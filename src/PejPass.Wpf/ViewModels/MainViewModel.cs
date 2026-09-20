@@ -98,9 +98,8 @@ public partial class MainViewModel : ObservableObject
         _autoLockTimer?.Stop();
         _clipboard.Clear();
 
-        // Clear sensitive session data
-        LoginViewModel.CurrentMasterPassword = null;
-        LoginViewModel.CurrentVault = null;
+        // Clear sensitive session data via the dedicated method
+        LoginViewModel.ClearSession();
 
         StatusMessage = "Vault locked.";
         RequestLock?.Invoke(this, EventArgs.Empty);

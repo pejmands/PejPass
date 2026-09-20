@@ -17,10 +17,20 @@ public partial class LoginViewModel : ObservableObject
 
     public event EventHandler? RequestClose;
 
-    // Shared state after successful unlock
+    // Shared session state after successful unlock
     public static Vault? CurrentVault { get; private set; }
     public static string? CurrentVaultPath { get; private set; }
     public static string? CurrentMasterPassword { get; private set; }
+
+    /// <summary>
+    /// Clears all sensitive session data. Call this when locking the vault.
+    /// </summary>
+    public static void ClearSession()
+    {
+        CurrentVault = null;
+        CurrentVaultPath = null;
+        CurrentMasterPassword = null;
+    }
 
     [ObservableProperty] private string _vaultPath = string.Empty;
     [ObservableProperty] private string _masterPassword = string.Empty;
@@ -120,7 +130,7 @@ public partial class LoginViewModel : ObservableObject
                 StatusMessage = "Vault unlocked.";
             }
 
-            // Store session state (in a real app consider more secure handling)
+            // Store session state
             CurrentVault = vault;
             CurrentVaultPath = VaultPath;
             CurrentMasterPassword = MasterPassword;
