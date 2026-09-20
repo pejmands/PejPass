@@ -1,34 +1,82 @@
 <Window x:Class="PejPass.Wpf.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d"
-        Title="PejPass — Local Password Manager"
-        Height="640" Width="960"
+        Title="PejPass"
+        Height="700" Width="1100"
         WindowStartupLocation="CenterScreen"
-        Background="#1E1E2E">
+        Background="{StaticResource BgBrush}">
 
-    <Grid>
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-            <TextBlock Text="PejPass"
-                       FontSize="42"
-                       FontWeight="Bold"
-                       Foreground="#CDD6F4"
-                       HorizontalAlignment="Center"
-                       Margin="0,0,0,12"/>
+    <DockPanel>
+        <!-- Top bar -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource SurfaceBrush}" Padding="16,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <TextBlock Text="Professional offline password manager"
-                       FontSize="16"
-                       Foreground="#A6ADC8"
-                       HorizontalAlignment="Center"
-                       Margin="0,0,0,32"/>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="PejPass" FontSize="18" FontWeight="Bold"
+                               Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding VaultName}" Margin="16,0,0,0"
+                               Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
 
-            <TextBlock Text="Project skeleton is ready.&#x0a;Next: implement vault open / create flow."
-                       FontSize="14"
-                       Foreground="#89B4FA"
-                       TextAlignment="Center"
-                       HorizontalAlignment="Center"/>
-        </StackPanel>
-    </Grid>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource AccentBrush}"
+                               VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <Button Content="Lock" Command="{Binding LockCommand}" Padding="14,6"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Search + Add -->
+        <Border DockPanel.Dock="Top" Padding="16,12" Background="{StaticResource BgBrush}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         Tag="Search entries..." Margin="0,0,12,0"/>
+                <Button Grid.Column="1" Content="+ Add Entry" Command="{Binding AddEntryCommand}"/>
+            </Grid>
+        </Border>
+
+        <!-- Entry list -->
+        <ListBox ItemsSource="{Binding FilteredEntries}"
+                 SelectedItem="{Binding SelectedEntry}"
+                 Background="Transparent" BorderThickness="0"
+                 Margin="8"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Border Background="{StaticResource SurfaceBrush}" CornerRadius="6" Padding="14,10" Margin="0,0,0,6">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextBrush}" FontSize="15"/>
+                                <TextBlock Text="{Binding Username}" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Content="Copy" Command="{Binding DataContext.CopyPasswordCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                        CommandParameter="{Binding}" Padding="10,4" Margin="0,0,6,0"/>
+                                <Button Content="Edit" Command="{Binding DataContext.EditEntryCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                        CommandParameter="{Binding}" Padding="10,4" Margin="0,0,6,0"/>
+                                <Button Content="Delete" Command="{Binding DataContext.DeleteEntryCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                        CommandParameter="{Binding}" Padding="10,4"
+                                        Background="{StaticResource DangerBrush}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
 </Window>
