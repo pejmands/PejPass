@@ -3,9 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using PejPass.Application.Interfaces;
 using PejPass.Application.Services;
 using PejPass.Domain.Settings;
-using PejPass.Infrastructure.Clipboard;
 using PejPass.Infrastructure.Crypto;
 using PejPass.Infrastructure.Storage;
+using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 
@@ -27,6 +27,8 @@ public partial class App : Application
         // Infrastructure
         services.AddSingleton<ICryptoService, CryptoService>();
         services.AddSingleton<IVaultStore, VaultStore>();
+
+        // WPF-specific services
         services.AddSingleton<IClipboardService, ClipboardService>();
 
         // Application
