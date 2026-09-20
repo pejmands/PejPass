@@ -1,5 +1,7 @@
 using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
 using PejPass.Wpf.ViewModels;
+using PejPass.Wpf.Views;
 
 namespace PejPass.Wpf;
 
@@ -13,7 +15,7 @@ public partial class MainWindow : Window
         viewModel.RequestLock += (_, _) =>
         {
             // Return to login
-            var login = App.Services.GetRequiredService<Views.LoginWindow>();
+            var login = App.Services.GetRequiredService<LoginWindow>();
             login.Show();
             Close();
         };
