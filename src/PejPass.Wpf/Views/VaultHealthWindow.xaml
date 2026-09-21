@@ -3,13 +3,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Vault Health"
         Height="560" Width="720"
+        MinWidth="560"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgBrush}">
 
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <!-- Fixed-height status strip: never collapses → no layout jump -->
             <RowDefinition Height="48"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -19,7 +19,6 @@
         <TextBlock Text="Vault Health" FontSize="22" FontWeight="Bold"
                    Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
 
-        <!-- Always visible strip (status + bar). Opacity dims when idle. -->
         <StackPanel Grid.Row="1" VerticalAlignment="Center">
             <TextBlock Text="{Binding ScanStatus}" FontSize="13"
                        Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"/>
@@ -74,7 +73,11 @@
                         IsEnabled="{Binding IsReady}"/>
             </Grid>
 
-            <ListBox ItemsSource="{Binding Issues}" Background="Transparent" BorderThickness="0"
+            <!-- No horizontal scroll; Open stays pinned on the right -->
+            <ListBox ItemsSource="{Binding Issues}"
+                     Background="Transparent" BorderThickness="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.CanContentScroll="True"
                      IsEnabled="{Binding IsReady}">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
@@ -84,7 +87,7 @@
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ListBoxItem">
-                                    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="14,12">
+                                    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="12,10">
                                         <ContentPresenter/>
                                     </Border>
                                 </ControlTemplate>
@@ -96,22 +99,29 @@
                     <DataTemplate>
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="100"/>
-                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="88"/>
+                                <ColumnDefinition Width="*" MinWidth="80"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
+
                             <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="4" Padding="8,3"
                                     HorizontalAlignment="Left" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding KindLabel}" FontSize="11" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}"/>
                             </Border>
-                            <StackPanel Grid.Column="1" Margin="12,0,12,0">
+
+                            <StackPanel Grid.Column="1" Margin="10,0,10,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding EntryTitle}" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
+                                           Foreground="{DynamicResource TextBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
                                 <TextBlock Text="{Binding Detail}" FontSize="12" Margin="0,2,0,0"
-                                           Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
-                            <Button Grid.Column="2" Content="Open" Padding="12,6"
+
+                            <Button Grid.Column="2" Content="Open" Padding="14,6"
+                                    VerticalAlignment="Center"
+                                    MinWidth="64"
                                     Command="{Binding DataContext.OpenEntryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                     CommandParameter="{Binding}"/>
                         </Grid>

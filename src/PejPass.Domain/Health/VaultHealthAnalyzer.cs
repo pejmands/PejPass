@@ -29,12 +29,10 @@ public sealed class VaultHealthReport
     public int Total => Issues.Count;
 }
 
-/// <summary>0–100 progress with a short status label.</summary>
 public sealed record HealthScanProgress(double Percent, string Status);
 
 public static class VaultHealthAnalyzer
 {
-    /// <summary>Password not updated for this long is considered stale.</summary>
     public static TimeSpan StaleThreshold { get; } = TimeSpan.FromDays(365);
 
     public static VaultHealthReport Analyze(IEnumerable<VaultEntry> entries, DateTimeOffset? now = null)
@@ -56,8 +54,8 @@ public static class VaultHealthAnalyzer
             return report;
         }
 
-        // Phase 1 (0–25%): find duplicate passwords
-        progress?.Report(new HealthScanProgress(2, "Checking duplicate passwords…"));
+        // Phase 1 — duplicates (0–20%)
+        progress?.Report(new HealthScanProgress(1, "Checking duplicate passwords…"));
 
         var byPassword = list
             .Where(e => !string.IsNullOrEmpty(e.Password))
@@ -67,20 +65,28 @@ public static class VaultHealthAnalyzer
 
         foreach (var group in byPassword)
         {
-            var titles = string.Join(", ", group.Select(e => e.Title));
+            var count = group.Count();
+            // Short detail — never list every title (that caused horizontal scroll)
+            var detail = count == 2
+                ? "Same password used on 2 entries"
+                : $"Same password used on {count} entries";
+
             foreach (var e in group)
             {
                 report.Issues.Add(new HealthIssue(
                     HealthIssueKind.DuplicatePassword,
                     e.Id,
                     e.Title,
-                    $"Same password as: {titles}"));
+                    detail));
             }
         }
 
-        progress?.Report(new HealthScanProgress(25, "Checking strength, TOTP, age…"));
+        progress?.Report(new HealthScanProgress(20, "Checking strength, TOTP, age…"));
 
-        // Phase 2 (25–100%): per-entry checks with smooth progress
+        // Phase 2 — per entry (20–100%)
+        // Report often enough for a smooth bar even on fast machines
+        var reportEvery = Math.Max(1, n / 50);
+
         for (var i = 0; i < n; i++)
         {
             var e = list[i];
@@ -116,13 +122,12 @@ public static class VaultHealthAnalyzer
                     $"Last updated {days} days ago"));
             }
 
-            // Update UI every ~2% or every 10 items (whichever comes first)
-            var pct = 25 + (i + 1) * 75.0 / n;
-            if (i == n - 1 || (i + 1) % Math.Max(1, n / 40) == 0)
+            if (i == n - 1 || (i + 1) % reportEvery == 0)
             {
+                var pct = 20 + (i + 1) * 80.0 / n;
                 progress?.Report(new HealthScanProgress(
-                    Math.Min(99, pct),
-                    $"Scanning {i + 1} / {n}…"));
+                    Math.Min(99.5, pct),
+                    $"Scanning {i + 1} / {n}"));
             }
         }
 

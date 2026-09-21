@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Windows;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
@@ -9,6 +11,7 @@ namespace PejPass.Wpf.ViewModels;
 public partial class VaultHealthViewModel : ObservableObject
 {
     private readonly IReadOnlyList<VaultEntry> _entries;
+    private readonly Dispatcher _dispatcher;
 
     [ObservableProperty] private int _selectedFilterIndex;
     [ObservableProperty] private int _totalIssues;
@@ -40,6 +43,7 @@ public partial class VaultHealthViewModel : ObservableObject
     public VaultHealthViewModel(IEnumerable<VaultEntry> entries)
     {
         _entries = entries.ToList();
+        _dispatcher = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         IsScanning = true;
         IsReady = false;
         ScanProgress = 0;
@@ -53,15 +57,27 @@ public partial class VaultHealthViewModel : ObservableObject
         ScanProgress = 0;
         ScanStatus = $"Scanning {_entries.Count} entries…";
 
-        // Let the window paint before work starts
+        // Keep previous issues visible until the new report is ready (avoids white flash)
         await Task.Yield();
 
         try
         {
             var progress = new Progress<HealthScanProgress>(p =>
             {
-                ScanProgress = p.Percent;
-                ScanStatus = p.Status;
+                // Ensure UI thread updates (Progress should already marshal, but be explicit)
+                if (_dispatcher.CheckAccess())
+                {
+                    ScanProgress = p.Percent;
+                    ScanStatus = p.Status;
+                }
+                else
+                {
+                    _dispatcher.BeginInvoke(() =>
+                    {
+                        ScanProgress = p.Percent;
+                        ScanStatus = p.Status;
+                    });
+                }
             });
 
             var report = await Task.Run(() =>
@@ -73,6 +89,8 @@ public partial class VaultHealthViewModel : ObservableObject
             WeakCount = _report.WeakCount;
             MissingTotpCount = _report.MissingTotpCount;
             StaleCount = _report.StaleCount;
+
+            // Swap list content only after scan completes
             ApplyFilter();
 
             ScanProgress = 100;
