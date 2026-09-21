@@ -1,3 +1,4 @@
+using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using PejPass.Application.Interfaces;
 using PejPass.Application.Services;
@@ -8,7 +9,6 @@ using PejPass.Infrastructure.Storage;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
-using System.Windows;
 
 namespace PejPass.Wpf;
 
@@ -20,34 +20,32 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
+        var settings = SettingsStore.Load();
+        var themeService = new ThemeService(settings);
+        themeService.Apply();
+
         var services = new ServiceCollection();
 
-        // Settings (singleton)
-        services.AddSingleton(new AppSettings());
+        services.AddSingleton(settings);
+        services.AddSingleton(themeService);
 
-        // Infrastructure
         services.AddSingleton<ICryptoService, CryptoService>();
         services.AddSingleton<IVaultStore, VaultStore>();
         services.AddSingleton<IBrowserImportService, BrowserImportService>();
-
-        // WPF-specific services
         services.AddSingleton<IClipboardService, ClipboardService>();
-
-        // Application
         services.AddSingleton<VaultService>();
 
-        // ViewModels
         services.AddTransient<LoginViewModel>();
         services.AddTransient<MainViewModel>();
         services.AddTransient<EntryEditorViewModel>();
+        services.AddTransient<SettingsViewModel>();
 
-        // Windows
         services.AddTransient<LoginWindow>();
         services.AddTransient<MainWindow>();
+        services.AddTransient<SettingsWindow>();
 
         Services = services.BuildServiceProvider();
 
-        // Start with Login window
         var login = Services.GetRequiredService<LoginWindow>();
         login.Show();
     }
