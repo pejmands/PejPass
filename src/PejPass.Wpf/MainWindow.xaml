@@ -5,11 +5,11 @@
         Height="720" Width="1180"
         MinHeight="560" MinWidth="900"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource BgBrush}">
+        Background="{DynamicResource BgBrush}">
 
     <DockPanel>
 
-        <Border DockPanel.Dock="Top" Background="{StaticResource SurfaceBrush}" Padding="20,12">
+        <Border DockPanel.Dock="Top" Background="{DynamicResource SurfaceBrush}" Padding="20,12">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -18,21 +18,24 @@
 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="PejPass" FontSize="20" FontWeight="Bold"
-                               Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
-                    <Border Background="#45475A" CornerRadius="4" Padding="8,2" Margin="14,0,0,0" VerticalAlignment="Center">
+                               Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                    <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="4" Padding="8,2" Margin="14,0,0,0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding VaultName}" FontSize="12"
-                                   Foreground="{StaticResource MutedBrush}"/>
+                                   Foreground="{DynamicResource MutedBrush}"/>
                     </Border>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource AccentBrush}"
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource AccentBrush}"
                                VerticalAlignment="Center" Margin="0,0,16,0" FontSize="13"/>
+                    <Button Content="Settings" Command="{Binding OpenSettingsCommand}"
+                            Padding="14,7" Margin="0,0,8,0"
+                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
                     <Button Content="Import" Command="{Binding ImportCommand}"
                             Padding="14,7" Margin="0,0,8,0"
-                            Background="#45475A" Foreground="{StaticResource TextBrush}"/>
+                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
                     <Button Content="Lock" Command="{Binding LockCommand}"
-                            Padding="14,7" Background="{StaticResource DangerBrush}"/>
+                            Padding="14,7" Background="{DynamicResource DangerBrush}"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -60,7 +63,7 @@
 
                 <TextBlock DockPanel.Dock="Top"
                            Text="{Binding FilteredEntries.Count, StringFormat={}{0} entries}"
-                           Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="20,0,0,8"/>
+                           Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="20,0,0,8"/>
 
                 <ListBox x:Name="EntryList"
                          ItemsSource="{Binding FilteredEntries}"
@@ -78,18 +81,18 @@
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBoxItem">
-                                        <Border x:Name="Bd" Background="{StaticResource SurfaceBrush}"
+                                        <Border x:Name="Bd" Background="{DynamicResource SurfaceBrush}"
                                                 CornerRadius="8" Padding="14,12" BorderThickness="1"
                                                 BorderBrush="Transparent" SnapsToDevicePixels="True">
                                             <ContentPresenter/>
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Bd" Property="Background" Value="#3B3B4F"/>
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
                                             </Trigger>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="Bd" Property="Background" Value="#45475A"/>
-                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -101,24 +104,24 @@
                         <DataTemplate>
                             <StackPanel>
                                 <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14"
-                                           Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis"/>
+                                           Foreground="{DynamicResource TextBrush}" TextTrimming="CharacterEllipsis"/>
                                 <TextBlock Text="{Binding Username}" FontSize="12" Margin="0,3,0,0"
-                                           Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
+                                           Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
             </DockPanel>
 
-            <Border Grid.Column="1" Background="#313244"/>
+            <Border Grid.Column="1" Background="{DynamicResource BorderBrush}"/>
 
             <Grid Grid.Column="2">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
                             Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
                     <TextBlock Text="Select an entry" FontSize="18" FontWeight="SemiBold"
-                               Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center"/>
+                               Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center"/>
                     <TextBlock Text="or click + to add a new one" FontSize="13" Margin="0,8,0,0"
-                               Foreground="#6C7086" HorizontalAlignment="Center"/>
+                               Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="36,32"
@@ -126,61 +129,61 @@
                     <StackPanel MaxWidth="560">
 
                         <TextBlock Text="{Binding SelectedEntry.Title}" FontSize="26" FontWeight="Bold"
-                                   Foreground="{StaticResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,20"/>
+                                   Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,20"/>
 
                         <StackPanel Visibility="{Binding HasUrl, Converter={StaticResource BoolToVis}}" Margin="0,0,0,18">
                             <TextBlock Text="URL" FontSize="11" FontWeight="SemiBold"
-                                       Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
+                                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <Border Background="{StaticResource SurfaceBrush}" CornerRadius="6" Padding="12,10">
-                                    <TextBlock Text="{Binding SelectedEntry.Url}" Foreground="{StaticResource AccentBrush}"
+                                <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="12,10">
+                                    <TextBlock Text="{Binding SelectedEntry.Url}" Foreground="{DynamicResource AccentBrush}"
                                                FontSize="13" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                 </Border>
                                 <Button Grid.Column="1" Content="Copy" Margin="8,0,0,0" Padding="12,8"
                                         Command="{Binding CopyUrlCommand}"
-                                        Background="#45475A" Foreground="{StaticResource TextBrush}"/>
+                                        Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
                                 <Button Grid.Column="2" Content="Open" Margin="8,0,0,0" Padding="12,8"
                                         Command="{Binding OpenUrlCommand}"/>
                             </Grid>
                         </StackPanel>
 
                         <TextBlock Text="USERNAME" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
+                                   Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"/>
                         <Grid Margin="0,0,0,18">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="6" Padding="12,10">
-                                <TextBlock Text="{Binding SelectedEntry.Username}" Foreground="{StaticResource TextBrush}"
+                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="12,10">
+                                <TextBlock Text="{Binding SelectedEntry.Username}" Foreground="{DynamicResource TextBrush}"
                                            FontSize="14" VerticalAlignment="Center" TextWrapping="Wrap"/>
                             </Border>
                             <Button Grid.Column="1" Content="Copy" Margin="8,0,0,0" Padding="12,8"
                                     Command="{Binding CopyUsernameCommand}"
-                                    Background="#45475A" Foreground="{StaticResource TextBrush}"/>
+                                    Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
                         </Grid>
 
                         <TextBlock Text="PASSWORD" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
+                                   Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"/>
                         <Grid Margin="0,0,0,18">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="6" Padding="12,10">
-                                <TextBlock Text="{Binding DisplayPassword}" Foreground="{StaticResource TextBrush}"
+                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="12,10">
+                                <TextBlock Text="{Binding DisplayPassword}" Foreground="{DynamicResource TextBrush}"
                                            FontSize="14" FontFamily="Consolas" VerticalAlignment="Center"/>
                             </Border>
                             <Button Grid.Column="1" Content="{Binding ShowPasswordButtonText}"
                                     Margin="8,0,0,0" Padding="12,8"
                                     Command="{Binding TogglePasswordVisibilityCommand}"
-                                    Background="#45475A" Foreground="{StaticResource TextBrush}"/>
+                                    Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
                             <Button Grid.Column="2" Content="Copy" Margin="8,0,0,0" Padding="12,8"
                                     Command="{Binding CopyPasswordCommand}"
                                     CommandParameter="{Binding SelectedEntry}"/>
@@ -188,8 +191,8 @@
 
                         <StackPanel Visibility="{Binding HasTotp, Converter={StaticResource BoolToVis}}" Margin="0,0,0,18">
                             <TextBlock Text="AUTHENTICATOR (TOTP)" FontSize="11" FontWeight="SemiBold"
-                                       Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
-                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="16,14">
+                                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"/>
+                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="16,14">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -203,7 +206,7 @@
 
                                     <TextBlock Text="{Binding TotpCodeFormatted}"
                                                FontSize="28" FontWeight="Bold" FontFamily="Consolas"
-                                               Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
+                                               Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
 
                                     <Button Grid.Column="1" Content="Copy" Padding="14,8"
                                             Command="{Binding CopyTotpCommand}" VerticalAlignment="Center"/>
@@ -216,7 +219,7 @@
 
                                     <TextBlock Grid.Row="2" Grid.ColumnSpan="2"
                                                Text="{Binding TotpRemainingSeconds, StringFormat={}{0}s remaining}"
-                                               FontSize="12" Foreground="{StaticResource MutedBrush}"
+                                               FontSize="12" Foreground="{DynamicResource MutedBrush}"
                                                Margin="0,8,0,0"/>
                                 </Grid>
                             </Border>
@@ -224,18 +227,17 @@
 
                         <StackPanel Visibility="{Binding HasNotes, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="NOTES" FontSize="11" FontWeight="SemiBold"
-                                       Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
-                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="6"
+                                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"/>
+                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6"
                                     Padding="12,10" Margin="0,0,0,18">
-                                <TextBlock Text="{Binding SelectedEntry.Notes}" Foreground="{StaticResource TextBrush}"
+                                <TextBlock Text="{Binding SelectedEntry.Notes}" Foreground="{DynamicResource TextBrush}"
                                            FontSize="13" TextWrapping="Wrap"/>
                             </Border>
                         </StackPanel>
 
-                        <!-- Custom Fields (with optional secret masking) -->
                         <StackPanel Visibility="{Binding HasCustomFields, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="CUSTOM FIELDS" FontSize="11" FontWeight="SemiBold"
-                                       Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
+                                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
                             <ItemsControl ItemsSource="{Binding DisplayCustomFields}" Margin="0,0,0,18">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -248,26 +250,26 @@
                                             </Grid.ColumnDefinitions>
 
                                             <TextBlock Text="{Binding Name}" FontSize="12"
-                                                       Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                                                       Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
 
-                                            <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}"
+                                            <Border Grid.Column="1" Background="{DynamicResource SurfaceBrush}"
                                                     CornerRadius="6" Padding="10,8" Margin="0,0,6,0">
                                                 <TextBlock Text="{Binding DisplayValue}" FontSize="13"
                                                            FontFamily="Consolas"
-                                                           Foreground="{StaticResource TextBrush}" TextWrapping="Wrap"/>
+                                                           Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"/>
                                             </Border>
 
                                             <Button Grid.Column="2" Content="{Binding RevealButtonText}"
                                                     Margin="0,0,6,0" Padding="10,6"
                                                     Command="{Binding DataContext.ToggleCustomFieldVisibilityCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding}"
-                                                    Background="#45475A" Foreground="{StaticResource TextBrush}"
+                                                    Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"
                                                     Visibility="{Binding IsSecret, Converter={StaticResource BoolToVis}}"/>
 
                                             <Button Grid.Column="3" Content="Copy" Padding="10,6"
                                                     Command="{Binding DataContext.CopyCustomFieldCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding}"
-                                                    Background="#45475A" Foreground="{StaticResource TextBrush}"/>
+                                                    Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -276,7 +278,7 @@
 
                         <StackPanel Visibility="{Binding HasTags, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="TAGS" FontSize="11" FontWeight="SemiBold"
-                                       Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
+                                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
                             <ItemsControl ItemsSource="{Binding SelectedEntry.Tags}" Margin="0,0,0,28">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -285,8 +287,8 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="#45475A" CornerRadius="4" Padding="8,3" Margin="0,0,6,6">
-                                            <TextBlock Text="{Binding}" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+                                        <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="4" Padding="8,3" Margin="0,0,6,6">
+                                            <TextBlock Text="{Binding}" FontSize="12" Foreground="{DynamicResource MutedBrush}"/>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -298,7 +300,7 @@
                                     CommandParameter="{Binding SelectedEntry}" Padding="20,10" Margin="0,0,10,0"/>
                             <Button Content="Delete" Command="{Binding DeleteEntryCommand}"
                                     CommandParameter="{Binding SelectedEntry}" Padding="20,10"
-                                    Background="{StaticResource DangerBrush}"/>
+                                    Background="{DynamicResource DangerBrush}"/>
                         </StackPanel>
 
                     </StackPanel>
