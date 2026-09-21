@@ -9,26 +9,27 @@
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+            <!-- Fixed-height status strip: never collapses → no layout jump -->
+            <RowDefinition Height="48"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock Text="Vault Health" FontSize="22" FontWeight="Bold"
-                   Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
+                   Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
 
-        <StackPanel Grid.Row="1" Margin="0,0,0,12"
-                    Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}">
+        <!-- Always visible strip (status + bar). Opacity dims when idle. -->
+        <StackPanel Grid.Row="1" VerticalAlignment="Center">
             <TextBlock Text="{Binding ScanStatus}" FontSize="13"
-                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"/>
             <ProgressBar Height="8" Minimum="0" Maximum="100"
                          Value="{Binding ScanProgress}"
                          Background="{DynamicResource SurfaceAltBrush}"
                          Foreground="{DynamicResource AccentBrush}"/>
         </StackPanel>
 
-        <UniformGrid Grid.Row="2" Columns="4" Margin="0,0,0,16">
+        <UniformGrid Grid.Row="2" Columns="4" Margin="0,12,0,16">
             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
                     <TextBlock Text="{Binding DuplicateCount}" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource DangerBrush}"/>

@@ -50,18 +50,22 @@ public partial class VaultHealthViewModel : ObservableObject
     {
         IsScanning = true;
         IsReady = false;
-        ScanProgress = 8;
+        ScanProgress = 0;
         ScanStatus = $"Scanning {_entries.Count} entries…";
 
+        // Let the window paint before work starts
         await Task.Yield();
 
         try
         {
-            var report = await Task.Run(() => VaultHealthAnalyzer.Analyze(_entries)).ConfigureAwait(true);
+            var progress = new Progress<HealthScanProgress>(p =>
+            {
+                ScanProgress = p.Percent;
+                ScanStatus = p.Status;
+            });
 
-            ScanProgress = 92;
-            ScanStatus = "Building report…";
-            await Task.Yield();
+            var report = await Task.Run(() =>
+                VaultHealthAnalyzer.Analyze(_entries, progress)).ConfigureAwait(true);
 
             _report = report;
             TotalIssues = _report.Total;
@@ -79,6 +83,7 @@ public partial class VaultHealthViewModel : ObservableObject
         catch (Exception ex)
         {
             ScanStatus = $"Scan failed: {ex.Message}";
+            ScanProgress = 0;
         }
         finally
         {
