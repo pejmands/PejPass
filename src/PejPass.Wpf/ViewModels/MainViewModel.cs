@@ -1,3 +1,7 @@
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Windows;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -5,10 +9,8 @@ using PejPass.Application.Interfaces;
 using PejPass.Application.Services;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Settings;
+using PejPass.Infrastructure.Totp;
 using PejPass.Wpf.Views;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Windows;
 
 namespace PejPass.Wpf.ViewModels;
 
@@ -20,6 +22,7 @@ public partial class MainViewModel : ObservableObject
     private readonly AppSettings _settings;
 
     private System.Timers.Timer? _autoLockTimer;
+    private DispatcherTimer? _totpTimer;
     private bool _isPasswordVisible;
 
     public event EventHandler? RequestLock;
@@ -32,11 +35,18 @@ public partial class MainViewModel : ObservableObject
     // Detail panel state
     [ObservableProperty] private bool _hasSelection;
     [ObservableProperty] private bool _hasUrl;
+    [ObservableProperty] private bool _hasTotp;
     [ObservableProperty] private bool _hasNotes;
     [ObservableProperty] private bool _hasCustomFields;
     [ObservableProperty] private bool _hasTags;
     [ObservableProperty] private string _displayPassword = string.Empty;
     [ObservableProperty] private string _showPasswordButtonText = "Show";
+
+    // TOTP display
+    [ObservableProperty] private string _totpCode = string.Empty;
+    [ObservableProperty] private string _totpCodeFormatted = string.Empty;
+    [ObservableProperty] private int _totpRemainingSeconds;
+    [ObservableProperty] private double _totpProgress; // 0..1 for progress bar
 
     public ObservableCollection<VaultEntry> Entries { get; } = [];
     public ObservableCollection<VaultEntry> FilteredEntries { get; } = [];
@@ -54,6 +64,7 @@ public partial class MainViewModel : ObservableObject
 
         LoadVault();
         StartAutoLockTimer();
+        StartTotpTimer();
     }
 
     partial void OnSelectedEntryChanged(VaultEntry? value)
@@ -61,11 +72,56 @@ public partial class MainViewModel : ObservableObject
         _isPasswordVisible = false;
         HasSelection = value is not null;
         HasUrl = !string.IsNullOrWhiteSpace(value?.Url);
+        HasTotp = !string.IsNullOrWhiteSpace(value?.TotpSecret);
         HasNotes = !string.IsNullOrWhiteSpace(value?.Notes);
         HasCustomFields = value?.CustomFields is { Count: > 0 };
         HasTags = value?.Tags is { Count: > 0 };
         UpdatePasswordDisplay();
+        RefreshTotp();
         ResetAutoLockTimer();
+    }
+
+    private void StartTotpTimer()
+    {
+        _totpTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(1)
+        };
+        _totpTimer.Tick += (_, _) => RefreshTotp();
+        _totpTimer.Start();
+    }
+
+    private void RefreshTotp()
+    {
+        if (SelectedEntry is null || string.IsNullOrWhiteSpace(SelectedEntry.TotpSecret))
+        {
+            HasTotp = false;
+            TotpCode = string.Empty;
+            TotpCodeFormatted = string.Empty;
+            TotpRemainingSeconds = 0;
+            TotpProgress = 0;
+            return;
+        }
+
+        if (TotpHelper.TryGetCode(SelectedEntry.TotpSecret, out var code, out var remaining))
+        {
+            HasTotp = true;
+            TotpCode = code;
+            // Format as 123 456 for readability
+            TotpCodeFormatted = code.Length == 6
+                ? $"{code[..3]} {code[3..]}"
+                : code;
+            TotpRemainingSeconds = remaining;
+            TotpProgress = remaining / (double)TotpHelper.StepSeconds;
+        }
+        else
+        {
+            HasTotp = true; // still show section so user sees error state
+            TotpCode = string.Empty;
+            TotpCodeFormatted = "Invalid secret";
+            TotpRemainingSeconds = 0;
+            TotpProgress = 0;
+        }
     }
 
     private void UpdatePasswordDisplay()
@@ -136,7 +192,7 @@ public partial class MainViewModel : ObservableObject
         _autoLockTimer = new System.Timers.Timer(_settings.AutoLockMinutes * 60_000);
         _autoLockTimer.Elapsed += (_, _) =>
         {
-            System.Windows.Application.Current?.Dispatcher.Invoke(() => Lock());
+            Application.Current?.Dispatcher.Invoke(() => Lock());
         };
         _autoLockTimer.AutoReset = false;
         _autoLockTimer.Start();
@@ -150,8 +206,8 @@ public partial class MainViewModel : ObservableObject
 
     private static Window? GetOwnerWindow()
     {
-        return System.Windows.Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
-               ?? System.Windows.Application.Current?.MainWindow;
+        return Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
+               ?? Application.Current?.MainWindow;
     }
 
     [RelayCommand]
@@ -181,6 +237,18 @@ public partial class MainViewModel : ObservableObject
         var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
         _clipboard.CopyWithTimeout(SelectedEntry.Url, timeout);
         StatusMessage = $"URL copied. Clears in {_settings.ClipboardClearSeconds}s.";
+        ResetAutoLockTimer();
+    }
+
+    [RelayCommand]
+    private void CopyTotp()
+    {
+        if (string.IsNullOrEmpty(TotpCode) || TotpCodeFormatted == "Invalid secret")
+            return;
+
+        var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
+        _clipboard.CopyWithTimeout(TotpCode, timeout);
+        StatusMessage = $"TOTP code copied. Clears in {_settings.ClipboardClearSeconds}s.";
         ResetAutoLockTimer();
     }
 
@@ -219,6 +287,7 @@ public partial class MainViewModel : ObservableObject
     private void Lock()
     {
         _autoLockTimer?.Stop();
+        _totpTimer?.Stop();
         _clipboard.Clear();
         LoginViewModel.ClearSession();
         StatusMessage = "Vault locked.";
@@ -276,6 +345,7 @@ public partial class MainViewModel : ObservableObject
             entry.Username = updated.Username;
             entry.Password = updated.Password;
             entry.Url = updated.Url;
+            entry.TotpSecret = updated.TotpSecret;
             entry.Notes = updated.Notes;
             entry.Tags = updated.Tags;
             entry.CustomFields = updated.CustomFields;

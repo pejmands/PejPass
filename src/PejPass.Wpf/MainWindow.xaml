@@ -221,6 +221,63 @@
                                     CommandParameter="{Binding SelectedEntry}"/>
                         </Grid>
 
+                        <!-- TOTP -->
+                        <StackPanel Visibility="{Binding HasTotp, Converter={StaticResource BoolToVis}}" Margin="0,0,0,18">
+                            <TextBlock Text="AUTHENTICATOR (TOTP)" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
+                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="16,14">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Text="{Binding TotpCodeFormatted}"
+                                               FontSize="28" FontWeight="Bold" FontFamily="Consolas"
+                                               Foreground="{StaticResource TextBrush}"
+                                               VerticalAlignment="Center"/>
+
+                                    <Button Grid.Column="1" Content="Copy" Padding="14,8"
+                                            Command="{Binding CopyTotpCommand}"
+                                            VerticalAlignment="Center"/>
+
+                                    <Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="0,12,0,0">
+                                        <ProgressBar Height="4" Minimum="0" Maximum="1"
+                                                     Value="{Binding TotpProgress}"
+                                                     BorderThickness="0">
+                                            <ProgressBar.Template>
+                                                <ControlTemplate TargetType="ProgressBar">
+                                                    <Grid>
+                                                        <Border Background="#45475A" CornerRadius="2"/>
+                                                        <Border x:Name="PART_Track" Background="Transparent"/>
+                                                        <Border HorizontalAlignment="Left" CornerRadius="2"
+                                                                Background="{StaticResource AccentBrush}"
+                                                                Width="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVis}}"/>
+                                                    </Grid>
+                                                </ControlTemplate>
+                                            </ProgressBar.Template>
+                                        </ProgressBar>
+                                        <!-- Simple visual progress without custom converter dependency -->
+                                        <Border Height="4" CornerRadius="2" Background="#45475A">
+                                            <Border HorizontalAlignment="Left" CornerRadius="2"
+                                                    Background="{StaticResource AccentBrush}"
+                                                    Width="{Binding TotpProgress, Converter={x:Null}}"/>
+                                        </Border>
+                                    </Grid>
+
+                                    <TextBlock Grid.Row="2" Grid.ColumnSpan="2"
+                                               Text="{Binding TotpRemainingSeconds, StringFormat={}{0}s remaining}"
+                                               FontSize="12" Foreground="{StaticResource MutedBrush}"
+                                               Margin="0,8,0,0"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+
                         <!-- Notes -->
                         <StackPanel Visibility="{Binding HasNotes, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="NOTES" FontSize="11" FontWeight="SemiBold"
