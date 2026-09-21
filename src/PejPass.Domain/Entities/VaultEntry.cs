@@ -27,10 +27,15 @@ public sealed class VaultEntry
 
     public List<string> Tags { get; set; } = [];
 
-    /// <summary>
-    /// User-defined custom fields (name/value pairs).
-    /// </summary>
     public List<CustomField> CustomFields { get; set; } = [];
+
+    /// <summary>Pinned to top of sorted lists (Bitwarden/1Password style).</summary>
+    public bool IsFavorite { get; set; }
+
+    /// <summary>
+    /// Manual order rank (lower = higher). Used when sort mode is Manual.
+    /// </summary>
+    public int SortOrder { get; set; }
 
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 

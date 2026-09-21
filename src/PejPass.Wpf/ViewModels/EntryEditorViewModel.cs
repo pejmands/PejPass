@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Security.Cryptography;
+using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
@@ -15,6 +16,7 @@ public partial class EntryEditorViewModel : ObservableObject
     [ObservableProperty] private string _totpSecret = string.Empty;
     [ObservableProperty] private string _notes = string.Empty;
     [ObservableProperty] private string _tagsText = string.Empty;
+    [ObservableProperty] private bool _isFavorite;
 
     public VaultEntry? Original { get; }
 
@@ -32,6 +34,7 @@ public partial class EntryEditorViewModel : ObservableObject
             TotpSecret = existing.TotpSecret;
             Notes = existing.Notes;
             TagsText = string.Join(", ", existing.Tags);
+            IsFavorite = existing.IsFavorite;
 
             foreach (var field in existing.CustomFields)
             {
@@ -77,6 +80,57 @@ public partial class EntryEditorViewModel : ObservableObject
         CustomFields.Remove(item);
     }
 
+    /// <summary>
+    /// Detects changes to sensitive fields vs Original.
+    /// Returns human-readable change lines (not the secret values themselves in the summary list names only).
+    /// </summary>
+    public List<SensitiveChange> GetSensitiveChanges()
+    {
+        var changes = new List<SensitiveChange>();
+        if (Original is null) return changes;
+
+        if (!string.Equals(Original.Password, Password, StringComparison.Ordinal))
+            changes.Add(new SensitiveChange("Password", Original.Password, Password));
+
+        if (!string.Equals(Original.Username, Username.Trim(), StringComparison.Ordinal))
+            changes.Add(new SensitiveChange("Username", Original.Username, Username.Trim()));
+
+        if (!string.Equals(Original.TotpSecret, TotpSecret.Trim(), StringComparison.Ordinal))
+            changes.Add(new SensitiveChange("TOTP Secret", Original.TotpSecret, TotpSecret.Trim()));
+
+        // Secret custom fields: changed value, removed, or cleared
+        var newFields = CustomFields
+            .Where(f => !string.IsNullOrWhiteSpace(f.Name))
+            .ToDictionary(f => f.Name.Trim(), f => f, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var old in Original.CustomFields.Where(f => f.IsSecret))
+        {
+            if (!newFields.TryGetValue(old.Name, out var neu))
+            {
+                changes.Add(new SensitiveChange($"Custom field \"{old.Name}\" (removed)", old.Value, string.Empty));
+            }
+            else if (!string.Equals(old.Value, neu.Value ?? string.Empty, StringComparison.Ordinal))
+            {
+                changes.Add(new SensitiveChange($"Custom field \"{old.Name}\"", old.Value, neu.Value ?? string.Empty));
+            }
+        }
+
+        return changes;
+    }
+
+    public string BuildHistoryAppendix(IReadOnlyList<SensitiveChange> changes)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine();
+        sb.AppendLine($"--- History {DateTime.Now:yyyy-MM-dd HH:mm} ---");
+        foreach (var c in changes)
+        {
+            sb.AppendLine($"{c.FieldName}:");
+            sb.AppendLine(string.IsNullOrEmpty(c.OldValue) ? "  (empty)" : $"  {c.OldValue}");
+        }
+        return sb.ToString();
+    }
+
     public VaultEntry ToEntry()
     {
         var tags = TagsText
@@ -106,6 +160,8 @@ public partial class EntryEditorViewModel : ObservableObject
                 Notes = Notes,
                 Tags = tags,
                 CustomFields = customFields,
+                IsFavorite = IsFavorite,
+                SortOrder = Original.SortOrder,
                 CreatedAt = Original.CreatedAt,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
@@ -120,10 +176,13 @@ public partial class EntryEditorViewModel : ObservableObject
             TotpSecret = TotpSecret.Trim(),
             Notes = Notes,
             Tags = tags,
-            CustomFields = customFields
+            CustomFields = customFields,
+            IsFavorite = IsFavorite
         };
     }
 }
+
+public sealed record SensitiveChange(string FieldName, string OldValue, string NewValue);
 
 public partial class CustomFieldItem : ObservableObject
 {
