@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
@@ -19,7 +18,8 @@ public partial class VaultHealthViewModel : ObservableObject
     [ObservableProperty] private int _staleCount;
 
     [ObservableProperty] private bool _isScanning;
-    [ObservableProperty] private double _scanProgress; // 0–100
+    [ObservableProperty] private bool _isReady;
+    [ObservableProperty] private double _scanProgress;
     [ObservableProperty] private string _scanStatus = "Preparing…";
 
     public string[] FilterOptions { get; } =
@@ -40,8 +40,8 @@ public partial class VaultHealthViewModel : ObservableObject
     public VaultHealthViewModel(IEnumerable<VaultEntry> entries)
     {
         _entries = entries.ToList();
-        // Do not analyze in ctor — window opens immediately, then StartScanAsync runs
         IsScanning = true;
+        IsReady = false;
         ScanProgress = 0;
         ScanStatus = $"Scanning {_entries.Count} entries…";
     }
@@ -49,22 +49,17 @@ public partial class VaultHealthViewModel : ObservableObject
     public async Task StartScanAsync()
     {
         IsScanning = true;
-        ScanProgress = 5;
+        IsReady = false;
+        ScanProgress = 8;
         ScanStatus = $"Scanning {_entries.Count} entries…";
 
-        // Yield so the window can render before heavy work
         await Task.Yield();
 
-        VaultHealthReport report = new();
         try
         {
-            report = await Task.Run(() =>
-            {
-                // Progress is coarse: analyzer is one pass; we still update UI around it
-                return VaultHealthAnalyzer.Analyze(_entries);
-            }).ConfigureAwait(true);
+            var report = await Task.Run(() => VaultHealthAnalyzer.Analyze(_entries)).ConfigureAwait(true);
 
-            ScanProgress = 90;
+            ScanProgress = 92;
             ScanStatus = "Building report…";
             await Task.Yield();
 
@@ -88,20 +83,18 @@ public partial class VaultHealthViewModel : ObservableObject
         finally
         {
             IsScanning = false;
+            IsReady = true;
         }
     }
 
     partial void OnSelectedFilterIndexChanged(int value)
     {
-        if (!IsScanning)
+        if (IsReady)
             ApplyFilter();
     }
 
     [RelayCommand]
-    private async Task RefreshAsync()
-    {
-        await StartScanAsync();
-    }
+    private async Task RefreshAsync() => await StartScanAsync();
 
     private void ApplyFilter()
     {

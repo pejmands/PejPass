@@ -18,7 +18,6 @@
         <TextBlock Text="Vault Health" FontSize="22" FontWeight="Bold"
                    Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
 
-        <!-- Scan progress (visible while analyzing) -->
         <StackPanel Grid.Row="1" Margin="0,0,0,12"
                     Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}">
             <TextBlock Text="{Binding ScanStatus}" FontSize="13"
@@ -29,8 +28,7 @@
                          Foreground="{DynamicResource AccentBrush}"/>
         </StackPanel>
 
-        <UniformGrid Grid.Row="2" Columns="4" Margin="0,0,0,16"
-                     IsEnabled="{Binding IsScanning, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+        <UniformGrid Grid.Row="2" Columns="4" Margin="0,0,0,16">
             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
                     <TextBlock Text="{Binding DuplicateCount}" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource DangerBrush}"/>
@@ -66,17 +64,17 @@
                 </Grid.ColumnDefinitions>
                 <ComboBox ItemsSource="{Binding FilterOptions}" SelectedIndex="{Binding SelectedFilterIndex}"
                           Width="200" HorizontalAlignment="Left" Padding="8,6"
-                          IsEnabled="{Binding IsScanning, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"/>
+                          IsEnabled="{Binding IsReady}"/>
                 <TextBlock Grid.Column="1" Text="{Binding Issues.Count, StringFormat={}{0} issues}"
                            Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
                 <Button Grid.Column="2" Content="Rescan" Command="{Binding RefreshCommand}"
                         Padding="12,6"
                         Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"
-                        IsEnabled="{Binding IsScanning, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"/>
+                        IsEnabled="{Binding IsReady}"/>
             </Grid>
 
             <ListBox ItemsSource="{Binding Issues}" Background="Transparent" BorderThickness="0"
-                     IsEnabled="{Binding IsScanning, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+                     IsEnabled="{Binding IsReady}">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
