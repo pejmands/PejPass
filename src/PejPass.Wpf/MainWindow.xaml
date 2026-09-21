@@ -155,11 +155,30 @@
                         <TextBlock Text="{Binding SelectedEntry.Title}"
                                    FontSize="26" FontWeight="Bold"
                                    Foreground="{StaticResource TextBrush}"
-                                   TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                   TextWrapping="Wrap" Margin="0,0,0,20"/>
 
-                        <TextBlock Text="{Binding SelectedEntry.Url}"
-                                   FontSize="13" Foreground="{StaticResource AccentBrush}"
-                                   TextWrapping="Wrap" Margin="0,0,0,28"/>
+                        <!-- URL -->
+                        <StackPanel Visibility="{Binding HasUrl, Converter={StaticResource BoolToVis}}" Margin="0,0,0,18">
+                            <TextBlock Text="URL" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Background="{StaticResource SurfaceBrush}" CornerRadius="6" Padding="12,10">
+                                    <TextBlock Text="{Binding SelectedEntry.Url}"
+                                               Foreground="{StaticResource AccentBrush}" FontSize="13"
+                                               VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                </Border>
+                                <Button Grid.Column="1" Content="Copy" Margin="8,0,0,0" Padding="12,8"
+                                        Command="{Binding CopyUrlCommand}"
+                                        Background="#45475A" Foreground="{StaticResource TextBrush}"/>
+                                <Button Grid.Column="2" Content="Open" Margin="8,0,0,0" Padding="12,8"
+                                        Command="{Binding OpenUrlCommand}"/>
+                            </Grid>
+                        </StackPanel>
 
                         <!-- Username -->
                         <TextBlock Text="USERNAME" FontSize="11" FontWeight="SemiBold"

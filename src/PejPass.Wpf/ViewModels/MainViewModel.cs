@@ -1,3 +1,6 @@
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -6,8 +9,6 @@ using PejPass.Application.Services;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Settings;
 using PejPass.Wpf.Views;
-using System.Collections.ObjectModel;
-using System.Windows;
 
 namespace PejPass.Wpf.ViewModels;
 
@@ -30,6 +31,7 @@ public partial class MainViewModel : ObservableObject
 
     // Detail panel state
     [ObservableProperty] private bool _hasSelection;
+    [ObservableProperty] private bool _hasUrl;
     [ObservableProperty] private bool _hasNotes;
     [ObservableProperty] private bool _hasCustomFields;
     [ObservableProperty] private bool _hasTags;
@@ -58,6 +60,7 @@ public partial class MainViewModel : ObservableObject
     {
         _isPasswordVisible = false;
         HasSelection = value is not null;
+        HasUrl = !string.IsNullOrWhiteSpace(value?.Url);
         HasNotes = !string.IsNullOrWhiteSpace(value?.Notes);
         HasCustomFields = value?.CustomFields is { Count: > 0 };
         HasTags = value?.Tags is { Count: > 0 };
@@ -133,7 +136,7 @@ public partial class MainViewModel : ObservableObject
         _autoLockTimer = new System.Timers.Timer(_settings.AutoLockMinutes * 60_000);
         _autoLockTimer.Elapsed += (_, _) =>
         {
-            System.Windows.Application.Current?.Dispatcher.Invoke(() => Lock());
+            Application.Current?.Dispatcher.Invoke(() => Lock());
         };
         _autoLockTimer.AutoReset = false;
         _autoLockTimer.Start();
@@ -143,6 +146,12 @@ public partial class MainViewModel : ObservableObject
     {
         _autoLockTimer?.Stop();
         _autoLockTimer?.Start();
+    }
+
+    private static Window? GetOwnerWindow()
+    {
+        return Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
+               ?? Application.Current?.MainWindow;
     }
 
     [RelayCommand]
@@ -162,6 +171,48 @@ public partial class MainViewModel : ObservableObject
         _clipboard.CopyWithTimeout(SelectedEntry.Username, timeout);
         StatusMessage = $"Username copied. Clears in {_settings.ClipboardClearSeconds}s.";
         ResetAutoLockTimer();
+    }
+
+    [RelayCommand]
+    private void CopyUrl()
+    {
+        if (SelectedEntry is null || string.IsNullOrWhiteSpace(SelectedEntry.Url)) return;
+
+        var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
+        _clipboard.CopyWithTimeout(SelectedEntry.Url, timeout);
+        StatusMessage = $"URL copied. Clears in {_settings.ClipboardClearSeconds}s.";
+        ResetAutoLockTimer();
+    }
+
+    [RelayCommand]
+    private void OpenUrl()
+    {
+        if (SelectedEntry is null || string.IsNullOrWhiteSpace(SelectedEntry.Url))
+            return;
+
+        try
+        {
+            var url = SelectedEntry.Url.Trim();
+            if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                url = "https://" + url;
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
+
+            StatusMessage = "Opened in browser.";
+            ResetAutoLockTimer();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not open URL:\n{ex.Message}", "Open URL",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     [RelayCommand]
@@ -189,7 +240,11 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task AddEntryAsync()
     {
-        var editor = new EntryEditorWindow(new EntryEditorViewModel(null));
+        var editor = new EntryEditorWindow(new EntryEditorViewModel(null))
+        {
+            Owner = GetOwnerWindow()
+        };
+
         if (editor.ShowDialog() == true && editor.Result is { } newEntry)
         {
             var vault = LoginViewModel.CurrentVault!;
@@ -210,7 +265,11 @@ public partial class MainViewModel : ObservableObject
         entry ??= SelectedEntry;
         if (entry is null) return;
 
-        var editor = new EntryEditorWindow(new EntryEditorViewModel(entry));
+        var editor = new EntryEditorWindow(new EntryEditorViewModel(entry))
+        {
+            Owner = GetOwnerWindow()
+        };
+
         if (editor.ShowDialog() == true && editor.Result is { } updated)
         {
             entry.Title = updated.Title;
