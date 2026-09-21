@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Text;
+using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -228,7 +228,6 @@ public partial class MainViewModel : ObservableObject
                     f.Value.Contains(q, StringComparison.OrdinalIgnoreCase)));
         }
 
-        // Favorites always first, then chosen sort
         source = SortEntries(source);
 
         foreach (var e in source)
@@ -242,7 +241,7 @@ public partial class MainViewModel : ObservableObject
     {
         var mode = _settings.SortMode;
 
-        IOrderedEnumerable<VaultEntry> ordered = mode switch
+        return mode switch
         {
             EntrySortMode.TitleDesc =>
                 source.OrderByDescending(e => e.IsFavorite)
@@ -261,12 +260,10 @@ public partial class MainViewModel : ObservableObject
                       .ThenBy(e => e.SortOrder)
                       .ThenBy(e => e.Title, StringComparer.OrdinalIgnoreCase),
 
-            _ => // TitleAsc
+            _ =>
                 source.OrderByDescending(e => e.IsFavorite)
                       .ThenBy(e => e.Title, StringComparer.OrdinalIgnoreCase)
         };
-
-        return ordered;
     }
 
     private void StartAutoLockTimer()
@@ -465,7 +462,6 @@ public partial class MainViewModel : ObservableObject
         if (editor.ShowDialog() != true || editor.Result is not { } updated)
             return;
 
-        // Sensitive-field guard
         var sensitive = editorVm.GetSensitiveChanges();
         if (sensitive.Count > 0)
         {
@@ -582,6 +578,48 @@ public partial class MainViewModel : ObservableObject
         {
             DialogService.Error($"Import failed:\n{ex.Message}", "Import Error");
             StatusMessage = "Import failed.";
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportBackupAsync()
+    {
+        var sourcePath = LoginViewModel.CurrentVaultPath;
+        if (string.IsNullOrEmpty(sourcePath))
+        {
+            DialogService.Warning("No vault file is open.", "Export Backup");
+            return;
+        }
+
+        var dlg = new SaveFileDialog
+        {
+            Title = "Export encrypted vault backup",
+            Filter = "PejPass Vault (*.pejpass)|*.pejpass|All files (*.*)|*.*",
+            DefaultExt = ".pejpass",
+            FileName = $"PejPass-backup-{DateTime.Now:yyyyMMdd-HHmm}.pejpass",
+            AddExtension = true
+        };
+
+        if (dlg.ShowDialog() != true)
+            return;
+
+        try
+        {
+            await _vaultService.SaveVaultAsync(
+                dlg.FileName,
+                LoginViewModel.CurrentMasterPassword!,
+                LoginViewModel.CurrentVault!);
+
+            StatusMessage = "Encrypted backup exported.";
+            DialogService.Success(
+                $"Backup saved to:\n{dlg.FileName}\n\nThis file is encrypted with your master password — store it offline.",
+                "Backup exported");
+            ResetAutoLockTimer();
+        }
+        catch (Exception ex)
+        {
+            DialogService.Error($"Backup failed:\n{ex.Message}", "Export Backup");
+            StatusMessage = "Backup failed.";
         }
     }
 
