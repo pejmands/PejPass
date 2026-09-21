@@ -32,7 +32,6 @@ public partial class MainWindow : Window
         var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
 
-        // Esc — clear selection
         if (e.Key == Key.Escape)
         {
             vm.SelectedEntry = null;
@@ -40,10 +39,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        // Don't steal keys while typing in a text box / password box
         if (IsTypingInInput())
         {
-            // Still allow Ctrl+L lock and Ctrl+F focus search from inputs
             if (ctrl && e.Key == Key.L)
             {
                 vm.LockCommand.Execute(null);
@@ -103,6 +100,12 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 break;
 
+            case Key.T when shift:
+                if (vm.OpenTrashCommand.CanExecute(null))
+                    vm.OpenTrashCommand.Execute(null);
+                e.Handled = true;
+                break;
+
             case Key.T:
                 vm.CopyTotpCommand.Execute(null);
                 e.Handled = true;
@@ -111,6 +114,12 @@ public partial class MainWindow : Window
             case Key.B:
                 if (vm.ExportBackupCommand.CanExecute(null))
                     vm.ExportBackupCommand.Execute(null);
+                e.Handled = true;
+                break;
+
+            case Key.H:
+                if (vm.OpenHealthCommand.CanExecute(null))
+                    vm.OpenHealthCommand.Execute(null);
                 e.Handled = true;
                 break;
 
