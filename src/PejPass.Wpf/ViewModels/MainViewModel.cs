@@ -10,6 +10,8 @@ using PejPass.Application.Services;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Settings;
 using PejPass.Infrastructure.Totp;
+using PejPass.Wpf.Dialogs;
+using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
 
 namespace PejPass.Wpf.ViewModels;
@@ -20,6 +22,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IClipboardService _clipboard;
     private readonly IBrowserImportService _importService;
     private readonly AppSettings _settings;
+    private readonly ThemeService _themeService;
 
     private System.Timers.Timer? _autoLockTimer;
     private DispatcherTimer? _totpTimer;
@@ -32,7 +35,6 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private VaultEntry? _selectedEntry;
 
-    // Detail panel state
     [ObservableProperty] private bool _hasSelection;
     [ObservableProperty] private bool _hasUrl;
     [ObservableProperty] private bool _hasTotp;
@@ -42,7 +44,6 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _displayPassword = string.Empty;
     [ObservableProperty] private string _showPasswordButtonText = "Show";
 
-    // TOTP display
     [ObservableProperty] private string _totpCode = string.Empty;
     [ObservableProperty] private string _totpCodeFormatted = string.Empty;
     [ObservableProperty] private int _totpRemainingSeconds;
@@ -56,12 +57,14 @@ public partial class MainViewModel : ObservableObject
         VaultService vaultService,
         IClipboardService clipboard,
         IBrowserImportService importService,
-        AppSettings settings)
+        AppSettings settings,
+        ThemeService themeService)
     {
         _vaultService = vaultService;
         _clipboard = clipboard;
         _importService = importService;
         _settings = settings;
+        _themeService = themeService;
 
         LoadVault();
         StartAutoLockTimer();
@@ -89,17 +92,12 @@ public partial class MainViewModel : ObservableObject
         if (SelectedEntry?.CustomFields is null) return;
 
         foreach (var f in SelectedEntry.CustomFields)
-        {
             DisplayCustomFields.Add(new CustomFieldDisplayItem(f));
-        }
     }
 
     private void StartTotpTimer()
     {
-        _totpTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromSeconds(1)
-        };
+        _totpTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _totpTimer.Tick += (_, _) => RefreshTotp();
         _totpTimer.Start();
     }
@@ -120,9 +118,7 @@ public partial class MainViewModel : ObservableObject
         {
             HasTotp = true;
             TotpCode = code;
-            TotpCodeFormatted = code.Length == 6
-                ? $"{code[..3]} {code[3..]}"
-                : code;
+            TotpCodeFormatted = code.Length == 6 ? $"{code[..3]} {code[3..]}" : code;
             TotpRemainingSeconds = remaining;
             TotpProgress = remaining / (double)TotpHelper.StepSeconds;
         }
@@ -198,12 +194,8 @@ public partial class MainViewModel : ObservableObject
         foreach (var e in source)
             FilteredEntries.Add(e);
 
-        // Restore selection after collection rebuild so ListBox doesn't lose it
         if (keepId is { } id)
-        {
-            var match = FilteredEntries.FirstOrDefault(e => e.Id == id);
-            SelectedEntry = match; // may be null if filtered out
-        }
+            SelectedEntry = FilteredEntries.FirstOrDefault(e => e.Id == id);
     }
 
     private void StartAutoLockTimer()
@@ -222,13 +214,31 @@ public partial class MainViewModel : ObservableObject
     private void ResetAutoLockTimer()
     {
         _autoLockTimer?.Stop();
-        _autoLockTimer?.Start();
+        if (_settings.AutoLockMinutes > 0)
+        {
+            _autoLockTimer ??= new System.Timers.Timer();
+            _autoLockTimer.Interval = _settings.AutoLockMinutes * 60_000;
+            _autoLockTimer.Start();
+        }
     }
 
     private static Window? GetOwnerWindow()
     {
         return System.Windows.Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
                ?? System.Windows.Application.Current?.MainWindow;
+    }
+
+    [RelayCommand]
+    private void OpenSettings()
+    {
+        var vm = new SettingsViewModel(_settings, _themeService);
+        var win = new SettingsWindow(vm) { Owner = GetOwnerWindow() };
+        win.ShowDialog();
+
+        // Restart auto-lock with possibly new timeout
+        _autoLockTimer?.Stop();
+        StartAutoLockTimer();
+        ResetAutoLockTimer();
     }
 
     [RelayCommand]
@@ -303,23 +313,15 @@ public partial class MainViewModel : ObservableObject
             var url = SelectedEntry.Url.Trim();
             if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
                 !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-            {
                 url = "https://" + url;
-            }
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = url,
-                UseShellExecute = true
-            });
-
+            Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
             StatusMessage = "Opened in browser.";
             ResetAutoLockTimer();
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Could not open URL:\n{ex.Message}", "Open URL",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            DialogService.Warning($"Could not open URL:\n{ex.Message}", "Open URL");
         }
     }
 
@@ -356,11 +358,9 @@ public partial class MainViewModel : ObservableObject
 
         if (editor.ShowDialog() == true && editor.Result is { } newEntry)
         {
-            var vault = LoginViewModel.CurrentVault!;
-            vault.AddEntry(newEntry);
+            LoginViewModel.CurrentVault!.AddEntry(newEntry);
             Entries.Add(newEntry);
             ApplyFilter(preserveSelectionId: newEntry.Id);
-
             await SaveVaultAsync();
             StatusMessage = "Entry added.";
             ResetAutoLockTimer();
@@ -391,7 +391,6 @@ public partial class MainViewModel : ObservableObject
             entry.Touch();
 
             ApplyFilter(preserveSelectionId: entry.Id);
-            // Force detail panel refresh for same object
             RebuildDisplayCustomFields();
             UpdatePasswordDisplay();
             RefreshTotp();
@@ -409,14 +408,10 @@ public partial class MainViewModel : ObservableObject
         entry ??= SelectedEntry;
         if (entry is null) return;
 
-        var result = MessageBox.Show(
-            $"Delete \"{entry.Title}\"?", "Confirm Delete",
-            MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (!DialogService.ConfirmDelete(entry.Title))
+            return;
 
-        if (result != MessageBoxResult.Yes) return;
-
-        var vault = LoginViewModel.CurrentVault!;
-        vault.RemoveEntry(entry.Id);
+        LoginViewModel.CurrentVault!.RemoveEntry(entry.Id);
         Entries.Remove(entry);
         SelectedEntry = null;
 
@@ -446,19 +441,16 @@ public partial class MainViewModel : ObservableObject
 
             if (imported.Count == 0)
             {
-                MessageBox.Show("No valid password entries found in the file.", "Import",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                DialogService.Info("No valid password entries found in the file.", "Import");
                 StatusMessage = "Import finished — nothing imported.";
                 return;
             }
 
-            var confirm = MessageBox.Show(
-                $"Found {imported.Count} entries.\n\nImport them into the current vault?",
-                "Confirm Import",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (confirm != MessageBoxResult.Yes)
+            if (!DialogService.Confirm(
+                    $"Found {imported.Count} entries.\n\nImport them into the current vault?",
+                    "Confirm Import",
+                    yesText: "Import",
+                    noText: "Cancel"))
             {
                 StatusMessage = "Import cancelled.";
                 return;
@@ -473,31 +465,25 @@ public partial class MainViewModel : ObservableObject
 
             ApplyFilter();
             await SaveVaultAsync();
-
             StatusMessage = $"Imported {imported.Count} entries.";
             ResetAutoLockTimer();
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Import failed:\n{ex.Message}", "Import Error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            DialogService.Error($"Import failed:\n{ex.Message}", "Import Error");
             StatusMessage = "Import failed.";
         }
     }
 
     private async Task SaveVaultAsync()
     {
-        var path = LoginViewModel.CurrentVaultPath!;
-        var password = LoginViewModel.CurrentMasterPassword!;
-        var vault = LoginViewModel.CurrentVault!;
-
-        await _vaultService.SaveVaultAsync(path, password, vault);
+        await _vaultService.SaveVaultAsync(
+            LoginViewModel.CurrentVaultPath!,
+            LoginViewModel.CurrentMasterPassword!,
+            LoginViewModel.CurrentVault!);
     }
 }
 
-/// <summary>
-/// UI model for a custom field in the detail panel (supports reveal for secrets).
-/// </summary>
 public partial class CustomFieldDisplayItem : ObservableObject
 {
     public string Name { get; }
