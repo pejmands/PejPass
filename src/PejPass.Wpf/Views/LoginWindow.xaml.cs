@@ -33,4 +33,10 @@ public partial class LoginWindow : Window
             vm.MasterPassword = pb.Password;
         }
     }
+
+    private void MasterPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is LoginViewModel vm)
+            vm.MasterPassword = MasterPasswordBox.Password;
+    }
 }
