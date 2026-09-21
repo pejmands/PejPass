@@ -2,21 +2,17 @@ using System.Windows;
 using System.Windows.Media;
 using Microsoft.Win32;
 using PejPass.Domain.Settings;
+using ThemeMode = PejPass.Domain.Settings.ThemeMode;
 
 namespace PejPass.Wpf.Services;
 
 /// <summary>
 /// Applies theme brushes to Application.Resources and watches OS theme when mode is System.
 /// </summary>
-public sealed class ThemeService : IDisposable
+public sealed class ThemeService(AppSettings settings) : IDisposable
 {
-    private readonly AppSettings _settings;
+    private readonly AppSettings _settings = settings;
     private bool _watching;
-
-    public ThemeService(AppSettings settings)
-    {
-        _settings = settings;
-    }
 
     /// <summary>Apply the saved theme from settings.</summary>
     public void Apply()
@@ -26,12 +22,12 @@ public sealed class ThemeService : IDisposable
     }
 
     /// <summary>Preview a theme without writing it to settings (for Settings dialog live preview).</summary>
-    public void Preview(ThemeMode mode)
+    public static void Preview(ThemeMode mode)
     {
         ApplyMode(mode);
     }
 
-    private void ApplyMode(ThemeMode mode)
+    private static void ApplyMode(ThemeMode mode)
     {
         var useDark = mode switch
         {

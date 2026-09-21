@@ -24,7 +24,7 @@
                        Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
             <ComboBox ItemsSource="{Binding ThemeOptions}"
                       SelectedIndex="{Binding SelectedThemeIndex}"
-                      Margin="0,0,0,24" Padding="10,8"
+                      Margin="0,0,0,24" Padding="10,8" Height="30"
                       Background="{DynamicResource SurfaceBrush}"
                       Foreground="{DynamicResource TextBrush}"
                       BorderBrush="{DynamicResource BorderBrush}"/>
