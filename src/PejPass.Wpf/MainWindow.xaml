@@ -32,6 +32,14 @@
                             Padding="14,7" Margin="0,0,8,0"
                             Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"
                             ToolTip="Settings (Ctrl+S)"/>
+                    <Button Content="Health" Command="{Binding OpenHealthCommand}"
+                            Padding="14,7" Margin="0,0,8,0"
+                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"
+                            ToolTip="Vault health report (Ctrl+H)"/>
+                    <Button Content="Trash" Command="{Binding OpenTrashCommand}"
+                            Padding="14,7" Margin="0,0,8,0"
+                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"
+                            ToolTip="Trash (Ctrl+Shift+T)"/>
                     <Button Content="Backup" Command="{Binding ExportBackupCommand}"
                             Padding="14,7" Margin="0,0,8,0"
                             Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"
@@ -354,10 +362,10 @@
                             <Button Content="Edit" Command="{Binding EditEntryCommand}"
                                     CommandParameter="{Binding SelectedEntry}" Padding="20,10" Margin="0,0,10,0"
                                     ToolTip="Edit (Ctrl+E)"/>
-                            <Button Content="Delete" Command="{Binding DeleteEntryCommand}"
+                            <Button Content="Trash" Command="{Binding DeleteEntryCommand}"
                                     CommandParameter="{Binding SelectedEntry}" Padding="20,10"
                                     Background="{DynamicResource DangerBrush}"
-                                    ToolTip="Delete (Del)"/>
+                                    ToolTip="Move to Trash (Del)"/>
                         </StackPanel>
 
                     </StackPanel>
