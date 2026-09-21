@@ -1,10 +1,10 @@
 using System.Collections.ObjectModel;
-using System.Text;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Security;
+using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Views;
 
 namespace PejPass.Wpf.ViewModels;
@@ -19,10 +19,12 @@ public partial class EntryEditorViewModel : ObservableObject
     [ObservableProperty] private string _notes = string.Empty;
     [ObservableProperty] private string _tagsText = string.Empty;
     [ObservableProperty] private bool _isFavorite;
+    [ObservableProperty] private bool _hasPasswordHistory;
 
     public VaultEntry? Original { get; }
 
     public ObservableCollection<CustomFieldItem> CustomFields { get; } = [];
+    public ObservableCollection<PasswordHistoryRow> HistoryItems { get; } = [];
 
     public EntryEditorViewModel(VaultEntry? existing)
     {
@@ -47,13 +49,19 @@ public partial class EntryEditorViewModel : ObservableObject
                     IsSecret = field.IsSecret
                 });
             }
+
+            foreach (var h in existing.PasswordHistory)
+            {
+                HistoryItems.Add(new PasswordHistoryRow(h));
+            }
+
+            HasPasswordHistory = HistoryItems.Count > 0;
         }
     }
 
     [RelayCommand]
     private void GeneratePassword()
     {
-        // Quick generate with secure defaults
         Password = PasswordGenerator.Generate(new PasswordGeneratorOptions
         {
             Length = 20,
@@ -76,6 +84,29 @@ public partial class EntryEditorViewModel : ObservableObject
 
         if (win.ShowDialog() == true && !string.IsNullOrEmpty(win.GeneratedPassword))
             Password = win.GeneratedPassword;
+    }
+
+    [RelayCommand]
+    private void RestoreHistoryPassword(PasswordHistoryRow? row)
+    {
+        if (row is null) return;
+
+        if (!DialogService.Confirm(
+                "Replace the current password with this history value?",
+                "Restore password",
+                yesText: "Restore",
+                noText: "Cancel"))
+            return;
+
+        Password = row.Password;
+    }
+
+    [RelayCommand]
+    private void DeleteHistoryItem(PasswordHistoryRow? row)
+    {
+        if (row is null) return;
+        HistoryItems.Remove(row);
+        HasPasswordHistory = HistoryItems.Count > 0;
     }
 
     [RelayCommand]
@@ -125,19 +156,6 @@ public partial class EntryEditorViewModel : ObservableObject
         return changes;
     }
 
-    public string BuildHistoryAppendix(IReadOnlyList<SensitiveChange> changes)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine();
-        sb.AppendLine($"--- History {DateTime.Now:yyyy-MM-dd HH:mm} ---");
-        foreach (var c in changes)
-        {
-            sb.AppendLine($"{c.FieldName}:");
-            sb.AppendLine(string.IsNullOrEmpty(c.OldValue) ? "  (empty)" : $"  {c.OldValue}");
-        }
-        return sb.ToString();
-    }
-
     public VaultEntry ToEntry()
     {
         var tags = TagsText
@@ -154,8 +172,35 @@ public partial class EntryEditorViewModel : ObservableObject
             })
             .ToList();
 
+        // History from UI (may have deleted items) + auto-push if password changed
+        var history = HistoryItems
+            .Select(h => new PasswordHistoryItem
+            {
+                Password = h.Password,
+                ChangedAt = h.ChangedAt
+            })
+            .ToList();
+
         if (Original is not null)
         {
+            if (!string.Equals(Original.Password, Password, StringComparison.Ordinal) &&
+                !string.IsNullOrEmpty(Original.Password))
+            {
+                // Avoid duplicate if already first
+                if (history.Count == 0 ||
+                    !string.Equals(history[0].Password, Original.Password, StringComparison.Ordinal))
+                {
+                    history.Insert(0, new PasswordHistoryItem
+                    {
+                        Password = Original.Password,
+                        ChangedAt = DateTimeOffset.UtcNow
+                    });
+                }
+            }
+
+            if (history.Count > VaultEntry.MaxPasswordHistory)
+                history = history.Take(VaultEntry.MaxPasswordHistory).ToList();
+
             return new VaultEntry
             {
                 Id = Original.Id,
@@ -167,6 +212,7 @@ public partial class EntryEditorViewModel : ObservableObject
                 Notes = Notes,
                 Tags = tags,
                 CustomFields = customFields,
+                PasswordHistory = history,
                 IsFavorite = IsFavorite,
                 SortOrder = Original.SortOrder,
                 CreatedAt = Original.CreatedAt,
@@ -184,6 +230,7 @@ public partial class EntryEditorViewModel : ObservableObject
             Notes = Notes,
             Tags = tags,
             CustomFields = customFields,
+            PasswordHistory = history,
             IsFavorite = IsFavorite
         };
     }
@@ -196,4 +243,22 @@ public partial class CustomFieldItem : ObservableObject
     [ObservableProperty] private string _name = string.Empty;
     [ObservableProperty] private string _value = string.Empty;
     [ObservableProperty] private bool _isSecret;
+}
+
+public sealed class PasswordHistoryRow
+{
+    public string Password { get; }
+    public DateTimeOffset ChangedAt { get; }
+    public string ChangedAtText { get; }
+    public string MaskedPassword { get; }
+
+    public PasswordHistoryRow(PasswordHistoryItem item)
+    {
+        Password = item.Password;
+        ChangedAt = item.ChangedAt;
+        ChangedAtText = item.ChangedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+        MaskedPassword = string.IsNullOrEmpty(item.Password)
+            ? string.Empty
+            : new string('•', Math.Min(item.Password.Length, 16));
+    }
 }
