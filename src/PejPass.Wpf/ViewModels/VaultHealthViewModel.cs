@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
@@ -16,6 +17,10 @@ public partial class VaultHealthViewModel : ObservableObject
     [ObservableProperty] private int _weakCount;
     [ObservableProperty] private int _missingTotpCount;
     [ObservableProperty] private int _staleCount;
+
+    [ObservableProperty] private bool _isScanning;
+    [ObservableProperty] private double _scanProgress; // 0–100
+    [ObservableProperty] private string _scanStatus = "Preparing…";
 
     public string[] FilterOptions { get; } =
     [
@@ -35,21 +40,67 @@ public partial class VaultHealthViewModel : ObservableObject
     public VaultHealthViewModel(IEnumerable<VaultEntry> entries)
     {
         _entries = entries.ToList();
-        Refresh();
+        // Do not analyze in ctor — window opens immediately, then StartScanAsync runs
+        IsScanning = true;
+        ScanProgress = 0;
+        ScanStatus = $"Scanning {_entries.Count} entries…";
     }
 
-    partial void OnSelectedFilterIndexChanged(int value) => ApplyFilter();
+    public async Task StartScanAsync()
+    {
+        IsScanning = true;
+        ScanProgress = 5;
+        ScanStatus = $"Scanning {_entries.Count} entries…";
+
+        // Yield so the window can render before heavy work
+        await Task.Yield();
+
+        VaultHealthReport report = new();
+        try
+        {
+            report = await Task.Run(() =>
+            {
+                // Progress is coarse: analyzer is one pass; we still update UI around it
+                return VaultHealthAnalyzer.Analyze(_entries);
+            }).ConfigureAwait(true);
+
+            ScanProgress = 90;
+            ScanStatus = "Building report…";
+            await Task.Yield();
+
+            _report = report;
+            TotalIssues = _report.Total;
+            DuplicateCount = _report.DuplicateCount;
+            WeakCount = _report.WeakCount;
+            MissingTotpCount = _report.MissingTotpCount;
+            StaleCount = _report.StaleCount;
+            ApplyFilter();
+
+            ScanProgress = 100;
+            ScanStatus = _report.Total == 0
+                ? "No issues found."
+                : $"{_report.Total} issue(s) found.";
+        }
+        catch (Exception ex)
+        {
+            ScanStatus = $"Scan failed: {ex.Message}";
+        }
+        finally
+        {
+            IsScanning = false;
+        }
+    }
+
+    partial void OnSelectedFilterIndexChanged(int value)
+    {
+        if (!IsScanning)
+            ApplyFilter();
+    }
 
     [RelayCommand]
-    private void Refresh()
+    private async Task RefreshAsync()
     {
-        _report = VaultHealthAnalyzer.Analyze(_entries);
-        TotalIssues = _report.Total;
-        DuplicateCount = _report.DuplicateCount;
-        WeakCount = _report.WeakCount;
-        MissingTotpCount = _report.MissingTotpCount;
-        StaleCount = _report.StaleCount;
-        ApplyFilter();
+        await StartScanAsync();
     }
 
     private void ApplyFilter()
@@ -67,9 +118,7 @@ public partial class VaultHealthViewModel : ObservableObject
         };
 
         foreach (var i in source.OrderBy(x => x.EntryTitle, StringComparer.OrdinalIgnoreCase))
-        {
             Issues.Add(new HealthIssueRow(i));
-        }
     }
 
     [RelayCommand]

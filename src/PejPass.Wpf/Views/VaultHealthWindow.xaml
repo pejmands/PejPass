@@ -10,14 +10,27 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock Text="Vault Health" FontSize="22" FontWeight="Bold"
-                   Foreground="{DynamicResource TextBrush}" Margin="0,0,0,16"/>
+                   Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
 
-        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,16">
+        <!-- Scan progress (visible while analyzing) -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,12"
+                    Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}">
+            <TextBlock Text="{Binding ScanStatus}" FontSize="13"
+                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+            <ProgressBar Height="8" Minimum="0" Maximum="100"
+                         Value="{Binding ScanProgress}"
+                         Background="{DynamicResource SurfaceAltBrush}"
+                         Foreground="{DynamicResource AccentBrush}"/>
+        </StackPanel>
+
+        <UniformGrid Grid.Row="2" Columns="4" Margin="0,0,0,16"
+                     IsEnabled="{Binding IsScanning, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
                     <TextBlock Text="{Binding DuplicateCount}" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource DangerBrush}"/>
@@ -44,19 +57,26 @@
             </Border>
         </UniformGrid>
 
-        <DockPanel Grid.Row="2">
+        <DockPanel Grid.Row="3">
             <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <ComboBox ItemsSource="{Binding FilterOptions}" SelectedIndex="{Binding SelectedFilterIndex}"
-                          Width="200" HorizontalAlignment="Left" Padding="8,6"/>
+                          Width="200" HorizontalAlignment="Left" Padding="8,6"
+                          IsEnabled="{Binding IsScanning, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"/>
                 <TextBlock Grid.Column="1" Text="{Binding Issues.Count, StringFormat={}{0} issues}"
-                           Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                           Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <Button Grid.Column="2" Content="Rescan" Command="{Binding RefreshCommand}"
+                        Padding="12,6"
+                        Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"
+                        IsEnabled="{Binding IsScanning, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"/>
             </Grid>
 
-            <ListBox ItemsSource="{Binding Issues}" Background="Transparent" BorderThickness="0">
+            <ListBox ItemsSource="{Binding Issues}" Background="Transparent" BorderThickness="0"
+                     IsEnabled="{Binding IsScanning, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -101,7 +121,7 @@
             </ListBox>
         </DockPanel>
 
-        <Button Grid.Row="3" Content="Close" HorizontalAlignment="Right" Margin="0,16,0,0"
+        <Button Grid.Row="4" Content="Close" HorizontalAlignment="Right" Margin="0,16,0,0"
                 Click="Close_Click" Padding="20,8"
                 Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
     </Grid>

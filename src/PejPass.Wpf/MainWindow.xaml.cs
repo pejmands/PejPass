@@ -21,6 +21,18 @@ public partial class MainWindow : Window
             Close();
         };
 
+        viewModel.RequestScrollToEntry += (_, _) =>
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (viewModel.SelectedEntry is null) return;
+                EntryList.ScrollIntoView(viewModel.SelectedEntry);
+                EntryList.UpdateLayout();
+                // Second pass helps when item was just added to filtered list
+                EntryList.ScrollIntoView(viewModel.SelectedEntry);
+            }, System.Windows.Threading.DispatcherPriority.Loaded);
+        };
+
         PreviewKeyDown += OnPreviewKeyDown;
     }
 
