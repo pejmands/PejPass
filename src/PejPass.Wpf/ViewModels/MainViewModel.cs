@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
 using PejPass.Application.Interfaces;
 using PejPass.Application.Services;
 using PejPass.Domain.Entities;
@@ -14,6 +15,7 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly VaultService _vaultService;
     private readonly IClipboardService _clipboard;
+    private readonly IBrowserImportService _importService;
     private readonly AppSettings _settings;
 
     private System.Timers.Timer? _autoLockTimer;
@@ -28,10 +30,15 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<VaultEntry> Entries { get; } = new();
     public ObservableCollection<VaultEntry> FilteredEntries { get; } = new();
 
-    public MainViewModel(VaultService vaultService, IClipboardService clipboard, AppSettings settings)
+    public MainViewModel(
+        VaultService vaultService,
+        IClipboardService clipboard,
+        IBrowserImportService importService,
+        AppSettings settings)
     {
         _vaultService = vaultService;
         _clipboard = clipboard;
+        _importService = importService;
         _settings = settings;
 
         LoadVault();
@@ -100,9 +107,7 @@ public partial class MainViewModel : ObservableObject
     {
         _autoLockTimer?.Stop();
         _clipboard.Clear();
-
         LoginViewModel.ClearSession();
-
         StatusMessage = "Vault locked.";
         RequestLock?.Invoke(this, EventArgs.Empty);
     }
@@ -178,6 +183,65 @@ public partial class MainViewModel : ObservableObject
         await SaveVaultAsync();
         StatusMessage = "Entry deleted.";
         ResetAutoLockTimer();
+    }
+
+    [RelayCommand]
+    private async Task ImportAsync()
+    {
+        var dlg = new OpenFileDialog
+        {
+            Title = "Import browser passwords (CSV)",
+            Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+            CheckFileExists = true
+        };
+
+        if (dlg.ShowDialog() != true)
+            return;
+
+        try
+        {
+            StatusMessage = "Importing...";
+            var imported = await _importService.ImportFromCsvAsync(dlg.FileName);
+
+            if (imported.Count == 0)
+            {
+                MessageBox.Show("No valid password entries found in the file.", "Import",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                StatusMessage = "Import finished — nothing imported.";
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                $"Found {imported.Count} entries.\n\nImport them into the current vault?",
+                "Confirm Import",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (confirm != MessageBoxResult.Yes)
+            {
+                StatusMessage = "Import cancelled.";
+                return;
+            }
+
+            var vault = LoginViewModel.CurrentVault!;
+            foreach (var entry in imported)
+            {
+                vault.AddEntry(entry);
+                Entries.Add(entry);
+            }
+
+            ApplyFilter();
+            await SaveVaultAsync();
+
+            StatusMessage = $"Imported {imported.Count} entries.";
+            ResetAutoLockTimer();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Import failed:\n{ex.Message}", "Import Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusMessage = "Import failed.";
+        }
     }
 
     private async Task SaveVaultAsync()

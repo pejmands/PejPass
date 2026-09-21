@@ -4,6 +4,7 @@ using PejPass.Application.Interfaces;
 using PejPass.Application.Services;
 using PejPass.Domain.Settings;
 using PejPass.Infrastructure.Crypto;
+using PejPass.Infrastructure.Import;
 using PejPass.Infrastructure.Storage;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
@@ -27,6 +28,7 @@ public partial class App : Application
         // Infrastructure
         services.AddSingleton<ICryptoService, CryptoService>();
         services.AddSingleton<IVaultStore, VaultStore>();
+        services.AddSingleton<IBrowserImportService, BrowserImportService>();
 
         // WPF-specific services
         services.AddSingleton<IClipboardService, ClipboardService>();

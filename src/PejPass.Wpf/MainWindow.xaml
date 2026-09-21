@@ -25,6 +25,8 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource AccentBrush}"
                                VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <Button Content="Import" Command="{Binding ImportCommand}" Padding="14,6" Margin="0,0,8,0"
+                            Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}"/>
                     <Button Content="Lock" Command="{Binding LockCommand}" Padding="14,6"/>
                 </StackPanel>
             </Grid>

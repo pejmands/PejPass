@@ -25,31 +25,29 @@ Built with **C# / .NET 10**, **WPF**, and modern cryptography.
 - No spaces
 - Basic common-password rejection
 
-## Architecture
+## Features
 
-Clean Architecture + full MVVM (CommunityToolkit.Mvvm) + Microsoft.Extensions.DependencyInjection
-
-```
-src/
-├── PejPass.Domain/          # Entities, Value Objects, Policies, Settings
-├── PejPass.Application/     # Use cases, Interfaces, Services
-├── PejPass.Infrastructure/  # Crypto, File storage, Clipboard
-└── PejPass.Wpf/             # WPF UI + ViewModels
-```
-
-## Current Features
-
-- [x] Project skeleton & security design
 - [x] Create / Open / Lock vault
 - [x] Entry management (Add / Edit / Delete)
+- [x] Custom fields (user-defined name/value pairs)
 - [x] Secure password generator
 - [x] Auto-lock on inactivity
 - [x] Clipboard auto-clear
 - [x] Custom vault path (default: `%LOCALAPPDATA%\PejPass`)
-- [x] Search entries
+- [x] Search (including custom fields)
+- [x] **Import from browser CSV** (Chrome, Edge, Firefox)
 - [ ] Change master password
-- [ ] Import / Export
+- [ ] Export
 - [ ] Groups / Folders
+
+## Browser Import
+
+1. In Chrome / Edge: Settings → Passwords → Export passwords → save as CSV
+2. In Firefox: about:logins → ••• → Export Logins
+3. In PejPass click **Import** and select the CSV file
+
+Supported columns (auto-detected):
+`name` / `title`, `url`, `username`, `password`, `notes`
 
 ## Requirements
 
