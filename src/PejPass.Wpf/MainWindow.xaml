@@ -69,7 +69,7 @@
                     <TextBlock Text="{Binding FilteredEntries.Count, StringFormat={}{0} entries}"
                                Foreground="{DynamicResource MutedBrush}" FontSize="12"
                                VerticalAlignment="Center"/>
-                    <ComboBox Grid.Column="1" Width="110"
+                    <ComboBox Grid.Column="1" Width="110" Height="30"
                               ItemsSource="{Binding SortOptions}"
                               SelectedIndex="{Binding SelectedSortIndex}"
                               FontSize="12" Padding="6,4"
@@ -136,7 +136,7 @@
 
             <Border Grid.Column="1" Background="{DynamicResource BorderBrush}"/>
 
-            <Grid Grid.Column="2">
+            <Grid Grid.Column="2" Margin="12">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
                             Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
                     <TextBlock Text="Select an entry" FontSize="18" FontWeight="SemiBold"
