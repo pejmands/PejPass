@@ -37,10 +37,16 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBox Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"/>
                     <Button Grid.Column="1" Content="Generate" Margin="8,0,0,0"
-                            Command="{Binding GeneratePasswordCommand}" Padding="12,6"/>
+                            Command="{Binding GeneratePasswordCommand}" Padding="12,6"
+                            ToolTip="Quick generate (20 chars, secure defaults)"/>
+                    <Button Grid.Column="2" Content="Options…" Margin="8,0,0,0"
+                            Command="{Binding OpenAdvancedGeneratorCommand}" Padding="12,6"
+                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"
+                            ToolTip="Advanced password generator"/>
                 </Grid>
 
                 <TextBlock Text="URL" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>

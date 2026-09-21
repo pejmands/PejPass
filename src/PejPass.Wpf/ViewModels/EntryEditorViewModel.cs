@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
-using System.Security.Cryptography;
 using System.Text;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
+using PejPass.Domain.Security;
+using PejPass.Wpf.Views;
 
 namespace PejPass.Wpf.ViewModels;
 
@@ -51,15 +53,29 @@ public partial class EntryEditorViewModel : ObservableObject
     [RelayCommand]
     private void GeneratePassword()
     {
-        const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*-_=+";
-        var bytes = new byte[20];
-        RandomNumberGenerator.Fill(bytes);
+        // Quick generate with secure defaults
+        Password = PasswordGenerator.Generate(new PasswordGeneratorOptions
+        {
+            Length = 20,
+            IncludeLowercase = true,
+            IncludeUppercase = true,
+            IncludeDigits = true,
+            IncludeSymbols = true,
+            ExcludeAmbiguous = true
+        });
+    }
 
-        var result = new char[20];
-        for (int i = 0; i < 20; i++)
-            result[i] = chars[bytes[i] % chars.Length];
+    [RelayCommand]
+    private void OpenAdvancedGenerator()
+    {
+        var owner = System.Windows.Application.Current?.Windows.OfType<Window>()
+            .FirstOrDefault(w => w.IsActive);
 
-        Password = new string(result);
+        var vm = new PasswordGeneratorViewModel();
+        var win = new PasswordGeneratorWindow(vm) { Owner = owner };
+
+        if (win.ShowDialog() == true && !string.IsNullOrEmpty(win.GeneratedPassword))
+            Password = win.GeneratedPassword;
     }
 
     [RelayCommand]
@@ -80,10 +96,6 @@ public partial class EntryEditorViewModel : ObservableObject
         CustomFields.Remove(item);
     }
 
-    /// <summary>
-    /// Detects changes to sensitive fields vs Original.
-    /// Returns human-readable change lines (not the secret values themselves in the summary list names only).
-    /// </summary>
     public List<SensitiveChange> GetSensitiveChanges()
     {
         var changes = new List<SensitiveChange>();
@@ -98,7 +110,6 @@ public partial class EntryEditorViewModel : ObservableObject
         if (!string.Equals(Original.TotpSecret, TotpSecret.Trim(), StringComparison.Ordinal))
             changes.Add(new SensitiveChange("TOTP Secret", Original.TotpSecret, TotpSecret.Trim()));
 
-        // Secret custom fields: changed value, removed, or cleared
         var newFields = CustomFields
             .Where(f => !string.IsNullOrWhiteSpace(f.Name))
             .ToDictionary(f => f.Name.Trim(), f => f, StringComparer.OrdinalIgnoreCase);
@@ -106,13 +117,9 @@ public partial class EntryEditorViewModel : ObservableObject
         foreach (var old in Original.CustomFields.Where(f => f.IsSecret))
         {
             if (!newFields.TryGetValue(old.Name, out var neu))
-            {
                 changes.Add(new SensitiveChange($"Custom field \"{old.Name}\" (removed)", old.Value, string.Empty));
-            }
             else if (!string.Equals(old.Value, neu.Value ?? string.Empty, StringComparison.Ordinal))
-            {
                 changes.Add(new SensitiveChange($"Custom field \"{old.Name}\"", old.Value, neu.Value ?? string.Empty));
-            }
         }
 
         return changes;
