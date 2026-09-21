@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Text;
 using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -43,11 +44,24 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _hasTags;
     [ObservableProperty] private string _displayPassword = string.Empty;
     [ObservableProperty] private string _showPasswordButtonText = "Show";
+    [ObservableProperty] private string _createdAtText = string.Empty;
+    [ObservableProperty] private string _updatedAtText = string.Empty;
+    [ObservableProperty] private bool _isFavoriteSelected;
+    [ObservableProperty] private int _selectedSortIndex;
 
     [ObservableProperty] private string _totpCode = string.Empty;
     [ObservableProperty] private string _totpCodeFormatted = string.Empty;
     [ObservableProperty] private int _totpRemainingSeconds;
     [ObservableProperty] private double _totpProgress;
+
+    public string[] SortOptions { get; } =
+    [
+        "A → Z",
+        "Z → A",
+        "Newest",
+        "Oldest",
+        "Manual"
+    ];
 
     public ObservableCollection<VaultEntry> Entries { get; } = [];
     public ObservableCollection<VaultEntry> FilteredEntries { get; } = [];
@@ -66,6 +80,8 @@ public partial class MainViewModel : ObservableObject
         _settings = settings;
         _themeService = themeService;
 
+        _selectedSortIndex = (int)_settings.SortMode;
+
         LoadVault();
         StartAutoLockTimer();
         StartTotpTimer();
@@ -80,10 +96,31 @@ public partial class MainViewModel : ObservableObject
         HasNotes = !string.IsNullOrWhiteSpace(value?.Notes);
         HasCustomFields = value?.CustomFields is { Count: > 0 };
         HasTags = value?.Tags is { Count: > 0 };
+        IsFavoriteSelected = value?.IsFavorite == true;
+
+        if (value is not null)
+        {
+            CreatedAtText = value.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+            UpdatedAtText = value.UpdatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+        }
+        else
+        {
+            CreatedAtText = string.Empty;
+            UpdatedAtText = string.Empty;
+        }
+
         UpdatePasswordDisplay();
         RebuildDisplayCustomFields();
         RefreshTotp();
         ResetAutoLockTimer();
+    }
+
+    partial void OnSelectedSortIndexChanged(int value)
+    {
+        if (value < 0 || value > 4) return;
+        _settings.SortMode = (EntrySortMode)value;
+        SettingsStore.Save(_settings);
+        ApplyFilter();
     }
 
     private void RebuildDisplayCustomFields()
@@ -162,7 +199,7 @@ public partial class MainViewModel : ObservableObject
 
         VaultName = vault.Name;
         Entries.Clear();
-        foreach (var e in vault.Entries.OrderBy(x => x.Title))
+        foreach (var e in vault.Entries)
             Entries.Add(e);
 
         ApplyFilter(preserveSelectionId: null);
@@ -191,11 +228,45 @@ public partial class MainViewModel : ObservableObject
                     f.Value.Contains(q, StringComparison.OrdinalIgnoreCase)));
         }
 
+        // Favorites always first, then chosen sort
+        source = SortEntries(source);
+
         foreach (var e in source)
             FilteredEntries.Add(e);
 
         if (keepId is { } id)
             SelectedEntry = FilteredEntries.FirstOrDefault(e => e.Id == id);
+    }
+
+    private IEnumerable<VaultEntry> SortEntries(IEnumerable<VaultEntry> source)
+    {
+        var mode = _settings.SortMode;
+
+        IOrderedEnumerable<VaultEntry> ordered = mode switch
+        {
+            EntrySortMode.TitleDesc =>
+                source.OrderByDescending(e => e.IsFavorite)
+                      .ThenByDescending(e => e.Title, StringComparer.OrdinalIgnoreCase),
+
+            EntrySortMode.NewestFirst =>
+                source.OrderByDescending(e => e.IsFavorite)
+                      .ThenByDescending(e => e.CreatedAt),
+
+            EntrySortMode.OldestFirst =>
+                source.OrderByDescending(e => e.IsFavorite)
+                      .ThenBy(e => e.CreatedAt),
+
+            EntrySortMode.Manual =>
+                source.OrderByDescending(e => e.IsFavorite)
+                      .ThenBy(e => e.SortOrder)
+                      .ThenBy(e => e.Title, StringComparer.OrdinalIgnoreCase),
+
+            _ => // TitleAsc
+                source.OrderByDescending(e => e.IsFavorite)
+                      .ThenBy(e => e.Title, StringComparer.OrdinalIgnoreCase)
+        };
+
+        return ordered;
     }
 
     private void StartAutoLockTimer()
@@ -229,13 +300,28 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task ToggleFavoriteAsync(VaultEntry? entry)
+    {
+        entry ??= SelectedEntry;
+        if (entry is null) return;
+
+        entry.IsFavorite = !entry.IsFavorite;
+        entry.Touch();
+        IsFavoriteSelected = entry.IsFavorite;
+
+        ApplyFilter(preserveSelectionId: entry.Id);
+        await SaveVaultAsync();
+        StatusMessage = entry.IsFavorite ? "Added to favorites." : "Removed from favorites.";
+        ResetAutoLockTimer();
+    }
+
+    [RelayCommand]
     private void OpenSettings()
     {
         var vm = new SettingsViewModel(_settings, _themeService);
         var win = new SettingsWindow(vm) { Owner = GetOwnerWindow() };
         win.ShowDialog();
 
-        // Restart auto-lock with possibly new timeout
         _autoLockTimer?.Stop();
         StartAutoLockTimer();
         ResetAutoLockTimer();
@@ -373,33 +459,57 @@ public partial class MainViewModel : ObservableObject
         entry ??= SelectedEntry;
         if (entry is null) return;
 
-        var editor = new EntryEditorWindow(new EntryEditorViewModel(entry))
+        var editorVm = new EntryEditorViewModel(entry);
+        var editor = new EntryEditorWindow(editorVm) { Owner = GetOwnerWindow() };
+
+        if (editor.ShowDialog() != true || editor.Result is not { } updated)
+            return;
+
+        // Sensitive-field guard
+        var sensitive = editorVm.GetSensitiveChanges();
+        if (sensitive.Count > 0)
         {
-            Owner = GetOwnerWindow()
-        };
+            var summary = string.Join("\n", sensitive.Select(c => $"• {c.FieldName}"));
+            var proceed = DialogService.Confirm(
+                $"These sensitive fields will change:\n\n{summary}\n\nContinue?",
+                "Confirm sensitive changes",
+                yesText: "Save",
+                noText: "Cancel");
 
-        if (editor.ShowDialog() == true && editor.Result is { } updated)
-        {
-            entry.Title = updated.Title;
-            entry.Username = updated.Username;
-            entry.Password = updated.Password;
-            entry.Url = updated.Url;
-            entry.TotpSecret = updated.TotpSecret;
-            entry.Notes = updated.Notes;
-            entry.Tags = updated.Tags;
-            entry.CustomFields = updated.CustomFields;
-            entry.Touch();
+            if (!proceed)
+                return;
 
-            ApplyFilter(preserveSelectionId: entry.Id);
-            RebuildDisplayCustomFields();
-            UpdatePasswordDisplay();
-            RefreshTotp();
-            OnSelectedEntryChanged(SelectedEntry);
+            var archive = DialogService.Confirm(
+                "Keep previous values in Notes as a history block?\n\n" +
+                "(Useful if this was accidental — you can delete the history later.)",
+                "Archive previous values?",
+                yesText: "Yes, keep history",
+                noText: "No");
 
-            await SaveVaultAsync();
-            StatusMessage = "Entry updated.";
-            ResetAutoLockTimer();
+            if (archive)
+                updated.Notes = (updated.Notes ?? string.Empty) + editorVm.BuildHistoryAppendix(sensitive);
         }
+
+        entry.Title = updated.Title;
+        entry.Username = updated.Username;
+        entry.Password = updated.Password;
+        entry.Url = updated.Url;
+        entry.TotpSecret = updated.TotpSecret;
+        entry.Notes = updated.Notes;
+        entry.Tags = updated.Tags;
+        entry.CustomFields = updated.CustomFields;
+        entry.IsFavorite = updated.IsFavorite;
+        entry.Touch();
+
+        ApplyFilter(preserveSelectionId: entry.Id);
+        RebuildDisplayCustomFields();
+        UpdatePasswordDisplay();
+        RefreshTotp();
+        OnSelectedEntryChanged(SelectedEntry);
+
+        await SaveVaultAsync();
+        StatusMessage = "Entry updated.";
+        ResetAutoLockTimer();
     }
 
     [RelayCommand]
