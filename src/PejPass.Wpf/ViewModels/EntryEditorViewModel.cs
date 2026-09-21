@@ -1,8 +1,8 @@
+using System.Collections.ObjectModel;
+using System.Security.Cryptography;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
-using System.Collections.ObjectModel;
-using System.Security.Cryptography;
 
 namespace PejPass.Wpf.ViewModels;
 
@@ -12,6 +12,7 @@ public partial class EntryEditorViewModel : ObservableObject
     [ObservableProperty] private string _username = string.Empty;
     [ObservableProperty] private string _password = string.Empty;
     [ObservableProperty] private string _url = string.Empty;
+    [ObservableProperty] private string _totpSecret = string.Empty;
     [ObservableProperty] private string _notes = string.Empty;
     [ObservableProperty] private string _tagsText = string.Empty;
 
@@ -28,6 +29,7 @@ public partial class EntryEditorViewModel : ObservableObject
             Username = existing.Username;
             Password = existing.Password;
             Url = existing.Url;
+            TotpSecret = existing.TotpSecret;
             Notes = existing.Notes;
             TagsText = string.Join(", ", existing.Tags);
 
@@ -97,6 +99,7 @@ public partial class EntryEditorViewModel : ObservableObject
                 Username = Username.Trim(),
                 Password = Password,
                 Url = Url.Trim(),
+                TotpSecret = TotpSecret.Trim(),
                 Notes = Notes,
                 Tags = tags,
                 CustomFields = customFields,
@@ -111,6 +114,7 @@ public partial class EntryEditorViewModel : ObservableObject
             Username = Username.Trim(),
             Password = Password,
             Url = Url.Trim(),
+            TotpSecret = TotpSecret.Trim(),
             Notes = Notes,
             Tags = tags,
             CustomFields = customFields
@@ -118,9 +122,6 @@ public partial class EntryEditorViewModel : ObservableObject
     }
 }
 
-/// <summary>
-/// UI-friendly wrapper for a custom field (supports two-way binding).
-/// </summary>
 public partial class CustomFieldItem : ObservableObject
 {
     [ObservableProperty] private string _name = string.Empty;

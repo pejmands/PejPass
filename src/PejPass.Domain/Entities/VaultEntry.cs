@@ -18,6 +18,11 @@ public sealed class VaultEntry
 
     public string Url { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Base32-encoded TOTP secret (empty if not configured).
+    /// </summary>
+    public string TotpSecret { get; set; } = string.Empty;
+
     public string Notes { get; set; } = string.Empty;
 
     public List<string> Tags { get; set; } = [];
