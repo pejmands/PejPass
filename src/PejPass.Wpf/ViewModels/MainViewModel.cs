@@ -1,8 +1,3 @@
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.IO;
-using System.Windows;
-using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -14,6 +9,10 @@ using PejPass.Infrastructure.Totp;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Windows;
+using System.Windows.Threading;
 
 namespace PejPass.Wpf.ViewModels;
 
@@ -228,7 +227,7 @@ public partial class MainViewModel : ObservableObject
                 e.Tags.Any(t => t.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 e.CustomFields.Any(f =>
                     f.Name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-                    f.Value.Contains(q, StringComparison.OrdinalIgnoreCase)));
+                    f.Value.Contains(q, StringComparison.OrdinalIgnoreCase))));
         }
 
         source = SortEntries(source);
