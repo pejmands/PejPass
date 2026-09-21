@@ -5,7 +5,7 @@
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         MinHeight="520" MinWidth="480"
-        Background="{StaticResource BgBrush}">
+        Background="{DynamicResource BgBrush}">
 
     <Grid Margin="24">
         <Grid.RowDefinitions>
@@ -13,17 +13,26 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <ScrollViewer
-            Padding="0,0,16,0"
-            VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Padding="0,0,16,0" VerticalScrollBarVisibility="Auto">
             <StackPanel>
-                <TextBlock Text="Title" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Title" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                    <CheckBox Grid.Column="1" Content="Favorite" IsChecked="{Binding IsFavorite}"
+                              VerticalAlignment="Bottom" Margin="12,0,0,4"
+                              ToolTip="Pin this entry to the top of the list"/>
+                </Grid>
 
-                <TextBlock Text="Username" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
+                <TextBlock Text="Username" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
 
-                <TextBlock Text="Password" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
+                <TextBlock Text="Password" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -34,30 +43,26 @@
                             Command="{Binding GeneratePasswordCommand}" Padding="12,6"/>
                 </Grid>
 
-                <TextBlock Text="URL" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
+                <TextBlock Text="URL" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
 
-                <TextBlock Text="TOTP Secret (Base32)" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
+                <TextBlock Text="TOTP Secret (Base32)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox Text="{Binding TotpSecret, UpdateSourceTrigger=PropertyChanged}"
                          Margin="0,0,0,4"
                          ToolTip="Paste the authenticator secret key (Base32). Leave empty to disable TOTP."/>
                 <TextBlock Text="Optional — used to generate 2FA codes in the main window"
-                           FontSize="11" Foreground="#6C7086" Margin="0,0,0,12"/>
+                           FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,12"/>
 
-                <TextBlock Text="Tags (comma separated)" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
+                <TextBlock Text="Tags (comma separated)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
 
-                <!-- Custom Fields -->
                 <Grid Margin="0,8,0,4">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Custom Fields" Foreground="{StaticResource MutedBrush}"
-                               VerticalAlignment="Center"/>
-                    <Button Grid.Column="1" Content="+ Add Field"
-                            Command="{Binding AddCustomFieldCommand}"
-                            Padding="10,4" FontSize="12"/>
+                    <TextBlock Text="Custom Fields" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Content="+ Add Field" Command="{Binding AddCustomFieldCommand}" Padding="10,4" FontSize="12"/>
                 </Grid>
 
                 <ItemsControl ItemsSource="{Binding CustomFields}" Margin="0,0,0,12">
@@ -70,31 +75,21 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-
-                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                                         ToolTip="Field name" Margin="0,0,6,0"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-                                         ToolTip="Field value" Margin="0,0,6,0"/>
-                                <CheckBox Grid.Column="2"
-                                          IsChecked="{Binding IsSecret}"
-                                          Content="Secret"
-                                          Foreground="{StaticResource MutedBrush}"
-                                          VerticalAlignment="Center"
-                                          Margin="0,0,6,0"
+                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" ToolTip="Field name" Margin="0,0,6,0"/>
+                                <TextBox Grid.Column="1" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" ToolTip="Field value" Margin="0,0,6,0"/>
+                                <CheckBox Grid.Column="2" IsChecked="{Binding IsSecret}" Content="Secret"
+                                          Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"
                                           ToolTip="Hide value in the main window like a password"/>
                                 <Button Grid.Column="3" Content="✕"
                                         Command="{Binding DataContext.RemoveCustomFieldCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                        CommandParameter="{Binding}"
-                                        Padding="8,4"
-                                        Background="{StaticResource DangerBrush}"
-                                        ToolTip="Remove field"/>
+                                        CommandParameter="{Binding}" Padding="8,4"
+                                        Background="{DynamicResource DangerBrush}" ToolTip="Remove field"/>
                             </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <TextBlock Text="Notes" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
+                <TextBlock Text="Notes" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
                          Height="80" TextWrapping="Wrap" AcceptsReturn="True"
                          VerticalScrollBarVisibility="Auto"/>
@@ -103,7 +98,7 @@
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="Cancel" Click="Cancel_Click" Margin="0,0,8,0"
-                    Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}"/>
+                    Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextBrush}"/>
             <Button Content="Save" Click="Save_Click" IsDefault="True"/>
         </StackPanel>
     </Grid>
