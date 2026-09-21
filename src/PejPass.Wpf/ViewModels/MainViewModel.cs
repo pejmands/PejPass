@@ -202,8 +202,11 @@ public partial class MainViewModel : ObservableObject
         foreach (var e in vault.Entries)
             Entries.Add(e);
 
+        var purged = vault.PurgeExpiredTrash();
         ApplyFilter(preserveSelectionId: null);
-        StatusMessage = $"{Entries.Count} entries";
+        StatusMessage = purged > 0
+            ? $"{Entries.Count} entries · purged {purged} expired trash item(s)"
+            : $"{Entries.Count} entries";
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
@@ -222,7 +225,7 @@ public partial class MainViewModel : ObservableObject
                 e.Title.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 e.Username.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 e.Url.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-                e.Tags.Any(t => t.Contains(q, StringComparison.OrdinalIgnoreCase)) ||
+                e.Tags.Any(t => t.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 e.CustomFields.Any(f =>
                     f.Name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                     f.Value.Contains(q, StringComparison.OrdinalIgnoreCase)));
@@ -474,16 +477,6 @@ public partial class MainViewModel : ObservableObject
 
             if (!proceed)
                 return;
-
-            var archive = DialogService.Confirm(
-                "Keep previous values in Notes as a history block?\n\n" +
-                "(Useful if this was accidental — you can delete the history later.)",
-                "Archive previous values?",
-                yesText: "Yes, keep history",
-                noText: "No");
-
-            if (archive)
-                updated.Notes = (updated.Notes ?? string.Empty) + editorVm.BuildHistoryAppendix(sensitive);
         }
 
         entry.Title = updated.Title;
@@ -494,6 +487,7 @@ public partial class MainViewModel : ObservableObject
         entry.Notes = updated.Notes;
         entry.Tags = updated.Tags;
         entry.CustomFields = updated.CustomFields;
+        entry.PasswordHistory = updated.PasswordHistory;
         entry.IsFavorite = updated.IsFavorite;
         entry.Touch();
 
@@ -514,16 +508,20 @@ public partial class MainViewModel : ObservableObject
         entry ??= SelectedEntry;
         if (entry is null) return;
 
-        if (!DialogService.ConfirmDelete(entry.Title))
+        if (!DialogService.Confirm(
+                $"Move \"{entry.Title}\" to Trash?\n\nYou can restore it within 30 days.",
+                "Move to Trash",
+                yesText: "Move to Trash",
+                noText: "Cancel"))
             return;
 
-        LoginViewModel.CurrentVault!.RemoveEntry(entry.Id);
+        LoginViewModel.CurrentVault!.SoftDelete(entry.Id);
         Entries.Remove(entry);
         SelectedEntry = null;
 
         ApplyFilter(preserveSelectionId: null);
         await SaveVaultAsync();
-        StatusMessage = "Entry deleted.";
+        StatusMessage = "Moved to Trash.";
         ResetAutoLockTimer();
     }
 
@@ -579,6 +577,43 @@ public partial class MainViewModel : ObservableObject
             DialogService.Error($"Import failed:\n{ex.Message}", "Import Error");
             StatusMessage = "Import failed.";
         }
+    }
+
+    [RelayCommand]
+    private void OpenHealth()
+    {
+        var vm = new VaultHealthViewModel(Entries);
+        var win = new VaultHealthWindow(vm) { Owner = GetOwnerWindow() };
+        if (win.ShowDialog() == true && win.SelectedEntryId is { } id)
+        {
+            SelectedEntry = FilteredEntries.FirstOrDefault(e => e.Id == id)
+                            ?? Entries.FirstOrDefault(e => e.Id == id);
+            if (SelectedEntry is null)
+            {
+                SearchText = string.Empty;
+                ApplyFilter(preserveSelectionId: id);
+            }
+        }
+        ResetAutoLockTimer();
+    }
+
+    [RelayCommand]
+    private async Task OpenTrashAsync()
+    {
+        var vault = LoginViewModel.CurrentVault;
+        if (vault is null) return;
+
+        var vm = new TrashViewModel(vault);
+        var win = new TrashWindow(vm) { Owner = GetOwnerWindow() };
+        win.ShowDialog();
+
+        Entries.Clear();
+        foreach (var e in vault.Entries)
+            Entries.Add(e);
+        ApplyFilter(preserveSelectionId: SelectedEntry?.Id);
+        await SaveVaultAsync();
+        StatusMessage = $"{Entries.Count} entries · {vault.Trash.Count} in trash";
+        ResetAutoLockTimer();
     }
 
     [RelayCommand]
