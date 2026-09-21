@@ -1,7 +1,8 @@
+using System.Collections.ObjectModel;
+using System.Security.Cryptography;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
-using System.Security.Cryptography;
 
 namespace PejPass.Wpf.ViewModels;
 
@@ -16,6 +17,8 @@ public partial class EntryEditorViewModel : ObservableObject
 
     public VaultEntry? Original { get; }
 
+    public ObservableCollection<CustomFieldItem> CustomFields { get; } = new();
+
     public EntryEditorViewModel(VaultEntry? existing)
     {
         Original = existing;
@@ -27,6 +30,15 @@ public partial class EntryEditorViewModel : ObservableObject
             Url = existing.Url;
             Notes = existing.Notes;
             TagsText = string.Join(", ", existing.Tags);
+
+            foreach (var field in existing.CustomFields)
+            {
+                CustomFields.Add(new CustomFieldItem
+                {
+                    Name = field.Name,
+                    Value = field.Value
+                });
+            }
         }
     }
 
@@ -44,15 +56,40 @@ public partial class EntryEditorViewModel : ObservableObject
         Password = new string(result);
     }
 
+    [RelayCommand]
+    private void AddCustomField()
+    {
+        CustomFields.Add(new CustomFieldItem
+        {
+            Name = string.Empty,
+            Value = string.Empty
+        });
+    }
+
+    [RelayCommand]
+    private void RemoveCustomField(CustomFieldItem? item)
+    {
+        if (item is null) return;
+        CustomFields.Remove(item);
+    }
+
     public VaultEntry ToEntry()
     {
         var tags = TagsText
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToList();
 
+        var customFields = CustomFields
+            .Where(f => !string.IsNullOrWhiteSpace(f.Name))
+            .Select(f => new CustomField
+            {
+                Name = f.Name.Trim(),
+                Value = f.Value ?? string.Empty
+            })
+            .ToList();
+
         if (Original is not null)
         {
-            // Editing – return a copy with same Id
             return new VaultEntry
             {
                 Id = Original.Id,
@@ -62,6 +99,7 @@ public partial class EntryEditorViewModel : ObservableObject
                 Url = Url.Trim(),
                 Notes = Notes,
                 Tags = tags,
+                CustomFields = customFields,
                 CreatedAt = Original.CreatedAt,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
@@ -74,7 +112,17 @@ public partial class EntryEditorViewModel : ObservableObject
             Password = Password,
             Url = Url.Trim(),
             Notes = Notes,
-            Tags = tags
+            Tags = tags,
+            CustomFields = customFields
         };
     }
+}
+
+/// <summary>
+/// UI-friendly wrapper for a custom field (supports two-way binding).
+/// </summary>
+public partial class CustomFieldItem : ObservableObject
+{
+    [ObservableProperty] private string _name = string.Empty;
+    [ObservableProperty] private string _value = string.Empty;
 }

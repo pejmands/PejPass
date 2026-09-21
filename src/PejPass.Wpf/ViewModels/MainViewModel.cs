@@ -66,7 +66,10 @@ public partial class MainViewModel : ObservableObject
                 e.Title.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 e.Username.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 e.Url.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-                e.Tags.Any(t => t.Contains(q, StringComparison.OrdinalIgnoreCase)));
+                e.Tags.Any(t => t.Contains(q, StringComparison.OrdinalIgnoreCase)) ||
+                e.CustomFields.Any(f =>
+                    f.Name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                    f.Value.Contains(q, StringComparison.OrdinalIgnoreCase)));
         }
 
         foreach (var e in source)
@@ -98,7 +101,6 @@ public partial class MainViewModel : ObservableObject
         _autoLockTimer?.Stop();
         _clipboard.Clear();
 
-        // Clear sensitive session data via the dedicated method
         LoginViewModel.ClearSession();
 
         StatusMessage = "Vault locked.";
@@ -147,6 +149,7 @@ public partial class MainViewModel : ObservableObject
             entry.Url = updated.Url;
             entry.Notes = updated.Notes;
             entry.Tags = updated.Tags;
+            entry.CustomFields = updated.CustomFields;
             entry.Touch();
 
             ApplyFilter();

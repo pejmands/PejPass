@@ -22,6 +22,11 @@ public sealed class VaultEntry
 
     public List<string> Tags { get; set; } = new();
 
+    /// <summary>
+    /// User-defined custom fields (name/value pairs).
+    /// </summary>
+    public List<CustomField> CustomFields { get; set; } = new();
+
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
