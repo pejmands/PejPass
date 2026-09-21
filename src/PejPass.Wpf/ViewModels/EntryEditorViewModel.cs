@@ -38,7 +38,8 @@ public partial class EntryEditorViewModel : ObservableObject
                 CustomFields.Add(new CustomFieldItem
                 {
                     Name = field.Name,
-                    Value = field.Value
+                    Value = field.Value,
+                    IsSecret = field.IsSecret
                 });
             }
         }
@@ -64,7 +65,8 @@ public partial class EntryEditorViewModel : ObservableObject
         CustomFields.Add(new CustomFieldItem
         {
             Name = string.Empty,
-            Value = string.Empty
+            Value = string.Empty,
+            IsSecret = false
         });
     }
 
@@ -86,7 +88,8 @@ public partial class EntryEditorViewModel : ObservableObject
             .Select(f => new CustomField
             {
                 Name = f.Name.Trim(),
-                Value = f.Value ?? string.Empty
+                Value = f.Value ?? string.Empty,
+                IsSecret = f.IsSecret
             })
             .ToList();
 
@@ -126,4 +129,5 @@ public partial class CustomFieldItem : ObservableObject
 {
     [ObservableProperty] private string _name = string.Empty;
     [ObservableProperty] private string _value = string.Empty;
+    [ObservableProperty] private bool _isSecret;
 }
