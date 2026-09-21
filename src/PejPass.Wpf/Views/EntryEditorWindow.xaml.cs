@@ -1,6 +1,7 @@
-using PejPass.Domain.Entities;
-using PejPass.Wpf.ViewModels;
 using System.Windows;
+using PejPass.Domain.Entities;
+using PejPass.Wpf.Dialogs;
+using PejPass.Wpf.ViewModels;
 
 namespace PejPass.Wpf.Views;
 
@@ -21,7 +22,7 @@ public partial class EntryEditorWindow : Window
         {
             if (string.IsNullOrWhiteSpace(vm.Title))
             {
-                MessageBox.Show("Title is required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                DialogService.Warning("Title is required.", "Validation");
                 return;
             }
 
