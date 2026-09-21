@@ -19,6 +19,11 @@ public partial class LoginWindow : Window
             main.Show();
             Close();
         };
+
+        Loaded += (_, _) =>
+        {
+            MasterPasswordBox.Focus();
+        };
     }
 
     private void PasswordBox_OnPasswordChanged(object sender, RoutedEventArgs e)

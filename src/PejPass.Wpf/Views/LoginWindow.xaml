@@ -34,7 +34,8 @@
             </Grid>
 
             <TextBlock Text="Master password" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-            <TextBox Text="{Binding MasterPassword, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+            <TextBox x:Name="MasterPasswordBox" 
+                     Text="{Binding MasterPassword, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
 
             <TextBlock Text="{Binding PasswordError}" Foreground="{DynamicResource DangerBrush}"
                        TextWrapping="Wrap" Margin="0,0,0,8" MinHeight="20"/>
