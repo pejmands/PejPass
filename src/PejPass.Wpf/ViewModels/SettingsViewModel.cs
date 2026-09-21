@@ -11,6 +11,13 @@ public partial class SettingsViewModel : ObservableObject
     private readonly AppSettings _settings;
     private readonly ThemeService _themeService;
 
+    // Snapshot of saved theme when dialog opened — used to revert on Cancel
+    private readonly ThemeMode _savedTheme;
+    private readonly int _savedAutoLock;
+    private readonly int _savedClipboard;
+
+    private bool _suppressThemePreview;
+
     [ObservableProperty] private int _autoLockMinutes;
     [ObservableProperty] private int _clipboardClearSeconds;
     [ObservableProperty] private int _selectedThemeIndex; // 0=System, 1=Dark, 2=Light
@@ -24,16 +31,24 @@ public partial class SettingsViewModel : ObservableObject
         _settings = settings;
         _themeService = themeService;
 
+        _savedTheme = settings.Theme;
+        _savedAutoLock = settings.AutoLockMinutes;
+        _savedClipboard = settings.ClipboardClearSeconds;
+
+        _suppressThemePreview = true;
         AutoLockMinutes = settings.AutoLockMinutes;
         ClipboardClearSeconds = settings.ClipboardClearSeconds;
         SelectedThemeIndex = (int)settings.Theme;
+        _suppressThemePreview = false;
     }
 
     partial void OnSelectedThemeIndexChanged(int value)
     {
+        if (_suppressThemePreview) return;
         if (value < 0 || value > 2) return;
-        _settings.Theme = (ThemeMode)value;
-        _themeService.Apply();
+
+        // Live preview only — do NOT write to settings yet
+        _themeService.Preview((ThemeMode)value);
     }
 
     [RelayCommand]
@@ -48,7 +63,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.Theme = (ThemeMode)SelectedThemeIndex;
 
         SettingsStore.Save(_settings);
-        _themeService.Apply();
+        _themeService.Apply(); // commits + starts/stops system watch
 
         DialogService.Success("Settings saved.", "Settings");
         RequestClose?.Invoke(this, EventArgs.Empty);
@@ -57,8 +72,12 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void Cancel()
     {
-        // Revert theme preview if cancelled
+        // Restore previously saved theme (ignore any preview)
+        _settings.Theme = _savedTheme;
+        _settings.AutoLockMinutes = _savedAutoLock;
+        _settings.ClipboardClearSeconds = _savedClipboard;
         _themeService.Apply();
+
         RequestClose?.Invoke(this, EventArgs.Empty);
     }
 }

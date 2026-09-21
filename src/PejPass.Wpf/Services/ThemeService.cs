@@ -6,21 +6,34 @@ using PejPass.Domain.Settings;
 namespace PejPass.Wpf.Services;
 
 /// <summary>
-/// Applies theme by writing brush keys directly into Application.Resources.
-/// This is reliable with DynamicResource and avoids MergedDictionary lookup-order bugs.
+/// Applies theme brushes to Application.Resources and watches OS theme when mode is System.
 /// </summary>
-public sealed class ThemeService
+public sealed class ThemeService : IDisposable
 {
     private readonly AppSettings _settings;
+    private bool _watching;
 
     public ThemeService(AppSettings settings)
     {
         _settings = settings;
     }
 
+    /// <summary>Apply the saved theme from settings.</summary>
     public void Apply()
     {
-        var useDark = _settings.Theme switch
+        ApplyMode(_settings.Theme);
+        UpdateSystemWatch();
+    }
+
+    /// <summary>Preview a theme without writing it to settings (for Settings dialog live preview).</summary>
+    public void Preview(ThemeMode mode)
+    {
+        ApplyMode(mode);
+    }
+
+    private void ApplyMode(ThemeMode mode)
+    {
+        var useDark = mode switch
         {
             ThemeMode.Dark => true,
             ThemeMode.Light => false,
@@ -30,12 +43,48 @@ public sealed class ThemeService
         ApplyColors(useDark);
     }
 
+    private void UpdateSystemWatch()
+    {
+        if (_settings.Theme == ThemeMode.System)
+            StartWatch();
+        else
+            StopWatch();
+    }
+
+    private void StartWatch()
+    {
+        if (_watching) return;
+        SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
+        _watching = true;
+    }
+
+    private void StopWatch()
+    {
+        if (!_watching) return;
+        SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
+        _watching = false;
+    }
+
+    private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+    {
+        if (e.Category is not (UserPreferenceCategory.General or UserPreferenceCategory.Color))
+            return;
+
+        if (_settings.Theme != ThemeMode.System)
+            return;
+
+        // Marshal to UI thread
+        var app = System.Windows.Application.Current;
+        if (app is null) return;
+
+        app.Dispatcher.Invoke(() => ApplyMode(ThemeMode.System));
+    }
+
     private static void ApplyColors(bool dark)
     {
         var app = System.Windows.Application.Current;
         if (app is null) return;
 
-        // Pack colors as (R,G,B)
         var colors = dark
             ? new Dictionary<string, Color>
             {
@@ -53,12 +102,13 @@ public sealed class ThemeService
                 ["OverlayBrush"] = Color.FromArgb(0xCC, 0x1E, 0x1E, 0x2E),
                 ["ScrollThumbBrush"] = Color.FromRgb(0x58, 0x5B, 0x70),
                 ["ScrollTrackBrush"] = Color.FromRgb(0x31, 0x32, 0x44),
+                ["ComboItemHoverBrush"] = Color.FromRgb(0x45, 0x47, 0x5A),
             }
             : new Dictionary<string, Color>
             {
                 ["BgBrush"] = Color.FromRgb(0xEF, 0xF1, 0xF5),
                 ["SurfaceBrush"] = Color.FromRgb(0xFF, 0xFF, 0xFF),
-                ["SurfaceAltBrush"] = Color.FromRgb(0xCC, 0xD0, 0xDA),
+                ["SurfaceAltBrush"] = Color.FromRgb(0xE6, 0xE9, 0xEF),
                 ["TextBrush"] = Color.FromRgb(0x4C, 0x4F, 0x69),
                 ["MutedBrush"] = Color.FromRgb(0x6C, 0x6F, 0x85),
                 ["AccentBrush"] = Color.FromRgb(0x1E, 0x66, 0xF5),
@@ -70,11 +120,11 @@ public sealed class ThemeService
                 ["OverlayBrush"] = Color.FromArgb(0xAA, 0xEF, 0xF1, 0xF5),
                 ["ScrollThumbBrush"] = Color.FromRgb(0x9C, 0xA0, 0xB0),
                 ["ScrollTrackBrush"] = Color.FromRgb(0xE6, 0xE9, 0xEF),
+                ["ComboItemHoverBrush"] = Color.FromRgb(0xDC, 0xE0, 0xE8),
             };
 
         foreach (var (key, color) in colors)
         {
-            // Freeze brushes for performance; create new instance each time so DynamicResource updates
             var brush = new SolidColorBrush(color);
             brush.Freeze();
             app.Resources[key] = brush;
@@ -97,5 +147,10 @@ public sealed class ThemeService
         }
 
         return true;
+    }
+
+    public void Dispose()
+    {
+        StopWatch();
     }
 }
