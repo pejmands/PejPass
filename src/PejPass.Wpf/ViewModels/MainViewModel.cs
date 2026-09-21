@@ -29,6 +29,7 @@ public partial class MainViewModel : ObservableObject
     private bool _isPasswordVisible;
 
     public event EventHandler? RequestLock;
+    public event EventHandler? RequestScrollToEntry;
 
     [ObservableProperty] private string _vaultName = string.Empty;
     [ObservableProperty] private string _statusMessage = string.Empty;
@@ -203,9 +204,18 @@ public partial class MainViewModel : ObservableObject
 
         var purged = vault.PurgeExpiredTrash();
         ApplyFilter(preserveSelectionId: null);
-        StatusMessage = purged > 0
-            ? $"{Entries.Count} entries · purged {purged} expired trash item(s)"
+        UpdateEntryStatus(purged > 0 ? $"purged {purged} expired trash item(s)" : null);
+    }
+
+    /// <summary>Status like "363 entries · 1 in trash".</summary>
+    private void UpdateEntryStatus(string? extra = null)
+    {
+        var vault = LoginViewModel.CurrentVault;
+        var trash = vault?.Trash.Count ?? 0;
+        var baseMsg = trash > 0
+            ? $"{Entries.Count} entries · {trash} in trash"
             : $"{Entries.Count} entries";
+        StatusMessage = string.IsNullOrEmpty(extra) ? baseMsg : $"{baseMsg} · {extra}";
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
@@ -224,10 +234,10 @@ public partial class MainViewModel : ObservableObject
                 e.Title.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 e.Username.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 e.Url.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-                e.Tags.Any(t => t.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                e.Tags.Any(t => t.Contains(q, StringComparison.OrdinalIgnoreCase)) ||
                 e.CustomFields.Any(f =>
                     f.Name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-                    f.Value.Contains(q, StringComparison.OrdinalIgnoreCase))));
+                    f.Value.Contains(q, StringComparison.OrdinalIgnoreCase)));
         }
 
         source = SortEntries(source);
@@ -520,7 +530,7 @@ public partial class MainViewModel : ObservableObject
 
         ApplyFilter(preserveSelectionId: null);
         await SaveVaultAsync();
-        StatusMessage = "Moved to Trash.";
+        UpdateEntryStatus("moved to trash");
         ResetAutoLockTimer();
     }
 
@@ -585,13 +595,18 @@ public partial class MainViewModel : ObservableObject
         var win = new VaultHealthWindow(vm) { Owner = GetOwnerWindow() };
         if (win.ShowDialog() == true && win.SelectedEntryId is { } id)
         {
-            SelectedEntry = FilteredEntries.FirstOrDefault(e => e.Id == id)
-                            ?? Entries.FirstOrDefault(e => e.Id == id);
-            if (SelectedEntry is null)
+            if (FilteredEntries.All(e => e.Id != id))
             {
                 SearchText = string.Empty;
                 ApplyFilter(preserveSelectionId: id);
             }
+            else
+            {
+                SelectedEntry = FilteredEntries.FirstOrDefault(e => e.Id == id);
+            }
+
+            if (SelectedEntry is not null)
+                RequestScrollToEntry?.Invoke(this, EventArgs.Empty);
         }
         ResetAutoLockTimer();
     }
@@ -611,7 +626,7 @@ public partial class MainViewModel : ObservableObject
             Entries.Add(e);
         ApplyFilter(preserveSelectionId: SelectedEntry?.Id);
         await SaveVaultAsync();
-        StatusMessage = $"{Entries.Count} entries · {vault.Trash.Count} in trash";
+        UpdateEntryStatus();
         ResetAutoLockTimer();
     }
 
