@@ -30,12 +30,18 @@
                                VerticalAlignment="Center" Margin="0,0,16,0" FontSize="13"/>
                     <Button Content="Settings" Command="{Binding OpenSettingsCommand}"
                             Padding="14,7" Margin="0,0,8,0"
-                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
+                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"
+                            ToolTip="Settings (Ctrl+S)"/>
+                    <Button Content="Backup" Command="{Binding ExportBackupCommand}"
+                            Padding="14,7" Margin="0,0,8,0"
+                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"
+                            ToolTip="Export encrypted vault backup (Ctrl+B)"/>
                     <Button Content="Import" Command="{Binding ImportCommand}"
                             Padding="14,7" Margin="0,0,8,0"
                             Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
                     <Button Content="Lock" Command="{Binding LockCommand}"
-                            Padding="14,7" Background="{DynamicResource DangerBrush}"/>
+                            Padding="14,7" Background="{DynamicResource DangerBrush}"
+                            ToolTip="Lock vault (Ctrl+L)"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -54,10 +60,12 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 VerticalContentAlignment="Center" Padding="10,8" Margin="0,0,10,0"/>
+                        <TextBox x:Name="SearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalContentAlignment="Center" Padding="10,8" Margin="0,0,10,0"
+                                 ToolTip="Search (Ctrl+F / Ctrl+K)"/>
                         <Button Grid.Column="1" Content="+" Command="{Binding AddEntryCommand}"
-                                Width="44" Height="40" FontSize="18" FontWeight="Bold" ToolTip="Add new entry"/>
+                                Width="44" Height="40" FontSize="18" FontWeight="Bold"
+                                ToolTip="Add entry (Ctrl+N)"/>
                     </Grid>
                 </Border>
 
@@ -69,7 +77,7 @@
                     <TextBlock Text="{Binding FilteredEntries.Count, StringFormat={}{0} entries}"
                                Foreground="{DynamicResource MutedBrush}" FontSize="12"
                                VerticalAlignment="Center"/>
-                    <ComboBox Grid.Column="1" Width="110" Height="30"
+                    <ComboBox Grid.Column="1" Width="110"
                               ItemsSource="{Binding SortOptions}"
                               SelectedIndex="{Binding SelectedSortIndex}"
                               FontSize="12" Padding="6,4"
@@ -136,7 +144,7 @@
 
             <Border Grid.Column="1" Background="{DynamicResource BorderBrush}"/>
 
-            <Grid Grid.Column="2" Margin="12">
+            <Grid Grid.Column="2">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
                             Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
                     <TextBlock Text="Select an entry" FontSize="18" FontWeight="SemiBold"
@@ -300,24 +308,19 @@
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-
                                             <TextBlock Text="{Binding Name}" FontSize="12"
                                                        Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
-
                                             <Border Grid.Column="1" Background="{DynamicResource SurfaceBrush}"
                                                     CornerRadius="6" Padding="10,8" Margin="0,0,6,0">
-                                                <TextBlock Text="{Binding DisplayValue}" FontSize="13"
-                                                           FontFamily="Consolas"
+                                                <TextBlock Text="{Binding DisplayValue}" FontSize="13" FontFamily="Consolas"
                                                            Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"/>
                                             </Border>
-
                                             <Button Grid.Column="2" Content="{Binding RevealButtonText}"
                                                     Margin="0,0,6,0" Padding="10,6"
                                                     Command="{Binding DataContext.ToggleCustomFieldVisibilityCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding}"
                                                     Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"
                                                     Visibility="{Binding IsSecret, Converter={StaticResource BoolToVis}}"/>
-
                                             <Button Grid.Column="3" Content="Copy" Padding="10,6"
                                                     Command="{Binding DataContext.CopyCustomFieldCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding}"
@@ -349,10 +352,12 @@
 
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                             <Button Content="Edit" Command="{Binding EditEntryCommand}"
-                                    CommandParameter="{Binding SelectedEntry}" Padding="20,10" Margin="0,0,10,0"/>
+                                    CommandParameter="{Binding SelectedEntry}" Padding="20,10" Margin="0,0,10,0"
+                                    ToolTip="Edit (Ctrl+E)"/>
                             <Button Content="Delete" Command="{Binding DeleteEntryCommand}"
                                     CommandParameter="{Binding SelectedEntry}" Padding="20,10"
-                                    Background="{DynamicResource DangerBrush}"/>
+                                    Background="{DynamicResource DangerBrush}"
+                                    ToolTip="Delete (Del)"/>
                         </StackPanel>
 
                     </StackPanel>
