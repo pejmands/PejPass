@@ -61,9 +61,20 @@
                     </Grid>
                 </Border>
 
-                <TextBlock DockPanel.Dock="Top"
-                           Text="{Binding FilteredEntries.Count, StringFormat={}{0} entries}"
-                           Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="20,0,0,8"/>
+                <Grid DockPanel.Dock="Top" Margin="16,0,16,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding FilteredEntries.Count, StringFormat={}{0} entries}"
+                               Foreground="{DynamicResource MutedBrush}" FontSize="12"
+                               VerticalAlignment="Center"/>
+                    <ComboBox Grid.Column="1" Width="110"
+                              ItemsSource="{Binding SortOptions}"
+                              SelectedIndex="{Binding SelectedSortIndex}"
+                              FontSize="12" Padding="6,4"
+                              ToolTip="Sort order (favorites always on top)"/>
+                </Grid>
 
                 <ListBox x:Name="EntryList"
                          ItemsSource="{Binding FilteredEntries}"
@@ -102,12 +113,22 @@
                     </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel>
-                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14"
-                                           Foreground="{DynamicResource TextBrush}" TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Text="{Binding Username}" FontSize="12" Margin="0,3,0,0"
-                                           Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
-                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14"
+                                               Foreground="{DynamicResource TextBrush}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Username}" FontSize="12" Margin="0,3,0,0"
+                                               Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Text="★" FontSize="14"
+                                           Foreground="{DynamicResource WarningBrush}"
+                                           VerticalAlignment="Center" Margin="8,0,0,0"
+                                           Visibility="{Binding IsFavorite, Converter={StaticResource BoolToVis}}"/>
+                            </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
@@ -128,8 +149,39 @@
                               Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
                     <StackPanel MaxWidth="560">
 
-                        <TextBlock Text="{Binding SelectedEntry.Title}" FontSize="26" FontWeight="Bold"
-                                   Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,20"/>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding SelectedEntry.Title}" FontSize="26" FontWeight="Bold"
+                                       Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"/>
+                            <Button Grid.Column="1" Padding="12,8" Margin="12,0,0,0"
+                                    Command="{Binding ToggleFavoriteCommand}"
+                                    CommandParameter="{Binding SelectedEntry}"
+                                    Background="{DynamicResource SurfaceAltBrush}"
+                                    ToolTip="Toggle favorite">
+                                <TextBlock FontSize="16" Foreground="{DynamicResource TextBrush}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="☆"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsFavoriteSelected}" Value="True">
+                                                    <Setter Property="Text" Value="★"/>
+                                                    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Button>
+                        </Grid>
+                        <TextBlock Margin="0,0,0,18" FontSize="12" Foreground="{DynamicResource MutedBrush}">
+                            <Run Text="Created "/>
+                            <Run Text="{Binding CreatedAtText, Mode=OneWay}"/>
+                            <Run Text="  ·  Updated "/>
+                            <Run Text="{Binding UpdatedAtText, Mode=OneWay}"/>
+                        </TextBlock>
 
                         <StackPanel Visibility="{Binding HasUrl, Converter={StaticResource BoolToVis}}" Margin="0,0,0,18">
                             <TextBlock Text="URL" FontSize="11" FontWeight="SemiBold"
