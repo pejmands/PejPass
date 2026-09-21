@@ -69,31 +69,11 @@
             <Setter Property="CaretBrush" Value="{StaticResource TextBrush}"/>
         </Style>
 
-        <Style x:Key="TotpProgressBar" TargetType="ProgressBar">
+        <Style TargetType="ProgressBar">
             <Setter Property="Height" Value="5"/>
-            <Setter Property="Minimum" Value="0"/>
-            <Setter Property="Maximum" Value="1"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Background" Value="#45475A"/>
             <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ProgressBar">
-                        <Grid>
-                            <Border Background="{TemplateBinding Background}" CornerRadius="3"/>
-                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left" CornerRadius="3"
-                                    Background="{TemplateBinding Foreground}"/>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <EventTrigger RoutedEvent="Loaded">
-                                <BeginStoryboard>
-                                    <Storyboard/>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
         </Style>
     </Application.Resources>
 </Application>
