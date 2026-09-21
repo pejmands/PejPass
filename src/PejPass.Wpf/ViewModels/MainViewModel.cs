@@ -46,10 +46,11 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _totpCode = string.Empty;
     [ObservableProperty] private string _totpCodeFormatted = string.Empty;
     [ObservableProperty] private int _totpRemainingSeconds;
-    [ObservableProperty] private double _totpProgress; // 0..1 for progress bar
+    [ObservableProperty] private double _totpProgress;
 
     public ObservableCollection<VaultEntry> Entries { get; } = [];
     public ObservableCollection<VaultEntry> FilteredEntries { get; } = [];
+    public ObservableCollection<CustomFieldDisplayItem> DisplayCustomFields { get; } = [];
 
     public MainViewModel(
         VaultService vaultService,
@@ -77,8 +78,20 @@ public partial class MainViewModel : ObservableObject
         HasCustomFields = value?.CustomFields is { Count: > 0 };
         HasTags = value?.Tags is { Count: > 0 };
         UpdatePasswordDisplay();
+        RebuildDisplayCustomFields();
         RefreshTotp();
         ResetAutoLockTimer();
+    }
+
+    private void RebuildDisplayCustomFields()
+    {
+        DisplayCustomFields.Clear();
+        if (SelectedEntry?.CustomFields is null) return;
+
+        foreach (var f in SelectedEntry.CustomFields)
+        {
+            DisplayCustomFields.Add(new CustomFieldDisplayItem(f));
+        }
     }
 
     private void StartTotpTimer()
@@ -107,7 +120,6 @@ public partial class MainViewModel : ObservableObject
         {
             HasTotp = true;
             TotpCode = code;
-            // Format as 123 456 for readability
             TotpCodeFormatted = code.Length == 6
                 ? $"{code[..3]} {code[3..]}"
                 : code;
@@ -116,7 +128,7 @@ public partial class MainViewModel : ObservableObject
         }
         else
         {
-            HasTotp = true; // still show section so user sees error state
+            HasTotp = true;
             TotpCode = string.Empty;
             TotpCodeFormatted = "Invalid secret";
             TotpRemainingSeconds = 0;
@@ -157,14 +169,16 @@ public partial class MainViewModel : ObservableObject
         foreach (var e in vault.Entries.OrderBy(x => x.Title))
             Entries.Add(e);
 
-        ApplyFilter();
+        ApplyFilter(preserveSelectionId: null);
         StatusMessage = $"{Entries.Count} entries";
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
-    private void ApplyFilter()
+    private void ApplyFilter(Guid? preserveSelectionId = null)
     {
+        var keepId = preserveSelectionId ?? SelectedEntry?.Id;
+
         FilteredEntries.Clear();
         var q = SearchText?.Trim() ?? string.Empty;
 
@@ -183,6 +197,13 @@ public partial class MainViewModel : ObservableObject
 
         foreach (var e in source)
             FilteredEntries.Add(e);
+
+        // Restore selection after collection rebuild so ListBox doesn't lose it
+        if (keepId is { } id)
+        {
+            var match = FilteredEntries.FirstOrDefault(e => e.Id == id);
+            SelectedEntry = match; // may be null if filtered out
+        }
     }
 
     private void StartAutoLockTimer()
@@ -192,7 +213,7 @@ public partial class MainViewModel : ObservableObject
         _autoLockTimer = new System.Timers.Timer(_settings.AutoLockMinutes * 60_000);
         _autoLockTimer.Elapsed += (_, _) =>
         {
-            Application.Current?.Dispatcher.Invoke(() => Lock());
+            System.Windows.Application.Current?.Dispatcher.Invoke(() => Lock());
         };
         _autoLockTimer.AutoReset = false;
         _autoLockTimer.Start();
@@ -206,8 +227,8 @@ public partial class MainViewModel : ObservableObject
 
     private static Window? GetOwnerWindow()
     {
-        return Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
-               ?? Application.Current?.MainWindow;
+        return System.Windows.Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
+               ?? System.Windows.Application.Current?.MainWindow;
     }
 
     [RelayCommand]
@@ -215,6 +236,25 @@ public partial class MainViewModel : ObservableObject
     {
         _isPasswordVisible = !_isPasswordVisible;
         UpdatePasswordDisplay();
+        ResetAutoLockTimer();
+    }
+
+    [RelayCommand]
+    private void ToggleCustomFieldVisibility(CustomFieldDisplayItem? item)
+    {
+        if (item is null || !item.IsSecret) return;
+        item.IsRevealed = !item.IsRevealed;
+        ResetAutoLockTimer();
+    }
+
+    [RelayCommand]
+    private void CopyCustomField(CustomFieldDisplayItem? item)
+    {
+        if (item is null || string.IsNullOrEmpty(item.Value)) return;
+
+        var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
+        _clipboard.CopyWithTimeout(item.Value, timeout);
+        StatusMessage = $"\"{item.Name}\" copied. Clears in {_settings.ClipboardClearSeconds}s.";
         ResetAutoLockTimer();
     }
 
@@ -319,8 +359,7 @@ public partial class MainViewModel : ObservableObject
             var vault = LoginViewModel.CurrentVault!;
             vault.AddEntry(newEntry);
             Entries.Add(newEntry);
-            ApplyFilter();
-            SelectedEntry = newEntry;
+            ApplyFilter(preserveSelectionId: newEntry.Id);
 
             await SaveVaultAsync();
             StatusMessage = "Entry added.";
@@ -351,11 +390,13 @@ public partial class MainViewModel : ObservableObject
             entry.CustomFields = updated.CustomFields;
             entry.Touch();
 
-            var current = entry;
-            SelectedEntry = null;
-            SelectedEntry = current;
+            ApplyFilter(preserveSelectionId: entry.Id);
+            // Force detail panel refresh for same object
+            RebuildDisplayCustomFields();
+            UpdatePasswordDisplay();
+            RefreshTotp();
+            OnSelectedEntryChanged(SelectedEntry);
 
-            ApplyFilter();
             await SaveVaultAsync();
             StatusMessage = "Entry updated.";
             ResetAutoLockTimer();
@@ -377,10 +418,9 @@ public partial class MainViewModel : ObservableObject
         var vault = LoginViewModel.CurrentVault!;
         vault.RemoveEntry(entry.Id);
         Entries.Remove(entry);
-        if (SelectedEntry?.Id == entry.Id)
-            SelectedEntry = null;
+        SelectedEntry = null;
 
-        ApplyFilter();
+        ApplyFilter(preserveSelectionId: null);
         await SaveVaultAsync();
         StatusMessage = "Entry deleted.";
         ResetAutoLockTimer();
@@ -452,5 +492,38 @@ public partial class MainViewModel : ObservableObject
         var vault = LoginViewModel.CurrentVault!;
 
         await _vaultService.SaveVaultAsync(path, password, vault);
+    }
+}
+
+/// <summary>
+/// UI model for a custom field in the detail panel (supports reveal for secrets).
+/// </summary>
+public partial class CustomFieldDisplayItem : ObservableObject
+{
+    public string Name { get; }
+    public string Value { get; }
+    public bool IsSecret { get; }
+
+    [ObservableProperty] private bool _isRevealed;
+
+    public CustomFieldDisplayItem(CustomField field)
+    {
+        Name = field.Name;
+        Value = field.Value;
+        IsSecret = field.IsSecret;
+        IsRevealed = !field.IsSecret;
+    }
+
+    public string DisplayValue =>
+        IsSecret && !IsRevealed
+            ? (string.IsNullOrEmpty(Value) ? string.Empty : new string('•', Math.Min(Value.Length, 16)))
+            : Value;
+
+    public string RevealButtonText => IsRevealed ? "Hide" : "Show";
+
+    partial void OnIsRevealedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(DisplayValue));
+        OnPropertyChanged(nameof(RevealButtonText));
     }
 }
