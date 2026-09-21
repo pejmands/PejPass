@@ -18,7 +18,7 @@ public partial class SettingsWindow : Window
         viewModel.RequestClose += (_, _) =>
         {
             _committed = true;
-            DialogResult = true;
+            try { DialogResult = true; } catch { /* already closing */ }
             Close();
         };
 
@@ -28,9 +28,7 @@ public partial class SettingsWindow : Window
     private void OnClosing(object? sender, CancelEventArgs e)
     {
         if (_committed) return;
-
-        // User closed with X / Alt+F4 — same as Cancel: revert preview
-        _vm.CancelCommand.Execute(null);
+        _vm.RevertPreview();
         _committed = true;
     }
 }

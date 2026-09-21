@@ -11,7 +11,6 @@ public partial class SettingsViewModel : ObservableObject
     private readonly AppSettings _settings;
     private readonly ThemeService _themeService;
 
-    // Snapshot of saved theme when dialog opened — used to revert on Cancel
     private readonly ThemeMode _savedTheme;
     private readonly int _savedAutoLock;
     private readonly int _savedClipboard;
@@ -20,7 +19,7 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty] private int _autoLockMinutes;
     [ObservableProperty] private int _clipboardClearSeconds;
-    [ObservableProperty] private int _selectedThemeIndex; // 0=System, 1=Dark, 2=Light
+    [ObservableProperty] private int _selectedThemeIndex;
 
     public string[] ThemeOptions { get; } = ["System", "Dark", "Light"];
 
@@ -46,8 +45,6 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (_suppressThemePreview) return;
         if (value < 0 || value > 2) return;
-
-        // Live preview only — do NOT write to settings yet
         _themeService.Preview((ThemeMode)value);
     }
 
@@ -63,21 +60,25 @@ public partial class SettingsViewModel : ObservableObject
         _settings.Theme = (ThemeMode)SelectedThemeIndex;
 
         SettingsStore.Save(_settings);
-        _themeService.Apply(); // commits + starts/stops system watch
+        _themeService.Apply();
 
         DialogService.Success("Settings saved.", "Settings");
         RequestClose?.Invoke(this, EventArgs.Empty);
     }
 
-    [RelayCommand]
-    private void Cancel()
+    /// <summary>Restore saved values and theme (no close).</summary>
+    public void RevertPreview()
     {
-        // Restore previously saved theme (ignore any preview)
         _settings.Theme = _savedTheme;
         _settings.AutoLockMinutes = _savedAutoLock;
         _settings.ClipboardClearSeconds = _savedClipboard;
         _themeService.Apply();
+    }
 
+    [RelayCommand]
+    private void Cancel()
+    {
+        RevertPreview();
         RequestClose?.Invoke(this, EventArgs.Empty);
     }
 }
