@@ -207,7 +207,6 @@ public partial class MainViewModel : ObservableObject
         UpdateEntryStatus(purged > 0 ? $"purged {purged} expired trash item(s)" : null);
     }
 
-    /// <summary>Status like "363 entries · 1 in trash".</summary>
     private void UpdateEntryStatus(string? extra = null)
     {
         var vault = LoginViewModel.CurrentVault;
@@ -497,6 +496,7 @@ public partial class MainViewModel : ObservableObject
         entry.Tags = updated.Tags;
         entry.CustomFields = updated.CustomFields;
         entry.PasswordHistory = updated.PasswordHistory;
+        entry.UsernameHistory = updated.UsernameHistory;
         entry.IsFavorite = updated.IsFavorite;
         entry.Touch();
 
