@@ -1,4 +1,3 @@
-using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using PejPass.Application.Interfaces;
 using PejPass.Application.Services;
@@ -9,10 +8,11 @@ using PejPass.Infrastructure.Storage;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
+using System.Windows;
 
 namespace PejPass.Wpf;
 
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     public static IServiceProvider Services { get; private set; } = null!;
 

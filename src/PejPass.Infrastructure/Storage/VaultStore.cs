@@ -1,7 +1,7 @@
-using System.Text;
-using System.Text.Json;
 using PejPass.Application.Interfaces;
 using PejPass.Domain.Entities;
+using System.Text;
+using System.Text.Json;
 
 namespace PejPass.Infrastructure.Storage;
 
@@ -14,17 +14,12 @@ namespace PejPass.Infrastructure.Storage;
 /// [tag]
 /// [ciphertext of JSON-serialized Vault]
 /// </summary>
-public sealed class VaultStore : IVaultStore
+public sealed class VaultStore(ICryptoService crypto) : IVaultStore
 {
     private static readonly byte[] Magic = Encoding.ASCII.GetBytes("PEJP");
     private const byte CurrentVersion = 1;
 
-    private readonly ICryptoService _crypto;
-
-    public VaultStore(ICryptoService crypto)
-    {
-        _crypto = crypto;
-    }
+    private readonly ICryptoService _crypto = crypto;
 
     public bool Exists(string path) => File.Exists(path);
 

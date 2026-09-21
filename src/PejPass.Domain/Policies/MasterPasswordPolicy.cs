@@ -5,8 +5,20 @@ namespace PejPass.Domain.Policies;
 /// <summary>
 /// Strict master-password policy (~75% strictness).
 /// </summary>
-public static class MasterPasswordPolicy
+public static partial class MasterPasswordPolicy
 {
+    [GeneratedRegex("[A-Z]")]
+    private static partial Regex UppercaseRegex();
+
+    [GeneratedRegex("[a-z]")]
+    private static partial Regex LowercaseRegex();
+
+    [GeneratedRegex("[0-9]")]
+    private static partial Regex DigitRegex();
+
+    [GeneratedRegex("[^A-Za-z0-9]")]
+    private static partial Regex SpecialCharacterRegex();
+
     public const int MinimumLength = 12;
 
     private static readonly HashSet<string> CommonPasswords = new(StringComparer.OrdinalIgnoreCase)
@@ -27,16 +39,16 @@ public static class MasterPasswordPolicy
         if (password.Contains(' '))
             return PasswordValidationResult.Fail("Master password must not contain spaces.");
 
-        if (!Regex.IsMatch(password, "[A-Z]"))
+        if (!UppercaseRegex().IsMatch(password))
             return PasswordValidationResult.Fail("Master password must contain at least one uppercase letter.");
 
-        if (!Regex.IsMatch(password, "[a-z]"))
+        if (!LowercaseRegex().IsMatch(password))
             return PasswordValidationResult.Fail("Master password must contain at least one lowercase letter.");
 
-        if (!Regex.IsMatch(password, "[0-9]"))
+        if (!DigitRegex().IsMatch(password))
             return PasswordValidationResult.Fail("Master password must contain at least one digit.");
 
-        if (!Regex.IsMatch(password, "[^A-Za-z0-9]"))
+        if (!SpecialCharacterRegex().IsMatch(password))
             return PasswordValidationResult.Fail("Master password must contain at least one special character.");
 
         if (CommonPasswords.Contains(password))

@@ -1,5 +1,5 @@
-using System.Windows;
 using PejPass.Application.Interfaces;
+using System.Windows;
 
 namespace PejPass.Wpf.Services;
 
@@ -33,14 +33,14 @@ public sealed class ClipboardService : IClipboardService
         }
     }
 
-    private async Task ClearAfterAsync(TimeSpan timeout, CancellationToken ct)
+    private static async Task ClearAfterAsync(TimeSpan timeout, CancellationToken ct)
     {
         try
         {
             await Task.Delay(timeout, ct);
             if (!ct.IsCancellationRequested)
             {
-                Application.Current?.Dispatcher.Invoke(() =>
+                System.Windows.Application.Current?.Dispatcher.Invoke(() =>
                 {
                     try { Clipboard.Clear(); }
                     catch { /* ignore */ }

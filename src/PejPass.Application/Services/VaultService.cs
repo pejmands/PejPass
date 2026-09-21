@@ -4,16 +4,9 @@ using PejPass.Domain.Policies;
 
 namespace PejPass.Application.Services;
 
-public sealed class VaultService
+public sealed class VaultService(IVaultStore store)
 {
-    private readonly IVaultStore _store;
-    private readonly ICryptoService _crypto;
-
-    public VaultService(IVaultStore store, ICryptoService crypto)
-    {
-        _store = store;
-        _crypto = crypto;
-    }
+    private readonly IVaultStore _store = store;
 
     public async Task<Vault> CreateVaultAsync(string path, string masterPassword, string vaultName = "Personal Vault", CancellationToken ct = default)
     {

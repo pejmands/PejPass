@@ -1,7 +1,6 @@
-using System.Globalization;
-using System.Text;
 using PejPass.Application.Interfaces;
 using PejPass.Domain.Entities;
+using System.Text;
 
 namespace PejPass.Infrastructure.Import;
 
@@ -18,7 +17,7 @@ public sealed class BrowserImportService : IBrowserImportService
 
         var lines = await File.ReadAllLinesAsync(filePath, Encoding.UTF8, ct);
         if (lines.Length < 2)
-            return Array.Empty<VaultEntry>();
+            return [];
 
         var header = ParseCsvLine(lines[0]);
         var map = BuildColumnMap(header);
@@ -73,14 +72,14 @@ public sealed class BrowserImportService : IBrowserImportService
                 Password = password,
                 Url = url?.Trim() ?? string.Empty,
                 Notes = notes?.Trim() ?? string.Empty,
-                Tags = new List<string> { "imported" }
+                Tags = ["imported"]
             });
         }
 
         return entries;
     }
 
-    private static ColumnMap BuildColumnMap(IReadOnlyList<string> header)
+    private static ColumnMap BuildColumnMap(List<string> header)
     {
         var map = new ColumnMap();
 
@@ -115,7 +114,7 @@ public sealed class BrowserImportService : IBrowserImportService
         return map;
     }
 
-    private static string? GetCol(IReadOnlyList<string> cols, int index)
+    private static string? GetCol(List<string> cols, int index)
     {
         if (index < 0 || index >= cols.Count)
             return null;

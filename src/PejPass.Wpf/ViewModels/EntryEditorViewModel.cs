@@ -1,8 +1,8 @@
-using System.Collections.ObjectModel;
-using System.Security.Cryptography;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
+using System.Collections.ObjectModel;
+using System.Security.Cryptography;
 
 namespace PejPass.Wpf.ViewModels;
 
@@ -17,7 +17,7 @@ public partial class EntryEditorViewModel : ObservableObject
 
     public VaultEntry? Original { get; }
 
-    public ObservableCollection<CustomFieldItem> CustomFields { get; } = new();
+    public ObservableCollection<CustomFieldItem> CustomFields { get; } = [];
 
     public EntryEditorViewModel(VaultEntry? existing)
     {

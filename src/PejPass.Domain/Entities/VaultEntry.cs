@@ -20,12 +20,12 @@ public sealed class VaultEntry
 
     public string Notes { get; set; } = string.Empty;
 
-    public List<string> Tags { get; set; } = new();
+    public List<string> Tags { get; set; } = [];
 
     /// <summary>
     /// User-defined custom fields (name/value pairs).
     /// </summary>
-    public List<CustomField> CustomFields { get; set; } = new();
+    public List<CustomField> CustomFields { get; set; } = [];
 
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 

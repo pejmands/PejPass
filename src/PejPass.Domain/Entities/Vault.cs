@@ -10,7 +10,7 @@ public sealed class Vault
 
     public string Name { get; set; } = "Personal Vault";
 
-    public List<VaultEntry> Entries { get; set; } = new();
+    public List<VaultEntry> Entries { get; set; } = [];
 
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 

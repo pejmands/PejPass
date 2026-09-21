@@ -1,5 +1,3 @@
-using System.IO;
-using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -7,6 +5,7 @@ using PejPass.Application.Services;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Policies;
 using PejPass.Domain.Settings;
+using System.IO;
 
 namespace PejPass.Wpf.ViewModels;
 
