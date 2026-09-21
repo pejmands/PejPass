@@ -29,6 +29,9 @@ public sealed class VaultEntry
 
     public List<CustomField> CustomFields { get; set; } = [];
 
+    /// <summary>Previous passwords (newest first). Capped by vault policy.</summary>
+    public List<PasswordHistoryItem> PasswordHistory { get; set; } = [];
+
     /// <summary>Pinned to top of sorted lists (Bitwarden/1Password style).</summary>
     public bool IsFavorite { get; set; }
 
@@ -41,8 +44,33 @@ public sealed class VaultEntry
 
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
+    public const int MaxPasswordHistory = 20;
+
     public void Touch()
     {
         UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Records the current password into history before replacing it.
+    /// </summary>
+    public void PushPasswordHistory(string previousPassword)
+    {
+        if (string.IsNullOrEmpty(previousPassword))
+            return;
+
+        // Skip if same as latest history entry
+        if (PasswordHistory.Count > 0 &&
+            string.Equals(PasswordHistory[0].Password, previousPassword, StringComparison.Ordinal))
+            return;
+
+        PasswordHistory.Insert(0, new PasswordHistoryItem
+        {
+            Password = previousPassword,
+            ChangedAt = DateTimeOffset.UtcNow
+        });
+
+        if (PasswordHistory.Count > MaxPasswordHistory)
+            PasswordHistory.RemoveRange(MaxPasswordHistory, PasswordHistory.Count - MaxPasswordHistory);
     }
 }
