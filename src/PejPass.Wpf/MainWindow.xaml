@@ -62,7 +62,10 @@
                            Text="{Binding FilteredEntries.Count, StringFormat={}{0} entries}"
                            Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="20,0,0,8"/>
 
-                <ListBox ItemsSource="{Binding FilteredEntries}" SelectedItem="{Binding SelectedEntry}"
+                <ListBox x:Name="EntryList"
+                         ItemsSource="{Binding FilteredEntries}"
+                         SelectedItem="{Binding SelectedEntry}"
+                         IsSynchronizedWithCurrentItem="False"
                          Background="Transparent" BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          ScrollViewer.VerticalScrollBarVisibility="Auto" Padding="8,0,8,12">
@@ -71,6 +74,7 @@
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                             <Setter Property="Padding" Value="0"/>
                             <Setter Property="Margin" Value="0,0,0,4"/>
+                            <Setter Property="Focusable" Value="True"/>
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBoxItem">
@@ -182,7 +186,6 @@
                                     CommandParameter="{Binding SelectedEntry}"/>
                         </Grid>
 
-                        <!-- TOTP -->
                         <StackPanel Visibility="{Binding HasTotp, Converter={StaticResource BoolToVis}}" Margin="0,0,0,18">
                             <TextBlock Text="AUTHENTICATOR (TOTP)" FontSize="11" FontWeight="SemiBold"
                                        Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
@@ -229,24 +232,42 @@
                             </Border>
                         </StackPanel>
 
+                        <!-- Custom Fields (with optional secret masking) -->
                         <StackPanel Visibility="{Binding HasCustomFields, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="CUSTOM FIELDS" FontSize="11" FontWeight="SemiBold"
                                        Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
-                            <ItemsControl ItemsSource="{Binding SelectedEntry.CustomFields}" Margin="0,0,0,18">
+                            <ItemsControl ItemsSource="{Binding DisplayCustomFields}" Margin="0,0,0,18">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Margin="0,0,0,8">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="140"/>
                                                 <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
+
                                             <TextBlock Text="{Binding Name}" FontSize="12"
                                                        Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+
                                             <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}"
-                                                    CornerRadius="6" Padding="10,8">
-                                                <TextBlock Text="{Binding Value}" FontSize="13"
+                                                    CornerRadius="6" Padding="10,8" Margin="0,0,6,0">
+                                                <TextBlock Text="{Binding DisplayValue}" FontSize="13"
+                                                           FontFamily="Consolas"
                                                            Foreground="{StaticResource TextBrush}" TextWrapping="Wrap"/>
                                             </Border>
+
+                                            <Button Grid.Column="2" Content="{Binding RevealButtonText}"
+                                                    Margin="0,0,6,0" Padding="10,6"
+                                                    Command="{Binding DataContext.ToggleCustomFieldVisibilityCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"
+                                                    Background="#45475A" Foreground="{StaticResource TextBrush}"
+                                                    Visibility="{Binding IsSecret, Converter={StaticResource BoolToVis}}"/>
+
+                                            <Button Grid.Column="3" Content="Copy" Padding="10,6"
+                                                    Command="{Binding DataContext.CopyCustomFieldCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"
+                                                    Background="#45475A" Foreground="{StaticResource TextBrush}"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
