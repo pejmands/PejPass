@@ -29,8 +29,11 @@ public sealed class VaultEntry
 
     public List<CustomField> CustomFields { get; set; } = [];
 
-    /// <summary>Previous passwords (newest first). Capped by vault policy.</summary>
+    /// <summary>Previous passwords (newest first). Never written into Notes.</summary>
     public List<PasswordHistoryItem> PasswordHistory { get; set; } = [];
+
+    /// <summary>Previous usernames (newest first). Never written into Notes.</summary>
+    public List<UsernameHistoryItem> UsernameHistory { get; set; } = [];
 
     /// <summary>Pinned to top of sorted lists (Bitwarden/1Password style).</summary>
     public bool IsFavorite { get; set; }
@@ -45,6 +48,7 @@ public sealed class VaultEntry
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public const int MaxPasswordHistory = 20;
+    public const int MaxUsernameHistory = 20;
 
     public void Touch()
     {
@@ -59,7 +63,6 @@ public sealed class VaultEntry
         if (string.IsNullOrEmpty(previousPassword))
             return;
 
-        // Skip if same as latest history entry
         if (PasswordHistory.Count > 0 &&
             string.Equals(PasswordHistory[0].Password, previousPassword, StringComparison.Ordinal))
             return;
@@ -72,5 +75,27 @@ public sealed class VaultEntry
 
         if (PasswordHistory.Count > MaxPasswordHistory)
             PasswordHistory.RemoveRange(MaxPasswordHistory, PasswordHistory.Count - MaxPasswordHistory);
+    }
+
+    /// <summary>
+    /// Records the current username into history before replacing it.
+    /// </summary>
+    public void PushUsernameHistory(string previousUsername)
+    {
+        if (string.IsNullOrEmpty(previousUsername))
+            return;
+
+        if (UsernameHistory.Count > 0 &&
+            string.Equals(UsernameHistory[0].Username, previousUsername, StringComparison.Ordinal))
+            return;
+
+        UsernameHistory.Insert(0, new UsernameHistoryItem
+        {
+            Username = previousUsername,
+            ChangedAt = DateTimeOffset.UtcNow
+        });
+
+        if (UsernameHistory.Count > MaxUsernameHistory)
+            UsernameHistory.RemoveRange(MaxUsernameHistory, UsernameHistory.Count - MaxUsernameHistory);
     }
 }

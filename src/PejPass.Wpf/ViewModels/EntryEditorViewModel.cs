@@ -20,11 +20,13 @@ public partial class EntryEditorViewModel : ObservableObject
     [ObservableProperty] private string _tagsText = string.Empty;
     [ObservableProperty] private bool _isFavorite;
     [ObservableProperty] private bool _hasPasswordHistory;
+    [ObservableProperty] private bool _hasUsernameHistory;
 
     public VaultEntry? Original { get; }
 
     public ObservableCollection<CustomFieldItem> CustomFields { get; } = [];
-    public ObservableCollection<PasswordHistoryRow> HistoryItems { get; } = [];
+    public ObservableCollection<PasswordHistoryRow> PasswordHistoryItems { get; } = [];
+    public ObservableCollection<UsernameHistoryRow> UsernameHistoryItems { get; } = [];
 
     public EntryEditorViewModel(VaultEntry? existing)
     {
@@ -51,11 +53,13 @@ public partial class EntryEditorViewModel : ObservableObject
             }
 
             foreach (var h in existing.PasswordHistory)
-            {
-                HistoryItems.Add(new PasswordHistoryRow(h));
-            }
+                PasswordHistoryItems.Add(new PasswordHistoryRow(h));
 
-            HasPasswordHistory = HistoryItems.Count > 0;
+            foreach (var h in existing.UsernameHistory)
+                UsernameHistoryItems.Add(new UsernameHistoryRow(h));
+
+            HasPasswordHistory = PasswordHistoryItems.Count > 0;
+            HasUsernameHistory = UsernameHistoryItems.Count > 0;
         }
     }
 
@@ -87,7 +91,7 @@ public partial class EntryEditorViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void RestoreHistoryPassword(PasswordHistoryRow? row)
+    private void RestorePasswordHistory(PasswordHistoryRow? row)
     {
         if (row is null) return;
 
@@ -102,11 +106,41 @@ public partial class EntryEditorViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void DeleteHistoryItem(PasswordHistoryRow? row)
+    private void DeletePasswordHistory(PasswordHistoryRow? row)
     {
         if (row is null) return;
-        HistoryItems.Remove(row);
-        HasPasswordHistory = HistoryItems.Count > 0;
+        PasswordHistoryItems.Remove(row);
+        HasPasswordHistory = PasswordHistoryItems.Count > 0;
+    }
+
+    [RelayCommand]
+    private void TogglePasswordHistoryReveal(PasswordHistoryRow? row)
+    {
+        if (row is null) return;
+        row.IsRevealed = !row.IsRevealed;
+    }
+
+    [RelayCommand]
+    private void RestoreUsernameHistory(UsernameHistoryRow? row)
+    {
+        if (row is null) return;
+
+        if (!DialogService.Confirm(
+                "Replace the current username with this history value?",
+                "Restore username",
+                yesText: "Restore",
+                noText: "Cancel"))
+            return;
+
+        Username = row.Username;
+    }
+
+    [RelayCommand]
+    private void DeleteUsernameHistory(UsernameHistoryRow? row)
+    {
+        if (row is null) return;
+        UsernameHistoryItems.Remove(row);
+        HasUsernameHistory = UsernameHistoryItems.Count > 0;
     }
 
     [RelayCommand]
@@ -172,11 +206,19 @@ public partial class EntryEditorViewModel : ObservableObject
             })
             .ToList();
 
-        // History from UI (may have deleted items) + auto-push if password changed
-        var history = HistoryItems
+        // History from UI (user may have deleted rows) + auto-push on change — never into Notes
+        var passwordHistory = PasswordHistoryItems
             .Select(h => new PasswordHistoryItem
             {
                 Password = h.Password,
+                ChangedAt = h.ChangedAt
+            })
+            .ToList();
+
+        var usernameHistory = UsernameHistoryItems
+            .Select(h => new UsernameHistoryItem
+            {
+                Username = h.Username,
                 ChangedAt = h.ChangedAt
             })
             .ToList();
@@ -186,11 +228,10 @@ public partial class EntryEditorViewModel : ObservableObject
             if (!string.Equals(Original.Password, Password, StringComparison.Ordinal) &&
                 !string.IsNullOrEmpty(Original.Password))
             {
-                // Avoid duplicate if already first
-                if (history.Count == 0 ||
-                    !string.Equals(history[0].Password, Original.Password, StringComparison.Ordinal))
+                if (passwordHistory.Count == 0 ||
+                    !string.Equals(passwordHistory[0].Password, Original.Password, StringComparison.Ordinal))
                 {
-                    history.Insert(0, new PasswordHistoryItem
+                    passwordHistory.Insert(0, new PasswordHistoryItem
                     {
                         Password = Original.Password,
                         ChangedAt = DateTimeOffset.UtcNow
@@ -198,21 +239,40 @@ public partial class EntryEditorViewModel : ObservableObject
                 }
             }
 
-            if (history.Count > VaultEntry.MaxPasswordHistory)
-                history = history.Take(VaultEntry.MaxPasswordHistory).ToList();
+            var newUsername = Username.Trim();
+            if (!string.Equals(Original.Username, newUsername, StringComparison.Ordinal) &&
+                !string.IsNullOrEmpty(Original.Username))
+            {
+                if (usernameHistory.Count == 0 ||
+                    !string.Equals(usernameHistory[0].Username, Original.Username, StringComparison.Ordinal))
+                {
+                    usernameHistory.Insert(0, new UsernameHistoryItem
+                    {
+                        Username = Original.Username,
+                        ChangedAt = DateTimeOffset.UtcNow
+                    });
+                }
+            }
+
+            if (passwordHistory.Count > VaultEntry.MaxPasswordHistory)
+                passwordHistory = passwordHistory.Take(VaultEntry.MaxPasswordHistory).ToList();
+
+            if (usernameHistory.Count > VaultEntry.MaxUsernameHistory)
+                usernameHistory = usernameHistory.Take(VaultEntry.MaxUsernameHistory).ToList();
 
             return new VaultEntry
             {
                 Id = Original.Id,
                 Title = Title.Trim(),
-                Username = Username.Trim(),
+                Username = newUsername,
                 Password = Password,
                 Url = Url.Trim(),
                 TotpSecret = TotpSecret.Trim(),
                 Notes = Notes,
                 Tags = tags,
                 CustomFields = customFields,
-                PasswordHistory = history,
+                PasswordHistory = passwordHistory,
+                UsernameHistory = usernameHistory,
                 IsFavorite = IsFavorite,
                 SortOrder = Original.SortOrder,
                 CreatedAt = Original.CreatedAt,
@@ -230,7 +290,8 @@ public partial class EntryEditorViewModel : ObservableObject
             Notes = Notes,
             Tags = tags,
             CustomFields = customFields,
-            PasswordHistory = history,
+            PasswordHistory = passwordHistory,
+            UsernameHistory = usernameHistory,
             IsFavorite = IsFavorite
         };
     }
@@ -245,20 +306,47 @@ public partial class CustomFieldItem : ObservableObject
     [ObservableProperty] private bool _isSecret;
 }
 
-public sealed class PasswordHistoryRow
+public partial class PasswordHistoryRow : ObservableObject
 {
     public string Password { get; }
     public DateTimeOffset ChangedAt { get; }
     public string ChangedAtText { get; }
-    public string MaskedPassword { get; }
+
+    [ObservableProperty] private bool _isRevealed;
 
     public PasswordHistoryRow(PasswordHistoryItem item)
     {
         Password = item.Password;
         ChangedAt = item.ChangedAt;
         ChangedAtText = item.ChangedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
-        MaskedPassword = string.IsNullOrEmpty(item.Password)
-            ? string.Empty
-            : new string('•', Math.Min(item.Password.Length, 16));
+    }
+
+    public string DisplayValue =>
+        IsRevealed
+            ? Password
+            : (string.IsNullOrEmpty(Password)
+                ? string.Empty
+                : new string('•', Math.Min(Password.Length, 16)));
+
+    public string RevealButtonText => IsRevealed ? "Hide" : "Show";
+
+    partial void OnIsRevealedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(DisplayValue));
+        OnPropertyChanged(nameof(RevealButtonText));
+    }
+}
+
+public sealed class UsernameHistoryRow
+{
+    public string Username { get; }
+    public DateTimeOffset ChangedAt { get; }
+    public string ChangedAtText { get; }
+
+    public UsernameHistoryRow(UsernameHistoryItem item)
+    {
+        Username = item.Username;
+        ChangedAt = item.ChangedAt;
+        ChangedAtText = item.ChangedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
     }
 }
