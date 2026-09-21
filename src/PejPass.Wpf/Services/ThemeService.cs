@@ -1,14 +1,22 @@
+using System.Windows;
+using System.Windows.Media;
 using Microsoft.Win32;
 using PejPass.Domain.Settings;
-using System.Windows;
-using ThemeMode = PejPass.Domain.Settings.ThemeMode;
 
 namespace PejPass.Wpf.Services;
 
-public sealed class ThemeService(AppSettings settings)
+/// <summary>
+/// Applies theme by writing brush keys directly into Application.Resources.
+/// This is reliable with DynamicResource and avoids MergedDictionary lookup-order bugs.
+/// </summary>
+public sealed class ThemeService
 {
-    private readonly AppSettings _settings = settings;
-    private ResourceDictionary? _currentTheme;
+    private readonly AppSettings _settings;
+
+    public ThemeService(AppSettings settings)
+    {
+        _settings = settings;
+    }
 
     public void Apply()
     {
@@ -19,20 +27,58 @@ public sealed class ThemeService(AppSettings settings)
             _ => IsSystemDark()
         };
 
-        var uri = useDark
-            ? new Uri("Themes/DarkTheme.xaml", UriKind.Relative)
-            : new Uri("Themes/LightTheme.xaml", UriKind.Relative);
+        ApplyColors(useDark);
+    }
 
-        var dict = new ResourceDictionary { Source = uri };
-
+    private static void ApplyColors(bool dark)
+    {
         var app = System.Windows.Application.Current;
         if (app is null) return;
 
-        if (_currentTheme is not null)
-            app.Resources.MergedDictionaries.Remove(_currentTheme);
+        // Pack colors as (R,G,B)
+        var colors = dark
+            ? new Dictionary<string, Color>
+            {
+                ["BgBrush"] = Color.FromRgb(0x1E, 0x1E, 0x2E),
+                ["SurfaceBrush"] = Color.FromRgb(0x31, 0x32, 0x44),
+                ["SurfaceAltBrush"] = Color.FromRgb(0x45, 0x47, 0x5A),
+                ["TextBrush"] = Color.FromRgb(0xCD, 0xD6, 0xF4),
+                ["MutedBrush"] = Color.FromRgb(0xA6, 0xAD, 0xC8),
+                ["AccentBrush"] = Color.FromRgb(0x89, 0xB4, 0xFA),
+                ["DangerBrush"] = Color.FromRgb(0xF3, 0x8B, 0xA8),
+                ["SuccessBrush"] = Color.FromRgb(0xA6, 0xE3, 0xA1),
+                ["WarningBrush"] = Color.FromRgb(0xF9, 0xE2, 0xAF),
+                ["ButtonTextBrush"] = Color.FromRgb(0x1E, 0x1E, 0x2E),
+                ["BorderBrush"] = Color.FromRgb(0x45, 0x47, 0x5A),
+                ["OverlayBrush"] = Color.FromArgb(0xCC, 0x1E, 0x1E, 0x2E),
+                ["ScrollThumbBrush"] = Color.FromRgb(0x58, 0x5B, 0x70),
+                ["ScrollTrackBrush"] = Color.FromRgb(0x31, 0x32, 0x44),
+            }
+            : new Dictionary<string, Color>
+            {
+                ["BgBrush"] = Color.FromRgb(0xEF, 0xF1, 0xF5),
+                ["SurfaceBrush"] = Color.FromRgb(0xFF, 0xFF, 0xFF),
+                ["SurfaceAltBrush"] = Color.FromRgb(0xCC, 0xD0, 0xDA),
+                ["TextBrush"] = Color.FromRgb(0x4C, 0x4F, 0x69),
+                ["MutedBrush"] = Color.FromRgb(0x6C, 0x6F, 0x85),
+                ["AccentBrush"] = Color.FromRgb(0x1E, 0x66, 0xF5),
+                ["DangerBrush"] = Color.FromRgb(0xD2, 0x0F, 0x39),
+                ["SuccessBrush"] = Color.FromRgb(0x40, 0xA0, 0x2B),
+                ["WarningBrush"] = Color.FromRgb(0xDF, 0x8E, 0x1D),
+                ["ButtonTextBrush"] = Color.FromRgb(0xFF, 0xFF, 0xFF),
+                ["BorderBrush"] = Color.FromRgb(0xCC, 0xD0, 0xDA),
+                ["OverlayBrush"] = Color.FromArgb(0xAA, 0xEF, 0xF1, 0xF5),
+                ["ScrollThumbBrush"] = Color.FromRgb(0x9C, 0xA0, 0xB0),
+                ["ScrollTrackBrush"] = Color.FromRgb(0xE6, 0xE9, 0xEF),
+            };
 
-        app.Resources.MergedDictionaries.Insert(0, dict);
-        _currentTheme = dict;
+        foreach (var (key, color) in colors)
+        {
+            // Freeze brushes for performance; create new instance each time so DynamicResource updates
+            var brush = new SolidColorBrush(color);
+            brush.Freeze();
+            app.Resources[key] = brush;
+        }
     }
 
     public static bool IsSystemDark()
@@ -47,9 +93,9 @@ public sealed class ThemeService(AppSettings settings)
         }
         catch
         {
-            // fall through
+            // ignore
         }
 
-        return true; // default dark
+        return true;
     }
 }

@@ -22,6 +22,8 @@ public partial class App : System.Windows.Application
 
         var settings = SettingsStore.Load();
         var themeService = new ThemeService(settings);
+
+        // Apply theme AFTER Application.Resources exist
         themeService.Apply();
 
         var services = new ServiceCollection();
