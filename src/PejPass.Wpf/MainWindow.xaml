@@ -57,7 +57,7 @@
                         <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                  VerticalContentAlignment="Center" Padding="10,8" Margin="0,0,10,0"/>
                         <Button Grid.Column="1" Content="+" Command="{Binding AddEntryCommand}"
-                                Width="36" Height="36" FontSize="18" FontWeight="Bold" ToolTip="Add new entry"/>
+                                Width="44" Height="40" FontSize="18" FontWeight="Bold" ToolTip="Add new entry"/>
                     </Grid>
                 </Border>
 

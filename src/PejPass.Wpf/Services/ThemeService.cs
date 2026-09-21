@@ -1,18 +1,14 @@
-using System.Windows;
 using Microsoft.Win32;
 using PejPass.Domain.Settings;
+using System.Windows;
+using ThemeMode = PejPass.Domain.Settings.ThemeMode;
 
 namespace PejPass.Wpf.Services;
 
-public sealed class ThemeService
+public sealed class ThemeService(AppSettings settings)
 {
-    private readonly AppSettings _settings;
+    private readonly AppSettings _settings = settings;
     private ResourceDictionary? _currentTheme;
-
-    public ThemeService(AppSettings settings)
-    {
-        _settings = settings;
-    }
 
     public void Apply()
     {
