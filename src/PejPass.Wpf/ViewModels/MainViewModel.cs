@@ -19,6 +19,7 @@ public partial class MainViewModel : ObservableObject
     private readonly AppSettings _settings;
 
     private System.Timers.Timer? _autoLockTimer;
+    private bool _isPasswordVisible;
 
     public event EventHandler? RequestLock;
 
@@ -26,6 +27,14 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _statusMessage = string.Empty;
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private VaultEntry? _selectedEntry;
+
+    // Detail panel helpers
+    [ObservableProperty] private bool _hasSelection;
+    [ObservableProperty] private bool _hasNotes;
+    [ObservableProperty] private bool _hasCustomFields;
+    [ObservableProperty] private bool _hasTags;
+    [ObservableProperty] private string _displayPassword = string.Empty;
+    [ObservableProperty] private string _showPasswordButtonText = "Show";
 
     public ObservableCollection<VaultEntry> Entries { get; } = new();
     public ObservableCollection<VaultEntry> FilteredEntries { get; } = new();
@@ -43,6 +52,40 @@ public partial class MainViewModel : ObservableObject
 
         LoadVault();
         StartAutoLockTimer();
+    }
+
+    partial void OnSelectedEntryChanged(VaultEntry? value)
+    {
+        _isPasswordVisible = false;
+        HasSelection = value is not null;
+        HasNotes = !string.IsNullOrWhiteSpace(value?.Notes);
+        HasCustomFields = value?.CustomFields?.Count > 0;
+        HasTags = value?.Tags?.Count > 0;
+        UpdatePasswordDisplay();
+        ResetAutoLockTimer();
+    }
+
+    private void UpdatePasswordDisplay()
+    {
+        if (SelectedEntry is null)
+        {
+            DisplayPassword = string.Empty;
+            ShowPasswordButtonText = "Show";
+            return;
+        }
+
+        if (_isPasswordVisible)
+        {
+            DisplayPassword = SelectedEntry.Password;
+            ShowPasswordButtonText = "Hide";
+        }
+        else
+        {
+            DisplayPassword = string.IsNullOrEmpty(SelectedEntry.Password)
+                ? string.Empty
+                : new string('•', Math.Min(SelectedEntry.Password.Length, 16));
+            ShowPasswordButtonText = "Show";
+        }
     }
 
     private void LoadVault()
@@ -103,6 +146,25 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void TogglePasswordVisibility()
+    {
+        _isPasswordVisible = !_isPasswordVisible;
+        UpdatePasswordDisplay();
+        ResetAutoLockTimer();
+    }
+
+    [RelayCommand]
+    private void CopyUsername()
+    {
+        if (SelectedEntry is null || string.IsNullOrEmpty(SelectedEntry.Username)) return;
+
+        var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
+        _clipboard.CopyWithTimeout(SelectedEntry.Username, timeout);
+        StatusMessage = $"Username copied. Clears in {_settings.ClipboardClearSeconds}s.";
+        ResetAutoLockTimer();
+    }
+
+    [RelayCommand]
     private void Lock()
     {
         _autoLockTimer?.Stop();
@@ -115,6 +177,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void CopyPassword(VaultEntry? entry)
     {
+        entry ??= SelectedEntry;
         if (entry is null || string.IsNullOrEmpty(entry.Password)) return;
 
         var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
@@ -133,6 +196,7 @@ public partial class MainViewModel : ObservableObject
             vault.AddEntry(newEntry);
             Entries.Add(newEntry);
             ApplyFilter();
+            SelectedEntry = newEntry;
 
             await SaveVaultAsync();
             StatusMessage = "Entry added.";
@@ -143,6 +207,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task EditEntryAsync(VaultEntry? entry)
     {
+        entry ??= SelectedEntry;
         if (entry is null) return;
 
         var editor = new EntryEditorWindow(new EntryEditorViewModel(entry));
@@ -157,6 +222,11 @@ public partial class MainViewModel : ObservableObject
             entry.CustomFields = updated.CustomFields;
             entry.Touch();
 
+            // Force UI refresh of detail panel
+            var current = entry;
+            SelectedEntry = null;
+            SelectedEntry = current;
+
             ApplyFilter();
             await SaveVaultAsync();
             StatusMessage = "Entry updated.";
@@ -167,6 +237,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task DeleteEntryAsync(VaultEntry? entry)
     {
+        entry ??= SelectedEntry;
         if (entry is null) return;
 
         var result = MessageBox.Show(
@@ -178,8 +249,10 @@ public partial class MainViewModel : ObservableObject
         var vault = LoginViewModel.CurrentVault!;
         vault.RemoveEntry(entry.Id);
         Entries.Remove(entry);
-        ApplyFilter();
+        if (SelectedEntry?.Id == entry.Id)
+            SelectedEntry = null;
 
+        ApplyFilter();
         await SaveVaultAsync();
         StatusMessage = "Entry deleted.";
         ResetAutoLockTimer();
@@ -224,10 +297,10 @@ public partial class MainViewModel : ObservableObject
             }
 
             var vault = LoginViewModel.CurrentVault!;
-            foreach (var entry in imported)
+            foreach (var e in imported)
             {
-                vault.AddEntry(entry);
-                Entries.Add(entry);
+                vault.AddEntry(e);
+                Entries.Add(e);
             }
 
             ApplyFilter();

@@ -9,7 +9,7 @@
 
     <DockPanel>
 
-        <!-- ========== TOP BAR ========== -->
+        <!-- TOP BAR -->
         <Border DockPanel.Dock="Top" Background="{StaticResource SurfaceBrush}" Padding="20,12">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -38,18 +38,17 @@
             </Grid>
         </Border>
 
-        <!-- ========== MAIN CONTENT ========== -->
+        <!-- MAIN CONTENT -->
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="340" MinWidth="280" MaxWidth="420"/>
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="1"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- ===== LEFT: Entry List ===== -->
-            <DockPanel Grid.Column="0" Background="{StaticResource BgBrush}">
+            <!-- LEFT: Entry List -->
+            <DockPanel Grid.Column="0">
 
-                <!-- Search + Add -->
                 <Border DockPanel.Dock="Top" Padding="16,14,16,10">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -67,13 +66,11 @@
                     </Grid>
                 </Border>
 
-                <!-- Count -->
                 <TextBlock DockPanel.Dock="Top"
                            Text="{Binding FilteredEntries.Count, StringFormat={}{0} entries}"
                            Foreground="{StaticResource MutedBrush}" FontSize="12"
                            Margin="20,0,0,8"/>
 
-                <!-- List -->
                 <ListBox ItemsSource="{Binding FilteredEntries}"
                          SelectedItem="{Binding SelectedEntry}"
                          Background="Transparent"
@@ -87,7 +84,6 @@
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                             <Setter Property="Padding" Value="0"/>
                             <Setter Property="Margin" Value="0,0,0,4"/>
-                            <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBoxItem">
@@ -95,6 +91,8 @@
                                                 Background="{StaticResource SurfaceBrush}"
                                                 CornerRadius="8"
                                                 Padding="14,12"
+                                                BorderThickness="1"
+                                                BorderBrush="Transparent"
                                                 SnapsToDevicePixels="True">
                                             <ContentPresenter/>
                                         </Border>
@@ -105,7 +103,6 @@
                                             <Trigger Property="IsSelected" Value="True">
                                                 <Setter TargetName="Bd" Property="Background" Value="#45475A"/>
                                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-                                                <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -116,70 +113,53 @@
 
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Title}"
-                                               FontWeight="SemiBold" FontSize="14"
-                                               Foreground="{StaticResource TextBrush}"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Username}"
-                                               FontSize="12" Margin="0,3,0,0"
-                                               Foreground="{StaticResource MutedBrush}"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-                            </Grid>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}"
+                                           FontWeight="SemiBold" FontSize="14"
+                                           Foreground="{StaticResource TextBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding Username}"
+                                           FontSize="12" Margin="0,3,0,0"
+                                           Foreground="{StaticResource MutedBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
             </DockPanel>
 
-            <!-- Splitter -->
-            <GridSplitter Grid.Column="1" Width="1" HorizontalAlignment="Center"
-                          Background="#313244" ResizeBehavior="PreviousAndNext"/>
+            <!-- Divider -->
+            <Border Grid.Column="1" Background="#313244"/>
 
-            <!-- ===== RIGHT: Detail Panel ===== -->
-            <Grid Grid.Column="2" Background="{StaticResource BgBrush}">
+            <!-- RIGHT: Detail Panel -->
+            <Grid Grid.Column="2">
 
                 <!-- Empty state -->
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
-                            Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <!-- shown when NO selection — we invert below with a trigger style -->
+                            Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+                    <TextBlock Text="Select an entry"
+                               FontSize="18" FontWeight="SemiBold"
+                               Foreground="{StaticResource MutedBrush}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="or click + to add a new one"
+                               FontSize="13" Margin="0,8,0,0"
+                               Foreground="#6C7086"
+                               HorizontalAlignment="Center"/>
                 </StackPanel>
 
-                <!-- Placeholder when nothing selected -->
-                <Border x:Name="EmptyState">
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <TextBlock Text="Select an entry"
-                                   FontSize="18" FontWeight="SemiBold"
-                                   Foreground="{StaticResource MutedBrush}"
-                                   HorizontalAlignment="Center"/>
-                        <TextBlock Text="or click + to add a new one"
-                                   FontSize="13" Margin="0,8,0,0"
-                                   Foreground="#6C7086"
-                                   HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-
                 <!-- Detail content -->
-                <ScrollViewer x:Name="DetailPanel" VerticalScrollBarVisibility="Auto"
-                              Padding="32,28" Visibility="Collapsed">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="36,32"
+                              Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
                     <StackPanel MaxWidth="560">
 
-                        <!-- Title -->
                         <TextBlock Text="{Binding SelectedEntry.Title}"
                                    FontSize="26" FontWeight="Bold"
                                    Foreground="{StaticResource TextBrush}"
                                    TextWrapping="Wrap" Margin="0,0,0,6"/>
 
-                        <!-- URL -->
                         <TextBlock Text="{Binding SelectedEntry.Url}"
                                    FontSize="13" Foreground="{StaticResource AccentBrush}"
-                                   TextWrapping="Wrap" Margin="0,0,0,24"
-                                   Cursor="Hand"/>
+                                   TextWrapping="Wrap" Margin="0,0,0,28"/>
 
                         <!-- Username -->
                         <TextBlock Text="USERNAME" FontSize="11" FontWeight="SemiBold"
@@ -223,68 +203,67 @@
                         </Grid>
 
                         <!-- Notes -->
-                        <TextBlock Text="NOTES" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"
-                                   Visibility="{Binding HasNotes, Converter={StaticResource BoolToVis}}"/>
-                        <Border Background="{StaticResource SurfaceBrush}" CornerRadius="6"
-                                Padding="12,10" Margin="0,0,0,18"
-                                Visibility="{Binding HasNotes, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="{Binding SelectedEntry.Notes}"
-                                       Foreground="{StaticResource TextBrush}" FontSize="13"
-                                       TextWrapping="Wrap"/>
-                        </Border>
+                        <StackPanel Visibility="{Binding HasNotes, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="NOTES" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
+                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="6"
+                                    Padding="12,10" Margin="0,0,0,18">
+                                <TextBlock Text="{Binding SelectedEntry.Notes}"
+                                           Foreground="{StaticResource TextBrush}" FontSize="13"
+                                           TextWrapping="Wrap"/>
+                            </Border>
+                        </StackPanel>
 
                         <!-- Custom Fields -->
-                        <TextBlock Text="CUSTOM FIELDS" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"
-                                   Visibility="{Binding HasCustomFields, Converter={StaticResource BoolToVis}}"/>
-                        <ItemsControl ItemsSource="{Binding SelectedEntry.CustomFields}"
-                                      Margin="0,0,0,18"
-                                      Visibility="{Binding HasCustomFields, Converter={StaticResource BoolToVis}}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="0,0,0,8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="140"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding Name}" FontSize="12"
-                                                   Foreground="{StaticResource MutedBrush}"
-                                                   VerticalAlignment="Center"/>
-                                        <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}"
-                                                CornerRadius="6" Padding="10,8">
-                                            <TextBlock Text="{Binding Value}" FontSize="13"
-                                                       Foreground="{StaticResource TextBrush}"
-                                                       TextWrapping="Wrap"/>
-                                        </Border>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <StackPanel Visibility="{Binding HasCustomFields, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="CUSTOM FIELDS" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
+                            <ItemsControl ItemsSource="{Binding SelectedEntry.CustomFields}" Margin="0,0,0,18">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="140"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Name}" FontSize="12"
+                                                       Foreground="{StaticResource MutedBrush}"
+                                                       VerticalAlignment="Center"/>
+                                            <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}"
+                                                    CornerRadius="6" Padding="10,8">
+                                                <TextBlock Text="{Binding Value}" FontSize="13"
+                                                           Foreground="{StaticResource TextBrush}"
+                                                           TextWrapping="Wrap"/>
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
 
                         <!-- Tags -->
-                        <TextBlock Text="TAGS" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"
-                                   Visibility="{Binding HasTags, Converter={StaticResource BoolToVis}}"/>
-                        <ItemsControl ItemsSource="{Binding SelectedEntry.Tags}" Margin="0,0,0,28"
-                                      Visibility="{Binding HasTags, Converter={StaticResource BoolToVis}}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="#45475A" CornerRadius="4" Padding="8,3" Margin="0,0,6,6">
-                                        <TextBlock Text="{Binding}" FontSize="12"
-                                                   Foreground="{StaticResource MutedBrush}"/>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <StackPanel Visibility="{Binding HasTags, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="TAGS" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
+                            <ItemsControl ItemsSource="{Binding SelectedEntry.Tags}" Margin="0,0,0,28">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#45475A" CornerRadius="4" Padding="8,3" Margin="0,0,6,6">
+                                            <TextBlock Text="{Binding}" FontSize="12"
+                                                       Foreground="{StaticResource MutedBrush}"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
 
                         <!-- Actions -->
-                        <StackPanel Orientation="Horizontal">
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                             <Button Content="Edit" Command="{Binding EditEntryCommand}"
                                     CommandParameter="{Binding SelectedEntry}"
                                     Padding="20,10" Margin="0,0,10,0"/>
