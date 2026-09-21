@@ -1,5 +1,3 @@
-using System.Collections.ObjectModel;
-using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -8,6 +6,8 @@ using PejPass.Application.Services;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Settings;
 using PejPass.Wpf.Views;
+using System.Collections.ObjectModel;
+using System.Windows;
 
 namespace PejPass.Wpf.ViewModels;
 
@@ -27,14 +27,6 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _statusMessage = string.Empty;
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private VaultEntry? _selectedEntry;
-
-    // Detail panel helpers
-    [ObservableProperty] private bool _hasSelection;
-    [ObservableProperty] private bool _hasNotes;
-    [ObservableProperty] private bool _hasCustomFields;
-    [ObservableProperty] private bool _hasTags;
-    [ObservableProperty] private string _displayPassword = string.Empty;
-    [ObservableProperty] private string _showPasswordButtonText = "Show";
 
     public ObservableCollection<VaultEntry> Entries { get; } = new();
     public ObservableCollection<VaultEntry> FilteredEntries { get; } = new();
@@ -133,7 +125,7 @@ public partial class MainViewModel : ObservableObject
         _autoLockTimer = new System.Timers.Timer(_settings.AutoLockMinutes * 60_000);
         _autoLockTimer.Elapsed += (_, _) =>
         {
-            Application.Current?.Dispatcher.Invoke(() => Lock());
+            System.Windows.Application.Current?.Dispatcher.Invoke(() => Lock());
         };
         _autoLockTimer.AutoReset = false;
         _autoLockTimer.Start();
