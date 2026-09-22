@@ -240,6 +240,7 @@ public partial class MainViewModel : ObservableObject
             Entries.Add(e);
 
         var purged = vault.PurgeExpiredTrash();
+        RebuildTagFilters();
         ApplyFilter(preserveSelectionId: null);
         UpdateEntryStatus(purged > 0 ? $"purged {purged} expired trash item(s)" : null);
     }
@@ -264,9 +265,17 @@ public partial class MainViewModel : ObservableObject
         var q = SearchText?.Trim() ?? string.Empty;
 
         IEnumerable<VaultEntry> source = Entries;
+
+        if (!string.IsNullOrEmpty(SelectedTagFilter))
+        {
+            var tag = SelectedTagFilter;
+            source = source.Where(e =>
+                e.Tags.Any(t => string.Equals(t.Trim(), tag, StringComparison.OrdinalIgnoreCase)));
+        }
+
         if (!string.IsNullOrEmpty(q))
         {
-            source = Entries.Where(e =>
+            source = source.Where(e =>
                 e.Title.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 e.Username.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 e.Url.Contains(q, StringComparison.OrdinalIgnoreCase) ||
@@ -491,6 +500,7 @@ public partial class MainViewModel : ObservableObject
         {
             LoginViewModel.CurrentVault!.AddEntry(newEntry);
             Entries.Add(newEntry);
+            RebuildTagFilters();
             ApplyFilter(preserveSelectionId: newEntry.Id);
             await SaveVaultAsync();
             StatusMessage = "Entry added.";
@@ -537,6 +547,7 @@ public partial class MainViewModel : ObservableObject
         entry.IsFavorite = updated.IsFavorite;
         entry.Touch();
 
+        RebuildTagFilters();
         ApplyFilter(preserveSelectionId: entry.Id);
         RebuildDisplayCustomFields();
         UpdatePasswordDisplay();
@@ -565,6 +576,7 @@ public partial class MainViewModel : ObservableObject
         Entries.Remove(entry);
         SelectedEntry = null;
 
+        RebuildTagFilters();
         ApplyFilter(preserveSelectionId: null);
         await SaveVaultAsync();
         UpdateEntryStatus("moved to trash");
@@ -613,6 +625,7 @@ public partial class MainViewModel : ObservableObject
                 Entries.Add(e);
             }
 
+            RebuildTagFilters();
             ApplyFilter();
             await SaveVaultAsync();
             StatusMessage = $"Imported {imported.Count} entries.";
@@ -661,6 +674,7 @@ public partial class MainViewModel : ObservableObject
         Entries.Clear();
         foreach (var e in vault.Entries)
             Entries.Add(e);
+        RebuildTagFilters();
         ApplyFilter(preserveSelectionId: SelectedEntry?.Id);
         await SaveVaultAsync();
         UpdateEntryStatus();
