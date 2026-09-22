@@ -80,8 +80,9 @@ public partial class MainViewModel
             (trashCount > 0 ? $" and {trashCount} in trash" : "") + ".\n\n" +
             "• Replace — overwrite data in the CURRENT vault file\n" +
             "  (path stays the same; re-encrypted with your current password)\n\n" +
-            "• Merge — add backup entries that are not already present\n" +
-            "  (identical title + username + password + URL are skipped)\n\n" +
+            "• Merge — add entries that are not a 100% content match\n" +
+            "  (any difference in title, username, password, URL, notes,\n" +
+            "   TOTP, tags, or custom fields → treated as new and added)\n\n" +
             "This is different from Login → Open vault, which would switch to the backup file itself.",
             "Restore mode",
             primaryText: "Replace",
@@ -143,19 +144,19 @@ public partial class MainViewModel
             }
             else
             {
-                // Merge: skip fully identical entries (title + username + password + url)
+                // Merge: skip only when content is 100% identical
                 var existingKeys = new HashSet<string>(StringComparer.Ordinal);
                 foreach (var e in currentVault.Entries)
-                    existingKeys.Add(EntryIdentityKey(e));
+                    existingKeys.Add(EntryContentFingerprint(e));
                 foreach (var tr in currentVault.Trash)
-                    existingKeys.Add(EntryIdentityKey(tr.Entry));
+                    existingKeys.Add(EntryContentFingerprint(tr.Entry));
 
                 var added = 0;
                 var skipped = 0;
 
                 foreach (var e in backupVault.Entries)
                 {
-                    var key = EntryIdentityKey(e);
+                    var key = EntryContentFingerprint(e);
                     if (existingKeys.Contains(key))
                     {
                         skipped++;
@@ -169,7 +170,7 @@ public partial class MainViewModel
 
                 foreach (var tr in backupVault.Trash)
                 {
-                    var key = EntryIdentityKey(tr.Entry);
+                    var key = EntryContentFingerprint(tr.Entry);
                     if (existingKeys.Contains(key))
                     {
                         skipped++;
@@ -196,13 +197,13 @@ public partial class MainViewModel
                 await SaveVaultAsync();
 
                 StatusMessage = skipped > 0
-                    ? $"Merged {added} entries ({skipped} identical skipped)."
+                    ? $"Merged {added} entries ({skipped} 100% identical skipped)."
                     : $"Merged {added} entries from backup.";
 
                 DialogService.Success(
                     $"Merge finished.\n\n" +
                     $"Added: {added}\n" +
-                    $"Skipped identical: {skipped}\n\n" +
+                    $"Skipped (100% identical): {skipped}\n\n" +
                     $"Saved to:\n{currentPath}",
                     "Restore complete");
             }
@@ -217,17 +218,33 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// Identity used to detect fully identical credentials during merge.
+    /// Full content fingerprint. Skip on merge only when every content field matches exactly
+    /// (Ordinal, no case folding). Id / dates / history / sort order are ignored.
     /// </summary>
-    private static string EntryIdentityKey(VaultEntry e)
+    private static string EntryContentFingerprint(VaultEntry e)
     {
-        static string N(string? s) => (s ?? string.Empty).Trim();
+        static string S(string? s) => s ?? string.Empty;
+
+        // Tags: order-independent
+        var tags = string.Join('\u001e',
+            e.Tags.Select(t => S(t)).OrderBy(t => t, StringComparer.Ordinal));
+
+        // Custom fields: order-independent by name|value|IsSecret
+        var customs = string.Join('\u001e',
+            e.CustomFields
+                .Select(f => $"{S(f.Name)}\u001d{S(f.Value)}\u001d{(f.IsSecret ? '1' : '0')}")
+                .OrderBy(x => x, StringComparer.Ordinal));
 
         return string.Join('\u001f',
-            N(e.Title).ToLowerInvariant(),
-            N(e.Username).ToLowerInvariant(),
-            N(e.Password), // case-sensitive
-            N(e.Url).ToLowerInvariant());
+            S(e.Title),
+            S(e.Username),
+            S(e.Password),
+            S(e.Url),
+            S(e.TotpSecret),
+            S(e.Notes),
+            tags,
+            customs,
+            e.IsFavorite ? "1" : "0");
     }
 
     private static VaultEntry CloneEntry(VaultEntry source, bool newId = false)
