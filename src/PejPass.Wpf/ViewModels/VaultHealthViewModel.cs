@@ -4,6 +4,8 @@ using PejPass.Domain.Entities;
 using PejPass.Domain.Health;
 using PejPass.Domain.Security;
 using System.Collections.ObjectModel;
+using System.Security.Cryptography;
+using System.Text;
 using System.Windows.Threading;
 
 namespace PejPass.Wpf.ViewModels;
@@ -56,6 +58,8 @@ public partial class VaultHealthViewModel : ObservableObject
     public event EventHandler<Guid>? RequestOpenEntry;
 
     private readonly List<HealthIssue> _allIssues = [];
+    /// <summary>EntryId → stable group key (password hash) for sorting peers together.</summary>
+    private readonly Dictionary<Guid, string> _duplicateGroupKeys = [];
 
     public VaultHealthViewModel(IEnumerable<VaultEntry> entries)
     {
@@ -77,13 +81,13 @@ public partial class VaultHealthViewModel : ObservableObject
 
         Issues.Clear();
         _allIssues.Clear();
+        _duplicateGroupKeys.Clear();
         TotalIssues = 0;
         DuplicateCount = 0;
         WeakCount = 0;
         MissingTotpCount = 0;
         StaleCount = 0;
 
-        // Paint the cleared state before work starts
         await YieldUiAsync().ConfigureAwait(true);
 
         var n = _entries.Count;
@@ -98,11 +102,18 @@ public partial class VaultHealthViewModel : ObservableObject
 
         try
         {
-            // password → how many entries share it
-            var passwordCounts = _entries
+            // password → entries that share it (only groups with 2+)
+            var byPassword = _entries
                 .Where(e => !string.IsNullOrEmpty(e.Password))
                 .GroupBy(e => e.Password, StringComparer.Ordinal)
-                .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+                .Where(g => g.Count() > 1)
+                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
+
+            // Stable group key per password (never store the password itself in rows)
+            var groupKeyByPassword = byPassword.Keys.ToDictionary(
+                p => p,
+                p => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(p)))[..16],
+                StringComparer.Ordinal);
 
             var utc = DateTimeOffset.UtcNow;
             var filter = SelectedFilterIndex;
@@ -112,16 +123,16 @@ public partial class VaultHealthViewModel : ObservableObject
                 var e = _entries[i];
 
                 if (!string.IsNullOrEmpty(e.Password) &&
-                    passwordCounts.TryGetValue(e.Password, out var peers) &&
-                    peers > 1)
+                    byPassword.TryGetValue(e.Password, out var group))
                 {
+                    var groupKey = groupKeyByPassword[e.Password];
+                    _duplicateGroupKeys[e.Id] = groupKey;
+
                     AddIssue(new HealthIssue(
                         HealthIssueKind.DuplicatePassword,
                         e.Id,
-                        e.Title,
-                        peers == 2
-                            ? "Same password used on 2 entries"
-                            : $"Same password used on {peers} entries"),
+                        string.IsNullOrWhiteSpace(e.Title) ? "(untitled)" : e.Title,
+                        FormatDuplicateDetail(e, group)),
                         filter);
                 }
 
@@ -160,28 +171,52 @@ public partial class VaultHealthViewModel : ObservableObject
                 }
 
                 ScanProgress = (i + 1) * 100.0 / n;
-                ScanStatus = $"Scanning {i + 1} / {n}";
+                ScanStatus = $"Scanning {i + 1} / {n}…";
 
-                // No sleep — just let the dispatcher render pending UI changes.
-                // Without this, a tight loop starves layout/render and everything jumps at the end.
-                await YieldUiAsync().ConfigureAwait(true);
+                // Yield often enough for progress to paint on large vaults
+                if ((i + 1) % 5 == 0 || i + 1 == n)
+                    await YieldUiAsync().ConfigureAwait(true);
             }
 
             ScanProgress = 100;
             ScanStatus = TotalIssues == 0
                 ? "No issues found."
                 : $"{TotalIssues} issue(s) found.";
-        }
-        catch (Exception ex)
-        {
-            ScanStatus = $"Scan failed: {ex.Message}";
-            ScanProgress = 0;
+
+            // Final ordered view (peers of same password sit together)
+            RebuildVisibleIssues(SelectedFilterIndex);
         }
         finally
         {
             IsScanning = false;
             IsReady = true;
         }
+    }
+
+    /// <summary>
+    /// Names the other account(s) that share this password so the user can find them.
+    /// </summary>
+    private static string FormatDuplicateDetail(VaultEntry entry, List<VaultEntry> group)
+    {
+        var others = group
+            .Where(x => x.Id != entry.Id)
+            .Select(x => string.IsNullOrWhiteSpace(x.Title) ? "(untitled)" : x.Title.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (others.Count == 0)
+            return "Same password used on multiple entries";
+
+        if (others.Count == 1)
+            return $"Same password as «{others[0]}»";
+
+        const int maxShow = 4;
+        if (others.Count <= maxShow)
+            return "Also used by: " + string.Join(", ", others.Select(t => $"«{t}»"));
+
+        var shown = others.Take(maxShow).Select(t => $"«{t}»");
+        return "Also used by: " + string.Join(", ", shown) + $", +{others.Count - maxShow} more";
     }
 
     private void AddIssue(HealthIssue issue, int filter)
@@ -199,13 +234,34 @@ public partial class VaultHealthViewModel : ObservableObject
         TotalIssues = _allIssues.Count;
 
         if (MatchesFilter(issue, filter))
-            Issues.Add(new HealthIssueRow(issue));
+            Issues.Add(new HealthIssueRow(issue, GroupKeyFor(issue)));
     }
 
-    /// <summary>
-    /// Returns control to the WPF dispatcher so bindings / layout / render can run.
-    /// Not a timed delay — only pumps the message queue.
-    /// </summary>
+    private string GroupKeyFor(HealthIssue issue)
+    {
+        if (issue.Kind == HealthIssueKind.DuplicatePassword &&
+            _duplicateGroupKeys.TryGetValue(issue.EntryId, out var key))
+            return key;
+
+        // Non-duplicates: stable per-entry so sort is predictable
+        return issue.EntryId.ToString("N");
+    }
+
+    private void RebuildVisibleIssues(int filterIndex)
+    {
+        Issues.Clear();
+        foreach (var i in OrderedIssues(filterIndex))
+            Issues.Add(new HealthIssueRow(i, GroupKeyFor(i)));
+    }
+
+    private IEnumerable<HealthIssue> OrderedIssues(int filterIndex)
+    {
+        return _allIssues
+            .Where(x => MatchesFilter(x, filterIndex))
+            .OrderBy(x => GroupKeyFor(x), StringComparer.Ordinal)
+            .ThenBy(x => x.EntryTitle, StringComparer.OrdinalIgnoreCase);
+    }
+
     private static async Task YieldUiAsync()
     {
         var dispatcher = System.Windows.Application.Current?.Dispatcher;
@@ -215,7 +271,6 @@ public partial class VaultHealthViewModel : ObservableObject
             return;
         }
 
-        // Background: after input, before idle — enough for ProgressBar + list to paint
         await dispatcher.InvokeAsync(static () => { }, DispatcherPriority.Background);
     }
 
@@ -228,16 +283,7 @@ public partial class VaultHealthViewModel : ObservableObject
         _ => true
     };
 
-    partial void OnSelectedFilterIndexChanged(int value)
-    {
-        Issues.Clear();
-        foreach (var i in _allIssues
-                     .Where(x => MatchesFilter(x, value))
-                     .OrderBy(x => x.EntryTitle, StringComparer.OrdinalIgnoreCase))
-        {
-            Issues.Add(new HealthIssueRow(i));
-        }
-    }
+    partial void OnSelectedFilterIndexChanged(int value) => RebuildVisibleIssues(value);
 
     [RelayCommand]
     private async Task RefreshAsync() => await StartScanAsync();
@@ -259,12 +305,14 @@ public sealed class HealthIssueRow
     public string KindLabel { get; }
     public string Detail { get; }
     public string SeverityColor { get; }
+    public string GroupKey { get; }
 
-    public HealthIssueRow(HealthIssue issue)
+    public HealthIssueRow(HealthIssue issue, string groupKey)
     {
         EntryId = issue.EntryId;
         EntryTitle = issue.EntryTitle;
         Detail = issue.Detail;
+        GroupKey = groupKey;
 
         (KindLabel, SeverityColor) = issue.Kind switch
         {
