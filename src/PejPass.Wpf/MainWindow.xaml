@@ -210,9 +210,11 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14"
-                                               Foreground="{DynamicResource TextBrush}" TextTrimming="CharacterEllipsis"/>
+                                               Foreground="{DynamicResource TextBrush}" TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding Title}"/>
                                     <TextBlock Text="{Binding Username}" FontSize="12" Margin="0,3,0,0"
-                                               Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
+                                               Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding Username}"/>
                                 </StackPanel>
                                 <TextBlock Grid.Column="2" Text="★" FontSize="14"
                                            Foreground="{DynamicResource WarningBrush}"
@@ -245,7 +247,8 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{Binding SelectedEntry.Title}" FontSize="26" FontWeight="Bold"
-                                       Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"
+                                       ToolTip="{Binding SelectedEntry.Title}"/>
                             <Button Grid.Column="1" Padding="12,8" Margin="12,0,0,0"
                                     Command="{Binding ToggleFavoriteCommand}"
                                     CommandParameter="{Binding SelectedEntry}"
@@ -284,7 +287,9 @@
                                 </Grid.ColumnDefinitions>
                                 <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="12,10">
                                     <TextBlock Text="{Binding SelectedEntry.Url}" Foreground="{DynamicResource AccentBrush}"
-                                               FontSize="13" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                               FontSize="13" VerticalAlignment="Center"
+                                               TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding SelectedEntry.Url}"/>
                                 </Border>
                                 <Button Grid.Column="1" Content="Copy" Margin="8,0,0,0" Padding="12,8"
                                         Command="{Binding CopyUrlCommand}"
@@ -303,7 +308,9 @@
                             </Grid.ColumnDefinitions>
                             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="12,10">
                                 <TextBlock Text="{Binding SelectedEntry.Username}" Foreground="{DynamicResource TextBrush}"
-                                           FontSize="14" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                           FontSize="14" VerticalAlignment="Center"
+                                           TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                           ToolTip="{Binding SelectedEntry.Username}"/>
                             </Border>
                             <Button Grid.Column="1" Content="Copy" Margin="8,0,0,0" Padding="12,8"
                                     Command="{Binding CopyUsernameCommand}"
@@ -320,7 +327,9 @@
                             </Grid.ColumnDefinitions>
                             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="12,10">
                                 <TextBlock Text="{Binding DisplayPassword}" Foreground="{DynamicResource TextBrush}"
-                                           FontSize="14" FontFamily="Consolas" VerticalAlignment="Center"/>
+                                           FontSize="14" FontFamily="Consolas" VerticalAlignment="Center"
+                                           TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                           ToolTip="{Binding DisplayPassword}"/>
                             </Border>
                             <Button Grid.Column="1" Content="{Binding ShowPasswordButtonText}"
                                     Margin="8,0,0,0" Padding="12,8"
@@ -361,8 +370,12 @@
                             <TextBlock Text="NOTES" FontSize="11" FontWeight="SemiBold"
                                        Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"/>
                             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="12,10">
-                                <TextBlock Text="{Binding SelectedEntry.Notes}" Foreground="{DynamicResource TextBrush}"
-                                           FontSize="13" TextWrapping="Wrap"/>
+                                <ScrollViewer MaxHeight="160" VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled">
+                                    <TextBlock Text="{Binding SelectedEntry.Notes}" Foreground="{DynamicResource TextBrush}"
+                                               FontSize="13" TextWrapping="Wrap"
+                                               ToolTip="{Binding SelectedEntry.Notes}"/>
+                                </ScrollViewer>
                             </Border>
                         </StackPanel>
 
@@ -383,7 +396,9 @@
                                                        VerticalAlignment="Center"/>
                                             <Border Grid.Column="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="10,8">
                                                 <TextBlock Text="{Binding DisplayValue}" Foreground="{DynamicResource TextBrush}"
-                                                           FontFamily="Consolas" TextWrapping="Wrap"/>
+                                                           FontFamily="Consolas"
+                                                           TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding Value}"/>
                                             </Border>
                                             <Button Grid.Column="2" Content="{Binding RevealButtonText}" Margin="6,0,0,0" Padding="10,6"
                                                     Command="{Binding DataContext.ToggleCustomFieldVisibilityCommand, RelativeSource={RelativeSource AncestorType=Window}}"
