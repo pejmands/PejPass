@@ -54,7 +54,6 @@ public static class VaultHealthAnalyzer
             return report;
         }
 
-        // Phase 1 — duplicates (0–20%)
         progress?.Report(new HealthScanProgress(1, "Checking duplicate passwords…"));
 
         var byPassword = list
@@ -65,14 +64,27 @@ public static class VaultHealthAnalyzer
 
         foreach (var group in byPassword)
         {
-            var count = group.Count();
-            // Short detail — never list every title (that caused horizontal scroll)
-            var detail = count == 2
-                ? "Same password used on 2 entries"
-                : $"Same password used on {count} entries";
-
-            foreach (var e in group)
+            var members = group.ToList();
+            foreach (var e in members)
             {
+                var others = members
+                    .Where(x => x.Id != e.Id)
+                    .Select(x => string.IsNullOrWhiteSpace(x.Title) ? "(untitled)" : x.Title.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                string detail;
+                if (others.Count == 0)
+                    detail = "Same password used on multiple entries";
+                else if (others.Count == 1)
+                    detail = $"Same password as «{others[0]}»";
+                else if (others.Count <= 4)
+                    detail = "Also used by: " + string.Join(", ", others.Select(n => $"«{n}»"));
+                else
+                    detail = "Also used by: " + string.Join(", ", others.Take(4).Select(n => $"«{n}»"))
+                             + $", +{others.Count - 4} more";
+
                 report.Issues.Add(new HealthIssue(
                     HealthIssueKind.DuplicatePassword,
                     e.Id,
@@ -81,11 +93,7 @@ public static class VaultHealthAnalyzer
             }
         }
 
-        progress?.Report(new HealthScanProgress(20, "Checking strength, TOTP, age…"));
-
-        // Phase 2 — per entry (20–100%)
-        // Report often enough for a smooth bar even on fast machines
-        var reportEvery = Math.Max(1, n / 50);
+        progress?.Report(new HealthScanProgress(25, "Checking password strength…"));
 
         for (var i = 0; i < n; i++)
         {
@@ -122,16 +130,13 @@ public static class VaultHealthAnalyzer
                     $"Last updated {days} days ago"));
             }
 
-            if (i == n - 1 || (i + 1) % reportEvery == 0)
-            {
-                var pct = 20 + (i + 1) * 80.0 / n;
-                progress?.Report(new HealthScanProgress(
-                    Math.Min(99.5, pct),
-                    $"Scanning {i + 1} / {n}"));
-            }
+            var pct = 25 + (i + 1) * 75.0 / n;
+            progress?.Report(new HealthScanProgress(pct, $"Scanning {i + 1} / {n}…"));
         }
 
-        progress?.Report(new HealthScanProgress(100, "Done."));
+        progress?.Report(new HealthScanProgress(100,
+            report.Total == 0 ? "No issues found." : $"{report.Total} issue(s) found."));
+
         return report;
     }
 }

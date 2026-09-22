@@ -3,112 +3,85 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Vault Health"
         Height="560" Width="720"
-        MinWidth="560"
+        MinHeight="420" MinWidth="560"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgBrush}">
 
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="48"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Text="Vault Health" FontSize="22" FontWeight="Bold"
-                   Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+        <Grid Margin="0,0,0,12">
+            <TextBlock Text="Vault Health" FontSize="22" FontWeight="Bold"
+                       Foreground="{DynamicResource TextBrush}"/>
+            <Button Content="Rescan" Command="{Binding RefreshCommand}"
+                    HorizontalAlignment="Right" Padding="12,6"
+                    Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
+        </Grid>
 
-        <StackPanel Grid.Row="1" VerticalAlignment="Center">
-            <TextBlock Text="{Binding ScanStatus}" FontSize="13"
-                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"/>
-            <ProgressBar Height="8" Minimum="0" Maximum="100"
-                         Value="{Binding ScanProgress}"
-                         Background="{DynamicResource SurfaceAltBrush}"
-                         Foreground="{DynamicResource AccentBrush}"/>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
+            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="14,10" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Total" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Text="{Binding TotalIssues}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"/>
+                </StackPanel>
+            </Border>
+            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="14,10" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Duplicates" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Text="{Binding DuplicateCount}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource DangerBrush}"/>
+                </StackPanel>
+            </Border>
+            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="14,10" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Weak" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Text="{Binding WeakCount}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}"/>
+                </StackPanel>
+            </Border>
+            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="14,10" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="No TOTP" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Text="{Binding MissingTotpCount}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                </StackPanel>
+            </Border>
+            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="14,10">
+                <StackPanel>
+                    <TextBlock Text="Stale" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Text="{Binding StaleCount}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}"/>
+                </StackPanel>
+            </Border>
         </StackPanel>
 
-        <UniformGrid Grid.Row="2" Columns="4" Margin="0,12,0,16">
-            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="12" Margin="0,0,8,0">
-                <StackPanel>
-                    <TextBlock Text="{Binding DuplicateCount}" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource DangerBrush}"/>
-                    <TextBlock Text="Duplicates" FontSize="12" Foreground="{DynamicResource MutedBrush}"/>
-                </StackPanel>
-            </Border>
-            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="12" Margin="0,0,8,0">
-                <StackPanel>
-                    <TextBlock Text="{Binding WeakCount}" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}"/>
-                    <TextBlock Text="Weak" FontSize="12" Foreground="{DynamicResource MutedBrush}"/>
-                </StackPanel>
-            </Border>
-            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="12" Margin="0,0,8,0">
-                <StackPanel>
-                    <TextBlock Text="{Binding MissingTotpCount}" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-                    <TextBlock Text="No TOTP" FontSize="12" Foreground="{DynamicResource MutedBrush}"/>
-                </StackPanel>
-            </Border>
-            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="12">
-                <StackPanel>
-                    <TextBlock Text="{Binding StaleCount}" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}"/>
-                    <TextBlock Text="Stale (1y+)" FontSize="12" Foreground="{DynamicResource MutedBrush}"/>
-                </StackPanel>
-            </Border>
-        </UniformGrid>
+        <DockPanel Grid.Row="2" Margin="0,0,0,8">
+            <ComboBox DockPanel.Dock="Right" Width="180"
+                      ItemsSource="{Binding FilterOptions}"
+                      SelectedIndex="{Binding SelectedFilterIndex}"
+                      IsEnabled="{Binding IsReady}"
+                      FontSize="12" Padding="6,4"/>
+            <StackPanel>
+                <TextBlock Text="{Binding ScanStatus}" FontSize="12" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+                <ProgressBar Height="6" Minimum="0" Maximum="100" Value="{Binding ScanProgress}"
+                             Background="{DynamicResource SurfaceAltBrush}"/>
+            </StackPanel>
+        </DockPanel>
 
         <DockPanel Grid.Row="3">
-            <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <ComboBox ItemsSource="{Binding FilterOptions}" SelectedIndex="{Binding SelectedFilterIndex}"
-                          Width="200" HorizontalAlignment="Left" Padding="8,6"
-                          IsEnabled="{Binding IsReady}"/>
-                <TextBlock Grid.Column="1" Text="{Binding Issues.Count, StringFormat={}{0} issues}"
-                           Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                <Button Grid.Column="2" Content="Rescan" Command="{Binding RefreshCommand}"
-                        Padding="12,6"
-                        Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"
-                        IsEnabled="{Binding IsReady}"/>
-            </Grid>
-
-            <!-- ListBox stays fully enabled (no white disabled gaps, no deferred clicks).
-                 Only Open buttons are gated by IsReady. -->
-            <ListBox ItemsSource="{Binding Issues}"
-                     Background="{DynamicResource BgBrush}"
-                     BorderThickness="0"
-                     Padding="0"
-                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     ScrollViewer.CanContentScroll="True">
-                <ListBox.Template>
-                    <ControlTemplate TargetType="ListBox">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderThickness="0"
-                                SnapsToDevicePixels="True">
-                            <ScrollViewer Focusable="False"
-                                          HorizontalScrollBarVisibility="Disabled"
-                                          VerticalScrollBarVisibility="Auto">
-                                <ItemsPresenter/>
-                            </ScrollViewer>
-                        </Border>
-                    </ControlTemplate>
-                </ListBox.Template>
+            <ListBox ItemsSource="{Binding Issues}" Background="Transparent" BorderThickness="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         <Setter Property="Padding" Value="0"/>
                         <Setter Property="Margin" Value="0,0,0,6"/>
-                        <Setter Property="Background" Value="Transparent"/>
-                        <Setter Property="BorderThickness" Value="0"/>
-                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ListBoxItem">
-                                    <Border Background="{DynamicResource SurfaceBrush}"
-                                            CornerRadius="8"
-                                            Padding="12,10"
-                                            SnapsToDevicePixels="True">
+                                    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="12,10">
                                         <ContentPresenter/>
                                     </Border>
                                 </ControlTemplate>
@@ -126,7 +99,7 @@
                             </Grid.ColumnDefinitions>
 
                             <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="4" Padding="8,3"
-                                    HorizontalAlignment="Left" VerticalAlignment="Center">
+                                    HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,2,0,0">
                                 <TextBlock Text="{Binding KindLabel}" FontSize="11" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}"/>
                             </Border>
@@ -137,7 +110,7 @@
                                            TextTrimming="CharacterEllipsis"/>
                                 <TextBlock Text="{Binding Detail}" FontSize="12" Margin="0,2,0,0"
                                            Foreground="{DynamicResource MutedBrush}"
-                                           TextTrimming="CharacterEllipsis"/>
+                                           TextWrapping="Wrap"/>
                             </StackPanel>
 
                             <Button Grid.Column="2" Content="Open" Padding="14,6"
