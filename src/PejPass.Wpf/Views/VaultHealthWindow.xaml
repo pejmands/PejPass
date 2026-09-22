@@ -22,9 +22,7 @@
         <StackPanel Grid.Row="1" VerticalAlignment="Center">
             <TextBlock Text="{Binding ScanStatus}" FontSize="13"
                        Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"/>
-            <!-- Indeterminate while scanning; full bar when done -->
             <ProgressBar Height="8" Minimum="0" Maximum="100"
-                         IsIndeterminate="{Binding IsScanning}"
                          Value="{Binding ScanProgress}"
                          Background="{DynamicResource SurfaceAltBrush}"
                          Foreground="{DynamicResource AccentBrush}"/>
