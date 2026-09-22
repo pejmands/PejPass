@@ -21,7 +21,7 @@
                     Background="{DynamicResource DangerBrush}"/>
         </Grid>
 
-        <ListBox Grid.Row="1" ItemsSource="{Binding Items}" Background="Transparent" BorderThickness="0">
+        <ListBox x:Name="TrashList" Grid.Row="1" ItemsSource="{Binding Items}" Background="Transparent" BorderThickness="0">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -42,14 +42,21 @@
                 <DataTemplate>
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <StackPanel>
+                        <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
+                                Background="{DynamicResource SurfaceAltBrush}"
+                                VerticalAlignment="Center" Margin="0,0,10,0">
+                            <Image Source="{Binding Converter={StaticResource FaviconConv}}"
+                                   Stretch="UniformToFill"
+                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"/>
-                            <!-- Run.Text defaults to TwoWay; TrashRow props are get-only → must use OneWay -->
                             <TextBlock FontSize="12" Foreground="{DynamicResource MutedBrush}" Margin="0,2,0,0">
                                 <Run Text="{Binding Username, Mode=OneWay}"/>
                                 <Run Text=" · deleted "/>
@@ -58,10 +65,10 @@
                                 <Run Text="{Binding DaysLeftText, Mode=OneWay}"/>
                             </TextBlock>
                         </StackPanel>
-                        <Button Grid.Column="1" Content="Restore" Margin="8,0,0,0" Padding="12,6"
+                        <Button Grid.Column="2" Content="Restore" Margin="8,0,0,0" Padding="12,6"
                                 Command="{Binding DataContext.RestoreCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                 CommandParameter="{Binding}"/>
-                        <Button Grid.Column="2" Content="Purge" Margin="8,0,0,0" Padding="12,6"
+                        <Button Grid.Column="3" Content="Purge" Margin="8,0,0,0" Padding="12,6"
                                 Command="{Binding DataContext.PurgeCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                 CommandParameter="{Binding}"
                                 Background="{DynamicResource DangerBrush}"/>
