@@ -27,6 +27,7 @@
 
             <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
             <conv:NullOrEmptyToVisibilityConverter x:Key="NullOrEmptyToVis"/>
+            <conv:FaviconConverter x:Key="FaviconConv"/>
 
             <Style TargetType="Button">
                 <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
@@ -78,7 +79,6 @@
                 </Setter>
             </Style>
 
-            <!-- Same look as TextBox: rounded border, theme brushes, caret color -->
             <Style TargetType="PasswordBox">
                 <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
