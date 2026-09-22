@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.Windows;
@@ -28,12 +29,21 @@ public partial class MainWindow : Window
                 if (viewModel.SelectedEntry is null) return;
                 EntryList.ScrollIntoView(viewModel.SelectedEntry);
                 EntryList.UpdateLayout();
-                // Second pass helps when item was just added to filtered list
                 EntryList.ScrollIntoView(viewModel.SelectedEntry);
             }, System.Windows.Threading.DispatcherPriority.Loaded);
         };
 
         PreviewKeyDown += OnPreviewKeyDown;
+
+        // Refresh list item icons when a favicon finishes downloading
+        FaviconService.FaviconReady += _ =>
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                try { EntryList.Items.Refresh(); }
+                catch { /* list may be disposing */ }
+            });
+        };
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
