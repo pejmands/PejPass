@@ -73,30 +73,22 @@
                         IsEnabled="{Binding IsReady}"/>
             </Grid>
 
-            <!--
-              Do NOT use IsEnabled=false on ListBox: WPF paints disabled gaps white.
-              Block interaction with IsHitTestVisible instead; keep theme background.
-            -->
+            <!-- ListBox stays fully enabled (no white disabled gaps, no deferred clicks).
+                 Only Open buttons are gated by IsReady. -->
             <ListBox ItemsSource="{Binding Issues}"
                      Background="{DynamicResource BgBrush}"
                      BorderThickness="0"
                      Padding="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     ScrollViewer.CanContentScroll="True"
-                     ScrollViewer.Background="{DynamicResource BgBrush}"
-                     IsHitTestVisible="{Binding IsReady}"
-                     Focusable="{Binding IsReady}">
+                     ScrollViewer.CanContentScroll="True">
                 <ListBox.Template>
                     <ControlTemplate TargetType="ListBox">
                         <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="{TemplateBinding Padding}"
+                                BorderThickness="0"
                                 SnapsToDevicePixels="True">
-                            <ScrollViewer Padding="{TemplateBinding Padding}"
-                                          Focusable="False"
-                                          Background="{TemplateBinding Background}"
-                                          HorizontalScrollBarVisibility="Disabled">
+                            <ScrollViewer Focusable="False"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          VerticalScrollBarVisibility="Auto">
                                 <ItemsPresenter/>
                             </ScrollViewer>
                         </Border>
@@ -113,20 +105,12 @@
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ListBoxItem">
-                                    <Border x:Name="Bd"
-                                            Background="{DynamicResource SurfaceBrush}"
+                                    <Border Background="{DynamicResource SurfaceBrush}"
                                             CornerRadius="8"
                                             Padding="12,10"
                                             SnapsToDevicePixels="True">
                                         <ContentPresenter/>
                                     </Border>
-                                    <ControlTemplate.Triggers>
-                                        <!-- Keep same look when parent is disabled / not ready -->
-                                        <Trigger Property="IsEnabled" Value="False">
-                                            <Setter TargetName="Bd" Property="Opacity" Value="1"/>
-                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
                                 </ControlTemplate>
                             </Setter.Value>
                         </Setter>
@@ -159,6 +143,7 @@
                             <Button Grid.Column="2" Content="Open" Padding="14,6"
                                     VerticalAlignment="Center"
                                     MinWidth="64"
+                                    IsEnabled="{Binding DataContext.IsReady, RelativeSource={RelativeSource AncestorType=Window}}"
                                     Command="{Binding DataContext.OpenEntryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                     CommandParameter="{Binding}"/>
                         </Grid>
