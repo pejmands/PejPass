@@ -22,6 +22,12 @@ public sealed class AppSettings
     /// <summary>How the entry list is ordered. Favorites always float to the top.</summary>
     public EntrySortMode SortMode { get; set; } = EntrySortMode.TitleAsc;
 
+    /// <summary>
+    /// After a successful master-password unlock in this process, allow Windows Hello
+    /// to unlock again without retyping the password (same vault path).
+    /// </summary>
+    public bool WindowsHelloEnabled { get; set; } = true;
+
     public static string SettingsFilePath =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
