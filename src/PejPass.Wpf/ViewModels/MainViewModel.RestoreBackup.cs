@@ -75,18 +75,26 @@ public partial class MainViewModel
         var entryCount = backupVault.Entries.Count;
         var trashCount = backupVault.Trash.Count;
 
-        // Yes = Replace, No = Merge (labels make the choice explicit)
-        var replace = DialogService.Confirm(
+        var choice = DialogService.Choose(
             $"Backup contains {entryCount} entries" +
             (trashCount > 0 ? $" and {trashCount} in trash" : "") + ".\n\n" +
             "• Replace — overwrite data in the CURRENT vault file\n" +
             "  (path stays the same; re-encrypted with your current password)\n\n" +
-            "• Merge — add backup entries into the current vault (new IDs)\n\n" +
-            "This is different from Login → Open vault, which would switch to the backup file itself.\n\n" +
-            "Replace current vault data with this backup?",
+            "• Merge — add backup entries that are not already present\n" +
+            "  (identical title + username + password + URL are skipped)\n\n" +
+            "This is different from Login → Open vault, which would switch to the backup file itself.",
             "Restore mode",
-            yesText: "Replace",
-            noText: "Merge");
+            primaryText: "Replace",
+            secondaryText: "Merge",
+            tertiaryText: "Cancel");
+
+        if (choice == AppDialogResult.Tertiary || choice == AppDialogResult.None)
+        {
+            StatusMessage = "Restore cancelled.";
+            return;
+        }
+
+        var replace = choice == AppDialogResult.Primary;
 
         try
         {
@@ -118,41 +126,86 @@ public partial class MainViewModel
                 }
                 currentVault.Name = backupVault.Name;
                 currentVault.UpdatedAt = DateTimeOffset.UtcNow;
+
+                Entries.Clear();
+                foreach (var e in currentVault.Entries)
+                    Entries.Add(e);
+
+                SelectedEntry = null;
+                ApplyFilter(preserveSelectionId: null);
+                await SaveVaultAsync();
+
+                StatusMessage = $"Vault restored from backup ({currentVault.Entries.Count} entries).";
+                DialogService.Success(
+                    $"Current vault replaced with backup data.\n\n" +
+                    $"{currentVault.Entries.Count} entries saved to:\n{currentPath}",
+                    "Restore complete");
             }
             else
             {
+                // Merge: skip fully identical entries (title + username + password + url)
+                var existingKeys = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var e in currentVault.Entries)
+                    existingKeys.Add(EntryIdentityKey(e));
+                foreach (var tr in currentVault.Trash)
+                    existingKeys.Add(EntryIdentityKey(tr.Entry));
+
+                var added = 0;
+                var skipped = 0;
+
                 foreach (var e in backupVault.Entries)
+                {
+                    var key = EntryIdentityKey(e);
+                    if (existingKeys.Contains(key))
+                    {
+                        skipped++;
+                        continue;
+                    }
+
                     currentVault.AddEntry(CloneEntry(e, newId: true));
+                    existingKeys.Add(key);
+                    added++;
+                }
 
                 foreach (var tr in backupVault.Trash)
                 {
+                    var key = EntryIdentityKey(tr.Entry);
+                    if (existingKeys.Contains(key))
+                    {
+                        skipped++;
+                        continue;
+                    }
+
                     currentVault.Trash.Add(new TrashedEntry
                     {
                         Entry = CloneEntry(tr.Entry, newId: true),
                         DeletedAt = tr.DeletedAt
                     });
+                    existingKeys.Add(key);
+                    added++;
                 }
+
                 currentVault.UpdatedAt = DateTimeOffset.UtcNow;
+
+                Entries.Clear();
+                foreach (var e in currentVault.Entries)
+                    Entries.Add(e);
+
+                SelectedEntry = null;
+                ApplyFilter(preserveSelectionId: null);
+                await SaveVaultAsync();
+
+                StatusMessage = skipped > 0
+                    ? $"Merged {added} entries ({skipped} identical skipped)."
+                    : $"Merged {added} entries from backup.";
+
+                DialogService.Success(
+                    $"Merge finished.\n\n" +
+                    $"Added: {added}\n" +
+                    $"Skipped identical: {skipped}\n\n" +
+                    $"Saved to:\n{currentPath}",
+                    "Restore complete");
             }
-
-            Entries.Clear();
-            foreach (var e in currentVault.Entries)
-                Entries.Add(e);
-
-            SelectedEntry = null;
-            ApplyFilter(preserveSelectionId: null);
-            await SaveVaultAsync();
-
-            StatusMessage = replace
-                ? $"Vault restored from backup ({currentVault.Entries.Count} entries)."
-                : $"Merged {entryCount} entries from backup.";
-
-            DialogService.Success(
-                replace
-                    ? $"Current vault replaced with backup data.\n\n" +
-                      $"{currentVault.Entries.Count} entries saved to:\n{currentPath}"
-                    : $"Merged {entryCount} entries from backup into:\n{currentPath}",
-                "Restore complete");
 
             ResetAutoLockTimer();
         }
@@ -161,6 +214,20 @@ public partial class MainViewModel
             DialogService.Error($"Restore failed:\n{ex.Message}", "Restore Backup");
             StatusMessage = "Restore failed.";
         }
+    }
+
+    /// <summary>
+    /// Identity used to detect fully identical credentials during merge.
+    /// </summary>
+    private static string EntryIdentityKey(VaultEntry e)
+    {
+        static string N(string? s) => (s ?? string.Empty).Trim();
+
+        return string.Join('\u001f',
+            N(e.Title).ToLowerInvariant(),
+            N(e.Username).ToLowerInvariant(),
+            N(e.Password), // case-sensitive
+            N(e.Url).ToLowerInvariant());
     }
 
     private static VaultEntry CloneEntry(VaultEntry source, bool newId = false)

@@ -4,7 +4,8 @@ public enum AppDialogResult
 {
     None,
     Primary,
-    Secondary
+    Secondary,
+    Tertiary
 }
 
 public enum AppDialogType

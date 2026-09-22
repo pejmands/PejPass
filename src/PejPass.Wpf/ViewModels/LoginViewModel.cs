@@ -5,6 +5,7 @@ using PejPass.Application.Services;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Policies;
 using PejPass.Domain.Settings;
+using PejPass.Wpf.Services;
 using System.IO;
 
 namespace PejPass.Wpf.ViewModels;
@@ -156,7 +157,9 @@ public partial class LoginViewModel : ObservableObject
             CurrentVaultPath = VaultPath;
             CurrentMasterPassword = MasterPassword;
 
+            // Persist so the next launch defaults to this vault
             _settings.LastVaultPath = VaultPath;
+            SettingsStore.Save(_settings);
 
             RequestClose?.Invoke(this, EventArgs.Empty);
         }

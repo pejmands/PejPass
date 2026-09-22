@@ -8,7 +8,7 @@ public partial class AppDialog : Window
     public AppDialogResult Result { get; private set; } = AppDialogResult.None;
 
     public AppDialog(string title, string message, AppDialogType type,
-        string primaryText = "OK", string? secondaryText = null)
+        string primaryText = "OK", string? secondaryText = null, string? tertiaryText = null)
     {
         InitializeComponent();
 
@@ -24,6 +24,18 @@ public partial class AppDialog : Window
         {
             SecondaryButton.Content = secondaryText;
             SecondaryButton.Visibility = Visibility.Visible;
+        }
+
+        if (string.IsNullOrEmpty(tertiaryText))
+        {
+            TertiaryButton.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            TertiaryButton.Content = tertiaryText;
+            TertiaryButton.Visibility = Visibility.Visible;
+            // Escape cancels when a tertiary (usually Cancel) is present
+            TertiaryButton.IsCancel = true;
         }
 
         // Tint primary button by type
@@ -50,6 +62,13 @@ public partial class AppDialog : Window
     private void Secondary_Click(object sender, RoutedEventArgs e)
     {
         Result = AppDialogResult.Secondary;
+        DialogResult = false;
+        Close();
+    }
+
+    private void Tertiary_Click(object sender, RoutedEventArgs e)
+    {
+        Result = AppDialogResult.Tertiary;
         DialogResult = false;
         Close();
     }

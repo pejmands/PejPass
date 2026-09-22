@@ -39,6 +39,26 @@ public static class DialogService
         return dlg.Result == AppDialogResult.Primary;
     }
 
+    /// <summary>
+    /// Three-way choice. Primary / Secondary / Tertiary (usually Cancel).
+    /// Closing without a button yields Tertiary.
+    /// </summary>
+    public static AppDialogResult Choose(
+        string message,
+        string title,
+        string primaryText,
+        string secondaryText,
+        string tertiaryText = "Cancel")
+    {
+        var dlg = new AppDialog(title, message, AppDialogType.Confirm,
+            primaryText, secondaryText, tertiaryText)
+        {
+            Owner = Owner
+        };
+        dlg.ShowDialog();
+        return dlg.Result == AppDialogResult.None ? AppDialogResult.Tertiary : dlg.Result;
+    }
+
     public static bool ConfirmDelete(string itemName)
     {
         return Confirm(
