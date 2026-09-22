@@ -44,6 +44,10 @@
                             Padding="14,7" Margin="0,0,8,0"
                             Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"
                             ToolTip="Export encrypted vault backup (Ctrl+B)"/>
+                    <Button Content="Export CSV" Command="{Binding ExportCsvCommand}"
+                            Padding="14,7" Margin="0,0,8,0"
+                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"
+                            ToolTip="Export unencrypted CSV (security warning)"/>
                     <Button Content="Import" Command="{Binding ImportCommand}"
                             Padding="14,7" Margin="0,0,8,0"
                             Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
