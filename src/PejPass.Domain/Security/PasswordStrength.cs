@@ -22,6 +22,7 @@ public static class PasswordStrength
         if (password.Length >= 8) score++;
         if (password.Length >= 12) score++;
         if (password.Length >= 16) score++;
+        if (password.Length >= 20) score++;
 
         var hasLower = password.Any(char.IsLower);
         var hasUpper = password.Any(char.IsUpper);
@@ -42,6 +43,10 @@ public static class PasswordStrength
         if (password.Length < 8)
             return PasswordStrengthLevel.VeryWeak;
 
+        // Repeated characters penalty
+        if (password.Distinct().Count() <= password.Length / 3)
+            score = Math.Max(0, score - 1);
+
         return score switch
         {
             <= 2 => PasswordStrengthLevel.Weak,
@@ -58,4 +63,27 @@ public static class PasswordStrength
             or PasswordStrengthLevel.VeryWeak
             or PasswordStrengthLevel.Weak;
     }
+
+    public static string GetLabel(PasswordStrengthLevel level) => level switch
+    {
+        PasswordStrengthLevel.Empty => string.Empty,
+        PasswordStrengthLevel.VeryWeak => "Very weak",
+        PasswordStrengthLevel.Weak => "Weak",
+        PasswordStrengthLevel.Fair => "Fair",
+        PasswordStrengthLevel.Strong => "Strong",
+        PasswordStrengthLevel.VeryStrong => "Very strong",
+        _ => string.Empty
+    };
+
+    /// <summary>0–100 for progress bars.</summary>
+    public static double GetProgress(PasswordStrengthLevel level) => level switch
+    {
+        PasswordStrengthLevel.Empty => 0,
+        PasswordStrengthLevel.VeryWeak => 15,
+        PasswordStrengthLevel.Weak => 35,
+        PasswordStrengthLevel.Fair => 55,
+        PasswordStrengthLevel.Strong => 75,
+        PasswordStrengthLevel.VeryStrong => 100,
+        _ => 0
+    };
 }
