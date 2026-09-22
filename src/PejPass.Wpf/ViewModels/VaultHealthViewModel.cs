@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -50,6 +49,11 @@ public partial class VaultHealthViewModel : ObservableObject
         ScanStatus = $"Scanning {_entries.Count} entries…";
     }
 
+    partial void OnIsReadyChanged(bool value)
+    {
+        OpenEntryCommand.NotifyCanExecuteChanged();
+    }
+
     public async Task StartScanAsync()
     {
         IsScanning = true;
@@ -57,14 +61,12 @@ public partial class VaultHealthViewModel : ObservableObject
         ScanProgress = 0;
         ScanStatus = $"Scanning {_entries.Count} entries…";
 
-        // Keep previous issues visible until the new report is ready (avoids white flash)
         await Task.Yield();
 
         try
         {
             var progress = new Progress<HealthScanProgress>(p =>
             {
-                // Ensure UI thread updates (Progress should already marshal, but be explicit)
                 if (_dispatcher.CheckAccess())
                 {
                     ScanProgress = p.Percent;
@@ -90,7 +92,6 @@ public partial class VaultHealthViewModel : ObservableObject
             MissingTotpCount = _report.MissingTotpCount;
             StaleCount = _report.StaleCount;
 
-            // Swap list content only after scan completes
             ApplyFilter();
 
             ScanProgress = 100;
@@ -137,10 +138,12 @@ public partial class VaultHealthViewModel : ObservableObject
             Issues.Add(new HealthIssueRow(i));
     }
 
-    [RelayCommand]
+    private bool CanOpenEntry(HealthIssueRow? row) => IsReady && row is not null;
+
+    [RelayCommand(CanExecute = nameof(CanOpenEntry))]
     private void OpenEntry(HealthIssueRow? row)
     {
-        if (row is null) return;
+        if (!IsReady || row is null) return;
         RequestOpenEntry?.Invoke(this, row.EntryId);
     }
 }
