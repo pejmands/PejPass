@@ -189,7 +189,7 @@ public static class FaviconService
     {
         Interlocked.Exchange(ref _batchPending, 1);
 
-        var dispatcher = Application.Current?.Dispatcher;
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
         if (dispatcher is null) return;
 
         dispatcher.BeginInvoke(() =>
@@ -234,7 +234,7 @@ public static class FaviconService
         return Path.Combine(CacheDir, hash + ".bin");
     }
 
-    private static ImageSource? TryLoadFromDisk(string host)
+    private static BitmapImage? TryLoadFromDisk(string host)
     {
         try
         {
@@ -251,7 +251,7 @@ public static class FaviconService
         }
     }
 
-    private static ImageSource? CreateBitmap(byte[] bytes)
+    private static BitmapImage? CreateBitmap(byte[] bytes)
     {
         try
         {
@@ -286,7 +286,7 @@ public static class FaviconService
         return LetterCache.GetOrAdd(letter, static l => CreateLetterAvatarCore(l));
     }
 
-    private static ImageSource CreateLetterAvatarCore(string letter)
+    private static RenderTargetBitmap CreateLetterAvatarCore(string letter)
     {
         var hash = letter.GetHashCode();
         var r = (byte)(80 + (hash & 0x7F));
