@@ -1,0 +1,46 @@
+using CommunityToolkit.Mvvm.Input;
+
+namespace PejPass.Wpf.ViewModels;
+
+public partial class EntryEditorViewModel
+{
+    /// <summary>
+    /// Common tags shown as one-click chips in the editor.
+    /// Not forced onto entries — only added when the user taps them.
+    /// </summary>
+    public string[] SuggestedTags { get; } =
+    [
+        "Work",
+        "Personal",
+        "Finance",
+        "Banking",
+        "Social",
+        "Email",
+        "Shopping",
+        "Dev",
+        "Cloud",
+        "Gaming",
+        "Travel",
+        "Family"
+    ];
+
+    [RelayCommand]
+    private void ToggleSuggestedTag(string? tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+            return;
+
+        tag = tag.Trim();
+        var parts = TagsText
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+
+        var existing = parts.FindIndex(t => t.Equals(tag, StringComparison.OrdinalIgnoreCase));
+        if (existing >= 0)
+            parts.RemoveAt(existing);
+        else
+            parts.Add(tag);
+
+        TagsText = string.Join(", ", parts);
+    }
+}
