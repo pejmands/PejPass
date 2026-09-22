@@ -16,7 +16,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly int _savedClipboard;
     private readonly bool _savedWindowsHello;
 
-    private bool _suppressThemePreview;
+    private readonly bool _suppressThemePreview;
 
     [ObservableProperty]
     public partial int AutoLockMinutes { get; set; }

@@ -81,7 +81,7 @@ public static class FaviconService
     }
 
     /// <summary>Background: load disk cache + download missing icons (throttled).</summary>
-    public static void Prefetch(IEnumerable<(string? Url, string? Title)> items)
+    public static void Prefetch(IEnumerable<(string Url, string Title)> items)
     {
         foreach (var (url, _) in items)
         {
