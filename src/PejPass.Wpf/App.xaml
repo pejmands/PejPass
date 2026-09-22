@@ -8,7 +8,6 @@
                 <ResourceDictionary Source="Themes/ComboBoxStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- Fallback brushes (ThemeService overwrites these at startup) -->
             <SolidColorBrush x:Key="BgBrush" Color="#1E1E2E"/>
             <SolidColorBrush x:Key="SurfaceBrush" Color="#313244"/>
             <SolidColorBrush x:Key="SurfaceAltBrush" Color="#45475A"/>
@@ -27,6 +26,7 @@
 
             <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
             <conv:NullOrEmptyToVisibilityConverter x:Key="NullOrEmptyToVis"/>
+            <conv:EmptyStringToVisibilityConverter x:Key="EmptyStringToVis"/>
             <conv:FaviconConverter x:Key="FaviconConv"/>
 
             <Style TargetType="Button">
