@@ -4,6 +4,7 @@ using Microsoft.Win32;
 using PejPass.Application.Services;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Policies;
+using PejPass.Domain.Security;
 using PejPass.Domain.Settings;
 using PejPass.Wpf.Services;
 using System.IO;
@@ -18,14 +19,10 @@ public partial class LoginViewModel : ObservableObject
 
     public event EventHandler? RequestClose;
 
-    // Shared session state after successful unlock
     public static Vault? CurrentVault { get; private set; }
     public static string? CurrentVaultPath { get; private set; }
     public static string? CurrentMasterPassword { get; private set; }
 
-    /// <summary>
-    /// Clears sensitive session data. Windows Hello DPAPI cache is kept so biometric unlock works after Lock.
-    /// </summary>
     public static void ClearSession()
     {
         CurrentVault = null;
@@ -33,7 +30,6 @@ public partial class LoginViewModel : ObservableObject
         CurrentMasterPassword = null;
     }
 
-    /// <summary>Full wipe including Hello session cache (e.g. disable Hello in settings).</summary>
     public static void ClearSessionAndHelloCache()
     {
         ClearSession();
@@ -64,6 +60,18 @@ public partial class LoginViewModel : ObservableObject
     [ObservableProperty]
     public partial bool ShowWindowsHello { get; set; }
 
+    [ObservableProperty]
+    public partial string MasterPasswordStrengthLabel { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial double MasterPasswordStrengthProgress { get; set; }
+
+    [ObservableProperty]
+    public partial int MasterPasswordStrengthLevel { get; set; }
+
+    [ObservableProperty]
+    public partial bool ShowMasterPasswordStrength { get; set; }
+
     public LoginViewModel(VaultService vaultService, AppSettings settings)
     {
         _vaultService = vaultService;
@@ -80,6 +88,7 @@ public partial class LoginViewModel : ObservableObject
     {
         if (value) IsOpenMode = false;
         _ = RefreshWindowsHelloVisibilityAsync();
+        UpdateMasterPasswordStrength();
     }
 
     partial void OnIsOpenModeChanged(bool value)
@@ -89,6 +98,26 @@ public partial class LoginViewModel : ObservableObject
     }
 
     partial void OnVaultPathChanged(string value) => _ = RefreshWindowsHelloVisibilityAsync();
+
+    partial void OnMasterPasswordChanged(string value) => UpdateMasterPasswordStrength();
+
+    private void UpdateMasterPasswordStrength()
+    {
+        if (!IsCreateMode)
+        {
+            ShowMasterPasswordStrength = false;
+            MasterPasswordStrengthLabel = string.Empty;
+            MasterPasswordStrengthProgress = 0;
+            MasterPasswordStrengthLevel = 0;
+            return;
+        }
+
+        var level = PasswordStrength.Evaluate(MasterPassword);
+        MasterPasswordStrengthLevel = (int)level;
+        MasterPasswordStrengthLabel = PasswordStrength.GetLabel(level);
+        MasterPasswordStrengthProgress = PasswordStrength.GetProgress(level);
+        ShowMasterPasswordStrength = level != PasswordStrengthLevel.Empty;
+    }
 
     public async Task RefreshWindowsHelloVisibilityAsync()
     {
@@ -190,7 +219,6 @@ public partial class LoginViewModel : ObservableObject
             CurrentVaultPath = VaultPath;
             CurrentMasterPassword = password;
 
-            // Refresh DPAPI blob (same path)
             SessionPasswordCache.Store(VaultPath, password);
 
             _settings.LastVaultPath = VaultPath;
@@ -272,7 +300,6 @@ public partial class LoginViewModel : ObservableObject
             CurrentVaultPath = VaultPath;
             CurrentMasterPassword = MasterPassword;
 
-            // Cache for Windows Hello re-unlock after Lock (same process)
             if (_settings.WindowsHelloEnabled)
                 SessionPasswordCache.Store(VaultPath, MasterPassword);
             else
