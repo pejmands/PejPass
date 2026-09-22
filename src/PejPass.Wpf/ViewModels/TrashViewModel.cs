@@ -9,10 +9,15 @@ namespace PejPass.Wpf.ViewModels;
 public partial class TrashViewModel : ObservableObject
 {
     private readonly Vault _vault;
+    private readonly List<TrashRow> _all = [];
 
     public ObservableCollection<TrashRow> Items { get; } = [];
 
-    [ObservableProperty] public partial string StatusMessage { get; set; } = string.Empty;
+    [ObservableProperty]
+    public partial string SearchText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string StatusMessage { get; set; } = string.Empty;
 
     public event EventHandler? Changed;
 
@@ -22,16 +27,44 @@ public partial class TrashViewModel : ObservableObject
         Reload();
     }
 
+    partial void OnSearchTextChanged(string value) => ApplyFilter();
+
     private void Reload()
     {
-        Items.Clear();
+        _all.Clear();
         foreach (var t in _vault.Trash.OrderByDescending(x => x.DeletedAt))
-            Items.Add(new TrashRow(t));
+            _all.Add(new TrashRow(t));
 
-        StatusMessage = Items.Count == 0
-            ? "Trash is empty."
-            : $"{Items.Count} item(s) — recoverable for 30 days.";
+        ApplyFilter();
     }
+
+    private void ApplyFilter()
+    {
+        Items.Clear();
+        var q = SearchText?.Trim() ?? string.Empty;
+
+        IEnumerable<TrashRow> source = _all;
+        if (!string.IsNullOrEmpty(q))
+        {
+            source = _all.Where(r =>
+                r.Title.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                r.Username.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                r.Url.Contains(q, StringComparison.OrdinalIgnoreCase));
+        }
+
+        foreach (var row in source)
+            Items.Add(row);
+
+        if (_all.Count == 0)
+            StatusMessage = "Trash is empty.";
+        else if (!string.IsNullOrEmpty(q))
+            StatusMessage = $"{Items.Count} of {_all.Count} item(s)";
+        else
+            StatusMessage = $"{_all.Count} item(s) — recoverable for 30 days.";
+    }
+
+    [RelayCommand]
+    private void ClearSearch() => SearchText = string.Empty;
 
     [RelayCommand]
     private void Restore(TrashRow? row)
@@ -41,10 +74,11 @@ public partial class TrashViewModel : ObservableObject
         if (!_vault.RestoreFromTrash(row.EntryId))
             return;
 
-        Items.Remove(row);
+        _all.RemoveAll(r => r.EntryId == row.EntryId);
+        ApplyFilter();
         Changed?.Invoke(this, EventArgs.Empty);
         StatusMessage = $"Restored \"{row.Title}\".";
-        if (Items.Count == 0)
+        if (_all.Count == 0)
             StatusMessage = "Trash is empty.";
     }
 
@@ -63,27 +97,28 @@ public partial class TrashViewModel : ObservableObject
         if (!_vault.PurgeFromTrash(row.EntryId))
             return;
 
-        Items.Remove(row);
+        _all.RemoveAll(r => r.EntryId == row.EntryId);
+        ApplyFilter();
         Changed?.Invoke(this, EventArgs.Empty);
-        StatusMessage = Items.Count == 0
-            ? "Trash is empty."
-            : $"{Items.Count} item(s) remaining.";
+        if (_all.Count == 0)
+            StatusMessage = "Trash is empty.";
     }
 
     [RelayCommand]
     private void EmptyTrash()
     {
-        if (Items.Count == 0) return;
+        if (_all.Count == 0) return;
 
         if (!DialogService.Confirm(
-                $"Permanently delete all {Items.Count} item(s) in Trash?\n\nThis cannot be undone.",
+                $"Permanently delete all {_all.Count} item(s) in Trash?\n\nThis cannot be undone.",
                 "Empty Trash",
                 yesText: "Empty Trash",
                 noText: "Cancel"))
             return;
 
         _vault.EmptyTrash();
-        Items.Clear();
+        _all.Clear();
+        ApplyFilter();
         Changed?.Invoke(this, EventArgs.Empty);
         StatusMessage = "Trash is empty.";
     }
