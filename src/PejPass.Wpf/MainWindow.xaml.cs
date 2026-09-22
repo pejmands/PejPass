@@ -35,13 +35,10 @@ public partial class MainWindow : Window
 
         PreviewKeyDown += OnPreviewKeyDown;
 
-        FaviconService.FaviconReady += _ =>
+        FaviconService.FaviconsBatchReady += () =>
         {
-            Dispatcher.BeginInvoke(() =>
-            {
-                try { EntryList.Items.Refresh(); }
-                catch { /* list may be disposing */ }
-            });
+            try { EntryList.Items.Refresh(); }
+            catch { /* list may be disposing */ }
         };
 
         Loaded += (_, _) =>

@@ -23,7 +23,7 @@ public static class FaviconService
     private static readonly ConcurrentDictionary<string, byte> Failed = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentQueue<string> DownloadQueue = new();
     private static readonly SemaphoreSlim DownloadGate = new(1, 1);
-    private static readonly SemaphoreSlim WorkerSlots = new(3, 3); // max 3 concurrent HTTP
+    private static readonly SemaphoreSlim WorkerSlots = new(3, 3);
 
     private static readonly string CacheDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -73,7 +73,6 @@ public static class FaviconService
         if (host is not null && Memory.TryGetValue(host, out var mem))
             return mem;
 
-        // Queue background work if we might still get an icon
         if (host is not null && !Failed.ContainsKey(host) && !Memory.ContainsKey(host))
             EnqueueHost(host);
 
@@ -114,16 +113,19 @@ public static class FaviconService
             while (DownloadQueue.TryDequeue(out var host))
             {
                 await WorkerSlots.WaitAsync().ConfigureAwait(false);
+                var captured = host;
                 _ = Task.Run(async () =>
                 {
                     try
                     {
-                        await LoadOneAsync(host).ConfigureAwait(false);
+                        await LoadOneAsync(captured).ConfigureAwait(false);
                     }
                     finally
                     {
                         WorkerSlots.Release();
-                        InFlight.TryRemove(host, out _);
+                        InFlight.TryRemove(captured, out _);
+                        if (!DownloadQueue.IsEmpty)
+                            _ = ProcessQueueAsync();
                     }
                 });
             }
@@ -131,6 +133,8 @@ public static class FaviconService
         finally
         {
             DownloadGate.Release();
+            if (!DownloadQueue.IsEmpty)
+                _ = ProcessQueueAsync();
         }
     }
 
@@ -138,7 +142,6 @@ public static class FaviconService
     {
         try
         {
-            // 1) Disk (background thread — OK)
             var fromDisk = TryLoadFromDisk(host);
             if (fromDisk is not null)
             {
@@ -147,7 +150,6 @@ public static class FaviconService
                 return;
             }
 
-            // 2) Network
             byte[]? bytes =
                 await TryDownloadBytesAsync($"https://icons.duckduckgo.com/ip3/{host}.ico").ConfigureAwait(false)
                 ?? await TryDownloadBytesAsync($"https://www.google.com/s2/favicons?domain={host}&sz=64").ConfigureAwait(false);
@@ -165,7 +167,6 @@ public static class FaviconService
             }
             catch
             {
-                // cache write is best-effort
             }
 
             var image = CreateBitmap(bytes);
@@ -254,7 +255,6 @@ public static class FaviconService
     {
         try
         {
-            // BitmapImage must be created/frozen on a thread with STA or via Freeze after OnLoad
             using var ms = new MemoryStream(bytes);
             var bmp = new BitmapImage();
             bmp.BeginInit();
