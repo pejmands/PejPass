@@ -35,7 +35,6 @@ public partial class MainWindow : Window
 
         PreviewKeyDown += OnPreviewKeyDown;
 
-        // Refresh list item icons when a favicon finishes downloading
         FaviconService.FaviconReady += _ =>
         {
             Dispatcher.BeginInvoke(() =>
@@ -43,6 +42,12 @@ public partial class MainWindow : Window
                 try { EntryList.Items.Refresh(); }
                 catch { /* list may be disposing */ }
             });
+        };
+
+        Loaded += (_, _) =>
+        {
+            if (DataContext is MainViewModel vm)
+                FaviconService.Prefetch(vm.Entries.Select(e => (e.Url, e.Title)));
         };
     }
 
