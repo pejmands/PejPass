@@ -26,6 +26,7 @@
             <SolidColorBrush x:Key="ComboItemHoverBrush" Color="#45475A"/>
 
             <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
+            <conv:NullOrEmptyToVisibilityConverter x:Key="NullOrEmptyToVis"/>
 
             <Style TargetType="Button">
                 <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
