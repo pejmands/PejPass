@@ -1,6 +1,6 @@
+using PejPass.Domain.Settings;
 using System.IO;
 using System.Text.Json;
-using PejPass.Domain.Settings;
 
 namespace PejPass.Wpf.Services;
 

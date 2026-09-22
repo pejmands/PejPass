@@ -1,11 +1,10 @@
-using System.Collections.ObjectModel;
-using System.Windows;
-using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Health;
 using PejPass.Domain.Security;
+using System.Collections.ObjectModel;
+using System.Windows.Threading;
 
 namespace PejPass.Wpf.ViewModels;
 
@@ -13,17 +12,35 @@ public partial class VaultHealthViewModel : ObservableObject
 {
     private readonly IReadOnlyList<VaultEntry> _entries;
 
-    [ObservableProperty] private int _selectedFilterIndex;
-    [ObservableProperty] private int _totalIssues;
-    [ObservableProperty] private int _duplicateCount;
-    [ObservableProperty] private int _weakCount;
-    [ObservableProperty] private int _missingTotpCount;
-    [ObservableProperty] private int _staleCount;
+    [ObservableProperty]
+    public partial int SelectedFilterIndex { get; set; }
 
-    [ObservableProperty] private bool _isScanning;
-    [ObservableProperty] private bool _isReady;
-    [ObservableProperty] private double _scanProgress;
-    [ObservableProperty] private string _scanStatus = "Preparing…";
+    [ObservableProperty]
+    public partial int TotalIssues { get; set; }
+
+    [ObservableProperty]
+    public partial int DuplicateCount { get; set; }
+
+    [ObservableProperty]
+    public partial int WeakCount { get; set; }
+
+    [ObservableProperty]
+    public partial int MissingTotpCount { get; set; }
+
+    [ObservableProperty]
+    public partial int StaleCount { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsScanning { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsReady { get; set; }
+
+    [ObservableProperty]
+    public partial double ScanProgress { get; set; }
+
+    [ObservableProperty]
+    public partial string ScanStatus { get; set; } = "Preparing…";
 
     public string[] FilterOptions { get; } =
     [
@@ -42,7 +59,7 @@ public partial class VaultHealthViewModel : ObservableObject
 
     public VaultHealthViewModel(IEnumerable<VaultEntry> entries)
     {
-        _entries = entries.ToList();
+        _entries = [.. entries];
         IsScanning = true;
         IsReady = false;
         ScanProgress = 0;

@@ -1,14 +1,13 @@
-using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using PejPass.Application.Interfaces;
 using PejPass.Application.Services;
-using PejPass.Domain.Settings;
 using PejPass.Infrastructure.Crypto;
 using PejPass.Infrastructure.Import;
 using PejPass.Infrastructure.Storage;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
+using System.Windows;
 
 namespace PejPass.Wpf;
 

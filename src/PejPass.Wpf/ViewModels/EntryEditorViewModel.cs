@@ -1,26 +1,45 @@
-using System.Collections.ObjectModel;
-using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Security;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Views;
+using System.Collections.ObjectModel;
+using System.Windows;
 
 namespace PejPass.Wpf.ViewModels;
 
 public partial class EntryEditorViewModel : ObservableObject
 {
-    [ObservableProperty] private string _title = string.Empty;
-    [ObservableProperty] private string _username = string.Empty;
-    [ObservableProperty] private string _password = string.Empty;
-    [ObservableProperty] private string _url = string.Empty;
-    [ObservableProperty] private string _totpSecret = string.Empty;
-    [ObservableProperty] private string _notes = string.Empty;
-    [ObservableProperty] private string _tagsText = string.Empty;
-    [ObservableProperty] private bool _isFavorite;
-    [ObservableProperty] private bool _hasPasswordHistory;
-    [ObservableProperty] private bool _hasUsernameHistory;
+    [ObservableProperty]
+    public partial string Title { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Username { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Password { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Url { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string TotpSecret { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Notes { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string TagsText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsFavorite { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasPasswordHistory { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasUsernameHistory { get; set; }
 
     public VaultEntry? Original { get; }
 
@@ -114,7 +133,7 @@ public partial class EntryEditorViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void TogglePasswordHistoryReveal(PasswordHistoryRow? row)
+    private static void TogglePasswordHistoryReveal(PasswordHistoryRow? row)
     {
         if (row is null) return;
         row.IsRevealed = !row.IsRevealed;
@@ -255,10 +274,10 @@ public partial class EntryEditorViewModel : ObservableObject
             }
 
             if (passwordHistory.Count > VaultEntry.MaxPasswordHistory)
-                passwordHistory = passwordHistory.Take(VaultEntry.MaxPasswordHistory).ToList();
+                passwordHistory = [.. passwordHistory.Take(VaultEntry.MaxPasswordHistory)];
 
             if (usernameHistory.Count > VaultEntry.MaxUsernameHistory)
-                usernameHistory = usernameHistory.Take(VaultEntry.MaxUsernameHistory).ToList();
+                usernameHistory = [.. usernameHistory.Take(VaultEntry.MaxUsernameHistory)];
 
             return new VaultEntry
             {
@@ -301,25 +320,24 @@ public sealed record SensitiveChange(string FieldName, string OldValue, string N
 
 public partial class CustomFieldItem : ObservableObject
 {
-    [ObservableProperty] private string _name = string.Empty;
-    [ObservableProperty] private string _value = string.Empty;
-    [ObservableProperty] private bool _isSecret;
+    [ObservableProperty]
+    public partial string Name { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Value { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsSecret { get; set; }
 }
 
-public partial class PasswordHistoryRow : ObservableObject
+public partial class PasswordHistoryRow(PasswordHistoryItem item) : ObservableObject
 {
-    public string Password { get; }
-    public DateTimeOffset ChangedAt { get; }
-    public string ChangedAtText { get; }
+    public string Password { get; } = item.Password;
+    public DateTimeOffset ChangedAt { get; } = item.ChangedAt;
+    public string ChangedAtText { get; } = item.ChangedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
 
-    [ObservableProperty] private bool _isRevealed;
-
-    public PasswordHistoryRow(PasswordHistoryItem item)
-    {
-        Password = item.Password;
-        ChangedAt = item.ChangedAt;
-        ChangedAtText = item.ChangedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
-    }
+    [ObservableProperty]
+    public partial bool IsRevealed { get; set; }
 
     public string DisplayValue =>
         IsRevealed
@@ -337,16 +355,9 @@ public partial class PasswordHistoryRow : ObservableObject
     }
 }
 
-public sealed class UsernameHistoryRow
+public sealed class UsernameHistoryRow(UsernameHistoryItem item)
 {
-    public string Username { get; }
-    public DateTimeOffset ChangedAt { get; }
-    public string ChangedAtText { get; }
-
-    public UsernameHistoryRow(UsernameHistoryItem item)
-    {
-        Username = item.Username;
-        ChangedAt = item.ChangedAt;
-        ChangedAtText = item.ChangedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
-    }
+    public string Username { get; } = item.Username;
+    public DateTimeOffset ChangedAt { get; } = item.ChangedAt;
+    public string ChangedAtText { get; } = item.ChangedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
 }

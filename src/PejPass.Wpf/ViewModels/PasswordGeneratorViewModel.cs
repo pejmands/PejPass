@@ -6,14 +6,29 @@ namespace PejPass.Wpf.ViewModels;
 
 public partial class PasswordGeneratorViewModel : ObservableObject
 {
-    [ObservableProperty] private int _length = 20;
-    [ObservableProperty] private bool _includeLowercase = true;
-    [ObservableProperty] private bool _includeUppercase = true;
-    [ObservableProperty] private bool _includeDigits = true;
-    [ObservableProperty] private bool _includeSymbols = true;
-    [ObservableProperty] private bool _excludeAmbiguous = true;
-    [ObservableProperty] private string _preview = string.Empty;
-    [ObservableProperty] private string? _error;
+    [ObservableProperty]
+    public partial int Length { get; set; } = 20;
+
+    [ObservableProperty]
+    public partial bool IncludeLowercase { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool IncludeUppercase { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool IncludeDigits { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool IncludeSymbols { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool ExcludeAmbiguous { get; set; } = true;
+
+    [ObservableProperty]
+    public partial string Preview { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string? Error { get; set; }
 
     public string? Result { get; private set; }
 

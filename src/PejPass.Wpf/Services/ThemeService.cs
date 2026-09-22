@@ -1,7 +1,6 @@
-using System.Windows;
-using System.Windows.Media;
 using Microsoft.Win32;
 using PejPass.Domain.Settings;
+using System.Windows.Media;
 using ThemeMode = PejPass.Domain.Settings.ThemeMode;
 
 namespace PejPass.Wpf.Services;

@@ -1,9 +1,9 @@
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
 using Microsoft.Extensions.DependencyInjection;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace PejPass.Wpf;
 

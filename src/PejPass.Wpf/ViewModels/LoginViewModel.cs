@@ -32,13 +32,26 @@ public partial class LoginViewModel : ObservableObject
         CurrentMasterPassword = null;
     }
 
-    [ObservableProperty] private string _vaultPath = string.Empty;
-    [ObservableProperty] private string _masterPassword = string.Empty;
-    [ObservableProperty] private string? _passwordError;
-    [ObservableProperty] private string _statusMessage = string.Empty;
-    [ObservableProperty] private bool _isOpenMode = true;
-    [ObservableProperty] private bool _isCreateMode;
-    [ObservableProperty] private bool _isBusy;
+    [ObservableProperty]
+    public partial string VaultPath { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string MasterPassword { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string? PasswordError { get; set; }
+
+    [ObservableProperty]
+    public partial string StatusMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsOpenMode { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool IsCreateMode { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
 
     public LoginViewModel(VaultService vaultService, AppSettings settings)
     {

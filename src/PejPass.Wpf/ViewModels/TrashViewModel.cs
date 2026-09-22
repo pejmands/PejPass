@@ -1,8 +1,8 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
 using PejPass.Wpf.Dialogs;
+using System.Collections.ObjectModel;
 
 namespace PejPass.Wpf.ViewModels;
 
@@ -12,7 +12,7 @@ public partial class TrashViewModel : ObservableObject
 
     public ObservableCollection<TrashRow> Items { get; } = [];
 
-    [ObservableProperty] private string _statusMessage = string.Empty;
+    [ObservableProperty] public partial string StatusMessage { get; set; } = string.Empty;
 
     public event EventHandler? Changed;
 

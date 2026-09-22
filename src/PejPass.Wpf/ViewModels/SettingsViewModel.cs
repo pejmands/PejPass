@@ -15,11 +15,16 @@ public partial class SettingsViewModel : ObservableObject
     private readonly int _savedAutoLock;
     private readonly int _savedClipboard;
 
-    private bool _suppressThemePreview;
+    private readonly bool _suppressThemePreview;
 
-    [ObservableProperty] private int _autoLockMinutes;
-    [ObservableProperty] private int _clipboardClearSeconds;
-    [ObservableProperty] private int _selectedThemeIndex;
+    [ObservableProperty] 
+    public partial int AutoLockMinutes { get; set; }
+
+    [ObservableProperty] 
+    public partial int ClipboardClearSeconds { get; set; }
+
+    [ObservableProperty] 
+    public partial int SelectedThemeIndex { get; set; }
 
     public string[] ThemeOptions { get; } = ["System", "Dark", "Light"];
 

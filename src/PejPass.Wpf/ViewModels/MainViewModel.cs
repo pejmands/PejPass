@@ -31,28 +31,65 @@ public partial class MainViewModel : ObservableObject
     public event EventHandler? RequestLock;
     public event EventHandler? RequestScrollToEntry;
 
-    [ObservableProperty] private string _vaultName = string.Empty;
-    [ObservableProperty] private string _statusMessage = string.Empty;
-    [ObservableProperty] private string _searchText = string.Empty;
-    [ObservableProperty] private VaultEntry? _selectedEntry;
+    [ObservableProperty]
+    public partial string VaultName { get; set; } = string.Empty;
 
-    [ObservableProperty] private bool _hasSelection;
-    [ObservableProperty] private bool _hasUrl;
-    [ObservableProperty] private bool _hasTotp;
-    [ObservableProperty] private bool _hasNotes;
-    [ObservableProperty] private bool _hasCustomFields;
-    [ObservableProperty] private bool _hasTags;
-    [ObservableProperty] private string _displayPassword = string.Empty;
-    [ObservableProperty] private string _showPasswordButtonText = "Show";
-    [ObservableProperty] private string _createdAtText = string.Empty;
-    [ObservableProperty] private string _updatedAtText = string.Empty;
-    [ObservableProperty] private bool _isFavoriteSelected;
-    [ObservableProperty] private int _selectedSortIndex;
+    [ObservableProperty]
+    public partial string StatusMessage { get; set; } = string.Empty;
 
-    [ObservableProperty] private string _totpCode = string.Empty;
-    [ObservableProperty] private string _totpCodeFormatted = string.Empty;
-    [ObservableProperty] private int _totpRemainingSeconds;
-    [ObservableProperty] private double _totpProgress;
+    [ObservableProperty]
+    public partial string SearchText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial VaultEntry? SelectedEntry { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasSelection { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasUrl { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasTotp { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasNotes { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasCustomFields { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasTags { get; set; }
+
+    [ObservableProperty]
+    public partial string DisplayPassword { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ShowPasswordButtonText { get; set; } = "Show";
+
+    [ObservableProperty]
+    public partial string CreatedAtText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string UpdatedAtText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsFavoriteSelected { get; set; }
+
+    [ObservableProperty]
+    public partial int SelectedSortIndex { get; set; }
+
+    [ObservableProperty]
+    public partial string TotpCode { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string TotpCodeFormatted { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial int TotpRemainingSeconds { get; set; }
+
+    [ObservableProperty]
+    public partial double TotpProgress { get; set; }
 
     public string[] SortOptions { get; } =
     [
@@ -80,7 +117,7 @@ public partial class MainViewModel : ObservableObject
         _settings = settings;
         _themeService = themeService;
 
-        _selectedSortIndex = (int)_settings.SortMode;
+        SelectedSortIndex = (int)_settings.SortMode;
 
         LoadVault();
         StartAutoLockTimer();
@@ -681,21 +718,14 @@ public partial class MainViewModel : ObservableObject
     }
 }
 
-public partial class CustomFieldDisplayItem : ObservableObject
+public partial class CustomFieldDisplayItem(CustomField field) : ObservableObject
 {
-    public string Name { get; }
-    public string Value { get; }
-    public bool IsSecret { get; }
+    public string Name { get; } = field.Name;
+    public string Value { get; } = field.Value;
+    public bool IsSecret { get; } = field.IsSecret;
 
-    [ObservableProperty] private bool _isRevealed;
-
-    public CustomFieldDisplayItem(CustomField field)
-    {
-        Name = field.Name;
-        Value = field.Value;
-        IsSecret = field.IsSecret;
-        IsRevealed = !field.IsSecret;
-    }
+    [ObservableProperty]
+    public partial bool IsRevealed { get; set; } = !field.IsSecret;
 
     public string DisplayValue =>
         IsSecret && !IsRevealed
