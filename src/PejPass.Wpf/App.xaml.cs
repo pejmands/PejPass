@@ -34,6 +34,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<ICryptoService, CryptoService>();
         services.AddSingleton<IVaultStore, VaultStore>();
         services.AddSingleton<IBrowserImportService, BrowserImportService>();
+        services.AddSingleton<ICsvExportService, CsvExportService>();
         services.AddSingleton<IClipboardService, ClipboardService>();
         services.AddSingleton<VaultService>();
 
