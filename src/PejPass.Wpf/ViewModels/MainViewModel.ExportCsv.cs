@@ -7,7 +7,7 @@ using PejPass.Wpf.Dialogs;
 namespace PejPass.Wpf.ViewModels;
 
 /// <summary>
-/// CSV export only — lives in a partial so MainViewModel.cs stays untouched.
+/// CSV export only — partial so MainViewModel.cs stays untouched.
 /// Resolves <see cref="ICsvExportService"/> from DI at call time (no ctor change).
 /// </summary>
 public partial class MainViewModel
