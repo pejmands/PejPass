@@ -22,7 +22,10 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel>
                         <TextBlock Text="Title" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                        <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
+                                 TextWrapping="NoWrap"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 VerticalScrollBarVisibility="Disabled"/>
                     </StackPanel>
                     <CheckBox Grid.Column="1" Content="Favorite" IsChecked="{Binding IsFavorite}"
                               VerticalAlignment="Bottom" Margin="12,0,0,4"
@@ -30,7 +33,10 @@
                 </Grid>
 
                 <TextBlock Text="Username" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"
+                         TextWrapping="NoWrap"
+                         HorizontalScrollBarVisibility="Auto"
+                         VerticalScrollBarVisibility="Disabled"/>
 
                 <StackPanel Visibility="{Binding HasUsernameHistory, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                     <TextBlock Text="USERNAME HISTORY" FontSize="11" FontWeight="SemiBold"
@@ -47,7 +53,9 @@
                                     <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="10,8">
                                         <StackPanel>
                                             <TextBlock Text="{Binding Username}"
-                                                       Foreground="{DynamicResource TextBrush}"/>
+                                                       Foreground="{DynamicResource TextBrush}"
+                                                       TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                                       ToolTip="{Binding Username}"/>
                                             <TextBlock Text="{Binding ChangedAtText}" FontSize="11"
                                                        Foreground="{DynamicResource MutedBrush}" Margin="0,2,0,0"/>
                                         </StackPanel>
@@ -73,7 +81,11 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBox Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBox Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"
+                             FontFamily="Consolas"
+                             TextWrapping="NoWrap"
+                             HorizontalScrollBarVisibility="Auto"
+                             VerticalScrollBarVisibility="Disabled"/>
                     <Button Grid.Column="1" Content="Generate" Margin="8,0,0,0"
                             Command="{Binding GeneratePasswordCommand}" Padding="12,6"
                             ToolTip="Quick generate (20 chars, secure defaults)"/>
@@ -135,7 +147,9 @@
                                     <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="10,8">
                                         <StackPanel>
                                             <TextBlock Text="{Binding DisplayValue}" FontFamily="Consolas"
-                                                       Foreground="{DynamicResource TextBrush}"/>
+                                                       Foreground="{DynamicResource TextBrush}"
+                                                       TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                                       ToolTip="{Binding DisplayValue}"/>
                                             <TextBlock Text="{Binding ChangedAtText}" FontSize="11"
                                                        Foreground="{DynamicResource MutedBrush}" Margin="0,2,0,0"/>
                                         </StackPanel>
@@ -159,17 +173,27 @@
                 </StackPanel>
 
                 <TextBlock Text="URL" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+                <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"
+                         TextWrapping="NoWrap"
+                         HorizontalScrollBarVisibility="Auto"
+                         VerticalScrollBarVisibility="Disabled"/>
 
                 <TextBlock Text="TOTP Secret (Base32)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox Text="{Binding TotpSecret, UpdateSourceTrigger=PropertyChanged}"
                          Margin="0,0,0,4"
+                         FontFamily="Consolas"
+                         TextWrapping="NoWrap"
+                         HorizontalScrollBarVisibility="Auto"
+                         VerticalScrollBarVisibility="Disabled"
                          ToolTip="Paste the authenticator secret key (Base32). Leave empty to disable TOTP."/>
                 <TextBlock Text="Optional — used to generate 2FA codes in the main window"
                            FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,12"/>
 
                 <TextBlock Text="Tags (comma separated)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6"/>
+                <TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6"
+                         TextWrapping="NoWrap"
+                         HorizontalScrollBarVisibility="Auto"
+                         VerticalScrollBarVisibility="Disabled"/>
                 <ItemsControl ItemsSource="{Binding SuggestedTags}" Margin="0,0,0,12">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -208,8 +232,10 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" ToolTip="Field name" Margin="0,0,6,0"/>
-                                <TextBox Grid.Column="1" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" ToolTip="Field value" Margin="0,0,6,0"/>
+                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" ToolTip="Field name" Margin="0,0,6,0"
+                                         TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"/>
+                                <TextBox Grid.Column="1" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" ToolTip="Field value" Margin="0,0,6,0"
+                                         TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"/>
                                 <CheckBox Grid.Column="2" IsChecked="{Binding IsSecret}" Content="Secret"
                                           Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"
                                           ToolTip="Hide value in the main window like a password"/>
@@ -224,8 +250,10 @@
 
                 <TextBlock Text="Notes" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
-                         Height="80" TextWrapping="Wrap" AcceptsReturn="True"
-                         VerticalScrollBarVisibility="Auto"/>
+                         Height="100" MaxHeight="160"
+                         TextWrapping="Wrap" AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Disabled"/>
             </StackPanel>
         </ScrollViewer>
 
