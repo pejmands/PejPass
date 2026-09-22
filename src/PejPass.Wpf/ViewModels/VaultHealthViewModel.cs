@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Windows;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
@@ -36,7 +38,6 @@ public partial class VaultHealthViewModel : ObservableObject
 
     public event EventHandler<Guid>? RequestOpenEntry;
 
-    /// <summary>Full unfiltered issue list from last completed (or in-progress) scan.</summary>
     private readonly List<HealthIssue> _allIssues = [];
 
     public VaultHealthViewModel(IEnumerable<VaultEntry> entries)
@@ -57,7 +58,6 @@ public partial class VaultHealthViewModel : ObservableObject
         ScanProgress = 0;
         ScanStatus = $"Preparing {_entries.Count} entries…";
 
-        // Clear UI immediately so Rescan feels responsive
         Issues.Clear();
         _allIssues.Clear();
         TotalIssues = 0;
@@ -66,8 +66,8 @@ public partial class VaultHealthViewModel : ObservableObject
         MissingTotpCount = 0;
         StaleCount = 0;
 
-        // Let the cleared UI paint
-        await Task.Yield();
+        // Paint the cleared state before work starts
+        await YieldUiAsync().ConfigureAwait(true);
 
         var n = _entries.Count;
         if (n == 0)
@@ -81,13 +81,11 @@ public partial class VaultHealthViewModel : ObservableObject
 
         try
         {
-            // Precompute which passwords are shared (fast dictionary pass)
-            var sharedPasswords = _entries
+            // password → how many entries share it
+            var passwordCounts = _entries
                 .Where(e => !string.IsNullOrEmpty(e.Password))
                 .GroupBy(e => e.Password, StringComparer.Ordinal)
-                .Where(g => g.Count() > 1)
-                .Select(g => g.Key)
-                .ToHashSet(StringComparer.Ordinal);
+                .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
 
             var utc = DateTimeOffset.UtcNow;
             var filter = SelectedFilterIndex;
@@ -95,81 +93,61 @@ public partial class VaultHealthViewModel : ObservableObject
             for (var i = 0; i < n; i++)
             {
                 var e = _entries[i];
-                var found = new List<HealthIssue>();
 
-                // Duplicates
-                if (!string.IsNullOrEmpty(e.Password) && sharedPasswords.Contains(e.Password))
+                if (!string.IsNullOrEmpty(e.Password) &&
+                    passwordCounts.TryGetValue(e.Password, out var peers) &&
+                    peers > 1)
                 {
-                    var peers = _entries.Count(x =>
-                        string.Equals(x.Password, e.Password, StringComparison.Ordinal));
-                    found.Add(new HealthIssue(
+                    AddIssue(new HealthIssue(
                         HealthIssueKind.DuplicatePassword,
                         e.Id,
                         e.Title,
                         peers == 2
                             ? "Same password used on 2 entries"
-                            : $"Same password used on {peers} entries"));
+                            : $"Same password used on {peers} entries"),
+                        filter);
                 }
 
-                // Weak
                 if (PasswordStrength.IsWeak(e.Password))
                 {
                     var level = PasswordStrength.Evaluate(e.Password);
-                    found.Add(new HealthIssue(
+                    AddIssue(new HealthIssue(
                         HealthIssueKind.WeakPassword,
                         e.Id,
                         e.Title,
                         level == PasswordStrengthLevel.Empty
                             ? "Password is empty"
-                            : $"Strength: {level}"));
+                            : $"Strength: {level}"),
+                        filter);
                 }
 
-                // Missing TOTP
                 if (string.IsNullOrWhiteSpace(e.TotpSecret))
                 {
-                    found.Add(new HealthIssue(
+                    AddIssue(new HealthIssue(
                         HealthIssueKind.MissingTotp,
                         e.Id,
                         e.Title,
-                        "No authenticator (TOTP) configured"));
+                        "No authenticator (TOTP) configured"),
+                        filter);
                 }
 
-                // Stale
                 if (utc - e.UpdatedAt >= VaultHealthAnalyzer.StaleThreshold)
                 {
                     var days = (int)(utc - e.UpdatedAt).TotalDays;
-                    found.Add(new HealthIssue(
+                    AddIssue(new HealthIssue(
                         HealthIssueKind.StalePassword,
                         e.Id,
                         e.Title,
-                        $"Last updated {days} days ago"));
+                        $"Last updated {days} days ago"),
+                        filter);
                 }
 
-                // Commit issues for this entry to UI (one-by-one)
-                foreach (var issue in found)
-                {
-                    _allIssues.Add(issue);
-
-                    switch (issue.Kind)
-                    {
-                        case HealthIssueKind.DuplicatePassword: DuplicateCount++; break;
-                        case HealthIssueKind.WeakPassword: WeakCount++; break;
-                        case HealthIssueKind.MissingTotp: MissingTotpCount++; break;
-                        case HealthIssueKind.StalePassword: StaleCount++; break;
-                    }
-
-                    TotalIssues = _allIssues.Count;
-
-                    if (MatchesFilter(issue, filter))
-                        Issues.Add(new HealthIssueRow(issue));
-                }
-
-                // Live progress
                 ScanProgress = (i + 1) * 100.0 / n;
                 ScanStatus = $"Scanning {i + 1} / {n}";
 
-                // Explicit delay so progress is visible (requested for diagnosis)
-                await Task.Delay(100).ConfigureAwait(true);
+                // No sleep — just let the dispatcher render pending UI changes.
+                // Without this, a tight loop starves layout/render and everything jumps at the end.
+                await YieldUiAsync().ConfigureAwait(true);
             }
 
             ScanProgress = 100;
@@ -189,6 +167,41 @@ public partial class VaultHealthViewModel : ObservableObject
         }
     }
 
+    private void AddIssue(HealthIssue issue, int filter)
+    {
+        _allIssues.Add(issue);
+
+        switch (issue.Kind)
+        {
+            case HealthIssueKind.DuplicatePassword: DuplicateCount++; break;
+            case HealthIssueKind.WeakPassword: WeakCount++; break;
+            case HealthIssueKind.MissingTotp: MissingTotpCount++; break;
+            case HealthIssueKind.StalePassword: StaleCount++; break;
+        }
+
+        TotalIssues = _allIssues.Count;
+
+        if (MatchesFilter(issue, filter))
+            Issues.Add(new HealthIssueRow(issue));
+    }
+
+    /// <summary>
+    /// Returns control to the WPF dispatcher so bindings / layout / render can run.
+    /// Not a timed delay — only pumps the message queue.
+    /// </summary>
+    private static async Task YieldUiAsync()
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null)
+        {
+            await Task.Yield();
+            return;
+        }
+
+        // Background: after input, before idle — enough for ProgressBar + list to paint
+        await dispatcher.InvokeAsync(static () => { }, DispatcherPriority.Background);
+    }
+
     private static bool MatchesFilter(HealthIssue issue, int filterIndex) => filterIndex switch
     {
         1 => issue.Kind == HealthIssueKind.DuplicatePassword,
@@ -200,7 +213,6 @@ public partial class VaultHealthViewModel : ObservableObject
 
     partial void OnSelectedFilterIndexChanged(int value)
     {
-        // Live filter against accumulated issues (works mid-scan and after)
         Issues.Clear();
         foreach (var i in _allIssues
                      .Where(x => MatchesFilter(x, value))
