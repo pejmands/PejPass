@@ -251,7 +251,27 @@ public static class FaviconService
         }
     }
 
+    /// <summary>
+    /// BitmapImage is more reliable when created on the UI thread.
+    /// Worker threads only pass byte[]; decode is marshalled so disk cache is not ignored.
+    /// </summary>
     private static BitmapImage? CreateBitmap(byte[] bytes)
+    {
+        try
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher is not null && !dispatcher.CheckAccess())
+                return dispatcher.Invoke(() => CreateBitmapCore(bytes));
+
+            return CreateBitmapCore(bytes);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static BitmapImage? CreateBitmapCore(byte[] bytes)
     {
         try
         {
