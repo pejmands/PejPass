@@ -129,10 +129,8 @@ public partial class LoginViewModel : ObservableObject
             if (File.Exists(VaultPath))
             {
                 PasswordError =
-                    "A vault file already exists at this path.\n\n" +
-                    "• Use «Open vault» to unlock it\n" +
-                    "• Or choose a different path for a new vault\n\n" +
-                    "To recover data from a backup into an open vault, unlock first and use Restore.";
+                    "A vault already exists here.\n" +
+                    "Switch to «Open vault», or pick another path.";
                 return;
             }
         }
@@ -141,8 +139,8 @@ public partial class LoginViewModel : ObservableObject
             if (!File.Exists(VaultPath))
             {
                 PasswordError =
-                    "No vault file found at this path.\n\n" +
-                    "Use «Create vault» to make a new one, or Browse to an existing .pejpass file.";
+                    "No vault at this path.\n" +
+                    "Use «Create vault» or Browse to an existing file.";
                 return;
             }
         }
