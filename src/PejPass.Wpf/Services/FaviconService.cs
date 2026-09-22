@@ -6,30 +6,38 @@ using System.Text;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace PejPass.Wpf.Services;
 
 /// <summary>
-/// Fetches and caches site favicons for the entry list.
-/// Offline-friendly: disk cache under LocalAppData; letter avatar when unknown.
+/// Favicon cache for the entry list. UI path is memory-only (no disk/network on UI thread).
+/// Background queue loads disk + downloads with limited concurrency; UI refresh is debounced.
 /// </summary>
 public static class FaviconService
 {
     private static readonly HttpClient Http = CreateClient();
     private static readonly ConcurrentDictionary<string, ImageSource> Memory = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, ImageSource> LetterCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, byte> InFlight = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, byte> Failed = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentQueue<string> DownloadQueue = new();
+    private static readonly SemaphoreSlim DownloadGate = new(1, 1);
+    private static readonly SemaphoreSlim WorkerSlots = new(3, 3); // max 3 concurrent HTTP
 
     private static readonly string CacheDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "PejPass", "favicons");
 
-    /// <summary>Raised on UI thread when a favicon becomes available (host key).</summary>
-    public static event Action<string>? FaviconReady;
+    private static DispatcherTimer? _batchTimer;
+    private static int _batchPending;
+
+    /// <summary>Raised on UI thread after one or more favicons finished (debounced ~350ms).</summary>
+    public static event Action? FaviconsBatchReady;
 
     private static HttpClient CreateClient()
     {
-        var c = new HttpClient { Timeout = TimeSpan.FromSeconds(6) };
+        var c = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
         c.DefaultRequestHeaders.UserAgent.ParseAdd("PejPass/1.0 (+local password manager)");
         return c;
     }
@@ -57,34 +65,23 @@ public static class FaviconService
     }
 
     /// <summary>
-    /// Returns a cached favicon or a letter avatar. Schedules download when needed.
+    /// UI-safe: only touches memory + letter avatars. Never blocks on disk or network.
     /// </summary>
     public static ImageSource GetImage(string? url, string? title = null)
     {
         var host = TryGetHost(url);
-        if (host is not null)
-        {
-            if (Memory.TryGetValue(host, out var mem))
-                return mem;
+        if (host is not null && Memory.TryGetValue(host, out var mem))
+            return mem;
 
-            var fromDisk = TryLoadFromDisk(host);
-            if (fromDisk is not null)
-            {
-                Memory[host] = fromDisk;
-                return fromDisk;
-            }
+        // Queue background work if we might still get an icon
+        if (host is not null && !Failed.ContainsKey(host) && !Memory.ContainsKey(host))
+            EnqueueHost(host);
 
-            if (!Failed.ContainsKey(host))
-                _ = DownloadAsync(host);
-        }
-
-        var letterSource = title;
-        if (string.IsNullOrWhiteSpace(letterSource))
-            letterSource = host ?? "?";
-
-        return CreateLetterAvatar(letterSource);
+        var letterSource = !string.IsNullOrWhiteSpace(title) ? title : host ?? "?";
+        return GetLetterAvatar(letterSource);
     }
 
+    /// <summary>Background: load disk cache + download missing icons (throttled).</summary>
     public static void Prefetch(IEnumerable<(string? Url, string? Title)> items)
     {
         foreach (var (url, _) in items)
@@ -92,29 +89,68 @@ public static class FaviconService
             var host = TryGetHost(url);
             if (host is null) continue;
             if (Memory.ContainsKey(host) || Failed.ContainsKey(host)) continue;
-            if (File.Exists(CachePath(host)))
-            {
-                var img = TryLoadFromDisk(host);
-                if (img is not null)
-                    Memory[host] = img;
-                continue;
-            }
-
-            _ = DownloadAsync(host);
+            EnqueueHost(host);
         }
+
+        _ = ProcessQueueAsync();
     }
 
-    private static async Task DownloadAsync(string host)
+    private static void EnqueueHost(string host)
     {
         if (!InFlight.TryAdd(host, 0))
             return;
 
+        DownloadQueue.Enqueue(host);
+        _ = ProcessQueueAsync();
+    }
+
+    private static async Task ProcessQueueAsync()
+    {
+        if (!await DownloadGate.WaitAsync(0).ConfigureAwait(false))
+            return;
+
         try
         {
-            // DuckDuckGo icon service (PNG). Fallback: Google s2 favicons.
+            while (DownloadQueue.TryDequeue(out var host))
+            {
+                await WorkerSlots.WaitAsync().ConfigureAwait(false);
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await LoadOneAsync(host).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        WorkerSlots.Release();
+                        InFlight.TryRemove(host, out _);
+                    }
+                });
+            }
+        }
+        finally
+        {
+            DownloadGate.Release();
+        }
+    }
+
+    private static async Task LoadOneAsync(string host)
+    {
+        try
+        {
+            // 1) Disk (background thread — OK)
+            var fromDisk = TryLoadFromDisk(host);
+            if (fromDisk is not null)
+            {
+                Memory[host] = fromDisk;
+                ScheduleBatchNotify();
+                return;
+            }
+
+            // 2) Network
             byte[]? bytes =
-                await TryDownloadBytesAsync($"https://icons.duckduckgo.com/ip3/{host}.ico")
-                ?? await TryDownloadBytesAsync($"https://www.google.com/s2/favicons?domain={host}&sz=64");
+                await TryDownloadBytesAsync($"https://icons.duckduckgo.com/ip3/{host}.ico").ConfigureAwait(false)
+                ?? await TryDownloadBytesAsync($"https://www.google.com/s2/favicons?domain={host}&sz=64").ConfigureAwait(false);
 
             if (bytes is null || bytes.Length < 16)
             {
@@ -122,8 +158,15 @@ public static class FaviconService
                 return;
             }
 
-            Directory.CreateDirectory(CacheDir);
-            await File.WriteAllBytesAsync(CachePath(host), bytes);
+            try
+            {
+                Directory.CreateDirectory(CacheDir);
+                await File.WriteAllBytesAsync(CachePath(host), bytes).ConfigureAwait(false);
+            }
+            catch
+            {
+                // cache write is best-effort
+            }
 
             var image = CreateBitmap(bytes);
             if (image is null)
@@ -133,35 +176,49 @@ public static class FaviconService
             }
 
             Memory[host] = image;
-
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher is null)
-                return;
-
-            if (dispatcher.CheckAccess())
-                FaviconReady?.Invoke(host);
-            else
-                _ = dispatcher.BeginInvoke(() => FaviconReady?.Invoke(host));
+            ScheduleBatchNotify();
         }
         catch
         {
             Failed[host] = 0;
         }
-        finally
+    }
+
+    private static void ScheduleBatchNotify()
+    {
+        Interlocked.Exchange(ref _batchPending, 1);
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null) return;
+
+        dispatcher.BeginInvoke(() =>
         {
-            InFlight.TryRemove(host, out _);
-        }
+            if (_batchTimer is null)
+            {
+                _batchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+                _batchTimer.Tick += (_, _) =>
+                {
+                    _batchTimer.Stop();
+                    if (Interlocked.Exchange(ref _batchPending, 0) == 0)
+                        return;
+                    FaviconsBatchReady?.Invoke();
+                };
+            }
+
+            if (!_batchTimer.IsEnabled)
+                _batchTimer.Start();
+        }, DispatcherPriority.Background);
     }
 
     private static async Task<byte[]?> TryDownloadBytesAsync(string requestUrl)
     {
         try
         {
-            using var response = await Http.GetAsync(requestUrl);
+            using var response = await Http.GetAsync(requestUrl).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return null;
 
-            var bytes = await response.Content.ReadAsByteArrayAsync();
+            var bytes = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
             return bytes.Length > 0 ? bytes : null;
         }
         catch
@@ -197,6 +254,7 @@ public static class FaviconService
     {
         try
         {
+            // BitmapImage must be created/frozen on a thread with STA or via Freeze after OnLoad
             using var ms = new MemoryStream(bytes);
             var bmp = new BitmapImage();
             bmp.BeginInit();
@@ -213,8 +271,7 @@ public static class FaviconService
         }
     }
 
-    /// <summary>Simple colored circle with first letter (no network).</summary>
-    public static ImageSource CreateLetterAvatar(string seed)
+    private static ImageSource GetLetterAvatar(string seed)
     {
         var letter = "?";
         foreach (var ch in seed.Trim())
@@ -226,8 +283,12 @@ public static class FaviconService
             }
         }
 
-        // Stable pastel-ish color from hash
-        var hash = seed.GetHashCode();
+        return LetterCache.GetOrAdd(letter, static l => CreateLetterAvatarCore(l));
+    }
+
+    private static ImageSource CreateLetterAvatarCore(string letter)
+    {
+        var hash = letter.GetHashCode();
         var r = (byte)(80 + (hash & 0x7F));
         var g = (byte)(80 + ((hash >> 8) & 0x7F));
         var b = (byte)(80 + ((hash >> 16) & 0x7F));

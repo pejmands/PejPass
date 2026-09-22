@@ -22,7 +22,7 @@ public partial class TrashViewModel : ObservableObject
         Reload();
     }
 
-    public void Reload()
+    private void Reload()
     {
         Items.Clear();
         foreach (var t in _vault.Trash.OrderByDescending(x => x.DeletedAt))
@@ -30,38 +30,44 @@ public partial class TrashViewModel : ObservableObject
 
         StatusMessage = Items.Count == 0
             ? "Trash is empty."
-            : $"{Items.Count} item(s) — auto-purged after 30 days.";
+            : $"{Items.Count} item(s) — recoverable for 30 days.";
     }
 
     [RelayCommand]
     private void Restore(TrashRow? row)
     {
         if (row is null) return;
-        if (_vault.RestoreFromTrash(row.EntryId))
-        {
-            Reload();
-            Changed?.Invoke(this, EventArgs.Empty);
-            StatusMessage = $"Restored \"{row.Title}\".";
-        }
+
+        if (!_vault.RestoreFromTrash(row.EntryId))
+            return;
+
+        Items.Remove(row);
+        Changed?.Invoke(this, EventArgs.Empty);
+        StatusMessage = $"Restored \"{row.Title}\".";
+        if (Items.Count == 0)
+            StatusMessage = "Trash is empty.";
     }
 
     [RelayCommand]
     private void Purge(TrashRow? row)
     {
         if (row is null) return;
+
         if (!DialogService.Confirm(
                 $"Permanently delete \"{row.Title}\"?\n\nThis cannot be undone.",
                 "Purge",
-                yesText: "Delete forever",
+                yesText: "Purge",
                 noText: "Cancel"))
             return;
 
-        if (_vault.PurgeFromTrash(row.EntryId))
-        {
-            Reload();
-            Changed?.Invoke(this, EventArgs.Empty);
-            StatusMessage = $"Purged \"{row.Title}\".";
-        }
+        if (!_vault.PurgeFromTrash(row.EntryId))
+            return;
+
+        Items.Remove(row);
+        Changed?.Invoke(this, EventArgs.Empty);
+        StatusMessage = Items.Count == 0
+            ? "Trash is empty."
+            : $"{Items.Count} item(s) remaining.";
     }
 
     [RelayCommand]
@@ -77,9 +83,9 @@ public partial class TrashViewModel : ObservableObject
             return;
 
         _vault.EmptyTrash();
-        Reload();
+        Items.Clear();
         Changed?.Invoke(this, EventArgs.Empty);
-        StatusMessage = "Trash emptied.";
+        StatusMessage = "Trash is empty.";
     }
 }
 
@@ -88,6 +94,7 @@ public sealed class TrashRow
     public Guid EntryId { get; }
     public string Title { get; }
     public string Username { get; }
+    public string Url { get; }
     public string DeletedAtText { get; }
     public string DaysLeftText { get; }
 
@@ -96,6 +103,7 @@ public sealed class TrashRow
         EntryId = item.Entry.Id;
         Title = item.Entry.Title;
         Username = item.Entry.Username;
+        Url = item.Entry.Url;
         DeletedAtText = item.DeletedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
 
         var expires = item.DeletedAt + Vault.TrashRetention;

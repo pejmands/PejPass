@@ -2,20 +2,23 @@ using System.Globalization;
 using System.Windows.Data;
 using PejPass.Domain.Entities;
 using PejPass.Wpf.Services;
+using PejPass.Wpf.ViewModels;
 
 namespace PejPass.Wpf.Converters;
 
 /// <summary>
-/// VaultEntry → ImageSource (favicon or letter avatar).
+/// VaultEntry or TrashRow → ImageSource (favicon or letter avatar).
 /// </summary>
 public sealed class FaviconConverter : IValueConverter
 {
     public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (value is VaultEntry entry)
-            return FaviconService.GetImage(entry.Url, entry.Title);
-
-        return FaviconService.CreateLetterAvatar("?");
+        return value switch
+        {
+            VaultEntry entry => FaviconService.GetImage(entry.Url, entry.Title),
+            TrashRow row => FaviconService.GetImage(row.Url, row.Title),
+            _ => FaviconService.GetImage(null, "?")
+        };
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
