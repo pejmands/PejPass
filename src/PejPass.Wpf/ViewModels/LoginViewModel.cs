@@ -72,7 +72,8 @@ public partial class LoginViewModel : ObservableObject
                 Filter = "PejPass Vault (*.pejpass)|*.pejpass",
                 DefaultExt = ".pejpass",
                 FileName = "vault.pejpass",
-                InitialDirectory = _settings.DefaultVaultDirectory
+                InitialDirectory = _settings.DefaultVaultDirectory,
+                OverwritePrompt = true
             };
             if (dlg.ShowDialog() == true)
                 VaultPath = dlg.FileName;
@@ -107,6 +108,27 @@ public partial class LoginViewModel : ObservableObject
             if (!validation.IsValid)
             {
                 PasswordError = validation.ErrorMessage;
+                return;
+            }
+
+            // Create never overwrites an existing vault file.
+            if (File.Exists(VaultPath))
+            {
+                PasswordError =
+                    "A vault file already exists at this path.\n\n" +
+                    "• Use «Open vault» to unlock it\n" +
+                    "• Or choose a different path for a new vault\n\n" +
+                    "To recover data from a backup into an open vault, unlock first and use Restore.";
+                return;
+            }
+        }
+        else
+        {
+            if (!File.Exists(VaultPath))
+            {
+                PasswordError =
+                    "No vault file found at this path.\n\n" +
+                    "Use «Create vault» to make a new one, or Browse to an existing .pejpass file.";
                 return;
             }
         }
