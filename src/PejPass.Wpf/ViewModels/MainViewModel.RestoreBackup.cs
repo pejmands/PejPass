@@ -78,11 +78,12 @@ public partial class MainViewModel
         var choice = DialogService.Choose(
             $"Backup contains {entryCount} entries" +
             (trashCount > 0 ? $" and {trashCount} in trash" : "") + ".\n\n" +
-            "• Replace — overwrite data in the CURRENT vault file\n" +
-            "  (path stays the same; re-encrypted with your current password)\n\n" +
-            "• Merge — add entries that are not a 100% content match\n" +
-            "  (any difference in title, username, password, URL, notes,\n" +
-            "   TOTP, tags, or custom fields → treated as new and added)\n\n" +
+            "• Replace — overwrite data in the CURRENT vault file\n\n" +
+            "• Merge rules:\n" +
+            "  – 100% identical content only is treated as the same item\n" +
+            "  – Backup active + current trash → restored to the list\n" +
+            "  – Backup trash + current active → left in the list (not demoted)\n" +
+            "  – Backup trash + nothing → added to trash\n\n" +
             "This is different from Login → Open vault, which would switch to the backup file itself.",
             "Restore mode",
             primaryText: "Replace",
@@ -139,51 +140,85 @@ public partial class MainViewModel
                 StatusMessage = $"Vault restored from backup ({currentVault.Entries.Count} entries).";
                 DialogService.Success(
                     $"Current vault replaced with backup data.\n\n" +
-                    $"{currentVault.Entries.Count} entries saved to:\n{currentPath}",
+                    $"{currentVault.Entries.Count} entries · {currentVault.Trash.Count} in trash\n\n" +
+                    $"Saved to:\n{currentPath}",
                     "Restore complete");
             }
             else
             {
-                // Merge: skip only when content is 100% identical
-                var existingKeys = new HashSet<string>(StringComparer.Ordinal);
+                // ---- Merge with explicit active-vs-trash rules ----
+                // Map fingerprint → entry (or trashed entry) in the CURRENT vault
+                var activeByFp = new Dictionary<string, VaultEntry>(StringComparer.Ordinal);
                 foreach (var e in currentVault.Entries)
-                    existingKeys.Add(EntryContentFingerprint(e));
+                    activeByFp[EntryContentFingerprint(e)] = e;
+
+                var trashByFp = new Dictionary<string, TrashedEntry>(StringComparer.Ordinal);
                 foreach (var tr in currentVault.Trash)
-                    existingKeys.Add(EntryContentFingerprint(tr.Entry));
+                    trashByFp[EntryContentFingerprint(tr.Entry)] = tr;
 
-                var added = 0;
-                var skipped = 0;
+                int addedToList = 0;
+                int restoredFromTrash = 0;
+                int skippedAlreadyInList = 0;
+                int addedToTrash = 0;
+                int skippedTrashAlreadyInList = 0;
+                int skippedTrashAlreadyInTrash = 0;
 
+                // 1) Backup ACTIVE entries
                 foreach (var e in backupVault.Entries)
                 {
-                    var key = EntryContentFingerprint(e);
-                    if (existingKeys.Contains(key))
+                    var fp = EntryContentFingerprint(e);
+
+                    if (activeByFp.ContainsKey(fp))
                     {
-                        skipped++;
+                        // Already live in the current list → keep as-is
+                        skippedAlreadyInList++;
                         continue;
                     }
 
-                    currentVault.AddEntry(CloneEntry(e, newId: true));
-                    existingKeys.Add(key);
-                    added++;
+                    if (trashByFp.TryGetValue(fp, out var trashed))
+                    {
+                        // Same content sits in current trash, but backup says it should be active
+                        // → bring it back to the list (active wins over trash)
+                        currentVault.Trash.Remove(trashed);
+                        trashed.Entry.Touch();
+                        currentVault.Entries.Add(trashed.Entry);
+                        activeByFp[fp] = trashed.Entry;
+                        trashByFp.Remove(fp);
+                        restoredFromTrash++;
+                        continue;
+                    }
+
+                    // Brand-new content → add to list
+                    var clone = CloneEntry(e, newId: true);
+                    currentVault.AddEntry(clone);
+                    activeByFp[fp] = clone;
+                    addedToList++;
                 }
 
+                // 2) Backup TRASH entries
                 foreach (var tr in backupVault.Trash)
                 {
-                    var key = EntryContentFingerprint(tr.Entry);
-                    if (existingKeys.Contains(key))
+                    var fp = EntryContentFingerprint(tr.Entry);
+
+                    if (activeByFp.ContainsKey(fp))
                     {
-                        skipped++;
+                        // Already live in the list → never demote to trash from a backup
+                        skippedTrashAlreadyInList++;
                         continue;
                     }
 
-                    currentVault.Trash.Add(new TrashedEntry
+                    if (trashByFp.ContainsKey(fp))
                     {
-                        Entry = CloneEntry(tr.Entry, newId: true),
-                        DeletedAt = tr.DeletedAt
-                    });
-                    existingKeys.Add(key);
-                    added++;
+                        // Already in trash → leave it
+                        skippedTrashAlreadyInTrash++;
+                        continue;
+                    }
+
+                    var clone = CloneEntry(tr.Entry, newId: true);
+                    var item = new TrashedEntry { Entry = clone, DeletedAt = tr.DeletedAt };
+                    currentVault.Trash.Add(item);
+                    trashByFp[fp] = item;
+                    addedToTrash++;
                 }
 
                 currentVault.UpdatedAt = DateTimeOffset.UtcNow;
@@ -196,16 +231,41 @@ public partial class MainViewModel
                 ApplyFilter(preserveSelectionId: null);
                 await SaveVaultAsync();
 
-                StatusMessage = skipped > 0
-                    ? $"Merged {added} entries ({skipped} 100% identical skipped)."
-                    : $"Merged {added} entries from backup.";
+                var totalSkipped = skippedAlreadyInList + skippedTrashAlreadyInList + skippedTrashAlreadyInTrash;
+                var totalChanged = addedToList + restoredFromTrash + addedToTrash;
 
-                DialogService.Success(
-                    $"Merge finished.\n\n" +
-                    $"Added: {added}\n" +
-                    $"Skipped (100% identical): {skipped}\n\n" +
-                    $"Saved to:\n{currentPath}",
-                    "Restore complete");
+                StatusMessage = totalChanged > 0
+                    ? $"Merged: +{addedToList} list, {restoredFromTrash} from trash, +{addedToTrash} trash."
+                    : "Merge finished — nothing new to add.";
+
+                // Build a clear breakdown so trash effects are visible
+                var lines = new List<string>
+                {
+                    "Merge finished.",
+                    "",
+                    $"Added to list:              {addedToList}",
+                    $"Restored from trash → list: {restoredFromTrash}",
+                    $"Added to trash:             {addedToTrash}",
+                    $"Skipped (already in list):  {skippedAlreadyInList}",
+                };
+
+                if (skippedTrashAlreadyInList > 0)
+                    lines.Add($"Skipped trash (kept in list): {skippedTrashAlreadyInList}");
+                if (skippedTrashAlreadyInTrash > 0)
+                    lines.Add($"Skipped trash (already trash): {skippedTrashAlreadyInTrash}");
+
+                lines.Add("");
+                lines.Add($"Vault now: {currentVault.Entries.Count} entries · {currentVault.Trash.Count} in trash");
+                lines.Add("");
+                lines.Add(currentPath);
+
+                if (restoredFromTrash > 0 || skippedTrashAlreadyInList > 0 || addedToTrash > 0)
+                {
+                    lines.Add("");
+                    lines.Add("Note: trash affected this merge (see counts above).");
+                }
+
+                DialogService.Success(string.Join('\n', lines), "Restore complete");
             }
 
             ResetAutoLockTimer();
@@ -218,18 +278,16 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// Full content fingerprint. Skip on merge only when every content field matches exactly
-    /// (Ordinal, no case folding). Id / dates / history / sort order are ignored.
+    /// Full content fingerprint. Match only when every content field is exactly equal
+    /// (Ordinal, case-sensitive). Id / dates / history / sort order are ignored.
     /// </summary>
     private static string EntryContentFingerprint(VaultEntry e)
     {
         static string S(string? s) => s ?? string.Empty;
 
-        // Tags: order-independent
         var tags = string.Join('\u001e',
             e.Tags.Select(t => S(t)).OrderBy(t => t, StringComparer.Ordinal));
 
-        // Custom fields: order-independent by name|value|IsSecret
         var customs = string.Join('\u001e',
             e.CustomFields
                 .Select(f => $"{S(f.Name)}\u001d{S(f.Value)}\u001d{(f.IsSecret ? '1' : '0')}")
