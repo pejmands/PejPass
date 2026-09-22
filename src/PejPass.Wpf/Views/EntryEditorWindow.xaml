@@ -3,8 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Entry" Height="760" Width="560"
         WindowStartupLocation="CenterOwner"
-        Background="{DynamicResource BgBrush}"
-        ResizeMode="CanResizeWithGrip">
+        ResizeMode="CanResizeWithGrip"
+        MinHeight="520" MinWidth="480"
+        Background="{DynamicResource BgBrush}">
 
     <Grid Margin="24">
         <Grid.RowDefinitions>
@@ -12,44 +13,160 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,16,0">
-            <StackPanel>
-                <TextBlock Text="Title *" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,0,12,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Title" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                    <CheckBox Grid.Column="1" Content="Favorite" IsChecked="{Binding IsFavorite}"
+                              VerticalAlignment="Bottom" Margin="12,0,0,4"
+                              ToolTip="Pin this entry to the top of the list"/>
+                </Grid>
 
                 <TextBlock Text="Username" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+                <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+
+                <StackPanel Visibility="{Binding HasUsernameHistory, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                    <TextBlock Text="USERNAME HISTORY" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+                    <ItemsControl ItemsSource="{Binding UsernameHistoryItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="10,8">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Username}"
+                                                       Foreground="{DynamicResource TextBrush}"/>
+                                            <TextBlock Text="{Binding ChangedAtText}" FontSize="11"
+                                                       Foreground="{DynamicResource MutedBrush}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Button Grid.Column="1" Content="Restore" Margin="6,0,0,0" Padding="10,6"
+                                            Command="{Binding DataContext.RestoreUsernameHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
+                                    <Button Grid.Column="2" Content="✕" Margin="6,0,0,0" Padding="8,6"
+                                            Command="{Binding DataContext.DeleteUsernameHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            Background="{DynamicResource DangerBrush}" ToolTip="Remove from history"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
 
                 <TextBlock Text="Password" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <Grid Margin="0,0,0,4">
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"/>
+                    <Button Grid.Column="1" Content="Generate" Margin="8,0,0,0"
+                            Command="{Binding GeneratePasswordCommand}" Padding="12,6"
+                            ToolTip="Quick generate (20 chars, secure defaults)"/>
+                    <Button Grid.Column="2" Content="Options…" Margin="8,0,0,0"
+                            Command="{Binding OpenAdvancedGeneratorCommand}" Padding="12,6"
+                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"
+                            ToolTip="Advanced password generator"/>
+                </Grid>
+
+                <Grid Margin="0,6,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBox Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas"/>
-                    <Button Grid.Column="1" Content="Generate" Margin="8,0,0,0" Padding="12,8"
-                            Command="{Binding OpenGeneratorCommand}"
-                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
+                    <ProgressBar Height="6" Minimum="0" Maximum="100"
+                                 Value="{Binding PasswordStrengthProgress}"
+                                 Background="{DynamicResource SurfaceAltBrush}"/>
+                    <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="11"
+                               VerticalAlignment="Center"
+                               Text="{Binding PasswordStrengthLabel}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PasswordStrengthLevel}" Value="1">
+                                        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding PasswordStrengthLevel}" Value="2">
+                                        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding PasswordStrengthLevel}" Value="3">
+                                        <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding PasswordStrengthLevel}" Value="4">
+                                        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding PasswordStrengthLevel}" Value="5">
+                                        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                 </Grid>
-                <Grid Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <ProgressBar Height="4" Maximum="4" Value="{Binding PasswordStrengthProgress}" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" Text="{Binding PasswordStrengthLabel}" FontSize="11" Margin="10,0,0,0"
-                               VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}"/>
-                </Grid>
+
+                <StackPanel Visibility="{Binding HasPasswordHistory, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                    <TextBlock Text="PASSWORD HISTORY" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+                    <ItemsControl ItemsSource="{Binding PasswordHistoryItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="10,8">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DisplayValue}" FontFamily="Consolas"
+                                                       Foreground="{DynamicResource TextBrush}"/>
+                                            <TextBlock Text="{Binding ChangedAtText}" FontSize="11"
+                                                       Foreground="{DynamicResource MutedBrush}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Button Grid.Column="1" Content="{Binding RevealButtonText}" Margin="6,0,0,0" Padding="10,6"
+                                            Command="{Binding DataContext.TogglePasswordHistoryRevealCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
+                                    <Button Grid.Column="2" Content="Restore" Margin="6,0,0,0" Padding="10,6"
+                                            Command="{Binding DataContext.RestorePasswordHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
+                                    <Button Grid.Column="3" Content="✕" Margin="6,0,0,0" Padding="8,6"
+                                            Command="{Binding DataContext.DeletePasswordHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            Background="{DynamicResource DangerBrush}" ToolTip="Remove from history"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
 
                 <TextBlock Text="URL" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
 
-                <TextBlock Text="TOTP secret (Base32)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox Text="{Binding TotpSecret, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" FontFamily="Consolas"/>
-
-                <TextBlock Text="Notes" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
-                <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"
-                         AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72"/>
+                <TextBlock Text="TOTP Secret (Base32)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+                <TextBox Text="{Binding TotpSecret, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="0,0,0,4"
+                         ToolTip="Paste the authenticator secret key (Base32). Leave empty to disable TOTP."/>
+                <TextBlock Text="Optional — used to generate 2FA codes in the main window"
+                           FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,12"/>
 
                 <TextBlock Text="Tags (comma separated)" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                 <TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6"/>
@@ -72,95 +189,50 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <CheckBox Content="Favorite" IsChecked="{Binding IsFavorite}" Margin="0,0,0,16"/>
-
-                <Grid Margin="0,0,0,8">
+                <Grid Margin="0,8,0,4">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Custom Fields" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
-                    <Button Grid.Column="1" Content="+ Add Field" Command="{Binding AddCustomFieldCommand}" Padding="10,4" FontSize="12"
-                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
+                    <Button Grid.Column="1" Content="+ Add Field" Command="{Binding AddCustomFieldCommand}" Padding="10,4" FontSize="12"/>
                 </Grid>
+
                 <ItemsControl ItemsSource="{Binding CustomFields}" Margin="0,0,0,12">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Grid Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0" ToolTip="Field name"/>
-                                <TextBox Grid.Column="1" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0" ToolTip="Field value"/>
-                                <CheckBox Grid.Column="2" Content="Secret" IsChecked="{Binding IsSecret}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                <Button Grid.Column="3" Content="✕" Padding="8,4"
+                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" ToolTip="Field name" Margin="0,0,6,0"/>
+                                <TextBox Grid.Column="1" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" ToolTip="Field value" Margin="0,0,6,0"/>
+                                <CheckBox Grid.Column="2" IsChecked="{Binding IsSecret}" Content="Secret"
+                                          Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"
+                                          ToolTip="Hide value in the main window like a password"/>
+                                <Button Grid.Column="3" Content="✕"
                                         Command="{Binding DataContext.RemoveCustomFieldCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                        CommandParameter="{Binding}"
-                                        Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
+                                        CommandParameter="{Binding}" Padding="8,4"
+                                        Background="{DynamicResource DangerBrush}" ToolTip="Remove field"/>
                             </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <StackPanel Visibility="{Binding HasPasswordHistory, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
-                    <TextBlock Text="Password history" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
-                    <ItemsControl ItemsSource="{Binding PasswordHistoryItems}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="0,0,0,6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock VerticalAlignment="Center" TextWrapping="Wrap">
-                                        <Run Text="{Binding Password, Mode=OneWay}" FontFamily="Consolas"/>
-                                        <Run Text="  ·  " Foreground="{DynamicResource MutedBrush}"/>
-                                        <Run Text="{Binding ChangedAtText, Mode=OneWay}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
-                                    </TextBlock>
-                                    <Button Grid.Column="1" Content="✕" Padding="8,4"
-                                            Command="{Binding DataContext.RemovePasswordHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}"
-                                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-
-                <StackPanel Visibility="{Binding HasUsernameHistory, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
-                    <TextBlock Text="Username history" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
-                    <ItemsControl ItemsSource="{Binding UsernameHistoryItems}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="0,0,0,6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock VerticalAlignment="Center" TextWrapping="Wrap">
-                                        <Run Text="{Binding Username, Mode=OneWay}"/>
-                                        <Run Text="  ·  " Foreground="{DynamicResource MutedBrush}"/>
-                                        <Run Text="{Binding ChangedAtText, Mode=OneWay}" Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
-                                    </TextBlock>
-                                    <Button Grid.Column="1" Content="✕" Padding="8,4"
-                                            Command="{Binding DataContext.RemoveUsernameHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}"
-                                            Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
+                <TextBlock Text="Notes" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
+                <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
+                         Height="80" TextWrapping="Wrap" AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Auto"/>
             </StackPanel>
         </ScrollViewer>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-            <Button Content="Cancel" IsCancel="True" Padding="20,10" Margin="0,0,10,0"
-                    Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}" Click="Cancel_Click"/>
-            <Button Content="Save" IsDefault="True" Padding="20,10" Command="{Binding SaveCommand}"/>
+            <Button Content="Cancel" Click="Cancel_Click" Margin="0,0,8,0"
+                    Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextBrush}"/>
+            <Button Content="Save" Click="Save_Click" IsDefault="True"/>
         </StackPanel>
     </Grid>
 </Window>
