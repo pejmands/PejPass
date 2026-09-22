@@ -41,7 +41,15 @@
                 <TextBox Text="{Binding ClipboardClearSeconds, UpdateSourceTrigger=PropertyChanged}"
                          Margin="0,0,0,4"/>
                 <TextBlock Text="Copied secrets are cleared from the clipboard after this time (5–300)."
-                           FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,24"/>
+                           FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,20"/>
+
+                <TextBlock Text="WINDOWS HELLO" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+                <CheckBox Content="Unlock with Windows Hello after first password unlock"
+                          IsChecked="{Binding WindowsHelloEnabled}"
+                          Margin="0,0,0,4"/>
+                <TextBlock Text="Requires a successful master-password unlock in this session. Cache is cleared when you exit the app or turn this off."
+                           FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,24" TextWrapping="Wrap"/>
 
                 <TextBlock Text="KEYBOARD SHORTCUTS" FontSize="11" FontWeight="SemiBold"
                            Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,10"/>
