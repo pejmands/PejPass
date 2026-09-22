@@ -1,16 +1,15 @@
 using System.Collections.ObjectModel;
-using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Health;
+using PejPass.Domain.Security;
 
 namespace PejPass.Wpf.ViewModels;
 
 public partial class VaultHealthViewModel : ObservableObject
 {
     private readonly IReadOnlyList<VaultEntry> _entries;
-    private readonly Dispatcher _dispatcher;
 
     [ObservableProperty] private int _selectedFilterIndex;
     [ObservableProperty] private int _totalIssues;
@@ -37,67 +36,146 @@ public partial class VaultHealthViewModel : ObservableObject
 
     public event EventHandler<Guid>? RequestOpenEntry;
 
-    private VaultHealthReport _report = new();
+    /// <summary>Full unfiltered issue list from last completed (or in-progress) scan.</summary>
+    private readonly List<HealthIssue> _allIssues = [];
 
     public VaultHealthViewModel(IEnumerable<VaultEntry> entries)
     {
         _entries = entries.ToList();
-        _dispatcher = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         IsScanning = true;
         IsReady = false;
         ScanProgress = 0;
         ScanStatus = $"Scanning {_entries.Count} entries…";
     }
 
-    partial void OnIsReadyChanged(bool value)
-    {
-        OpenEntryCommand.NotifyCanExecuteChanged();
-    }
+    partial void OnIsReadyChanged(bool value) => OpenEntryCommand.NotifyCanExecuteChanged();
 
     public async Task StartScanAsync()
     {
         IsScanning = true;
         IsReady = false;
         ScanProgress = 0;
-        ScanStatus = $"Scanning {_entries.Count} entries…";
+        ScanStatus = $"Preparing {_entries.Count} entries…";
 
+        // Clear UI immediately so Rescan feels responsive
+        Issues.Clear();
+        _allIssues.Clear();
+        TotalIssues = 0;
+        DuplicateCount = 0;
+        WeakCount = 0;
+        MissingTotpCount = 0;
+        StaleCount = 0;
+
+        // Let the cleared UI paint
         await Task.Yield();
+
+        var n = _entries.Count;
+        if (n == 0)
+        {
+            ScanProgress = 100;
+            ScanStatus = "No entries to scan.";
+            IsScanning = false;
+            IsReady = true;
+            return;
+        }
 
         try
         {
-            var progress = new Progress<HealthScanProgress>(p =>
+            // Precompute which passwords are shared (fast dictionary pass)
+            var sharedPasswords = _entries
+                .Where(e => !string.IsNullOrEmpty(e.Password))
+                .GroupBy(e => e.Password, StringComparer.Ordinal)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key)
+                .ToHashSet(StringComparer.Ordinal);
+
+            var utc = DateTimeOffset.UtcNow;
+            var filter = SelectedFilterIndex;
+
+            for (var i = 0; i < n; i++)
             {
-                if (_dispatcher.CheckAccess())
+                var e = _entries[i];
+                var found = new List<HealthIssue>();
+
+                // Duplicates
+                if (!string.IsNullOrEmpty(e.Password) && sharedPasswords.Contains(e.Password))
                 {
-                    ScanProgress = p.Percent;
-                    ScanStatus = p.Status;
+                    var peers = _entries.Count(x =>
+                        string.Equals(x.Password, e.Password, StringComparison.Ordinal));
+                    found.Add(new HealthIssue(
+                        HealthIssueKind.DuplicatePassword,
+                        e.Id,
+                        e.Title,
+                        peers == 2
+                            ? "Same password used on 2 entries"
+                            : $"Same password used on {peers} entries"));
                 }
-                else
+
+                // Weak
+                if (PasswordStrength.IsWeak(e.Password))
                 {
-                    _dispatcher.BeginInvoke(() =>
+                    var level = PasswordStrength.Evaluate(e.Password);
+                    found.Add(new HealthIssue(
+                        HealthIssueKind.WeakPassword,
+                        e.Id,
+                        e.Title,
+                        level == PasswordStrengthLevel.Empty
+                            ? "Password is empty"
+                            : $"Strength: {level}"));
+                }
+
+                // Missing TOTP
+                if (string.IsNullOrWhiteSpace(e.TotpSecret))
+                {
+                    found.Add(new HealthIssue(
+                        HealthIssueKind.MissingTotp,
+                        e.Id,
+                        e.Title,
+                        "No authenticator (TOTP) configured"));
+                }
+
+                // Stale
+                if (utc - e.UpdatedAt >= VaultHealthAnalyzer.StaleThreshold)
+                {
+                    var days = (int)(utc - e.UpdatedAt).TotalDays;
+                    found.Add(new HealthIssue(
+                        HealthIssueKind.StalePassword,
+                        e.Id,
+                        e.Title,
+                        $"Last updated {days} days ago"));
+                }
+
+                // Commit issues for this entry to UI (one-by-one)
+                foreach (var issue in found)
+                {
+                    _allIssues.Add(issue);
+
+                    switch (issue.Kind)
                     {
-                        ScanProgress = p.Percent;
-                        ScanStatus = p.Status;
-                    });
+                        case HealthIssueKind.DuplicatePassword: DuplicateCount++; break;
+                        case HealthIssueKind.WeakPassword: WeakCount++; break;
+                        case HealthIssueKind.MissingTotp: MissingTotpCount++; break;
+                        case HealthIssueKind.StalePassword: StaleCount++; break;
+                    }
+
+                    TotalIssues = _allIssues.Count;
+
+                    if (MatchesFilter(issue, filter))
+                        Issues.Add(new HealthIssueRow(issue));
                 }
-            });
 
-            var report = await Task.Run(() =>
-                VaultHealthAnalyzer.Analyze(_entries, progress)).ConfigureAwait(true);
+                // Live progress
+                ScanProgress = (i + 1) * 100.0 / n;
+                ScanStatus = $"Scanning {i + 1} / {n}";
 
-            _report = report;
-            TotalIssues = _report.Total;
-            DuplicateCount = _report.DuplicateCount;
-            WeakCount = _report.WeakCount;
-            MissingTotpCount = _report.MissingTotpCount;
-            StaleCount = _report.StaleCount;
-
-            ApplyFilter();
+                // Explicit delay so progress is visible (requested for diagnosis)
+                await Task.Delay(100).ConfigureAwait(true);
+            }
 
             ScanProgress = 100;
-            ScanStatus = _report.Total == 0
+            ScanStatus = TotalIssues == 0
                 ? "No issues found."
-                : $"{_report.Total} issue(s) found.";
+                : $"{TotalIssues} issue(s) found.";
         }
         catch (Exception ex)
         {
@@ -111,32 +189,29 @@ public partial class VaultHealthViewModel : ObservableObject
         }
     }
 
+    private static bool MatchesFilter(HealthIssue issue, int filterIndex) => filterIndex switch
+    {
+        1 => issue.Kind == HealthIssueKind.DuplicatePassword,
+        2 => issue.Kind == HealthIssueKind.WeakPassword,
+        3 => issue.Kind == HealthIssueKind.MissingTotp,
+        4 => issue.Kind == HealthIssueKind.StalePassword,
+        _ => true
+    };
+
     partial void OnSelectedFilterIndexChanged(int value)
     {
-        if (IsReady)
-            ApplyFilter();
+        // Live filter against accumulated issues (works mid-scan and after)
+        Issues.Clear();
+        foreach (var i in _allIssues
+                     .Where(x => MatchesFilter(x, value))
+                     .OrderBy(x => x.EntryTitle, StringComparer.OrdinalIgnoreCase))
+        {
+            Issues.Add(new HealthIssueRow(i));
+        }
     }
 
     [RelayCommand]
     private async Task RefreshAsync() => await StartScanAsync();
-
-    private void ApplyFilter()
-    {
-        Issues.Clear();
-        IEnumerable<HealthIssue> source = _report.Issues;
-
-        source = SelectedFilterIndex switch
-        {
-            1 => source.Where(i => i.Kind == HealthIssueKind.DuplicatePassword),
-            2 => source.Where(i => i.Kind == HealthIssueKind.WeakPassword),
-            3 => source.Where(i => i.Kind == HealthIssueKind.MissingTotp),
-            4 => source.Where(i => i.Kind == HealthIssueKind.StalePassword),
-            _ => source
-        };
-
-        foreach (var i in source.OrderBy(x => x.EntryTitle, StringComparer.OrdinalIgnoreCase))
-            Issues.Add(new HealthIssueRow(i));
-    }
 
     private bool CanOpenEntry(HealthIssueRow? row) => IsReady && row is not null;
 
