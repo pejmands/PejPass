@@ -47,7 +47,7 @@ public partial class MainViewModel
 
         try
         {
-            var csvExport = App.Services.GetRequiredService<ICsvExportService>();
+            var csvExport = global::PejPass.Wpf.App.Services.GetRequiredService<ICsvExportService>();
             await csvExport.ExportToCsvAsync(dlg.FileName, Entries);
 
             StatusMessage = $"Exported {Entries.Count} entries to CSV.";
