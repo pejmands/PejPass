@@ -14,17 +14,21 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ThemeMode _savedTheme;
     private readonly int _savedAutoLock;
     private readonly int _savedClipboard;
+    private readonly bool _savedWindowsHello;
 
-    private readonly bool _suppressThemePreview;
+    private bool _suppressThemePreview;
 
-    [ObservableProperty] 
+    [ObservableProperty]
     public partial int AutoLockMinutes { get; set; }
 
-    [ObservableProperty] 
+    [ObservableProperty]
     public partial int ClipboardClearSeconds { get; set; }
 
-    [ObservableProperty] 
+    [ObservableProperty]
     public partial int SelectedThemeIndex { get; set; }
+
+    [ObservableProperty]
+    public partial bool WindowsHelloEnabled { get; set; }
 
     public string[] ThemeOptions { get; } = ["System", "Dark", "Light"];
 
@@ -38,11 +42,13 @@ public partial class SettingsViewModel : ObservableObject
         _savedTheme = settings.Theme;
         _savedAutoLock = settings.AutoLockMinutes;
         _savedClipboard = settings.ClipboardClearSeconds;
+        _savedWindowsHello = settings.WindowsHelloEnabled;
 
         _suppressThemePreview = true;
         AutoLockMinutes = settings.AutoLockMinutes;
         ClipboardClearSeconds = settings.ClipboardClearSeconds;
         SelectedThemeIndex = (int)settings.Theme;
+        WindowsHelloEnabled = settings.WindowsHelloEnabled;
         _suppressThemePreview = false;
     }
 
@@ -63,6 +69,10 @@ public partial class SettingsViewModel : ObservableObject
         _settings.AutoLockMinutes = AutoLockMinutes;
         _settings.ClipboardClearSeconds = ClipboardClearSeconds;
         _settings.Theme = (ThemeMode)SelectedThemeIndex;
+        _settings.WindowsHelloEnabled = WindowsHelloEnabled;
+
+        if (!WindowsHelloEnabled)
+            SessionPasswordCache.Clear();
 
         SettingsStore.Save(_settings);
         _themeService.Apply();
@@ -71,12 +81,12 @@ public partial class SettingsViewModel : ObservableObject
         RequestClose?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>Restore saved values and theme (no close).</summary>
     public void RevertPreview()
     {
         _settings.Theme = _savedTheme;
         _settings.AutoLockMinutes = _savedAutoLock;
         _settings.ClipboardClearSeconds = _savedClipboard;
+        _settings.WindowsHelloEnabled = _savedWindowsHello;
         _themeService.Apply();
     }
 

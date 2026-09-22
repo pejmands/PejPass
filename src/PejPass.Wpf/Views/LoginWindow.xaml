@@ -8,7 +8,6 @@
         ResizeMode="CanMinimize"
         Background="{DynamicResource BgBrush}">
 
-    <!-- ScrollViewer keeps all controls inside the window when error text grows -->
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled"
                   Padding="32,28">
@@ -44,7 +43,13 @@
                          PasswordChanged="MasterPasswordBox_PasswordChanged"
                          Margin="0,0,0,12" Padding="8,6"/>
 
-            <!-- Error box: wraps text, stays in layout, no fixed MinHeight that grows the stack blindly -->
+            <Button Content="Unlock with Windows Hello"
+                    Command="{Binding UnlockWithHelloCommand}"
+                    Margin="0,0,0,12" Padding="16,10"
+                    Background="{DynamicResource SurfaceAltBrush}"
+                    Foreground="{DynamicResource TextBrush}"
+                    Visibility="{Binding ShowWindowsHello, Converter={StaticResource BoolToVis}}"/>
+
             <Border Background="{DynamicResource SurfaceBrush}"
                     BorderBrush="{DynamicResource DangerBrush}"
                     BorderThickness="1"

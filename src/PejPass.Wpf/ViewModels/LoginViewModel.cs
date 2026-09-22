@@ -7,6 +7,7 @@ using PejPass.Domain.Policies;
 using PejPass.Domain.Settings;
 using PejPass.Wpf.Services;
 using System.IO;
+using System.Windows;
 
 namespace PejPass.Wpf.ViewModels;
 
@@ -23,13 +24,20 @@ public partial class LoginViewModel : ObservableObject
     public static string? CurrentMasterPassword { get; private set; }
 
     /// <summary>
-    /// Clears all sensitive session data. Call this when locking the vault.
+    /// Clears sensitive session data. Windows Hello DPAPI cache is kept so biometric unlock works after Lock.
     /// </summary>
     public static void ClearSession()
     {
         CurrentVault = null;
         CurrentVaultPath = null;
         CurrentMasterPassword = null;
+    }
+
+    /// <summary>Full wipe including Hello session cache (e.g. disable Hello in settings).</summary>
+    public static void ClearSessionAndHelloCache()
+    {
+        ClearSession();
+        SessionPasswordCache.Clear();
     }
 
     [ObservableProperty]
@@ -53,12 +61,14 @@ public partial class LoginViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsBusy { get; set; }
 
+    [ObservableProperty]
+    public partial bool ShowWindowsHello { get; set; }
+
     public LoginViewModel(VaultService vaultService, AppSettings settings)
     {
         _vaultService = vaultService;
         _settings = settings;
 
-        // Default path
         Directory.CreateDirectory(_settings.DefaultVaultDirectory);
         VaultPath = Path.Combine(_settings.DefaultVaultDirectory, "vault.pejpass");
 
@@ -69,11 +79,32 @@ public partial class LoginViewModel : ObservableObject
     partial void OnIsCreateModeChanged(bool value)
     {
         if (value) IsOpenMode = false;
+        _ = RefreshWindowsHelloVisibilityAsync();
     }
 
     partial void OnIsOpenModeChanged(bool value)
     {
         if (value) IsCreateMode = false;
+        _ = RefreshWindowsHelloVisibilityAsync();
+    }
+
+    partial void OnVaultPathChanged(string value) => _ = RefreshWindowsHelloVisibilityAsync();
+
+    public async Task RefreshWindowsHelloVisibilityAsync()
+    {
+        try
+        {
+            ShowWindowsHello =
+                _settings.WindowsHelloEnabled
+                && IsOpenMode
+                && !string.IsNullOrWhiteSpace(VaultPath)
+                && SessionPasswordCache.HasCacheFor(VaultPath)
+                && await WindowsHelloHelper.IsAvailableAsync();
+        }
+        catch
+        {
+            ShowWindowsHello = false;
+        }
     }
 
     [RelayCommand]
@@ -105,6 +136,81 @@ public partial class LoginViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task UnlockWithHelloAsync()
+    {
+        PasswordError = null;
+        StatusMessage = string.Empty;
+
+        if (!IsOpenMode)
+        {
+            PasswordError = "Windows Hello is only for opening an existing vault.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(VaultPath) || !File.Exists(VaultPath))
+        {
+            PasswordError = "Select an existing vault file first.";
+            return;
+        }
+
+        if (!SessionPasswordCache.HasCacheFor(VaultPath))
+        {
+            PasswordError = "Unlock once with your master password first, then Windows Hello will be available until you exit the app.";
+            return;
+        }
+
+        var owner = System.Windows.Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
+                    ?? System.Windows.Application.Current?.MainWindow;
+        if (owner is null)
+            return;
+
+        IsBusy = true;
+        try
+        {
+            StatusMessage = "Waiting for Windows Hello…";
+            var verified = await WindowsHelloHelper.VerifyAsync(owner, "Unlock PejPass");
+            if (!verified)
+            {
+                PasswordError = "Windows Hello verification failed or was cancelled.";
+                StatusMessage = string.Empty;
+                return;
+            }
+
+            if (!SessionPasswordCache.TryRestore(VaultPath, out var password))
+            {
+                PasswordError = "Could not restore the session. Enter your master password.";
+                StatusMessage = string.Empty;
+                return;
+            }
+
+            StatusMessage = "Unlocking vault…";
+            var vault = await _vaultService.OpenVaultAsync(VaultPath, password);
+
+            CurrentVault = vault;
+            CurrentVaultPath = VaultPath;
+            CurrentMasterPassword = password;
+
+            // Refresh DPAPI blob (same path)
+            SessionPasswordCache.Store(VaultPath, password);
+
+            _settings.LastVaultPath = VaultPath;
+            SettingsStore.Save(_settings);
+
+            StatusMessage = "Vault unlocked.";
+            RequestClose?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            PasswordError = ex.Message;
+            StatusMessage = string.Empty;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
     private async Task SubmitAsync()
     {
         PasswordError = null;
@@ -125,7 +231,6 @@ public partial class LoginViewModel : ObservableObject
                 return;
             }
 
-            // Create never overwrites an existing vault file.
             if (File.Exists(VaultPath))
             {
                 PasswordError =
@@ -163,12 +268,16 @@ public partial class LoginViewModel : ObservableObject
                 StatusMessage = "Vault unlocked.";
             }
 
-            // Store session state
             CurrentVault = vault;
             CurrentVaultPath = VaultPath;
             CurrentMasterPassword = MasterPassword;
 
-            // Persist so the next launch defaults to this vault
+            // Cache for Windows Hello re-unlock after Lock (same process)
+            if (_settings.WindowsHelloEnabled)
+                SessionPasswordCache.Store(VaultPath, MasterPassword);
+            else
+                SessionPasswordCache.Clear();
+
             _settings.LastVaultPath = VaultPath;
             SettingsStore.Save(_settings);
 

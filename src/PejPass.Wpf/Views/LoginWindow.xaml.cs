@@ -20,7 +20,11 @@ public partial class LoginWindow : Window
             Close();
         };
 
-        Loaded += (_, _) => MasterPasswordBox.Focus();
+        Loaded += async (_, _) =>
+        {
+            MasterPasswordBox.Focus();
+            await viewModel.RefreshWindowsHelloVisibilityAsync();
+        };
     }
 
     private void MasterPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
