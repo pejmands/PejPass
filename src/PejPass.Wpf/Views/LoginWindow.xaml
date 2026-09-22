@@ -41,7 +41,44 @@
             <TextBlock Text="Master password" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
             <PasswordBox x:Name="MasterPasswordBox"
                          PasswordChanged="MasterPasswordBox_PasswordChanged"
-                         Margin="0,0,0,12" Padding="8,6"/>
+                         Margin="0,0,0,8" Padding="8,6"/>
+
+            <Grid Margin="0,0,0,12"
+                  Visibility="{Binding ShowMasterPasswordStrength, Converter={StaticResource BoolToVis}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ProgressBar Height="6" Minimum="0" Maximum="100"
+                             Value="{Binding MasterPasswordStrengthProgress}"
+                             Background="{DynamicResource SurfaceAltBrush}"/>
+                <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="11"
+                           VerticalAlignment="Center"
+                           Text="{Binding MasterPasswordStrengthLabel}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding MasterPasswordStrengthLevel}" Value="1">
+                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding MasterPasswordStrengthLevel}" Value="2">
+                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding MasterPasswordStrengthLevel}" Value="3">
+                                    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding MasterPasswordStrengthLevel}" Value="4">
+                                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding MasterPasswordStrengthLevel}" Value="5">
+                                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
 
             <Button Content="Unlock with Windows Hello"
                     Command="{Binding UnlockWithHelloCommand}"
