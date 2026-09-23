@@ -18,8 +18,22 @@ public partial class MainWindow : Window
         viewModel.RequestLock += (_, _) =>
         {
             var login = App.Services.GetRequiredService<LoginWindow>();
+            System.Windows.Application.Current.MainWindow = login;
             login.Show();
             Close();
+        };
+
+        // User closed main with X → exit fully (do not leave a background process)
+        Closed += (_, _) =>
+        {
+            viewModel.StopBackgroundTimers();
+
+            // If we are locking (login shown), do not shut down the app
+            if (System.Windows.Application.Current?.Windows.OfType<LoginWindow>().Any(w => w.IsVisible) == true)
+                return;
+
+            LoginViewModel.ClearSession();
+            System.Windows.Application.Current?.Shutdown();
         };
 
         viewModel.RequestScrollToEntry += (_, _) =>
