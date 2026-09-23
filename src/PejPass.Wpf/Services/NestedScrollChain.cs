@@ -10,25 +10,47 @@ namespace PejPass.Wpf.Services;
 /// Nested scroll chaining (standard desktop / web pattern):
 /// 1) Wheel scrolls the inner scroller while it has room.
 /// 2) At top/bottom (or if content fits), further wheel deltas scroll the parent ScrollViewer.
-///
-/// Fully handles PreviewMouseWheel so WPF cannot "eat" the event at a non-scrollable boundary.
 /// </summary>
 public static class NestedScrollChain
 {
     private const double Epsilon = 1.0;
+    private const double PixelsPerNotch = 48.0; // ~3 lines — matches typical WPF wheel feel
+    private const double NotchUnit = 120.0;
 
-    public static void Attach(ScrollViewer inner)
+    private static readonly DependencyProperty ParentOverrideProperty =
+        DependencyProperty.RegisterAttached(
+            "ParentOverride",
+            typeof(ScrollViewer),
+            typeof(NestedScrollChain),
+            new PropertyMetadata(null));
+
+    private static readonly DependencyProperty IsAttachedProperty =
+        DependencyProperty.RegisterAttached(
+            "IsAttached",
+            typeof(bool),
+            typeof(NestedScrollChain),
+            new PropertyMetadata(false));
+
+    public static void Attach(ScrollViewer inner, ScrollViewer? parentOverride = null)
     {
         if (inner is null) return;
 
-        inner.PreviewMouseWheel -= OnInnerPreviewMouseWheel;
-        inner.PreviewMouseWheel += OnInnerPreviewMouseWheel;
+        inner.SetValue(ParentOverrideProperty, parentOverride);
+
+        if (inner.GetValue(IsAttachedProperty) is true)
+            return;
+
+        inner.SetValue(IsAttachedProperty, true);
+        inner.AddHandler(
+            UIElement.PreviewMouseWheelEvent,
+            new MouseWheelEventHandler(OnInnerPreviewMouseWheel),
+            handledEventsToo: true);
+
+        if (inner.Background is null)
+            inner.Background = Brushes.Transparent;
     }
 
-    /// <summary>
-    /// Attach to a multiline TextBox after its template (internal ScrollViewer) exists.
-    /// </summary>
-    public static void Attach(TextBox textBox)
+    public static void Attach(TextBox textBox, ScrollViewer? parentOverride = null)
     {
         if (textBox is null) return;
 
@@ -38,7 +60,7 @@ public static class NestedScrollChain
             var inner = FindDescendantScrollViewer(textBox);
             if (inner is not null)
             {
-                Attach(inner);
+                Attach(inner, parentOverride);
                 return;
             }
 
@@ -47,7 +69,7 @@ public static class NestedScrollChain
                 textBox.ApplyTemplate();
                 var sv = FindDescendantScrollViewer(textBox);
                 if (sv is not null)
-                    Attach(sv);
+                    Attach(sv, parentOverride);
             }, DispatcherPriority.Loaded);
         }
 
@@ -62,43 +84,45 @@ public static class NestedScrollChain
         if (sender is not ScrollViewer inner)
             return;
 
-        // Always handle so WPF ScrollViewer cannot swallow the event at a boundary.
         e.Handled = true;
 
-        var delta = e.Delta;
-        var parent = FindAncestorScrollViewer(inner);
+        // e.Delta > 0 → scroll up → decrease offset; e.Delta < 0 → scroll down → increase offset
+        var notches = e.Delta / NotchUnit;
+        var offsetDelta = -notches * PixelsPerNotch;
+
+        var parent = inner.GetValue(ParentOverrideProperty) as ScrollViewer
+                     ?? FindAncestorScrollViewer(inner);
 
         if (inner.ScrollableHeight <= Epsilon)
         {
-            ScrollBy(parent, delta);
+            ScrollBy(parent, offsetDelta);
             return;
         }
 
-        var scrollingDown = delta < 0;
         var atTop = inner.VerticalOffset <= Epsilon;
         var atBottom = inner.VerticalOffset >= inner.ScrollableHeight - Epsilon;
 
-        if (scrollingDown && atBottom)
+        if (offsetDelta > 0 && atBottom)
         {
-            ScrollBy(parent, delta);
+            ScrollBy(parent, offsetDelta);
             return;
         }
 
-        if (!scrollingDown && atTop)
+        if (offsetDelta < 0 && atTop)
         {
-            ScrollBy(parent, delta);
+            ScrollBy(parent, offsetDelta);
             return;
         }
 
-        ScrollBy(inner, delta);
+        ScrollBy(inner, offsetDelta);
     }
 
-    private static void ScrollBy(ScrollViewer? sv, double wheelDelta)
+    private static void ScrollBy(ScrollViewer? sv, double offsetDelta)
     {
         if (sv is null) return;
         if (sv.ScrollableHeight <= Epsilon) return;
 
-        var target = sv.VerticalOffset - wheelDelta;
+        var target = sv.VerticalOffset + offsetDelta;
         if (target < 0) target = 0;
         if (target > sv.ScrollableHeight) target = sv.ScrollableHeight;
         sv.ScrollToVerticalOffset(target);
