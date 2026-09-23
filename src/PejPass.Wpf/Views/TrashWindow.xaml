@@ -68,6 +68,7 @@
                  Grid.Row="2"
                  ItemsSource="{Binding Items}"
                  Background="Transparent"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  BorderThickness="0">
 
             <ListBox.ItemContainerStyle>
