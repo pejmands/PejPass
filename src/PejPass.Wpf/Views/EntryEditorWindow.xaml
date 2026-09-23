@@ -313,12 +313,30 @@
                            Margin="0,0,0,6"/>
 
                 <TextBox Text="{Binding TotpSecret, UpdateSourceTrigger=PropertyChanged}"
-                         Margin="0,0,0,4"
+                         Margin="0,0,0,6"
                          FontFamily="Consolas"
                          TextWrapping="NoWrap"
                          HorizontalScrollBarVisibility="Auto"
                          VerticalScrollBarVisibility="Disabled"
                          ToolTip="Paste the authenticator secret key (Base32). Leave empty to disable TOTP."/>
+
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <Button Content="From image…"
+                            Command="{Binding ImportTotpFromFileCommand}"
+                            Padding="12,6"
+                            Height="32"
+                            Margin="0,0,8,0"
+                            Background="{DynamicResource SurfaceAltBrush}"
+                            Foreground="{DynamicResource TextBrush}"
+                            ToolTip="Decode TOTP QR code from an image file"/>
+                    <Button Content="From clipboard"
+                            Command="{Binding ImportTotpFromClipboardCommand}"
+                            Padding="12,6"
+                            Height="32"
+                            Background="{DynamicResource SurfaceAltBrush}"
+                            Foreground="{DynamicResource TextBrush}"
+                            ToolTip="Decode TOTP QR code from an image on the clipboard"/>
+                </StackPanel>
 
                 <TextBlock Text="{Binding TotpErrorMessage}"
                            FontSize="11"
