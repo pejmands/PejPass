@@ -17,6 +17,13 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Single instance: second launch activates the existing window and exits
+        if (!SingleInstance.TryAcquire())
+        {
+            Shutdown();
+            return;
+        }
+
         base.OnStartup(e);
 
         UiPolish.Register();
@@ -52,5 +59,11 @@ public partial class App : System.Windows.Application
 
         var login = Services.GetRequiredService<LoginWindow>();
         login.Show();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        SingleInstance.Release();
+        base.OnExit(e);
     }
 }
