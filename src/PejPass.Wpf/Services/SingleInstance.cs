@@ -1,4 +1,3 @@
-using System.Threading;
 using System.Windows;
 
 namespace PejPass.Wpf.Services;
@@ -73,7 +72,7 @@ public static class SingleInstance
                 if (!_activateEvent.WaitOne(500))
                     continue;
 
-                var app = Application.Current;
+                var app = System.Windows.Application.Current;
                 if (app is null)
                     continue;
 
@@ -93,7 +92,7 @@ public static class SingleInstance
     /// <summary>Restore and activate the most appropriate open window.</summary>
     public static void BringToFront()
     {
-        var app = Application.Current;
+        var app = System.Windows.Application.Current;
         if (app is null)
             return;
 

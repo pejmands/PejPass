@@ -10,6 +10,7 @@
     <AssemblyName>PejPass</AssemblyName>
     <RootNamespace>PejPass.Wpf</RootNamespace>
     <Platforms>x64</Platforms>
+    <ApplicationIcon>Assets\PejPass.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
