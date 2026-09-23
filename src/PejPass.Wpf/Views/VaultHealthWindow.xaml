@@ -26,11 +26,41 @@
                        FontWeight="Bold"
                        Foreground="{DynamicResource TextBrush}"/>
 
-            <Button Content="Rescan"
-                    Command="{Binding RefreshCommand}"
-                    HorizontalAlignment="Right"
-                    Background="{DynamicResource SurfaceAltBrush}"
-                    Foreground="{DynamicResource TextBrush}"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Cancel"
+                        Command="{Binding CancelScanCommand}"
+                        Margin="0,0,8,0"
+                        Background="{DynamicResource SurfaceAltBrush}"
+                        Foreground="{DynamicResource TextBrush}"
+                        ToolTip="Cancel the running health scan">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsScanning}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button Content="Rescan"
+                        Command="{Binding RefreshCommand}"
+                        Background="{DynamicResource SurfaceAltBrush}"
+                        Foreground="{DynamicResource TextBrush}"
+                        ToolTip="Run health scan again">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsScanning}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
         </Grid>
 
         <!-- Summary -->
