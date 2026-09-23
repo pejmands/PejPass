@@ -14,6 +14,7 @@ public static class SingleInstance
     private static Mutex? _mutex;
     private static EventWaitHandle? _activateEvent;
     private static CancellationTokenSource? _listenCts;
+    private static Thread? _listenThread;
 
     /// <summary>
     /// Raised on the UI thread when a second instance asked us to activate
@@ -32,7 +33,7 @@ public static class SingleInstance
         if (!createdNew)
         {
             if (!string.IsNullOrWhiteSpace(vaultPathToForward))
-                PendingVaultOpen.Write(vaultPathToForward);
+                PendingVaultOpen.Write(vaultPathToForward!);
 
             try
             {
@@ -51,9 +52,19 @@ public static class SingleInstance
             return false;
         }
 
+        // Drop any stale pending path from a previous crashed session
+        PendingVaultOpen.ReadAndClear();
+
         _activateEvent = new EventWaitHandle(false, EventResetMode.AutoReset, EventName);
         _listenCts = new CancellationTokenSource();
-        _ = Task.Run(() => ListenForActivation(_listenCts.Token));
+
+        // Explicit background thread so it can never keep the process alive after UI exits
+        _listenThread = new Thread(() => ListenForActivation(_listenCts.Token))
+        {
+            IsBackground = true,
+            Name = "PejPass.SingleInstance.Listen"
+        };
+        _listenThread.Start();
         return true;
     }
 
@@ -74,11 +85,20 @@ public static class SingleInstance
                     continue;
 
                 var path = PendingVaultOpen.ReadAndClear();
-                app.Dispatcher.Invoke(() =>
+
+                // BeginInvoke: never deadlock with a modal dialog on the UI thread
+                app.Dispatcher.BeginInvoke(new Action(() =>
                 {
-                    Activated?.Invoke(path);
-                    BringToFront();
-                });
+                    try
+                    {
+                        BringToFront();
+                        Activated?.Invoke(path);
+                    }
+                    catch
+                    {
+                        // never crash the listen path
+                    }
+                }));
             }
             catch (ObjectDisposedException)
             {
@@ -87,6 +107,10 @@ public static class SingleInstance
             catch (OperationCanceledException)
             {
                 break;
+            }
+            catch
+            {
+                // keep listening
             }
         }
     }
@@ -99,17 +123,15 @@ public static class SingleInstance
 
         Window? target = null;
 
-        if (app.MainWindow is { IsVisible: true } main)
-            target = main;
-
-        if (target is null)
+        // Prefer any visible loaded window (MainWindow property may still point at closed Login)
+        foreach (Window w in app.Windows)
         {
-            foreach (Window w in app.Windows)
-            {
-                if (w.IsVisible)
-                    target = w;
-            }
+            if (w.IsVisible && w.IsLoaded)
+                target = w;
         }
+
+        if (target is null && app.MainWindow is { IsLoaded: true, IsVisible: true } main)
+            target = main;
 
         if (target is null)
             return;
@@ -143,5 +165,6 @@ public static class SingleInstance
 
         _listenCts?.Dispose();
         _listenCts = null;
+        _listenThread = null;
     }
 }

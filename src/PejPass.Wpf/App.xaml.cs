@@ -24,11 +24,14 @@ public partial class App : System.Windows.Application
         // Single instance: second launch activates existing window (and forwards vault path)
         if (!SingleInstance.TryAcquire(launchVaultPath))
         {
-            Shutdown();
+            // Hard exit — do not keep a half-started WPF process around
+            Environment.Exit(0);
             return;
         }
 
         base.OnStartup(e);
+
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
 
         SingleInstance.Activated += OnSecondInstanceActivated;
 
@@ -67,6 +70,7 @@ public partial class App : System.Windows.Application
         Services = services.BuildServiceProvider();
 
         var login = Services.GetRequiredService<LoginWindow>();
+        MainWindow = login;
 
         if (!string.IsNullOrWhiteSpace(launchVaultPath) &&
             login.DataContext is LoginViewModel loginVm)
@@ -104,11 +108,17 @@ public partial class App : System.Windows.Application
         if (LoginViewModel.CurrentVault is not null)
         {
             var current = LoginViewModel.CurrentVaultPath;
-            if (!string.IsNullOrEmpty(current) &&
-                string.Equals(Path.GetFullPath(current), path, StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrEmpty(current))
             {
-                // Same vault — just focused by SingleInstance.BringToFront
-                return;
+                try
+                {
+                    if (string.Equals(Path.GetFullPath(current), path, StringComparison.OrdinalIgnoreCase))
+                        return; // same vault — already brought to front
+                }
+                catch
+                {
+                    // fall through to message
+                }
             }
 
             DialogService.Info(
@@ -156,6 +166,7 @@ public partial class App : System.Windows.Application
     {
         SingleInstance.Activated -= OnSecondInstanceActivated;
         SingleInstance.Release();
+        PendingVaultOpen.ReadAndClear();
         base.OnExit(e);
     }
 }

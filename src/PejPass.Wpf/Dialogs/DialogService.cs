@@ -4,9 +4,35 @@ namespace PejPass.Wpf.Dialogs;
 
 public static class DialogService
 {
-    private static Window? Owner =>
-        System.Windows.Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
-        ?? System.Windows.Application.Current?.MainWindow;
+    /// <summary>
+    /// Prefer an active visible window; never use a closed/hidden MainWindow leftover from Login→Main switch.
+    /// </summary>
+    private static Window? Owner
+    {
+        get
+        {
+            var app = System.Windows.Application.Current;
+            if (app is null) return null;
+
+            Window? best = null;
+            foreach (Window w in app.Windows)
+            {
+                if (!w.IsVisible || !w.IsLoaded)
+                    continue;
+                if (w.IsActive)
+                    return w;
+                best ??= w;
+            }
+
+            if (best is not null)
+                return best;
+
+            if (app.MainWindow is { IsLoaded: true, IsVisible: true } main)
+                return main;
+
+            return null;
+        }
+    }
 
     public static void Info(string message, string title = "PejPass")
     {
@@ -74,6 +100,9 @@ public static class DialogService
         {
             Owner = Owner
         };
+        // Center on screen if no owner (e.g. activation from second instance)
+        if (dlg.Owner is null)
+            dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         dlg.ShowDialog();
     }
 }

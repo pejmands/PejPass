@@ -16,6 +16,7 @@ public partial class LoginWindow : Window
             MasterPasswordBox.Clear();
 
             var main = App.Services.GetRequiredService<MainWindow>();
+            System.Windows.Application.Current.MainWindow = main;
             main.Show();
             Close();
         };
