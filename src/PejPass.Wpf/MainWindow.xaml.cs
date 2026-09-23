@@ -16,7 +16,6 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = viewModel;
 
-        // Re-attach when detail pane / notes become visible
         viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(MainViewModel.HasSelection)
@@ -230,32 +229,42 @@ public partial class MainWindow : Window
 
     private void AttachNotesScrollChain()
     {
-        // Generated fields from x:Name in XAML (most reliable)
-        if (NotesScrollViewer is not null)
-        {
-            NestedScrollChain.Attach(NotesScrollViewer, DetailScrollViewer);
-            return;
-        }
-
-        if (FindName("NotesScrollViewer") is ScrollViewer named)
-        {
-            var parent = FindName("DetailScrollViewer") as ScrollViewer;
-            NestedScrollChain.Attach(named, parent);
-            return;
-        }
+        ScrollViewer? notes = null;
+        ScrollViewer? detail = null;
 
         foreach (var sv in FindVisualChildren<ScrollViewer>(this))
         {
-            if (sv.HorizontalScrollBarVisibility != ScrollBarVisibility.Disabled)
+            // Notes strip: fixed MaxHeight 160, no horizontal scroll
+            if (notes is null
+                && sv.HorizontalScrollBarVisibility == ScrollBarVisibility.Disabled
+                && !double.IsInfinity(sv.MaxHeight)
+                && !double.IsNaN(sv.MaxHeight)
+                && Math.Abs(sv.MaxHeight - 160) < 0.5)
+            {
+                notes = sv;
                 continue;
-            if (double.IsInfinity(sv.MaxHeight) || double.IsNaN(sv.MaxHeight))
-                continue;
-            if (Math.Abs(sv.MaxHeight - 160) > 0.5)
-                continue;
-
-            NestedScrollChain.Attach(sv);
-            return;
+            }
         }
+
+        // Detail pane: the vertical Auto scroller that contains the notes strip
+        if (notes is not null)
+        {
+            var current = VisualTreeHelper.GetParent(notes);
+            while (current is not null)
+            {
+                if (current is ScrollViewer sv
+                    && sv.VerticalScrollBarVisibility == ScrollBarVisibility.Auto
+                    && !ReferenceEquals(sv, notes))
+                {
+                    detail = sv;
+                    break;
+                }
+                current = VisualTreeHelper.GetParent(current);
+            }
+        }
+
+        if (notes is not null)
+            NestedScrollChain.Attach(notes, detail);
     }
 
     private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
