@@ -2,8 +2,10 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Trash"
-        Height="520" Width="640"
+        Height="520"
+        Width="640"
         WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
         Background="{DynamicResource BgBrush}">
 
     <Grid Margin="24">
@@ -14,29 +16,39 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- Header -->
         <Grid Margin="0,0,0,12">
-            <TextBlock Text="Trash" FontSize="22" FontWeight="Bold"
+            <TextBlock Text="Trash"
+                       FontSize="22"
+                       FontWeight="Bold"
                        Foreground="{DynamicResource TextBrush}"/>
-            <Button Content="Empty Trash" Command="{Binding EmptyTrashCommand}"
-                    HorizontalAlignment="Right" Padding="12,6"
+
+            <Button Content="Empty Trash"
+                    Command="{Binding EmptyTrashCommand}"
+                    HorizontalAlignment="Right"
                     Background="{DynamicResource DangerBrush}"/>
         </Grid>
 
-        <!-- Search (placeholder + clear — same pattern as Authenticator / main list) -->
-        <Grid Grid.Row="1" Margin="0,0,0,12">
+        <!-- Search -->
+        <Grid Grid.Row="1"
+              Margin="0,0,0,12">
+
             <TextBox x:Name="TrashSearchBox"
                      Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                      VerticalContentAlignment="Center"
                      Padding="10,8,32,8"
                      ToolTip="Search trash by title, username, or URL"/>
+
             <TextBlock Text="Search trash…"
                        Foreground="{DynamicResource MutedBrush}"
                        IsHitTestVisible="False"
                        Margin="12,0,36,0"
                        VerticalAlignment="Center"
                        Visibility="{Binding Text, ElementName=TrashSearchBox, Converter={StaticResource EmptyStringToVis}}"/>
+
             <Button Content="✕"
-                    Width="22" Height="22"
+                    Width="22"
+                    Height="22"
                     VerticalAlignment="Center"
                     HorizontalAlignment="Right"
                     Margin="0,0,8,0"
@@ -51,16 +63,28 @@
                     Visibility="{Binding Text, ElementName=TrashSearchBox, Converter={StaticResource NullOrEmptyToVis}}"/>
         </Grid>
 
-        <ListBox x:Name="TrashList" Grid.Row="2" ItemsSource="{Binding Items}" Background="Transparent" BorderThickness="0">
+        <!-- Trash items -->
+        <ListBox x:Name="TrashList"
+                 Grid.Row="2"
+                 ItemsSource="{Binding Items}"
+                 Background="Transparent"
+                 BorderThickness="0">
+
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
-                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                    <Setter Property="Padding" Value="0"/>
-                    <Setter Property="Margin" Value="0,0,0,6"/>
+                    <Setter Property="HorizontalContentAlignment"
+                            Value="Stretch"/>
+                    <Setter Property="Padding"
+                            Value="0"/>
+                    <Setter Property="Margin"
+                            Value="0,0,0,6"/>
+
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ListBoxItem">
-                                <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="14,12">
+                                <Border Background="{DynamicResource SurfaceBrush}"
+                                        CornerRadius="8"
+                                        Padding="12,10">
                                     <ContentPresenter/>
                                 </Border>
                             </ControlTemplate>
@@ -68,6 +92,7 @@
                     </Setter>
                 </Style>
             </ListBox.ItemContainerStyle>
+
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <Grid>
@@ -77,17 +102,31 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
+
+                        <Border Width="28"
+                                Height="28"
+                                CornerRadius="6"
+                                ClipToBounds="True"
                                 Background="{DynamicResource SurfaceAltBrush}"
-                                VerticalAlignment="Center" Margin="0,0,10,0">
+                                VerticalAlignment="Center"
+                                Margin="0,0,10,0">
                             <Image Source="{Binding Converter={StaticResource FaviconConv}}"
                                    Stretch="UniformToFill"
                                    RenderOptions.BitmapScalingMode="HighQuality"/>
                         </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextBrush}"/>
-                            <TextBlock FontSize="12" Foreground="{DynamicResource MutedBrush}" Margin="0,2,0,0">
+
+                        <StackPanel Grid.Column="1"
+                                    VerticalAlignment="Center">
+
+                            <TextBlock Text="{Binding Title}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       TextTrimming="CharacterEllipsis"/>
+
+                            <TextBlock FontSize="12"
+                                       Foreground="{DynamicResource MutedBrush}"
+                                       Margin="0,2,0,0"
+                                       TextTrimming="CharacterEllipsis">
                                 <Run Text="{Binding Username, Mode=OneWay}"/>
                                 <Run Text=" · deleted "/>
                                 <Run Text="{Binding DeletedAtText, Mode=OneWay}"/>
@@ -95,10 +134,20 @@
                                 <Run Text="{Binding DaysLeftText, Mode=OneWay}"/>
                             </TextBlock>
                         </StackPanel>
-                        <Button Grid.Column="2" Content="Restore" Margin="8,0,0,0" Padding="12,6"
+
+                        <Button Grid.Column="2"
+                                Content="Restore"
+                                Height="32"
+                                Margin="8,0,0,0"
+                                Padding="12,4"
                                 Command="{Binding DataContext.RestoreCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                 CommandParameter="{Binding}"/>
-                        <Button Grid.Column="3" Content="Purge" Margin="8,0,0,0" Padding="12,6"
+
+                        <Button Grid.Column="3"
+                                Content="Purge"
+                                Height="32"
+                                Margin="8,0,0,0"
+                                Padding="12,4"
                                 Command="{Binding DataContext.PurgeCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                 CommandParameter="{Binding}"
                                 Background="{DynamicResource DangerBrush}"/>
@@ -107,11 +156,20 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <Grid Grid.Row="3" Margin="0,16,0,0">
-            <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource MutedBrush}"
+        <!-- Footer -->
+        <Grid Grid.Row="3"
+              Margin="0,16,0,0">
+
+            <TextBlock Text="{Binding StatusMessage}"
+                       Foreground="{DynamicResource MutedBrush}"
                        VerticalAlignment="Center"/>
-            <Button Content="Close" HorizontalAlignment="Right" Click="Close_Click" Padding="20,8"
-                    Background="{DynamicResource SurfaceAltBrush}" Foreground="{DynamicResource TextBrush}"/>
+
+            <Button Content="Close"
+                    HorizontalAlignment="Right"
+                    Click="Close_Click"
+                    Background="{DynamicResource SurfaceAltBrush}"
+                    Foreground="{DynamicResource TextBrush}"/>
         </Grid>
+
     </Grid>
 </Window>

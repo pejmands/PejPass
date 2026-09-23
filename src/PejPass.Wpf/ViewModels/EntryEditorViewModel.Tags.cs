@@ -10,18 +10,29 @@ public partial class EntryEditorViewModel
     /// </summary>
     public string[] SuggestedTags { get; } =
     [
-        "Work",
-        "Personal",
-        "Finance",
         "Banking",
-        "Social",
-        "Email",
-        "Shopping",
-        "Dev",
         "Cloud",
+        "Crypto",
+        "Dev",
+        "Education",
+        "Email",
+        "Entertainment",
+        "Family",
+        "Finance",
         "Gaming",
+        "Government",
+        "Health",
+        "Hosting",
+        "Insurance",
+        "Messaging",
+        "Personal",
+        "Shopping",
+        "Social",
+        "Subscriptions",
         "Travel",
-        "Family"
+        "Utilities",
+        "VPN",
+        "Work"
     ];
 
     [RelayCommand]

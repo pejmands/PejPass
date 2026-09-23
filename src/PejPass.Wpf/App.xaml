@@ -29,10 +29,12 @@
             <conv:EmptyStringToVisibilityConverter x:Key="EmptyStringToVis"/>
             <conv:FaviconConverter x:Key="FaviconConv"/>
 
+            <!-- Buttons -->
             <Style TargetType="Button">
+                <Setter Property="Height" Value="32"/>
                 <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                 <Setter Property="Foreground" Value="{DynamicResource ButtonTextBrush}"/>
-                <Setter Property="Padding" Value="16,8"/>
+                <Setter Property="Padding" Value="14,8"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
@@ -42,7 +44,8 @@
                             <Border Background="{TemplateBinding Background}"
                                     CornerRadius="6"
                                     Padding="{TemplateBinding Padding}">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
                             </Border>
                         </ControlTemplate>
                     </Setter.Value>
@@ -57,12 +60,14 @@
                 </Style.Triggers>
             </Style>
 
+            <!-- TextBox -->
             <Style TargetType="TextBox">
+                <Setter Property="Height" Value="40"/>
                 <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                 <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Padding" Value="8"/>
+                <Setter Property="Padding" Value="10,8"/>
                 <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}"/>
                 <Setter Property="Template">
                     <Setter.Value>
@@ -79,12 +84,14 @@
                 </Setter>
             </Style>
 
+            <!-- PasswordBox -->
             <Style TargetType="PasswordBox">
+                <Setter Property="Height" Value="40"/>
                 <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                 <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Padding" Value="8"/>
+                <Setter Property="Padding" Value="10,8"/>
                 <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}"/>
                 <Setter Property="SelectionBrush" Value="{DynamicResource AccentBrush}"/>
                 <Setter Property="Template">
@@ -102,6 +109,7 @@
                 </Setter>
             </Style>
 
+            <!-- ProgressBar -->
             <Style TargetType="ProgressBar">
                 <Setter Property="Height" Value="5"/>
                 <Setter Property="BorderThickness" Value="0"/>
@@ -109,6 +117,7 @@
                 <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
             </Style>
 
+            <!-- CheckBox -->
             <Style TargetType="CheckBox">
                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                 <Setter Property="Cursor" Value="Hand"/>
@@ -116,25 +125,46 @@
                     <Setter.Value>
                         <ControlTemplate TargetType="CheckBox">
                             <StackPanel Orientation="Horizontal">
-                                <Border x:Name="Box" Width="18" Height="18"
+                                <Border x:Name="Box"
+                                        Width="18"
+                                        Height="18"
                                         Background="{DynamicResource SurfaceBrush}"
                                         BorderBrush="{DynamicResource BorderBrush}"
-                                        BorderThickness="1.5" CornerRadius="4" VerticalAlignment="Center">
-                                    <Path x:Name="CheckMark" Data="M 3,9 L 7,13 L 14,4"
-                                          Stroke="{DynamicResource AccentBrush}" StrokeThickness="2"
-                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                          StrokeLineJoin="Round" Visibility="Collapsed" Margin="1"/>
+                                        BorderThickness="1.5"
+                                        CornerRadius="4"
+                                        VerticalAlignment="Center">
+                                    <Path x:Name="CheckMark"
+                                          Data="M 3,9 L 7,13 L 14,4"
+                                          Stroke="{DynamicResource AccentBrush}"
+                                          StrokeThickness="2"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          Visibility="Collapsed"
+                                          Margin="1"/>
                                 </Border>
-                                <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+
+                                <ContentPresenter Margin="8,0,0,0"
+                                                  VerticalAlignment="Center"
+                                                  RecognizesAccessKey="True"/>
                             </StackPanel>
+
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
-                                    <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter TargetName="CheckMark"
+                                            Property="Visibility"
+                                            Value="Visible"/>
+                                    <Setter TargetName="Box"
+                                            Property="BorderBrush"
+                                            Value="{DynamicResource AccentBrush}"/>
                                 </Trigger>
+
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter TargetName="Box"
+                                            Property="BorderBrush"
+                                            Value="{DynamicResource AccentBrush}"/>
                                 </Trigger>
+
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter Property="Opacity" Value="0.5"/>
                                 </Trigger>
@@ -144,6 +174,7 @@
                 </Setter>
             </Style>
 
+            <!-- RadioButton -->
             <Style TargetType="RadioButton">
                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                 <Setter Property="Cursor" Value="Hand"/>
@@ -151,22 +182,42 @@
                     <Setter.Value>
                         <ControlTemplate TargetType="RadioButton">
                             <StackPanel Orientation="Horizontal">
-                                <Grid Width="18" Height="18" VerticalAlignment="Center">
-                                    <Ellipse x:Name="Outer" Fill="{DynamicResource SurfaceBrush}"
-                                             Stroke="{DynamicResource BorderBrush}" StrokeThickness="1.5"/>
-                                    <Ellipse x:Name="Inner" Width="10" Height="10"
-                                             Fill="{DynamicResource AccentBrush}" Visibility="Collapsed"/>
+                                <Grid Width="18"
+                                      Height="18"
+                                      VerticalAlignment="Center">
+                                    <Ellipse x:Name="Outer"
+                                             Fill="{DynamicResource SurfaceBrush}"
+                                             Stroke="{DynamicResource BorderBrush}"
+                                             StrokeThickness="1.5"/>
+
+                                    <Ellipse x:Name="Inner"
+                                             Width="10"
+                                             Height="10"
+                                             Fill="{DynamicResource AccentBrush}"
+                                             Visibility="Collapsed"/>
                                 </Grid>
-                                <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+
+                                <ContentPresenter Margin="8,0,0,0"
+                                                  VerticalAlignment="Center"
+                                                  RecognizesAccessKey="True"/>
                             </StackPanel>
+
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="Inner" Property="Visibility" Value="Visible"/>
-                                    <Setter TargetName="Outer" Property="Stroke" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter TargetName="Inner"
+                                            Property="Visibility"
+                                            Value="Visible"/>
+                                    <Setter TargetName="Outer"
+                                            Property="Stroke"
+                                            Value="{DynamicResource AccentBrush}"/>
                                 </Trigger>
+
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Outer" Property="Stroke" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter TargetName="Outer"
+                                            Property="Stroke"
+                                            Value="{DynamicResource AccentBrush}"/>
                                 </Trigger>
+
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter Property="Opacity" Value="0.5"/>
                                 </Trigger>
@@ -176,20 +227,29 @@
                 </Setter>
             </Style>
 
+            <!-- ScrollBar thumb -->
             <Style x:Key="ScrollBarThumb" TargetType="Thumb">
                 <Setter Property="OverridesDefaultStyle" Value="True"/>
                 <Setter Property="IsTabStop" Value="False"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Thumb">
-                            <Border x:Name="ThumbBorder" Background="{DynamicResource ScrollThumbBrush}"
-                                    CornerRadius="4" Margin="1"/>
+                            <Border x:Name="ThumbBorder"
+                                    Background="{DynamicResource ScrollThumbBrush}"
+                                    CornerRadius="4"
+                                    Margin="1"/>
+
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="ThumbBorder" Property="Opacity" Value="0.85"/>
+                                    <Setter TargetName="ThumbBorder"
+                                            Property="Opacity"
+                                            Value="0.85"/>
                                 </Trigger>
+
                                 <Trigger Property="IsDragging" Value="True">
-                                    <Setter TargetName="ThumbBorder" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter TargetName="ThumbBorder"
+                                            Property="Background"
+                                            Value="{DynamicResource AccentBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -197,10 +257,12 @@
                 </Setter>
             </Style>
 
+            <!-- ScrollBar -->
             <Style TargetType="ScrollBar">
                 <Setter Property="OverridesDefaultStyle" Value="True"/>
                 <Setter Property="Width" Value="10"/>
                 <Setter Property="MinWidth" Value="10"/>
+
                 <Style.Triggers>
                     <Trigger Property="Orientation" Value="Horizontal">
                         <Setter Property="Width" Value="Auto"/>
@@ -210,15 +272,22 @@
                             <Setter.Value>
                                 <ControlTemplate TargetType="ScrollBar">
                                     <Grid Background="{DynamicResource ScrollTrackBrush}">
-                                        <Track x:Name="PART_Track" IsDirectionReversed="False">
+                                        <Track x:Name="PART_Track"
+                                               IsDirectionReversed="False">
                                             <Track.DecreaseRepeatButton>
-                                                <RepeatButton Command="ScrollBar.LineLeftCommand" Opacity="0" Width="0"/>
+                                                <RepeatButton Command="ScrollBar.LineLeftCommand"
+                                                              Opacity="0"
+                                                              Width="0"/>
                                             </Track.DecreaseRepeatButton>
+
                                             <Track.Thumb>
                                                 <Thumb Style="{StaticResource ScrollBarThumb}"/>
                                             </Track.Thumb>
+
                                             <Track.IncreaseRepeatButton>
-                                                <RepeatButton Command="ScrollBar.LineRightCommand" Opacity="0" Width="0"/>
+                                                <RepeatButton Command="ScrollBar.LineRightCommand"
+                                                              Opacity="0"
+                                                              Width="0"/>
                                             </Track.IncreaseRepeatButton>
                                         </Track>
                                     </Grid>
@@ -226,22 +295,33 @@
                             </Setter.Value>
                         </Setter>
                     </Trigger>
+
                     <Trigger Property="Orientation" Value="Vertical">
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ScrollBar">
                                     <Grid Background="Transparent">
                                         <Border Background="{DynamicResource ScrollTrackBrush}"
-                                                CornerRadius="5" Width="8" HorizontalAlignment="Center"/>
-                                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                                CornerRadius="5"
+                                                Width="8"
+                                                HorizontalAlignment="Center"/>
+
+                                        <Track x:Name="PART_Track"
+                                               IsDirectionReversed="True">
                                             <Track.DecreaseRepeatButton>
-                                                <RepeatButton Command="ScrollBar.LineUpCommand" Opacity="0" Height="0"/>
+                                                <RepeatButton Command="ScrollBar.LineUpCommand"
+                                                              Opacity="0"
+                                                              Height="0"/>
                                             </Track.DecreaseRepeatButton>
+
                                             <Track.Thumb>
                                                 <Thumb Style="{StaticResource ScrollBarThumb}"/>
                                             </Track.Thumb>
+
                                             <Track.IncreaseRepeatButton>
-                                                <RepeatButton Command="ScrollBar.LineDownCommand" Opacity="0" Height="0"/>
+                                                <RepeatButton Command="ScrollBar.LineDownCommand"
+                                                              Opacity="0"
+                                                              Height="0"/>
                                             </Track.IncreaseRepeatButton>
                                         </Track>
                                     </Grid>
@@ -252,6 +332,7 @@
                 </Style.Triggers>
             </Style>
 
+            <!-- ScrollViewer -->
             <Style TargetType="ScrollViewer">
                 <Setter Property="Template">
                     <Setter.Value>
@@ -261,18 +342,27 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
+
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="*"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
-                                <ScrollContentPresenter Grid.Column="0" Grid.Row="0"/>
-                                <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Grid.Row="0"
+
+                                <ScrollContentPresenter Grid.Column="0"
+                                                        Grid.Row="0"/>
+
+                                <ScrollBar x:Name="PART_VerticalScrollBar"
+                                           Grid.Column="1"
+                                           Grid.Row="0"
                                            Orientation="Vertical"
                                            Maximum="{TemplateBinding ScrollableHeight}"
                                            ViewportSize="{TemplateBinding ViewportHeight}"
                                            Value="{TemplateBinding VerticalOffset}"
                                            Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"/>
-                                <ScrollBar x:Name="PART_HorizontalScrollBar" Grid.Column="0" Grid.Row="1"
+
+                                <ScrollBar x:Name="PART_HorizontalScrollBar"
+                                           Grid.Column="0"
+                                           Grid.Row="1"
                                            Orientation="Horizontal"
                                            Maximum="{TemplateBinding ScrollableWidth}"
                                            ViewportSize="{TemplateBinding ViewportWidth}"

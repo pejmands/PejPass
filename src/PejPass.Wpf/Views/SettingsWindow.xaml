@@ -2,109 +2,226 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Settings"
-        Height="640" Width="480"
+        Height="640"
+        Width="480"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
+        ShowInTaskbar="False"
         Background="{DynamicResource BgBrush}">
 
-    <Grid Margin="28">
+    <Grid Margin="18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Text="Settings" FontSize="22" FontWeight="Bold"
-                   Foreground="{DynamicResource TextBrush}" Margin="0,0,0,20"/>
+        <TextBlock Text="Settings"
+                   FontSize="22"
+                   FontWeight="Bold"
+                   Foreground="{DynamicResource TextBrush}"
+                   Margin="0,0,0,20"/>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="0,0,12,0">
 
-                <TextBlock Text="THEME" FontSize="11" FontWeight="SemiBold"
-                           Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+                <TextBlock Text="THEME"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,0,0,6"/>
+
                 <ComboBox ItemsSource="{Binding ThemeOptions}"
                           SelectedIndex="{Binding SelectedThemeIndex}"
-                          Margin="0,0,0,20" Padding="10,8" Height="30"
+                          Margin="0,0,0,20"
+                          Height="40"
+                          Padding="10,8"
                           Background="{DynamicResource SurfaceBrush}"
                           Foreground="{DynamicResource TextBrush}"
                           BorderBrush="{DynamicResource BorderBrush}"/>
 
-                <TextBlock Text="AUTO-LOCK (MINUTES)" FontSize="11" FontWeight="SemiBold"
-                           Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+                <TextBlock Text="AUTO-LOCK (MINUTES)"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,0,0,6"/>
+
                 <TextBox Text="{Binding AutoLockMinutes, UpdateSourceTrigger=PropertyChanged}"
-                         Margin="0,0,0,4"/>
+                         Margin="2,0,0,4"
+                         MaxLength="3"/>
+
                 <TextBlock Text="0 = disabled. Vault locks after this many minutes of inactivity."
-                           FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,20"/>
+                           FontSize="11"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,0,0,20"/>
 
-                <TextBlock Text="CLIPBOARD CLEAR (SECONDS)" FontSize="11" FontWeight="SemiBold"
-                           Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+                <TextBlock Text="CLIPBOARD CLEAR (SECONDS)"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,0,0,6"/>
+
                 <TextBox Text="{Binding ClipboardClearSeconds, UpdateSourceTrigger=PropertyChanged}"
-                         Margin="0,0,0,4"/>
-                <TextBlock Text="Copied secrets are cleared from the clipboard after this time (5–300)."
-                           FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,20"/>
+                         Margin="2,0,0,4"
+                         MaxLength="3"/>
 
-                <TextBlock Text="WINDOWS HELLO" FontSize="11" FontWeight="SemiBold"
-                           Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+                <TextBlock Text="Copied secrets are cleared from the clipboard after this time (5–300)."
+                           FontSize="11"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,0,0,20"/>
+
+                <TextBlock Text="WINDOWS HELLO"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,0,0,6"/>
+
                 <CheckBox Content="Unlock with Windows Hello after first password unlock"
                           IsChecked="{Binding WindowsHelloEnabled}"
                           Margin="0,0,0,4"/>
+
                 <TextBlock Text="Requires a successful master-password unlock in this session. Cache is cleared when you exit the app or turn this off."
-                           FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,24" TextWrapping="Wrap"/>
+                           FontSize="11"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,0,0,20"
+                           TextWrapping="Wrap"/>
 
-                <TextBlock Text="KEYBOARD SHORTCUTS" FontSize="11" FontWeight="SemiBold"
-                           Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,10"/>
+                <TextBlock Text="KEYBOARD SHORTCUTS"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,0,0,8"/>
 
-                <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="14,12">
+                <Border Background="{DynamicResource SurfaceBrush}"
+                        CornerRadius="8"
+                        Padding="12,10">
+
                     <StackPanel>
-                        <TextBlock Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6" FontFamily="Consolas" FontSize="12">
-                            <Run FontWeight="SemiBold" Text="Ctrl+F / Ctrl+K"/> <Run Foreground="{DynamicResource MutedBrush}" Text="  Search"/>
+
+                        <TextBlock Foreground="{DynamicResource TextBrush}"
+                                   Margin="0,0,0,6"
+                                   FontFamily="Consolas"
+                                   FontSize="12">
+                            <Run FontWeight="SemiBold" Text="Ctrl+F / Ctrl+K"/>
+                            <Run Foreground="{DynamicResource MutedBrush}" Text="  Search"/>
                         </TextBlock>
-                        <TextBlock Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6" FontFamily="Consolas" FontSize="12">
-                            <Run FontWeight="SemiBold" Text="Ctrl+N"/> <Run Foreground="{DynamicResource MutedBrush}" Text="  New entry"/>
+
+                        <TextBlock Foreground="{DynamicResource TextBrush}"
+                                   Margin="0,0,0,6"
+                                   FontFamily="Consolas"
+                                   FontSize="12">
+                            <Run FontWeight="SemiBold" Text="Ctrl+N"/>
+                            <Run Foreground="{DynamicResource MutedBrush}" Text="  New entry"/>
                         </TextBlock>
-                        <TextBlock Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6" FontFamily="Consolas" FontSize="12">
-                            <Run FontWeight="SemiBold" Text="Ctrl+E"/> <Run Foreground="{DynamicResource MutedBrush}" Text="  Edit selected"/>
+
+                        <TextBlock Foreground="{DynamicResource TextBrush}"
+                                   Margin="0,0,0,6"
+                                   FontFamily="Consolas"
+                                   FontSize="12">
+                            <Run FontWeight="SemiBold" Text="Ctrl+E"/>
+                            <Run Foreground="{DynamicResource MutedBrush}" Text="  Edit selected"/>
                         </TextBlock>
-                        <TextBlock Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6" FontFamily="Consolas" FontSize="12">
-                            <Run FontWeight="SemiBold" Text="Ctrl+C"/> <Run Foreground="{DynamicResource MutedBrush}" Text="  Copy password"/>
+
+                        <TextBlock Foreground="{DynamicResource TextBrush}"
+                                   Margin="0,0,0,6"
+                                   FontFamily="Consolas"
+                                   FontSize="12">
+                            <Run FontWeight="SemiBold" Text="Ctrl+C"/>
+                            <Run Foreground="{DynamicResource MutedBrush}" Text="  Copy password"/>
                         </TextBlock>
-                        <TextBlock Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6" FontFamily="Consolas" FontSize="12">
-                            <Run FontWeight="SemiBold" Text="Ctrl+Shift+C"/> <Run Foreground="{DynamicResource MutedBrush}" Text="  Copy username"/>
+
+                        <TextBlock Foreground="{DynamicResource TextBrush}"
+                                   Margin="0,0,0,6"
+                                   FontFamily="Consolas"
+                                   FontSize="12">
+                            <Run FontWeight="SemiBold" Text="Ctrl+Shift+C"/>
+                            <Run Foreground="{DynamicResource MutedBrush}" Text="  Copy username"/>
                         </TextBlock>
-                        <TextBlock Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6" FontFamily="Consolas" FontSize="12">
-                            <Run FontWeight="SemiBold" Text="Ctrl+T"/> <Run Foreground="{DynamicResource MutedBrush}" Text="  Copy TOTP"/>
+
+                        <TextBlock Foreground="{DynamicResource TextBrush}"
+                                   Margin="0,0,0,6"
+                                   FontFamily="Consolas"
+                                   FontSize="12">
+                            <Run FontWeight="SemiBold" Text="Ctrl+T"/>
+                            <Run Foreground="{DynamicResource MutedBrush}" Text="  Copy TOTP"/>
                         </TextBlock>
-                        <TextBlock Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6" FontFamily="Consolas" FontSize="12">
-                            <Run FontWeight="SemiBold" Text="Ctrl+B"/> <Run Foreground="{DynamicResource MutedBrush}" Text="  Export backup"/>
+
+                        <TextBlock Foreground="{DynamicResource TextBrush}"
+                                   Margin="0,0,0,6"
+                                   FontFamily="Consolas"
+                                   FontSize="12">
+                            <Run FontWeight="SemiBold" Text="Ctrl+B"/>
+                            <Run Foreground="{DynamicResource MutedBrush}" Text="  Export backup"/>
                         </TextBlock>
-                        <TextBlock Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6" FontFamily="Consolas" FontSize="12">
-                            <Run FontWeight="SemiBold" Text="Ctrl+H"/> <Run Foreground="{DynamicResource MutedBrush}" Text="  Vault health"/>
+
+                        <TextBlock Foreground="{DynamicResource TextBrush}"
+                                   Margin="0,0,0,6"
+                                   FontFamily="Consolas"
+                                   FontSize="12">
+                            <Run FontWeight="SemiBold" Text="Ctrl+H"/>
+                            <Run Foreground="{DynamicResource MutedBrush}" Text="  Vault health"/>
                         </TextBlock>
-                        <TextBlock Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6" FontFamily="Consolas" FontSize="12">
-                            <Run FontWeight="SemiBold" Text="Ctrl+Shift+T"/> <Run Foreground="{DynamicResource MutedBrush}" Text="  Trash"/>
+
+                        <TextBlock Foreground="{DynamicResource TextBrush}"
+                                   Margin="0,0,0,6"
+                                   FontFamily="Consolas"
+                                   FontSize="12">
+                            <Run FontWeight="SemiBold" Text="Ctrl+Shift+T"/>
+                            <Run Foreground="{DynamicResource MutedBrush}" Text="  Trash"/>
                         </TextBlock>
-                        <TextBlock Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6" FontFamily="Consolas" FontSize="12">
-                            <Run FontWeight="SemiBold" Text="Ctrl+S"/> <Run Foreground="{DynamicResource MutedBrush}" Text="  Settings"/>
+
+                        <TextBlock Foreground="{DynamicResource TextBrush}"
+                                   Margin="0,0,0,6"
+                                   FontFamily="Consolas"
+                                   FontSize="12">
+                            <Run FontWeight="SemiBold" Text="Ctrl+S"/>
+                            <Run Foreground="{DynamicResource MutedBrush}" Text="  Settings"/>
                         </TextBlock>
-                        <TextBlock Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6" FontFamily="Consolas" FontSize="12">
-                            <Run FontWeight="SemiBold" Text="Ctrl+L"/> <Run Foreground="{DynamicResource MutedBrush}" Text="  Lock vault"/>
+
+                        <TextBlock Foreground="{DynamicResource TextBrush}"
+                                   Margin="0,0,0,6"
+                                   FontFamily="Consolas"
+                                   FontSize="12">
+                            <Run FontWeight="SemiBold" Text="Ctrl+L"/>
+                            <Run Foreground="{DynamicResource MutedBrush}" Text="  Lock vault"/>
                         </TextBlock>
-                        <TextBlock Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6" FontFamily="Consolas" FontSize="12">
-                            <Run FontWeight="SemiBold" Text="Delete"/> <Run Foreground="{DynamicResource MutedBrush}" Text="  Move to trash"/>
+
+                        <TextBlock Foreground="{DynamicResource TextBrush}"
+                                   Margin="0,0,0,6"
+                                   FontFamily="Consolas"
+                                   FontSize="12">
+                            <Run FontWeight="SemiBold" Text="Delete"/>
+                            <Run Foreground="{DynamicResource MutedBrush}" Text="  Move to trash"/>
                         </TextBlock>
-                        <TextBlock Foreground="{DynamicResource TextBrush}" FontFamily="Consolas" FontSize="12">
-                            <Run FontWeight="SemiBold" Text="Esc"/> <Run Foreground="{DynamicResource MutedBrush}" Text="  Clear selection"/>
+
+                        <TextBlock Foreground="{DynamicResource TextBrush}"
+                                   FontFamily="Consolas"
+                                   FontSize="12">
+                            <Run FontWeight="SemiBold" Text="Esc"/>
+                            <Run Foreground="{DynamicResource MutedBrush}" Text="  Clear selection"/>
                         </TextBlock>
+
                     </StackPanel>
                 </Border>
             </StackPanel>
         </ScrollViewer>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-            <Button Content="Cancel" Command="{Binding CancelCommand}" Margin="0,0,8,0"
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,16,0,0">
+
+            <Button Content="Cancel"
+                    Command="{Binding CancelCommand}"
+                    Margin="0,0,8,0"
                     Background="{DynamicResource SurfaceAltBrush}"
                     Foreground="{DynamicResource TextBrush}"/>
-            <Button Content="Save" Command="{Binding SaveCommand}" IsDefault="True"/>
+
+            <Button Content="Save"
+                    Command="{Binding SaveCommand}"
+                    IsDefault="True"/>
         </StackPanel>
+
     </Grid>
 </Window>
