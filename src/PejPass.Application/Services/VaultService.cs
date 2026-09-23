@@ -34,4 +34,31 @@ public sealed class VaultService(IVaultStore store)
     {
         await _store.SaveAsync(path, masterPassword, vault, ct);
     }
+
+    /// <summary>
+    /// Verifies the current master password, then re-encrypts the vault with a new one.
+    /// Pass the in-memory vault so unsaved entry edits are preserved.
+    /// </summary>
+    public async Task ChangeMasterPasswordAsync(
+        string path,
+        string currentPassword,
+        string newPassword,
+        Vault vault,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentNullException.ThrowIfNull(vault);
+
+        var validation = MasterPasswordPolicy.Validate(newPassword);
+        if (!validation.IsValid)
+            throw new ArgumentException(validation.ErrorMessage);
+
+        if (string.Equals(currentPassword, newPassword, StringComparison.Ordinal))
+            throw new ArgumentException("New password must be different from the current password.");
+
+        // Verify current password against the on-disk vault
+        _ = await _store.OpenAsync(path, currentPassword, ct);
+
+        await _store.SaveAsync(path, newPassword, vault, ct);
+    }
 }
