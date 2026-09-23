@@ -3,7 +3,7 @@
 
     <SolidColorBrush x:Key="BgBrush" Color="#EFF1F5"/>
     <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="SurfaceAltBrush" Color="#CCD0DA"/>
+    <SolidColorBrush x:Key="SurfaceAltBrush" Color="#E6E9EF"/>
     <SolidColorBrush x:Key="TextBrush" Color="#4C4F69"/>
     <SolidColorBrush x:Key="MutedBrush" Color="#6C6F85"/>
     <SolidColorBrush x:Key="AccentBrush" Color="#1E66F5"/>
@@ -13,5 +13,8 @@
     <SolidColorBrush x:Key="ButtonTextBrush" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="BorderBrush" Color="#CCD0DA"/>
     <SolidColorBrush x:Key="OverlayBrush" Color="#AAEFF1F5"/>
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#9CA0B0"/>
+    <SolidColorBrush x:Key="ScrollTrackBrush" Color="#E6E9EF"/>
+    <SolidColorBrush x:Key="ComboItemHoverBrush" Color="#DCE0E8"/>
 
 </ResourceDictionary>

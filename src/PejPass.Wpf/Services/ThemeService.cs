@@ -124,6 +124,9 @@ public sealed class ThemeService(AppSettings settings) : IDisposable
             brush.Freeze();
             app.Resources[key] = brush;
         }
+
+        // Soft per-window pulse so Dark↔Light doesn't feel like a hard cut
+        UiPolish.OnThemeApplied();
     }
 
     public static bool IsSystemDark()

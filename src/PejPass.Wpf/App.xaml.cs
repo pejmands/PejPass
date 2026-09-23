@@ -19,6 +19,8 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
+        UiPolish.Register();
+
         var settings = SettingsStore.Load();
         var themeService = new ThemeService(settings);
 

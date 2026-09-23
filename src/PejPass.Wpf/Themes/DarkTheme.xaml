@@ -13,5 +13,8 @@
     <SolidColorBrush x:Key="ButtonTextBrush" Color="#1E1E2E"/>
     <SolidColorBrush x:Key="BorderBrush" Color="#45475A"/>
     <SolidColorBrush x:Key="OverlayBrush" Color="#CC1E1E2E"/>
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#585B70"/>
+    <SolidColorBrush x:Key="ScrollTrackBrush" Color="#313244"/>
+    <SolidColorBrush x:Key="ComboItemHoverBrush" Color="#45475A"/>
 
 </ResourceDictionary>
