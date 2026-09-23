@@ -179,4 +179,20 @@ public partial class MainWindow : Window
     {
         return Keyboard.FocusedElement is TextBox or PasswordBox;
     }
+
+    /// <summary>
+    /// Horizontal tag strip: map mouse wheel to horizontal scroll.
+    /// </summary>
+    private void TagFilterScroll_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (sender is not ScrollViewer sv)
+            return;
+
+        // Only hijack the wheel when there is horizontal content to scroll
+        if (sv.ExtentWidth <= sv.ViewportWidth)
+            return;
+
+        sv.ScrollToHorizontalOffset(sv.HorizontalOffset - e.Delta);
+        e.Handled = true;
+    }
 }
