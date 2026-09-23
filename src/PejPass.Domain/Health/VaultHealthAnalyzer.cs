@@ -7,6 +7,7 @@ public enum HealthIssueKind
 {
     DuplicatePassword,
     WeakPassword,
+    UsernameEqualsPassword,
     MissingTotp,
     StalePassword
 }
@@ -23,6 +24,7 @@ public sealed class VaultHealthReport
 
     public int DuplicateCount => Issues.Count(i => i.Kind == HealthIssueKind.DuplicatePassword);
     public int WeakCount => Issues.Count(i => i.Kind == HealthIssueKind.WeakPassword);
+    public int UsernameEqualsPasswordCount => Issues.Count(i => i.Kind == HealthIssueKind.UsernameEqualsPassword);
     public int MissingTotpCount => Issues.Count(i => i.Kind == HealthIssueKind.MissingTotp);
     public int StaleCount => Issues.Count(i => i.Kind == HealthIssueKind.StalePassword);
 
@@ -109,6 +111,17 @@ public static class VaultHealthAnalyzer
                     level == PasswordStrengthLevel.Empty
                         ? "Password is empty"
                         : $"Strength: {level}"));
+            }
+
+            if (!string.IsNullOrEmpty(e.Username) &&
+                !string.IsNullOrEmpty(e.Password) &&
+                string.Equals(e.Username, e.Password, StringComparison.OrdinalIgnoreCase))
+            {
+                report.Issues.Add(new HealthIssue(
+                    HealthIssueKind.UsernameEqualsPassword,
+                    e.Id,
+                    e.Title,
+                    "Username and password are the same"));
             }
 
             if (string.IsNullOrWhiteSpace(e.TotpSecret))
