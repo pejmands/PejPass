@@ -174,7 +174,7 @@
                 <!-- Tag Filters: single-row horizontal strip (does not grow with tag count) -->
                 <ScrollViewer DockPanel.Dock="Top"
                               Margin="16,0,16,8"
-                              Height="34"
+                              Height="44"
                               HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Disabled"
                               Padding="0,0,0,2"
@@ -194,7 +194,7 @@
                                         CommandParameter="{Binding}"
                                         Margin="0,0,6,0"
                                         Padding="10,0"
-                                        Height="28"
+                                        Height="26"
                                         FontSize="11"
                                         FontWeight="SemiBold"
                                         Cursor="Hand"
@@ -738,14 +738,14 @@
                             <Button Content="Edit"
                                     Command="{Binding EditEntryCommand}"
                                     CommandParameter="{Binding SelectedEntry}"
-                                    Padding="20,10"
+                                    Padding="20,8"
                                     Margin="0,0,8,0"
                                     ToolTip="Edit (Ctrl+E)"/>
 
                             <Button Content="Delete"
                                     Command="{Binding DeleteEntryCommand}"
                                     CommandParameter="{Binding SelectedEntry}"
-                                    Padding="20,10"
+                                    Padding="20,8"
                                     Background="{DynamicResource DangerBrush}"
                                     ToolTip="Move to trash (Delete)"/>
                         </StackPanel>

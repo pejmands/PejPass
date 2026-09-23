@@ -29,7 +29,7 @@
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Cancel"
                         Command="{Binding CancelScanCommand}"
-                        Margin="0,0,8,0"
+                        Width="70"
                         Background="{DynamicResource SurfaceAltBrush}"
                         Foreground="{DynamicResource TextBrush}"
                         ToolTip="Cancel the running health scan">
@@ -45,6 +45,7 @@
                     </Button.Style>
                 </Button>
                 <Button Content="Rescan"
+                        Width="70"
                         Command="{Binding RefreshCommand}"
                         Background="{DynamicResource SurfaceAltBrush}"
                         Foreground="{DynamicResource TextBrush}"
