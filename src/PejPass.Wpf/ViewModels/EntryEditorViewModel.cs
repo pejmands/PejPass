@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Security;
+using PejPass.Infrastructure.Totp;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Views;
 using System.Collections.ObjectModel;
@@ -25,6 +26,10 @@ public partial class EntryEditorViewModel : ObservableObject
 
     [ObservableProperty]
     public partial string TotpSecret { get; set; } = string.Empty;
+
+    /// <summary>Non-null when TotpSecret is non-empty and not a valid Base32 secret.</summary>
+    [ObservableProperty]
+    public partial string? TotpErrorMessage { get; set; }
 
     [ObservableProperty]
     public partial string Notes { get; set; } = string.Empty;
@@ -88,10 +93,47 @@ public partial class EntryEditorViewModel : ObservableObject
 
             HasPasswordHistory = PasswordHistoryItems.Count > 0;
             HasUsernameHistory = UsernameHistoryItems.Count > 0;
+            ValidateTotpSecret();
         }
     }
 
     partial void OnPasswordChanged(string value) => UpdatePasswordStrength();
+
+    partial void OnTotpSecretChanged(string value) => ValidateTotpSecret();
+
+    private void ValidateTotpSecret()
+    {
+        if (string.IsNullOrWhiteSpace(TotpSecret))
+        {
+            TotpErrorMessage = null;
+            return;
+        }
+
+        TotpErrorMessage = TotpHelper.IsValidSecret(TotpSecret)
+            ? null
+            : "Invalid TOTP secret — use a Base32 key, or leave empty.";
+    }
+
+    /// <summary>True when empty or a valid Base32 secret.</summary>
+    public bool IsTotpSecretValid()
+    {
+        ValidateTotpSecret();
+        return string.IsNullOrEmpty(TotpErrorMessage);
+    }
+
+    private static string NormalizeTotpSecret(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return string.Empty;
+
+        var cleaned = raw
+            .Replace(" ", "", StringComparison.Ordinal)
+            .Replace("-", "", StringComparison.Ordinal)
+            .Trim()
+            .ToUpperInvariant();
+
+        return TotpHelper.IsValidSecret(cleaned) ? cleaned : raw.Trim();
+    }
 
     private void UpdatePasswordStrength()
     {
@@ -304,7 +346,7 @@ public partial class EntryEditorViewModel : ObservableObject
                 Username = newUsername,
                 Password = Password,
                 Url = Url.Trim(),
-                TotpSecret = TotpSecret.Trim(),
+                TotpSecret = NormalizeTotpSecret(TotpSecret),
                 Notes = Notes,
                 Tags = tags,
                 CustomFields = customFields,
@@ -323,7 +365,7 @@ public partial class EntryEditorViewModel : ObservableObject
             Username = Username.Trim(),
             Password = Password,
             Url = Url.Trim(),
-            TotpSecret = TotpSecret.Trim(),
+            TotpSecret = NormalizeTotpSecret(TotpSecret),
             Notes = Notes,
             Tags = tags,
             CustomFields = customFields,
