@@ -11,8 +11,9 @@ using System.Windows.Threading;
 namespace PejPass.Wpf.Services;
 
 /// <summary>
-/// Favicon cache for the entry list. UI path is memory-only (no disk/network on UI thread).
-/// Background queue loads disk + downloads with limited concurrency; UI refresh is debounced.
+/// Favicon cache for the entry list.
+/// UI path is memory-only. Disk is warmed in parallel (no network queue).
+/// Network downloads are throttled separately. Bitmaps are decoded+frozen off the UI thread.
 /// </summary>
 public static class FaviconService
 {
@@ -21,9 +22,10 @@ public static class FaviconService
     private static readonly ConcurrentDictionary<string, ImageSource> LetterCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, byte> InFlight = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, byte> Failed = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, string> PathCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentQueue<string> DownloadQueue = new();
     private static readonly SemaphoreSlim DownloadGate = new(1, 1);
-    private static readonly SemaphoreSlim WorkerSlots = new(3, 3);
+    private static readonly SemaphoreSlim DownloadSlots = new(3, 3);
 
     private static readonly string CacheDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -31,8 +33,9 @@ public static class FaviconService
 
     private static DispatcherTimer? _batchTimer;
     private static int _batchPending;
+    private static int _diskWarmRunning;
 
-    /// <summary>Raised on UI thread after one or more favicons finished (debounced ~350ms).</summary>
+    /// <summary>Raised on UI thread after one or more favicons finished (debounced).</summary>
     public static event Action? FaviconsBatchReady;
 
     private static HttpClient CreateClient()
@@ -74,36 +77,89 @@ public static class FaviconService
             return mem;
 
         if (host is not null && !Failed.ContainsKey(host) && !Memory.ContainsKey(host))
-            EnqueueHost(host);
+            EnqueueDownload(host);
 
         var letterSource = !string.IsNullOrWhiteSpace(title) ? title : host ?? "?";
         return GetLetterAvatar(letterSource);
     }
 
-    /// <summary>Background: load disk cache + download missing icons (throttled).</summary>
+    /// <summary>
+    /// Background: warm disk cache in parallel, then download only missing hosts (throttled).
+    /// </summary>
     public static void Prefetch(IEnumerable<(string Url, string Title)> items)
     {
+        var hosts = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var (url, _) in items)
         {
             var host = TryGetHost(url);
             if (host is null) continue;
             if (Memory.ContainsKey(host) || Failed.ContainsKey(host)) continue;
-            EnqueueHost(host);
+            if (!seen.Add(host)) continue;
+            hosts.Add(host);
         }
 
-        _ = ProcessQueueAsync();
+        if (hosts.Count == 0)
+            return;
+
+        _ = Task.Run(() => WarmDiskThenDownloadAsync(hosts));
     }
 
-    private static void EnqueueHost(string host)
+    private static async Task WarmDiskThenDownloadAsync(List<string> hosts)
     {
+        var runDisk = Interlocked.CompareExchange(ref _diskWarmRunning, 1, 0) == 0;
+
+        try
+        {
+            if (runDisk)
+            {
+                await Parallel.ForEachAsync(
+                    hosts,
+                    new ParallelOptions { MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount * 2, 4, 16) },
+                    (host, _) =>
+                    {
+                        if (Memory.ContainsKey(host) || Failed.ContainsKey(host))
+                            return ValueTask.CompletedTask;
+
+                        var fromDisk = TryLoadFromDisk(host);
+                        if (fromDisk is not null)
+                        {
+                            Memory[host] = fromDisk;
+                            ScheduleBatchNotify();
+                        }
+
+                        return ValueTask.CompletedTask;
+                    }).ConfigureAwait(false);
+            }
+
+            foreach (var host in hosts)
+            {
+                if (Memory.ContainsKey(host) || Failed.ContainsKey(host))
+                    continue;
+                EnqueueDownload(host);
+            }
+        }
+        finally
+        {
+            if (runDisk)
+                Interlocked.Exchange(ref _diskWarmRunning, 0);
+        }
+    }
+
+    private static void EnqueueDownload(string host)
+    {
+        if (Memory.ContainsKey(host) || Failed.ContainsKey(host))
+            return;
+
         if (!InFlight.TryAdd(host, 0))
             return;
 
         DownloadQueue.Enqueue(host);
-        _ = ProcessQueueAsync();
+        _ = ProcessDownloadQueueAsync();
     }
 
-    private static async Task ProcessQueueAsync()
+    private static async Task ProcessDownloadQueueAsync()
     {
         if (!await DownloadGate.WaitAsync(0).ConfigureAwait(false))
             return;
@@ -112,20 +168,26 @@ public static class FaviconService
         {
             while (DownloadQueue.TryDequeue(out var host))
             {
-                await WorkerSlots.WaitAsync().ConfigureAwait(false);
+                if (Memory.ContainsKey(host) || Failed.ContainsKey(host))
+                {
+                    InFlight.TryRemove(host, out _);
+                    continue;
+                }
+
+                await DownloadSlots.WaitAsync().ConfigureAwait(false);
                 var captured = host;
                 _ = Task.Run(async () =>
                 {
                     try
                     {
-                        await LoadOneAsync(captured).ConfigureAwait(false);
+                        await DownloadOneAsync(captured).ConfigureAwait(false);
                     }
                     finally
                     {
-                        WorkerSlots.Release();
+                        DownloadSlots.Release();
                         InFlight.TryRemove(captured, out _);
                         if (!DownloadQueue.IsEmpty)
-                            _ = ProcessQueueAsync();
+                            _ = ProcessDownloadQueueAsync();
                     }
                 });
             }
@@ -134,11 +196,11 @@ public static class FaviconService
         {
             DownloadGate.Release();
             if (!DownloadQueue.IsEmpty)
-                _ = ProcessQueueAsync();
+                _ = ProcessDownloadQueueAsync();
         }
     }
 
-    private static async Task LoadOneAsync(string host)
+    private static async Task DownloadOneAsync(string host)
     {
         try
         {
@@ -196,7 +258,7 @@ public static class FaviconService
         {
             if (_batchTimer is null)
             {
-                _batchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+                _batchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
                 _batchTimer.Tick += (_, _) =>
                 {
                     _batchTimer.Stop();
@@ -228,11 +290,12 @@ public static class FaviconService
         }
     }
 
-    private static string CachePath(string host)
-    {
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(host))).ToLowerInvariant();
-        return Path.Combine(CacheDir, hash + ".bin");
-    }
+    private static string CachePath(string host) =>
+        PathCache.GetOrAdd(host, static h =>
+        {
+            var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(h))).ToLowerInvariant();
+            return Path.Combine(CacheDir, hash + ".bin");
+        });
 
     private static BitmapImage? TryLoadFromDisk(string host)
     {
@@ -243,6 +306,9 @@ public static class FaviconService
                 return null;
 
             var bytes = File.ReadAllBytes(path);
+            if (bytes.Length < 16)
+                return null;
+
             return CreateBitmap(bytes);
         }
         catch
@@ -252,17 +318,13 @@ public static class FaviconService
     }
 
     /// <summary>
-    /// BitmapImage is more reliable when created on the UI thread.
-    /// Worker threads only pass byte[]; decode is marshalled so disk cache is not ignored.
+    /// Decode + Freeze on the calling thread (background is fine).
+    /// No Dispatcher.Invoke — avoids serializing hundreds of icons on the UI thread.
     /// </summary>
     private static BitmapImage? CreateBitmap(byte[] bytes)
     {
         try
         {
-            var dispatcher = System.Windows.Application.Current?.Dispatcher;
-            if (dispatcher is not null && !dispatcher.CheckAccess())
-                return dispatcher.Invoke(() => CreateBitmapCore(bytes));
-
             return CreateBitmapCore(bytes);
         }
         catch
@@ -279,6 +341,7 @@ public static class FaviconService
             var bmp = new BitmapImage();
             bmp.BeginInit();
             bmp.CacheOption = BitmapCacheOption.OnLoad;
+            bmp.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
             bmp.StreamSource = ms;
             bmp.DecodePixelWidth = 64;
             bmp.EndInit();
