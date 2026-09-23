@@ -1,12 +1,15 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Win32;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Security;
 using PejPass.Infrastructure.Totp;
 using PejPass.Wpf.Dialogs;
+using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
 using System.Collections.ObjectModel;
 using System.Windows;
+using System.Windows.Media.Imaging;
 
 namespace PejPass.Wpf.ViewModels;
 
@@ -141,6 +144,101 @@ public partial class EntryEditorViewModel : ObservableObject
         PasswordStrengthLevel = (int)level;
         PasswordStrengthLabel = PasswordStrength.GetLabel(level);
         PasswordStrengthProgress = PasswordStrength.GetProgress(level);
+    }
+
+    [RelayCommand]
+    private void ImportTotpFromFile()
+    {
+        var dlg = new OpenFileDialog
+        {
+            Title = "Select QR code image",
+            Filter = "Image files (*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp)|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp|All files (*.*)|*.*",
+            CheckFileExists = true
+        };
+
+        if (dlg.ShowDialog() != true)
+            return;
+
+        try
+        {
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.UriSource = new Uri(dlg.FileName, UriKind.Absolute);
+            bitmap.EndInit();
+            bitmap.Freeze();
+
+            ApplyTotpImport(bitmap);
+        }
+        catch (Exception ex)
+        {
+            DialogService.Warning($"Could not read image:\n{ex.Message}", "TOTP import");
+        }
+    }
+
+    [RelayCommand]
+    private void ImportTotpFromClipboard()
+    {
+        try
+        {
+            if (!Clipboard.ContainsImage())
+            {
+                DialogService.Info(
+                    "Clipboard has no image.\n\nCopy a QR code screenshot first, then try again.",
+                    "TOTP import");
+                return;
+            }
+
+            var image = Clipboard.GetImage();
+            if (image is null)
+            {
+                DialogService.Warning("Could not read image from clipboard.", "TOTP import");
+                return;
+            }
+
+            ApplyTotpImport(image);
+        }
+        catch (Exception ex)
+        {
+            DialogService.Warning($"Clipboard import failed:\n{ex.Message}", "TOTP import");
+        }
+    }
+
+    private void ApplyTotpImport(BitmapSource image)
+    {
+        if (!QrTotpImport.TryDecode(image, out var result, out var error) || result is null)
+        {
+            DialogService.Warning(error ?? "Could not decode QR code.", "TOTP import");
+            return;
+        }
+
+        TotpSecret = result.Secret;
+
+        // Fill empty Title / Username from QR metadata when helpful
+        if (string.IsNullOrWhiteSpace(Title) && !string.IsNullOrWhiteSpace(result.Issuer))
+            Title = result.Issuer!;
+        else if (string.IsNullOrWhiteSpace(Title) && !string.IsNullOrWhiteSpace(result.Account))
+            Title = result.Account!;
+
+        if (string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(result.Account))
+            Username = result.Account!;
+
+        ValidateTotpSecret();
+
+        if (!string.IsNullOrEmpty(TotpErrorMessage))
+        {
+            DialogService.Warning(
+                $"QR was read, but the secret is not valid Base32:\n{TotpErrorMessage}",
+                "TOTP import");
+            return;
+        }
+
+        var who = string.Join(" · ", new[] { result.Issuer, result.Account }.Where(s => !string.IsNullOrWhiteSpace(s)));
+        DialogService.Success(
+            string.IsNullOrEmpty(who)
+                ? "TOTP secret imported from QR code."
+                : $"TOTP secret imported.\n{who}",
+            "TOTP import");
     }
 
     [RelayCommand]
