@@ -64,7 +64,7 @@ public static class UiPolish
     /// </summary>
     public static void OnThemeApplied()
     {
-        var app = Application.Current;
+        var app = System.Windows.Application.Current;
         if (app is null) return;
 
         foreach (Window window in app.Windows)
