@@ -24,12 +24,10 @@ public partial class MainWindow : Window
             Close();
         };
 
-        // User closed main with X → exit fully (do not leave a background process)
         Closed += (_, _) =>
         {
             viewModel.StopBackgroundTimers();
 
-            // If we are locking (login shown), do not shut down the app
             if (System.Windows.Application.Current?.Windows.OfType<LoginWindow>().Any(w => w.IsVisible) == true)
                 return;
 
@@ -62,7 +60,7 @@ public partial class MainWindow : Window
                 FaviconService.Prefetch(vm.Entries.Select(e => (e.Url, e.Title)));
 
             AttachTagFilterMouseWheel();
-            AttachNotesScrollChain();
+            Dispatcher.BeginInvoke(AttachNotesScrollChain, System.Windows.Threading.DispatcherPriority.Loaded);
         };
     }
 
@@ -184,9 +182,6 @@ public partial class MainWindow : Window
         return Keyboard.FocusedElement is TextBox or PasswordBox;
     }
 
-    /// <summary>
-    /// Wire mouse wheel → horizontal scroll on the tag-filter strip.
-    /// </summary>
     private void AttachTagFilterMouseWheel()
     {
         if (FindName("TagFilterScroll") is ScrollViewer named)
@@ -198,7 +193,6 @@ public partial class MainWindow : Window
 
         foreach (var sv in FindVisualChildren<ScrollViewer>(this))
         {
-            // Tag strip: horizontal-only, fixed height row above the list
             if (sv.VerticalScrollBarVisibility == ScrollBarVisibility.Disabled
                 && sv.HorizontalScrollBarVisibility == ScrollBarVisibility.Auto
                 && sv.Height is >= 36 and <= 52)
@@ -222,19 +216,25 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    /// <summary>
-    /// Notes: keep MaxHeight; wheel scrolls notes first, then parent (nested scroll chain).
-    /// </summary>
     private void AttachNotesScrollChain()
     {
+        if (FindName("NotesScrollViewer") is ScrollViewer named)
+        {
+            NestedScrollChain.Attach(named);
+            return;
+        }
+
         foreach (var sv in FindVisualChildren<ScrollViewer>(this))
         {
             if (sv.HorizontalScrollBarVisibility != ScrollBarVisibility.Disabled)
                 continue;
-            if (double.IsNaN(sv.MaxHeight) || Math.Abs(sv.MaxHeight - 160) > 0.5)
+            if (double.IsInfinity(sv.MaxHeight) || double.IsNaN(sv.MaxHeight))
+                continue;
+            if (Math.Abs(sv.MaxHeight - 160) > 0.5)
                 continue;
 
             NestedScrollChain.Attach(sv);
+            return;
         }
     }
 

@@ -2,29 +2,31 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace PejPass.Wpf.Services;
 
 /// <summary>
-/// Standard nested-scroll chaining (same idea as modern web / mobile):
-/// mouse wheel scrolls the inner scroller first; when it hits the top or bottom,
-/// further wheel deltas are applied to the nearest parent ScrollViewer.
+/// Nested scroll chaining (standard desktop / web pattern):
+/// 1) Wheel scrolls the inner scroller while it has room.
+/// 2) At top/bottom (or if content fits), further wheel deltas scroll the parent ScrollViewer.
+///
+/// Fully handles PreviewMouseWheel so WPF cannot "eat" the event at a non-scrollable boundary.
 /// </summary>
 public static class NestedScrollChain
 {
-    private const double Epsilon = 0.5;
+    private const double Epsilon = 1.0;
 
-    /// <summary>Attach chaining to a nested ScrollViewer (e.g. Notes in the detail pane).</summary>
     public static void Attach(ScrollViewer inner)
     {
         if (inner is null) return;
-        inner.PreviewMouseWheel -= OnScrollViewerPreviewMouseWheel;
-        inner.PreviewMouseWheel += OnScrollViewerPreviewMouseWheel;
+
+        inner.PreviewMouseWheel -= OnInnerPreviewMouseWheel;
+        inner.PreviewMouseWheel += OnInnerPreviewMouseWheel;
     }
 
     /// <summary>
-    /// Attach chaining to a multiline TextBox (uses its template ScrollViewer).
-    /// Safe to call before the template is applied — waits for Loaded if needed.
+    /// Attach to a multiline TextBox after its template (internal ScrollViewer) exists.
     /// </summary>
     public static void Attach(TextBox textBox)
     {
@@ -32,9 +34,21 @@ public static class NestedScrollChain
 
         void TryAttach()
         {
+            textBox.ApplyTemplate();
             var inner = FindDescendantScrollViewer(textBox);
             if (inner is not null)
+            {
                 Attach(inner);
+                return;
+            }
+
+            textBox.Dispatcher.BeginInvoke(() =>
+            {
+                textBox.ApplyTemplate();
+                var sv = FindDescendantScrollViewer(textBox);
+                if (sv is not null)
+                    Attach(sv);
+            }, DispatcherPriority.Loaded);
         }
 
         if (textBox.IsLoaded)
@@ -43,51 +57,61 @@ public static class NestedScrollChain
             textBox.Loaded += (_, _) => TryAttach();
     }
 
-    private static void OnScrollViewerPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    private static void OnInnerPreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         if (sender is not ScrollViewer inner)
             return;
 
-        // Nothing to scroll inside → always forward to parent
+        // Always handle so WPF ScrollViewer cannot swallow the event at a boundary.
+        e.Handled = true;
+
+        var delta = e.Delta;
+        var parent = FindAncestorScrollViewer(inner);
+
         if (inner.ScrollableHeight <= Epsilon)
         {
-            if (TryScrollParent(inner, e.Delta))
-                e.Handled = true;
+            ScrollBy(parent, delta);
             return;
         }
 
-        var scrollingDown = e.Delta < 0;
+        var scrollingDown = delta < 0;
         var atTop = inner.VerticalOffset <= Epsilon;
         var atBottom = inner.VerticalOffset >= inner.ScrollableHeight - Epsilon;
 
-        // Still room to move inside → let the default ScrollViewer handle it
-        if ((scrollingDown && !atBottom) || (!scrollingDown && !atTop))
-            return;
-
-        // Boundary hit → chain to parent
-        if (TryScrollParent(inner, e.Delta))
-            e.Handled = true;
-    }
-
-    private static bool TryScrollParent(DependencyObject from, double delta)
-    {
-        var parent = FindAncestorScrollViewer(from, skip: from as ScrollViewer);
-        if (parent is null)
-            return false;
-
-        var target = parent.VerticalOffset - delta;
-        target = Math.Clamp(target, 0, parent.ScrollableHeight);
-        parent.ScrollToVerticalOffset(target);
-        return true;
-    }
-
-    private static ScrollViewer? FindAncestorScrollViewer(DependencyObject? child, ScrollViewer? skip)
-    {
-        while (child is not null)
+        if (scrollingDown && atBottom)
         {
-            child = VisualTreeHelper.GetParent(child);
-            if (child is ScrollViewer sv && !ReferenceEquals(sv, skip))
+            ScrollBy(parent, delta);
+            return;
+        }
+
+        if (!scrollingDown && atTop)
+        {
+            ScrollBy(parent, delta);
+            return;
+        }
+
+        ScrollBy(inner, delta);
+    }
+
+    private static void ScrollBy(ScrollViewer? sv, double wheelDelta)
+    {
+        if (sv is null) return;
+        if (sv.ScrollableHeight <= Epsilon) return;
+
+        var target = sv.VerticalOffset - wheelDelta;
+        if (target < 0) target = 0;
+        if (target > sv.ScrollableHeight) target = sv.ScrollableHeight;
+        sv.ScrollToVerticalOffset(target);
+    }
+
+    private static ScrollViewer? FindAncestorScrollViewer(DependencyObject child)
+    {
+        var current = VisualTreeHelper.GetParent(child);
+        while (current is not null)
+        {
+            if (current is ScrollViewer sv)
                 return sv;
+            current = VisualTreeHelper.GetParent(current);
         }
 
         return null;
@@ -95,8 +119,8 @@ public static class NestedScrollChain
 
     private static ScrollViewer? FindDescendantScrollViewer(DependencyObject root)
     {
-        if (root is ScrollViewer sv)
-            return sv;
+        if (root is ScrollViewer direct)
+            return direct;
 
         var count = VisualTreeHelper.GetChildrenCount(root);
         for (var i = 0; i < count; i++)

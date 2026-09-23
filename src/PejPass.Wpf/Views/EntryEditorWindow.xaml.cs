@@ -5,6 +5,7 @@ using PejPass.Wpf.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace PejPass.Wpf.Views;
 
@@ -18,15 +19,14 @@ public partial class EntryEditorWindow : Window
         DataContext = viewModel;
         Title = viewModel.Original is null ? "Add Entry" : "Edit Entry";
 
-        // Nested scroll chain: Notes first, then the form ScrollViewer at boundaries
-        Loaded += (_, _) => AttachNotesScrollChain();
+        Loaded += (_, _) =>
+            Dispatcher.BeginInvoke(AttachNotesScrollChain, DispatcherPriority.Loaded);
     }
 
     private void AttachNotesScrollChain()
     {
         foreach (var tb in FindVisualChildren<TextBox>(this))
         {
-            // Multiline notes box (Height/MaxHeight constrained)
             if (!tb.AcceptsReturn)
                 continue;
             if (tb.VerticalScrollBarVisibility == ScrollBarVisibility.Disabled)
