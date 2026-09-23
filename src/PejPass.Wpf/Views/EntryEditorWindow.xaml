@@ -320,6 +320,13 @@
                          VerticalScrollBarVisibility="Disabled"
                          ToolTip="Paste the authenticator secret key (Base32). Leave empty to disable TOTP."/>
 
+                <TextBlock Text="{Binding TotpErrorMessage}"
+                           FontSize="11"
+                           Foreground="{DynamicResource DangerBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,4"
+                           Visibility="{Binding TotpErrorMessage, Converter={StaticResource NullOrEmptyToVis}}"/>
+
                 <TextBlock Text="Optional — used to generate 2FA codes in the main window"
                            FontSize="11"
                            Foreground="{DynamicResource MutedBrush}"
