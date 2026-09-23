@@ -7,7 +7,7 @@ namespace PejPass.Wpf.Services;
 /// <summary>
 /// Registers .pejpass → PejPass for the current user (HKCU) so double-click opens the vault.
 /// </summary>
-public static class VaultFileAssociation
+public static partial class VaultFileAssociation
 {
     private const string ProgId = "PejPass.Vault";
     private const string Extension = ".pejpass";
@@ -40,8 +40,8 @@ public static class VaultFileAssociation
                 using (var defaultIcon = prog.CreateSubKey("DefaultIcon"))
                     defaultIcon?.SetValue(null, icon);
 
-                using (var commandKey = prog.CreateSubKey(@"shell\open\command"))
-                    commandKey?.SetValue(null, command);
+                using var commandKey = prog.CreateSubKey(@"shell\open\command");
+                commandKey?.SetValue(null, command);
             }
 
             // Notify the shell that associations changed (best-effort)
@@ -60,6 +60,6 @@ public static class VaultFileAssociation
         }
     }
 
-    [DllImport("shell32.dll")]
-    private static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
+    [LibraryImport("shell32.dll")]
+    private static partial void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
 }

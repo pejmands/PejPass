@@ -80,7 +80,7 @@ public static class SingleInstance
                 if (!_activateEvent.WaitOne(500))
                     continue;
 
-                var app = Application.Current;
+                var app = System.Windows.Application.Current;
                 if (app is null)
                     continue;
 
@@ -117,7 +117,7 @@ public static class SingleInstance
 
     public static void BringToFront()
     {
-        var app = Application.Current;
+        var app = System.Windows.Application.Current;
         if (app is null)
             return;
 
