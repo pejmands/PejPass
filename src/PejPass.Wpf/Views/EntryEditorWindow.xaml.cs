@@ -1,5 +1,6 @@
 using PejPass.Domain.Entities;
 using PejPass.Wpf.Dialogs;
+using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using System.Windows;
 
@@ -14,6 +15,9 @@ public partial class EntryEditorWindow : Window
         InitializeComponent();
         DataContext = viewModel;
         Title = viewModel.Original is null ? "Add Entry" : "Edit Entry";
+
+        // Nested scroll chain: Notes first, then the form ScrollViewer at boundaries
+        Loaded += (_, _) => NestedScrollChain.Attach(NotesBox);
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
