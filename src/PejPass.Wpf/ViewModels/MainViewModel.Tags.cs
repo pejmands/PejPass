@@ -11,6 +11,10 @@ public partial class MainViewModel
 
     public ObservableCollection<TagFilterItem> TagFilters { get; } = [];
 
+    /// <summary>True when the vault uses at least one tag (strip is worth showing).</summary>
+    [ObservableProperty]
+    public partial bool ShowTagFilters { get; set; }
+
     /// <summary>
     /// Rebuild chip list from tags actually used in the vault (with counts).
     /// Call whenever Entries membership or tags change.
@@ -62,6 +66,9 @@ public partial class MainViewModel
                              selected.Equals(kv.Key, StringComparison.OrdinalIgnoreCase)
             });
         }
+
+        // Hide strip when there are no real tags (only the synthetic "All" chip)
+        ShowTagFilters = TagFilters.Count > 1;
     }
 
     [RelayCommand]
