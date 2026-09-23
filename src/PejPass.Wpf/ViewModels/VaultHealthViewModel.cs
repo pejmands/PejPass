@@ -60,6 +60,7 @@ public partial class VaultHealthViewModel : ObservableObject
     private readonly List<HealthIssue> _allIssues = [];
     /// <summary>EntryId → stable group key (password hash) for sorting peers together.</summary>
     private readonly Dictionary<Guid, string> _duplicateGroupKeys = [];
+    private CancellationTokenSource? _scanCts;
 
     public VaultHealthViewModel(IEnumerable<VaultEntry> entries)
     {
@@ -72,8 +73,16 @@ public partial class VaultHealthViewModel : ObservableObject
 
     partial void OnIsReadyChanged(bool value) => OpenEntryCommand.NotifyCanExecuteChanged();
 
+    partial void OnIsScanningChanged(bool value) => CancelScanCommand.NotifyCanExecuteChanged();
+
     public async Task StartScanAsync()
     {
+        // Cancel any in-flight scan (e.g. rapid Rescan)
+        _scanCts?.Cancel();
+        _scanCts?.Dispose();
+        _scanCts = new CancellationTokenSource();
+        var ct = _scanCts.Token;
+
         IsScanning = true;
         IsReady = false;
         ScanProgress = 0;
@@ -88,6 +97,7 @@ public partial class VaultHealthViewModel : ObservableObject
         MissingTotpCount = 0;
         StaleCount = 0;
 
+        CancelScanCommand.NotifyCanExecuteChanged();
         await YieldUiAsync().ConfigureAwait(true);
 
         var n = _entries.Count;
@@ -120,6 +130,8 @@ public partial class VaultHealthViewModel : ObservableObject
 
             for (var i = 0; i < n; i++)
             {
+                ct.ThrowIfCancellationRequested();
+
                 var e = _entries[i];
 
                 if (!string.IsNullOrEmpty(e.Password) &&
@@ -186,11 +198,29 @@ public partial class VaultHealthViewModel : ObservableObject
             // Final ordered view (peers of same password sit together)
             RebuildVisibleIssues(SelectedFilterIndex);
         }
+        catch (OperationCanceledException)
+        {
+            ScanStatus = TotalIssues == 0
+                ? "Scan cancelled."
+                : $"Scan cancelled — {TotalIssues} issue(s) found so far.";
+            RebuildVisibleIssues(SelectedFilterIndex);
+        }
         finally
         {
             IsScanning = false;
             IsReady = true;
+            CancelScanCommand.NotifyCanExecuteChanged();
         }
+    }
+
+    private bool CanCancelScan() => IsScanning;
+
+    [RelayCommand(CanExecute = nameof(CanCancelScan))]
+    private void CancelScan()
+    {
+        if (!IsScanning) return;
+        ScanStatus = "Cancelling…";
+        _scanCts?.Cancel();
     }
 
     /// <summary>

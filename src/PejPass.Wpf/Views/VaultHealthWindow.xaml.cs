@@ -21,6 +21,12 @@ public partial class VaultHealthWindow : Window
 
         // Open UI immediately, then scan on background
         Loaded += async (_, _) => await viewModel.StartScanAsync();
+
+        Closing += (_, _) =>
+        {
+            if (viewModel.CancelScanCommand.CanExecute(null))
+                viewModel.CancelScanCommand.Execute(null);
+        };
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
