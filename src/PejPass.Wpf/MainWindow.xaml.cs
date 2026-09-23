@@ -62,7 +62,7 @@ public partial class MainWindow : Window
                 FaviconService.Prefetch(vm.Entries.Select(e => (e.Url, e.Title)));
 
             AttachTagFilterMouseWheel();
-            FlattenNotesScrollViewer();
+            AttachNotesScrollChain();
         };
     }
 
@@ -223,49 +223,19 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Notes sits in a nested ScrollViewer (MaxHeight=160) which eats mouse wheel
-    /// even when it has nothing to scroll. Flatten it and route wheel to the detail pane.
+    /// Notes: keep MaxHeight; wheel scrolls notes first, then parent (nested scroll chain).
     /// </summary>
-    private void FlattenNotesScrollViewer()
+    private void AttachNotesScrollChain()
     {
         foreach (var sv in FindVisualChildren<ScrollViewer>(this))
         {
-            // Heuristic: the notes box is the only horizontal-disabled scroller with MaxHeight 160
             if (sv.HorizontalScrollBarVisibility != ScrollBarVisibility.Disabled)
                 continue;
             if (double.IsNaN(sv.MaxHeight) || Math.Abs(sv.MaxHeight - 160) > 0.5)
                 continue;
 
-            sv.MaxHeight = double.PositiveInfinity;
-            sv.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
-            sv.PreviewMouseWheel -= NotesInner_OnPreviewMouseWheel;
-            sv.PreviewMouseWheel += NotesInner_OnPreviewMouseWheel;
+            NestedScrollChain.Attach(sv);
         }
-    }
-
-    private void NotesInner_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
-    {
-        if (sender is not DependencyObject d)
-            return;
-
-        var parent = FindAncestorScrollViewer(d, skip: sender as ScrollViewer);
-        if (parent is null)
-            return;
-
-        parent.ScrollToVerticalOffset(parent.VerticalOffset - e.Delta);
-        e.Handled = true;
-    }
-
-    private static ScrollViewer? FindAncestorScrollViewer(DependencyObject? child, ScrollViewer? skip = null)
-    {
-        while (child is not null)
-        {
-            child = VisualTreeHelper.GetParent(child);
-            if (child is ScrollViewer sv && !ReferenceEquals(sv, skip))
-                return sv;
-        }
-
-        return null;
     }
 
     private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
