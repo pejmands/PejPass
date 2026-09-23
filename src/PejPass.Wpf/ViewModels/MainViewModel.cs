@@ -372,7 +372,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void OpenSettings()
     {
-        var vm = new SettingsViewModel(_settings, _themeService);
+        var vm = new SettingsViewModel(_settings, _themeService, _vaultService);
         var win = new SettingsWindow(vm) { Owner = GetOwnerWindow() };
         win.ShowDialog();
 
