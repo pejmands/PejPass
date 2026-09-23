@@ -1,8 +1,11 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PejPass.Application.Services;
 using PejPass.Domain.Settings;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
+using PejPass.Wpf.Views;
+using System.Windows;
 
 namespace PejPass.Wpf.ViewModels;
 
@@ -10,6 +13,7 @@ public partial class SettingsViewModel : ObservableObject
 {
     private readonly AppSettings _settings;
     private readonly ThemeService _themeService;
+    private readonly VaultService _vaultService;
 
     private readonly ThemeMode _savedTheme;
     private readonly int _savedAutoLock;
@@ -34,10 +38,11 @@ public partial class SettingsViewModel : ObservableObject
 
     public event EventHandler? RequestClose;
 
-    public SettingsViewModel(AppSettings settings, ThemeService themeService)
+    public SettingsViewModel(AppSettings settings, ThemeService themeService, VaultService vaultService)
     {
         _settings = settings;
         _themeService = themeService;
+        _vaultService = vaultService;
 
         _savedTheme = settings.Theme;
         _savedAutoLock = settings.AutoLockMinutes;
@@ -88,6 +93,30 @@ public partial class SettingsViewModel : ObservableObject
         _settings.ClipboardClearSeconds = _savedClipboard;
         _settings.WindowsHelloEnabled = _savedWindowsHello;
         _themeService.Apply();
+    }
+
+    [RelayCommand]
+    private void ChangeMasterPassword()
+    {
+        if (LoginViewModel.CurrentVault is null ||
+            string.IsNullOrEmpty(LoginViewModel.CurrentVaultPath))
+        {
+            DialogService.Warning("Open a vault first to change the master password.", "Change password");
+            return;
+        }
+
+        var owner = System.Windows.Application.Current?.Windows.OfType<Window>()
+            .FirstOrDefault(w => w.IsActive)
+            ?? System.Windows.Application.Current?.MainWindow;
+
+        var vm = new ChangeMasterPasswordViewModel(_vaultService);
+        var win = new ChangeMasterPasswordWindow(vm) { Owner = owner };
+        if (win.ShowDialog() == true)
+        {
+            DialogService.Info(
+                "Master password changed successfully.\n\nThe vault is now encrypted with the new password.",
+                "Password changed");
+        }
     }
 
     [RelayCommand]

@@ -30,6 +30,13 @@ public partial class LoginViewModel : ObservableObject
         CurrentMasterPassword = null;
     }
 
+    /// <summary>Updates the in-memory master password after a successful change.</summary>
+    public static void UpdateSessionMasterPassword(string newPassword)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(newPassword);
+        CurrentMasterPassword = newPassword;
+    }
+
     public static void ClearSessionAndHelloCache()
     {
         ClearSession();
