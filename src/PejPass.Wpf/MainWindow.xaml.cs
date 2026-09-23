@@ -5,6 +5,7 @@ using PejPass.Wpf.Views;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace PejPass.Wpf;
 
@@ -59,6 +60,8 @@ public partial class MainWindow : Window
         {
             if (DataContext is MainViewModel vm)
                 FaviconService.Prefetch(vm.Entries.Select(e => (e.Url, e.Title)));
+
+            AttachTagFilterMouseWheel();
         };
     }
 
@@ -181,18 +184,57 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Horizontal tag strip: map mouse wheel to horizontal scroll.
+    /// Wire mouse wheel → horizontal scroll on the tag-filter strip.
     /// </summary>
+    private void AttachTagFilterMouseWheel()
+    {
+        if (FindName("TagFilterScroll") is ScrollViewer named)
+        {
+            named.PreviewMouseWheel -= TagFilterScroll_OnPreviewMouseWheel;
+            named.PreviewMouseWheel += TagFilterScroll_OnPreviewMouseWheel;
+            return;
+        }
+
+        foreach (var sv in FindVisualChildren<ScrollViewer>(this))
+        {
+            // Tag strip: horizontal-only, fixed height row above the list
+            if (sv.VerticalScrollBarVisibility == ScrollBarVisibility.Disabled
+                && sv.HorizontalScrollBarVisibility == ScrollBarVisibility.Auto
+                && sv.Height is >= 36 and <= 52)
+            {
+                sv.PreviewMouseWheel -= TagFilterScroll_OnPreviewMouseWheel;
+                sv.PreviewMouseWheel += TagFilterScroll_OnPreviewMouseWheel;
+                return;
+            }
+        }
+    }
+
     private void TagFilterScroll_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         if (sender is not ScrollViewer sv)
             return;
 
-        // Only hijack the wheel when there is horizontal content to scroll
         if (sv.ExtentWidth <= sv.ViewportWidth)
             return;
 
         sv.ScrollToHorizontalOffset(sv.HorizontalOffset - e.Delta);
         e.Handled = true;
+    }
+
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+    {
+        if (parent is null)
+            yield break;
+
+        var count = VisualTreeHelper.GetChildrenCount(parent);
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T match)
+                yield return match;
+
+            foreach (var nested in FindVisualChildren<T>(child))
+                yield return nested;
+        }
     }
 }
