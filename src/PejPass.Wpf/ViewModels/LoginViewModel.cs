@@ -91,6 +91,34 @@ public partial class LoginViewModel : ObservableObject
             VaultPath = _settings.LastVaultPath;
     }
 
+    /// <summary>
+    /// Called when the user double-clicks a .pejpass file (or passes a path on the command line).
+    /// Switches to Open mode and points at that file.
+    /// </summary>
+    public void ApplyExternalVaultPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        try
+        {
+            path = Path.GetFullPath(path.Trim().Trim('"'));
+        }
+        catch
+        {
+            return;
+        }
+
+        IsOpenMode = true;
+        IsCreateMode = false;
+        VaultPath = path;
+        PasswordError = null;
+        StatusMessage = File.Exists(path)
+            ? "Vault selected from file. Enter master password to unlock."
+            : "Vault file not found at the given path.";
+        _ = RefreshWindowsHelloVisibilityAsync();
+    }
+
     partial void OnIsCreateModeChanged(bool value)
     {
         if (value) IsOpenMode = false;
