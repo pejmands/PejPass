@@ -410,7 +410,7 @@
                                        ToolTip="{Binding SelectedEntry.Title}"/>
 
                             <Button Grid.Column="1"
-                                    Padding="12,8"
+                                    Padding="10,0,10,3"
                                     Margin="12,0,0,0"
                                     Command="{Binding ToggleFavoriteCommand}"
                                     CommandParameter="{Binding SelectedEntry}"
@@ -604,6 +604,7 @@
                                     </StackPanel>
 
                                     <Button Grid.Column="1"
+                                            Margin="12,0,0,0"
                                             Content="Copy"
                                             VerticalAlignment="Center"
                                             Command="{Binding CopyTotpCommand}"/>
