@@ -27,6 +27,9 @@ public partial class VaultHealthViewModel : ObservableObject
     public partial int WeakCount { get; set; }
 
     [ObservableProperty]
+    public partial int UsernameEqualsPasswordCount { get; set; }
+
+    [ObservableProperty]
     public partial int MissingTotpCount { get; set; }
 
     [ObservableProperty]
@@ -49,6 +52,7 @@ public partial class VaultHealthViewModel : ObservableObject
         "All",
         "Duplicate passwords",
         "Weak passwords",
+        "Username = password",
         "Missing TOTP",
         "Stale (1+ year)"
     ];
@@ -94,6 +98,7 @@ public partial class VaultHealthViewModel : ObservableObject
         TotalIssues = 0;
         DuplicateCount = 0;
         WeakCount = 0;
+        UsernameEqualsPasswordCount = 0;
         MissingTotpCount = 0;
         StaleCount = 0;
 
@@ -158,6 +163,18 @@ public partial class VaultHealthViewModel : ObservableObject
                         level == PasswordStrengthLevel.Empty
                             ? "Password is empty"
                             : $"Strength: {level}"),
+                        filter);
+                }
+
+                if (!string.IsNullOrEmpty(e.Username) &&
+                    !string.IsNullOrEmpty(e.Password) &&
+                    string.Equals(e.Username, e.Password, StringComparison.OrdinalIgnoreCase))
+                {
+                    AddIssue(new HealthIssue(
+                        HealthIssueKind.UsernameEqualsPassword,
+                        e.Id,
+                        e.Title,
+                        "Username and password are the same"),
                         filter);
                 }
 
@@ -257,6 +274,7 @@ public partial class VaultHealthViewModel : ObservableObject
         {
             case HealthIssueKind.DuplicatePassword: DuplicateCount++; break;
             case HealthIssueKind.WeakPassword: WeakCount++; break;
+            case HealthIssueKind.UsernameEqualsPassword: UsernameEqualsPasswordCount++; break;
             case HealthIssueKind.MissingTotp: MissingTotpCount++; break;
             case HealthIssueKind.StalePassword: StaleCount++; break;
         }
@@ -308,8 +326,9 @@ public partial class VaultHealthViewModel : ObservableObject
     {
         1 => issue.Kind == HealthIssueKind.DuplicatePassword,
         2 => issue.Kind == HealthIssueKind.WeakPassword,
-        3 => issue.Kind == HealthIssueKind.MissingTotp,
-        4 => issue.Kind == HealthIssueKind.StalePassword,
+        3 => issue.Kind == HealthIssueKind.UsernameEqualsPassword,
+        4 => issue.Kind == HealthIssueKind.MissingTotp,
+        5 => issue.Kind == HealthIssueKind.StalePassword,
         _ => true
     };
 
@@ -348,6 +367,7 @@ public sealed class HealthIssueRow
         {
             HealthIssueKind.DuplicatePassword => ("Duplicate", "#F38BA8"),
             HealthIssueKind.WeakPassword => ("Weak", "#F9E2AF"),
+            HealthIssueKind.UsernameEqualsPassword => ("User=Pwd", "#FAB387"),
             HealthIssueKind.MissingTotp => ("No TOTP", "#89B4FA"),
             HealthIssueKind.StalePassword => ("Stale", "#A6ADC8"),
             _ => ("Issue", "#CDD6F4")
