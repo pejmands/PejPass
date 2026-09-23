@@ -214,7 +214,6 @@ public partial class EntryEditorViewModel : ObservableObject
 
         TotpSecret = result.Secret;
 
-        // Fill empty Title / Username from QR metadata when helpful
         if (string.IsNullOrWhiteSpace(Title) && !string.IsNullOrWhiteSpace(result.Issuer))
             Title = result.Issuer!;
         else if (string.IsNullOrWhiteSpace(Title) && !string.IsNullOrWhiteSpace(result.Account))
@@ -353,9 +352,11 @@ public partial class EntryEditorViewModel : ObservableObject
         if (!string.Equals(Original.TotpSecret, TotpSecret.Trim(), StringComparison.Ordinal))
             changes.Add(new SensitiveChange("TOTP Secret", Original.TotpSecret, TotpSecret.Trim()));
 
+        // GroupBy: duplicate field names must not throw (user can add same name twice)
         var newFields = CustomFields
             .Where(f => !string.IsNullOrWhiteSpace(f.Name))
-            .ToDictionary(f => f.Name.Trim(), f => f, StringComparer.OrdinalIgnoreCase);
+            .GroupBy(f => f.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Last(), StringComparer.OrdinalIgnoreCase);
 
         foreach (var old in Original.CustomFields.Where(f => f.IsSecret))
         {
