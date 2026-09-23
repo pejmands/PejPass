@@ -62,6 +62,7 @@ public partial class MainWindow : Window
                 FaviconService.Prefetch(vm.Entries.Select(e => (e.Url, e.Title)));
 
             AttachTagFilterMouseWheel();
+            FlattenNotesScrollViewer();
         };
     }
 
@@ -219,6 +220,52 @@ public partial class MainWindow : Window
 
         sv.ScrollToHorizontalOffset(sv.HorizontalOffset - e.Delta);
         e.Handled = true;
+    }
+
+    /// <summary>
+    /// Notes sits in a nested ScrollViewer (MaxHeight=160) which eats mouse wheel
+    /// even when it has nothing to scroll. Flatten it and route wheel to the detail pane.
+    /// </summary>
+    private void FlattenNotesScrollViewer()
+    {
+        foreach (var sv in FindVisualChildren<ScrollViewer>(this))
+        {
+            // Heuristic: the notes box is the only horizontal-disabled scroller with MaxHeight 160
+            if (sv.HorizontalScrollBarVisibility != ScrollBarVisibility.Disabled)
+                continue;
+            if (double.IsNaN(sv.MaxHeight) || Math.Abs(sv.MaxHeight - 160) > 0.5)
+                continue;
+
+            sv.MaxHeight = double.PositiveInfinity;
+            sv.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
+            sv.PreviewMouseWheel -= NotesInner_OnPreviewMouseWheel;
+            sv.PreviewMouseWheel += NotesInner_OnPreviewMouseWheel;
+        }
+    }
+
+    private void NotesInner_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (sender is not DependencyObject d)
+            return;
+
+        var parent = FindAncestorScrollViewer(d, skip: sender as ScrollViewer);
+        if (parent is null)
+            return;
+
+        parent.ScrollToVerticalOffset(parent.VerticalOffset - e.Delta);
+        e.Handled = true;
+    }
+
+    private static ScrollViewer? FindAncestorScrollViewer(DependencyObject? child, ScrollViewer? skip = null)
+    {
+        while (child is not null)
+        {
+            child = VisualTreeHelper.GetParent(child);
+            if (child is ScrollViewer sv && !ReferenceEquals(sv, skip))
+                return sv;
+        }
+
+        return null;
     }
 
     private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
