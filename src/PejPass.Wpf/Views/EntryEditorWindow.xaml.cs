@@ -25,6 +25,17 @@ public partial class EntryEditorWindow : Window
 
     private void AttachNotesScrollChain()
     {
+        ScrollViewer? formScroll = null;
+        foreach (var sv in FindVisualChildren<ScrollViewer>(this))
+        {
+            // Outer form scroller (not the TextBox internal one)
+            if (sv.TemplatedParent is null)
+            {
+                formScroll = sv;
+                break;
+            }
+        }
+
         foreach (var tb in FindVisualChildren<TextBox>(this))
         {
             if (!tb.AcceptsReturn)
@@ -32,7 +43,7 @@ public partial class EntryEditorWindow : Window
             if (tb.VerticalScrollBarVisibility == ScrollBarVisibility.Disabled)
                 continue;
 
-            NestedScrollChain.Attach(tb);
+            NestedScrollChain.Attach(tb, formScroll);
             return;
         }
     }

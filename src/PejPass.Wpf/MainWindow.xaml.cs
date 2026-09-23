@@ -16,6 +16,18 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = viewModel;
 
+        // Re-attach when detail pane / notes become visible
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(MainViewModel.HasSelection)
+                or nameof(MainViewModel.HasNotes)
+                or nameof(MainViewModel.SelectedEntry))
+            {
+                Dispatcher.BeginInvoke(AttachNotesScrollChain,
+                    System.Windows.Threading.DispatcherPriority.Loaded);
+            }
+        };
+
         viewModel.RequestLock += (_, _) =>
         {
             var login = App.Services.GetRequiredService<LoginWindow>();
@@ -218,9 +230,17 @@ public partial class MainWindow : Window
 
     private void AttachNotesScrollChain()
     {
+        // Generated fields from x:Name in XAML (most reliable)
+        if (NotesScrollViewer is not null)
+        {
+            NestedScrollChain.Attach(NotesScrollViewer, DetailScrollViewer);
+            return;
+        }
+
         if (FindName("NotesScrollViewer") is ScrollViewer named)
         {
-            NestedScrollChain.Attach(named);
+            var parent = FindName("DetailScrollViewer") as ScrollViewer;
+            NestedScrollChain.Attach(named, parent);
             return;
         }
 
