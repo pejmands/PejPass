@@ -14,16 +14,23 @@ namespace PejPass.Infrastructure.Storage;
 /// [tag]
 /// [ciphertext of JSON-serialized Vault]
 /// </summary>
-public sealed class VaultStore(ICryptoService crypto) : IVaultStore
+public sealed class VaultStore(
+    ICryptoService crypto,
+    IFileMover fileMover) : IVaultStore
 {
     private static readonly byte[] Magic = Encoding.ASCII.GetBytes("PEJP");
     private const byte CurrentVersion = 1;
 
     private readonly ICryptoService _crypto = crypto;
+    private readonly IFileMover _fileMover = fileMover;
 
     public bool Exists(string path) => File.Exists(path);
 
-    public async Task CreateAsync(string path, string masterPassword, Vault vault, CancellationToken ct = default)
+    public async Task CreateAsync(
+        string path,
+        string masterPassword,
+        Vault vault,
+        CancellationToken ct = default)
     {
         var salt = _crypto.GenerateSalt(16);
         var key = _crypto.DeriveKey(masterPassword, salt);
@@ -49,22 +56,33 @@ public sealed class VaultStore(ICryptoService crypto) : IVaultStore
         }
     }
 
-    public async Task<Vault> OpenAsync(string path, string masterPassword, CancellationToken ct = default)
+    public async Task<Vault> OpenAsync(
+        string path,
+        string masterPassword,
+        CancellationToken ct = default)
     {
-        await using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        await using var fs = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read);
 
         var magic = new byte[4];
         await fs.ReadExactlyAsync(magic, ct);
+
         if (!magic.AsSpan().SequenceEqual(Magic))
             throw new InvalidDataException("Not a valid PejPass vault file.");
 
         var version = new byte[1];
         await fs.ReadExactlyAsync(version, ct);
+
         if (version[0] != CurrentVersion)
-            throw new NotSupportedException($"Unsupported vault version: {version[0]}");
+            throw new NotSupportedException(
+                $"Unsupported vault version: {version[0]}");
 
         var saltLenBytes = new byte[2];
         await fs.ReadExactlyAsync(saltLenBytes, ct);
+
         var saltLen = BitConverter.ToUInt16(saltLenBytes);
 
         var salt = new byte[saltLen];
@@ -83,9 +101,15 @@ public sealed class VaultStore(ICryptoService crypto) : IVaultStore
 
         try
         {
-            var plaintext = _crypto.Decrypt(ciphertext, nonce, tag, key);
+            var plaintext = _crypto.Decrypt(
+                ciphertext,
+                nonce,
+                tag,
+                key);
+
             var vault = JsonSerializer.Deserialize<Vault>(plaintext)
-                        ?? throw new InvalidDataException("Vault data is corrupted.");
+                        ?? throw new InvalidDataException(
+                            "Vault data is corrupted.");
 
             return vault;
         }
@@ -95,10 +119,16 @@ public sealed class VaultStore(ICryptoService crypto) : IVaultStore
         }
     }
 
-    public async Task SaveAsync(string path, string masterPassword, Vault vault, CancellationToken ct = default)
+    public async Task SaveAsync(
+        string path,
+        string masterPassword,
+        Vault vault,
+        CancellationToken ct = default)
     {
-        var directory = Path.GetDirectoryName(Path.GetFullPath(path))
-                        ?? throw new InvalidOperationException("Vault directory could not be determined.");
+        var directory = Path.GetDirectoryName(
+                            Path.GetFullPath(path))
+                        ?? throw new InvalidOperationException(
+                            "Vault directory could not be determined.");
 
         var tempPath = Path.Combine(
             directory,
@@ -118,12 +148,22 @@ public sealed class VaultStore(ICryptoService crypto) : IVaultStore
                 FileAccess.Write,
                 FileShare.None))
             {
-                await WriteVaultAsync(fs, salt, nonce, tag, ciphertext, ct);
+                await WriteVaultAsync(
+                    fs,
+                    salt,
+                    nonce,
+                    tag,
+                    ciphertext,
+                    ct);
+
                 await fs.FlushAsync(ct);
                 fs.Flush(flushToDisk: true);
             }
 
-            File.Move(tempPath, path, overwrite: true);
+            _fileMover.Move(
+                tempPath,
+                path,
+                overwrite: true);
         }
         finally
         {
@@ -150,8 +190,14 @@ public sealed class VaultStore(ICryptoService crypto) : IVaultStore
         CancellationToken ct)
     {
         await fs.WriteAsync(Magic, ct);
-        await fs.WriteAsync(new byte[] { CurrentVersion }, ct);
-        await fs.WriteAsync(BitConverter.GetBytes((ushort)salt.Length), ct);
+        await fs.WriteAsync(
+            new byte[] { CurrentVersion },
+            ct);
+
+        await fs.WriteAsync(
+            BitConverter.GetBytes((ushort)salt.Length),
+            ct);
+
         await fs.WriteAsync(salt, ct);
         await fs.WriteAsync(nonce, ct);
         await fs.WriteAsync(tag, ct);
