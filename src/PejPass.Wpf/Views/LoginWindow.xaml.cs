@@ -17,7 +17,10 @@ public partial class LoginWindow : Window
             MasterPasswordBox.Clear();
 
             var main = App.Services.GetRequiredService<MainWindow>();
+            App.PrepareCustomChrome(main);
+
             System.Windows.Application.Current.MainWindow = main;
+
             main.Show();
             Close();
         };

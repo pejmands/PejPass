@@ -35,11 +35,6 @@ public partial class App : System.Windows.Application
 
         base.OnStartup(e);
 
-        EventManager.RegisterClassHandler(
-            typeof(Window),
-            FrameworkElement.LoadedEvent,
-            new RoutedEventHandler(ApplyCustomChrome));
-
         ShutdownMode = ShutdownMode.OnMainWindowClose;
 
         SingleInstance.Activated += OnSecondInstanceActivated;
@@ -79,6 +74,8 @@ public partial class App : System.Windows.Application
         var login = Services.GetRequiredService<LoginWindow>();
         MainWindow = login;
 
+        PrepareCustomChrome(login);
+
         if (!string.IsNullOrWhiteSpace(launchVaultPath) &&
             login.DataContext is LoginViewModel loginVm)
         {
@@ -110,12 +107,18 @@ public partial class App : System.Windows.Application
         if (LoginViewModel.CurrentVault is not null)
         {
             var current = LoginViewModel.CurrentVaultPath;
+
             if (!string.IsNullOrEmpty(current))
             {
                 try
                 {
-                    if (string.Equals(Path.GetFullPath(current), path, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(
+                        Path.GetFullPath(current),
+                        path,
+                        StringComparison.OrdinalIgnoreCase))
+                    {
                         return;
+                    }
                 }
                 catch
                 {
@@ -125,6 +128,7 @@ public partial class App : System.Windows.Application
             DialogService.Info(
                 "A vault is already open.\n\nLock it first if you want to open a different .pejpass file.",
                 "PejPass");
+
             return;
         }
 
@@ -146,6 +150,7 @@ public partial class App : System.Windows.Application
                 continue;
 
             var p = raw.Trim().Trim('"');
+
             if (!p.EndsWith(".pejpass", StringComparison.OrdinalIgnoreCase))
                 continue;
 
@@ -162,16 +167,20 @@ public partial class App : System.Windows.Application
         return null;
     }
 
-    private static void ApplyCustomChrome(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Applies the custom window chrome before the window is shown.
+    /// </summary>
+    public static void PrepareCustomChrome(Window window)
     {
-        if (sender is not Window window)
-            return;
-
-        // Avoid double-wrapping on re-load
         if (window.Content is Border { Tag: "ChromeRoot" })
             return;
 
-        ApplyWindowChrome(window, window.WindowState == WindowState.Maximized ? 0 : WindowCornerRadius);
+        ApplyWindowChrome(
+            window,
+            window.WindowState == WindowState.Maximized
+                ? 0
+                : WindowCornerRadius);
+
         EnsureChromeShell(window);
 
         window.StateChanged -= OnWindowStateChangedForChrome;
@@ -183,11 +192,17 @@ public partial class App : System.Windows.Application
         if (sender is not Window window)
             return;
 
-        var radius = window.WindowState == WindowState.Maximized ? 0 : WindowCornerRadius;
+        var radius = window.WindowState == WindowState.Maximized
+            ? 0
+            : WindowCornerRadius;
+
         ApplyWindowChrome(window, radius);
 
-        if (window.Content is Border root && Equals(root.Tag, "ChromeRoot"))
+        if (window.Content is Border root &&
+            Equals(root.Tag, "ChromeRoot"))
+        {
             root.CornerRadius = new CornerRadius(radius);
+        }
     }
 
     private static void ApplyWindowChrome(Window window, double radius)
@@ -213,23 +228,30 @@ public partial class App : System.Windows.Application
         window.Content = null;
 
         UIElement content = body;
+
         if (FindVisualChild<AppTitleBar>(body) is null)
         {
             var bar = new AppTitleBar
             {
                 Title = window.Title,
                 ShowMinimize = window.ResizeMode is not ResizeMode.NoResize,
-                ShowMaximize = window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip
+                ShowMaximize = window.ResizeMode is ResizeMode.CanResize
+                    or ResizeMode.CanResizeWithGrip
             };
 
             var dock = new DockPanel();
+
             DockPanel.SetDock(bar, Dock.Top);
+
             dock.Children.Add(bar);
             dock.Children.Add(body);
+
             content = dock;
         }
 
-        var radius = window.WindowState == WindowState.Maximized ? 0 : WindowCornerRadius;
+        var radius = window.WindowState == WindowState.Maximized
+            ? 0
+            : WindowCornerRadius;
 
         var root = new Border
         {
@@ -240,25 +262,39 @@ public partial class App : System.Windows.Application
             Child = content
         };
 
-        root.SetResourceReference(Border.BorderBrushProperty, "BorderBrush");
-        root.SetResourceReference(Border.BackgroundProperty, "BgBrush");
+        root.SetResourceReference(
+            Border.BorderBrushProperty,
+            "BorderBrush");
 
-        window.SetResourceReference(Window.BackgroundProperty, "BgBrush");
+        root.SetResourceReference(
+            Border.BackgroundProperty,
+            "BgBrush");
+
+        window.SetResourceReference(
+            Window.BackgroundProperty,
+            "BgBrush");
+
         window.Content = root;
     }
 
-    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    private static T? FindVisualChild<T>(DependencyObject parent)
+        where T : DependencyObject
     {
         var count = VisualTreeHelper.GetChildrenCount(parent);
+
         for (var i = 0; i < count; i++)
         {
             var child = VisualTreeHelper.GetChild(parent, i);
+
             if (child is T match)
                 return match;
+
             var nested = FindVisualChild<T>(child);
+
             if (nested is not null)
                 return nested;
         }
+
         return null;
     }
 

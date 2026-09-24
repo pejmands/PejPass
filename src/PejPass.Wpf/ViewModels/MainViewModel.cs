@@ -353,6 +353,15 @@ public partial class MainViewModel : ObservableObject
                ?? System.Windows.Application.Current?.MainWindow;
     }
 
+    private IEnumerable<string> GetUsedTags()
+    {
+        return Entries
+            .SelectMany(e => e.Tags)
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Select(t => t.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+    }
+
     [RelayCommand]
     private async Task ToggleFavoriteAsync(VaultEntry? entry)
     {
@@ -491,7 +500,8 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task AddEntryAsync()
     {
-        var editor = new EntryEditorWindow(new EntryEditorViewModel(null))
+        var editor = new EntryEditorWindow(
+            new EntryEditorViewModel(null, GetUsedTags()))
         {
             Owner = GetOwnerWindow()
         };
@@ -514,7 +524,7 @@ public partial class MainViewModel : ObservableObject
         entry ??= SelectedEntry;
         if (entry is null) return;
 
-        var editorVm = new EntryEditorViewModel(entry);
+        var editorVm = new EntryEditorViewModel(entry, GetUsedTags());
         var editor = new EntryEditorWindow(editorVm) { Owner = GetOwnerWindow() };
 
         if (editor.ShowDialog() != true || editor.Result is not { } updated)

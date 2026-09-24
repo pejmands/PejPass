@@ -10,6 +10,8 @@ public partial class PasswordGeneratorWindow : Window
     public PasswordGeneratorWindow(PasswordGeneratorViewModel viewModel)
     {
         InitializeComponent();
+        App.PrepareCustomChrome(this);
+
         DataContext = viewModel;
 
         viewModel.RequestAccept += (_, _) =>

@@ -10,6 +10,8 @@ public partial class PasswordPromptWindow : Window
     public PasswordPromptWindow(string title, string message)
     {
         InitializeComponent();
+        App.PrepareCustomChrome(this);
+
         Title = title;
         TitleText.Text = title;
         MessageText.Text = message;

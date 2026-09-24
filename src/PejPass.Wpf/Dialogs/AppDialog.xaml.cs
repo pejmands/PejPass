@@ -11,6 +11,7 @@ public partial class AppDialog : Window
         string primaryText = "OK", string? secondaryText = null, string? tertiaryText = null)
     {
         InitializeComponent();
+        App.PrepareCustomChrome(this);
 
         TitleText.Text = title;
         MessageText.Text = message;

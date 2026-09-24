@@ -1,6 +1,7 @@
 <Window x:Class="PejPass.Wpf.Views.EntryEditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:PejPass.Wpf.Controls"
         Title="Entry"
         Height="760"
         Width="560"
@@ -352,39 +353,19 @@
 
                 <!-- Tags -->
                 <TextBlock Text="Tags (comma separated)"
-                           Foreground="{DynamicResource MutedBrush}"
-                           Margin="0,0,0,6"/>
+           Foreground="{DynamicResource MutedBrush}"
+           Margin="0,0,0,6"/>
 
                 <TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}"
-                         Margin="0,0,0,6"
-                         TextWrapping="NoWrap"
-                         HorizontalScrollBarVisibility="Auto"
-                         VerticalScrollBarVisibility="Disabled"/>
+         Margin="0,0,0,6"
+         TextWrapping="NoWrap"
+         HorizontalScrollBarVisibility="Auto"
+         VerticalScrollBarVisibility="Disabled"/>
 
-                <ItemsControl ItemsSource="{Binding SuggestedTags}"
-                              Margin="0,0,0,20">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
+                <controls:TagChipStrip ItemsSource="{Binding SuggestedTags}"
+                       ChipCommand="{Binding ToggleSuggestedTagCommand}"
+                       Margin="0,0,0,20"/>
 
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Button Content="{Binding}"
-                                    Command="{Binding DataContext.ToggleSuggestedTagCommand,
-                                                      RelativeSource={RelativeSource AncestorType=Window}}"
-                                    CommandParameter="{Binding}"
-                                    Margin="0,0,6,6"
-                                    Padding="10,4"
-                                    Height="24"
-                                    FontSize="11"
-                                    Background="{DynamicResource SurfaceAltBrush}"
-                                    Foreground="{DynamicResource TextBrush}"
-                                    ToolTip="Add or remove this tag"/>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
 
                 <!-- Custom Fields Header -->
                 <Grid Margin="0,0,0,8">

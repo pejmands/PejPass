@@ -16,6 +16,8 @@ public partial class EntryEditorWindow : Window
     public EntryEditorWindow(EntryEditorViewModel viewModel)
     {
         InitializeComponent();
+        App.PrepareCustomChrome(this);
+
         DataContext = viewModel;
         Title = viewModel.Original is null ? "Add Entry" : "Edit Entry";
 

@@ -10,6 +10,8 @@ public partial class VaultHealthWindow : Window
     public VaultHealthWindow(VaultHealthViewModel viewModel)
     {
         InitializeComponent();
+        App.PrepareCustomChrome(this);
+
         DataContext = viewModel;
 
         viewModel.RequestOpenEntry += (_, id) =>

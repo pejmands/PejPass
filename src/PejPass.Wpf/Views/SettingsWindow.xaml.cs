@@ -12,6 +12,8 @@ public partial class SettingsWindow : Window
     public SettingsWindow(SettingsViewModel viewModel)
     {
         InitializeComponent();
+        App.PrepareCustomChrome(this);
+
         DataContext = viewModel;
         _vm = viewModel;
 

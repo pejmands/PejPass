@@ -36,6 +36,8 @@ public partial class MainWindow : Window
         viewModel.RequestLock += (_, _) =>
         {
             var login = App.Services.GetRequiredService<LoginWindow>();
+            App.PrepareCustomChrome(login);
+
             System.Windows.Application.Current.MainWindow = login;
             login.Show();
             Close();

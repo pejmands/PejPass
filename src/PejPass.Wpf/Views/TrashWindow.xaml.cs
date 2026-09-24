@@ -9,6 +9,8 @@ public partial class TrashWindow : Window
     public TrashWindow(TrashViewModel viewModel)
     {
         InitializeComponent();
+        App.PrepareCustomChrome(this);
+
         DataContext = viewModel;
 
         FaviconService.FaviconsBatchReady += OnFaviconsReady;

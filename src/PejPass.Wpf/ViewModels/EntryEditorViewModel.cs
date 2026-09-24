@@ -67,6 +67,7 @@ public partial class EntryEditorViewModel : ObservableObject
     public EntryEditorViewModel(VaultEntry? existing)
     {
         Original = existing;
+
         if (existing is not null)
         {
             Title = existing.Title;
