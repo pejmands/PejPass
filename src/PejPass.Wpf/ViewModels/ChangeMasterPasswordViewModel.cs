@@ -7,9 +7,9 @@ using PejPass.Wpf.Services;
 
 namespace PejPass.Wpf.ViewModels;
 
-public partial class ChangeMasterPasswordViewModel : ObservableObject
+public partial class ChangeMasterPasswordViewModel(VaultService vaultService) : ObservableObject
 {
-    private readonly VaultService _vaultService;
+    private readonly VaultService _vaultService = vaultService;
 
     [ObservableProperty]
     public partial string CurrentPassword { get; set; } = string.Empty;
@@ -41,11 +41,6 @@ public partial class ChangeMasterPasswordViewModel : ObservableObject
     public event EventHandler? RequestClose;
 
     public bool Success { get; private set; }
-
-    public ChangeMasterPasswordViewModel(VaultService vaultService)
-    {
-        _vaultService = vaultService;
-    }
 
     partial void OnNewPasswordChanged(string value) => UpdateNewPasswordStrength();
 
