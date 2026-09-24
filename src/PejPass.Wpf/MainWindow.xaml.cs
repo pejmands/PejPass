@@ -76,7 +76,6 @@ public partial class MainWindow : Window
             if (DataContext is MainViewModel vm)
                 FaviconService.Prefetch(vm.Entries.Select(e => (e.Url, e.Title)));
 
-            // After chrome shell wraps content (class Loaded handler), re-bind wheel
             Dispatcher.BeginInvoke(() =>
             {
                 AttachTagFilterMouseWheel();
@@ -229,6 +228,9 @@ public partial class MainWindow : Window
         target.AddHandler(UIElement.PreviewMouseWheelEvent,
             (MouseWheelEventHandler)TagFilterScroll_OnPreviewMouseWheel,
             handledEventsToo: true);
+
+        foreach (var btn in FindVisualChildren<Button>(target))
+            btn.ToolTip = null;
     }
 
     private void TagFilterScroll_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
