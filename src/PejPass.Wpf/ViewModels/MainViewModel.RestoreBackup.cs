@@ -15,11 +15,10 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task RestoreBackupAsync()
     {
-        var currentPath = LoginViewModel.CurrentVaultPath;
-        var currentVault = LoginViewModel.CurrentVault;
-        var currentPassword = LoginViewModel.CurrentMasterPassword;
+        var currentPath = _vaultSession.VaultPath;
+        var currentVault = _vaultSession.Vault;
 
-        if (string.IsNullOrEmpty(currentPath) || currentVault is null || string.IsNullOrEmpty(currentPassword))
+        if (string.IsNullOrEmpty(currentPath) || currentVault is null)
         {
             DialogService.Warning("No vault is open.", "Restore Backup");
             return;
@@ -316,23 +315,23 @@ public partial class MainViewModel
             Url = source.Url,
             TotpSecret = source.TotpSecret,
             Notes = source.Notes,
-            Tags = source.Tags.ToList(),
-            CustomFields = source.CustomFields.Select(f => new CustomField
+            Tags = [.. source.Tags],
+            CustomFields = [.. source.CustomFields.Select(f => new CustomField
             {
                 Name = f.Name,
                 Value = f.Value,
                 IsSecret = f.IsSecret
-            }).ToList(),
-            PasswordHistory = source.PasswordHistory.Select(h => new PasswordHistoryItem
+            })],
+            PasswordHistory = [.. source.PasswordHistory.Select(h => new PasswordHistoryItem
             {
                 Password = h.Password,
                 ChangedAt = h.ChangedAt
-            }).ToList(),
-            UsernameHistory = source.UsernameHistory.Select(h => new UsernameHistoryItem
+            })],
+            UsernameHistory = [.. source.UsernameHistory.Select(h => new UsernameHistoryItem
             {
                 Username = h.Username,
                 ChangedAt = h.ChangedAt
-            }).ToList(),
+            })],
             IsFavorite = source.IsFavorite,
             SortOrder = source.SortOrder,
             CreatedAt = source.CreatedAt,

@@ -60,7 +60,9 @@ public partial class App : System.Windows.Application
         services.AddSingleton<ICsvExportService, CsvExportService>();
         services.AddSingleton<IClipboardProvider, WpfClipboardProvider>();
         services.AddSingleton<IUiDispatcher>(_ => new WpfUiDispatcher(Current.Dispatcher));
-        services.AddSingleton<IClipboardService, ClipboardService>(); services.AddSingleton<VaultService>();
+        services.AddSingleton<IClipboardService, ClipboardService>();
+        services.AddSingleton<VaultService>();
+        services.AddSingleton<VaultSession>();
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<MainViewModel>();
@@ -106,9 +108,11 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        if (LoginViewModel.CurrentVault is not null)
+        var vaultSession = Services.GetRequiredService<VaultSession>();
+
+        if (vaultSession.Vault is not null)
         {
-            var current = LoginViewModel.CurrentVaultPath;
+            var current = vaultSession.VaultPath;
 
             if (!string.IsNullOrEmpty(current))
             {

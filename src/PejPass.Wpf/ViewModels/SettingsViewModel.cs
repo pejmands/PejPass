@@ -15,6 +15,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly AppSettings _settings;
     private readonly ThemeService _themeService;
     private readonly VaultService _vaultService;
+    private readonly VaultSession _vaultSession;
 
     private readonly ThemeMode _savedTheme;
     private readonly int _savedAutoLock;
@@ -39,11 +40,16 @@ public partial class SettingsViewModel : ObservableObject
 
     public event EventHandler? RequestClose;
 
-    public SettingsViewModel(AppSettings settings, ThemeService themeService, VaultService vaultService)
+    public SettingsViewModel(
+        AppSettings settings,
+        ThemeService themeService,
+        VaultService vaultService,
+        VaultSession vaultSession)
     {
         _settings = settings;
         _themeService = themeService;
         _vaultService = vaultService;
+        _vaultSession = vaultSession;
 
         _savedTheme = settings.Theme;
         _savedAutoLock = settings.AutoLockMinutes;
@@ -99,8 +105,8 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void ChangeMasterPassword()
     {
-        if (LoginViewModel.CurrentVault is null ||
-            string.IsNullOrEmpty(LoginViewModel.CurrentVaultPath))
+        if (_vaultSession.Vault is null ||
+            string.IsNullOrEmpty(_vaultSession.VaultPath))
         {
             DialogService.Warning("Open a vault first to change the master password.", "Change password");
             return;
@@ -110,7 +116,10 @@ public partial class SettingsViewModel : ObservableObject
             .FirstOrDefault(w => w.IsActive)
             ?? System.Windows.Application.Current?.MainWindow;
 
-        var vm = new ChangeMasterPasswordViewModel(_vaultService);
+        var vm = new ChangeMasterPasswordViewModel(
+            _vaultService,
+            _vaultSession);
+
         var win = new ChangeMasterPasswordWindow(vm) { Owner = owner };
         if (win.ShowDialog() == true)
         {

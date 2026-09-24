@@ -23,6 +23,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IBrowserImportService _importService;
     private readonly AppSettings _settings;
     private readonly ThemeService _themeService;
+    private readonly VaultSession _vaultSession;
 
     private System.Timers.Timer? _autoLockTimer;
     private DispatcherTimer? _totpTimer;
@@ -109,13 +110,15 @@ public partial class MainViewModel : ObservableObject
         IClipboardService clipboard,
         IBrowserImportService importService,
         AppSettings settings,
-        ThemeService themeService)
+        ThemeService themeService,
+        VaultSession vaultSession)
     {
         _vaultService = vaultService;
         _clipboard = clipboard;
         _importService = importService;
         _settings = settings;
         _themeService = themeService;
+        _vaultSession = vaultSession;
 
         SelectedSortIndex = (int)_settings.SortMode;
 
@@ -231,11 +234,12 @@ public partial class MainViewModel : ObservableObject
 
     private void LoadVault()
     {
-        var vault = LoginViewModel.CurrentVault;
+        var vault = _vaultSession.Vault;
         if (vault is null) return;
 
         VaultName = vault.Name;
         Entries.Clear();
+
         foreach (var e in vault.Entries)
             Entries.Add(e);
 
@@ -247,12 +251,16 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateEntryStatus(string? extra = null)
     {
-        var vault = LoginViewModel.CurrentVault;
+        var vault = _vaultSession.Vault;
         var trash = vault?.Trash.Count ?? 0;
+
         var baseMsg = trash > 0
             ? $"{Entries.Count} entries · {trash} in trash"
             : $"{Entries.Count} entries";
-        StatusMessage = string.IsNullOrEmpty(extra) ? baseMsg : $"{baseMsg} · {extra}";
+
+        StatusMessage = string.IsNullOrEmpty(extra)
+            ? baseMsg
+            : $"{baseMsg} · {extra}";
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
@@ -339,6 +347,7 @@ public partial class MainViewModel : ObservableObject
     private void ResetAutoLockTimer()
     {
         _autoLockTimer?.Stop();
+
         if (_settings.AutoLockMinutes > 0)
         {
             _autoLockTimer ??= new System.Timers.Timer();
@@ -370,18 +379,28 @@ public partial class MainViewModel : ObservableObject
 
         entry.IsFavorite = !entry.IsFavorite;
         entry.Touch();
+
         IsFavoriteSelected = entry.IsFavorite;
 
         ApplyFilter(preserveSelectionId: entry.Id);
         await SaveVaultAsync();
-        StatusMessage = entry.IsFavorite ? "Added to favorites." : "Removed from favorites.";
+
+        StatusMessage = entry.IsFavorite
+            ? "Added to favorites."
+            : "Removed from favorites.";
+
         ResetAutoLockTimer();
     }
 
     [RelayCommand]
     private void OpenSettings()
     {
-        var vm = new SettingsViewModel(_settings, _themeService, _vaultService);
+        var vm = new SettingsViewModel(
+            _settings,
+            _themeService,
+            _vaultService,
+            _vaultSession);
+
         var win = new SettingsWindow(vm) { Owner = GetOwnerWindow() };
         win.ShowDialog();
 
@@ -402,6 +421,7 @@ public partial class MainViewModel : ObservableObject
     private void ToggleCustomFieldVisibility(CustomFieldDisplayItem? item)
     {
         if (item is null || !item.IsSecret) return;
+
         item.IsRevealed = !item.IsRevealed;
         ResetAutoLockTimer();
     }
@@ -413,6 +433,7 @@ public partial class MainViewModel : ObservableObject
 
         var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
         _clipboard.CopyWithTimeout(item.Value, timeout);
+
         StatusMessage = $"\"{item.Name}\" copied. Clears in {_settings.ClipboardClearSeconds}s.";
         ResetAutoLockTimer();
     }
@@ -420,10 +441,12 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void CopyUsername()
     {
-        if (SelectedEntry is null || string.IsNullOrEmpty(SelectedEntry.Username)) return;
+        if (SelectedEntry is null || string.IsNullOrEmpty(SelectedEntry.Username))
+            return;
 
         var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
         _clipboard.CopyWithTimeout(SelectedEntry.Username, timeout);
+
         StatusMessage = $"Username copied. Clears in {_settings.ClipboardClearSeconds}s.";
         ResetAutoLockTimer();
     }
@@ -431,10 +454,12 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void CopyUrl()
     {
-        if (SelectedEntry is null || string.IsNullOrWhiteSpace(SelectedEntry.Url)) return;
+        if (SelectedEntry is null || string.IsNullOrWhiteSpace(SelectedEntry.Url))
+            return;
 
         var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
         _clipboard.CopyWithTimeout(SelectedEntry.Url, timeout);
+
         StatusMessage = $"URL copied. Clears in {_settings.ClipboardClearSeconds}s.";
         ResetAutoLockTimer();
     }
@@ -447,6 +472,7 @@ public partial class MainViewModel : ObservableObject
 
         var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
         _clipboard.CopyWithTimeout(TotpCode, timeout);
+
         StatusMessage = $"TOTP code copied. Clears in {_settings.ClipboardClearSeconds}s.";
         ResetAutoLockTimer();
     }
@@ -460,11 +486,19 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var url = SelectedEntry.Url.Trim();
+
             if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
                 !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
                 url = "https://" + url;
+            }
 
-            Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
+
             StatusMessage = "Opened in browser.";
             ResetAutoLockTimer();
         }
@@ -480,7 +514,8 @@ public partial class MainViewModel : ObservableObject
         _autoLockTimer?.Stop();
         _totpTimer?.Stop();
         _clipboard.Clear();
-        LoginViewModel.ClearSession();
+        _vaultSession.Clear();
+
         StatusMessage = "Vault locked.";
         RequestLock?.Invoke(this, EventArgs.Empty);
     }
@@ -489,10 +524,13 @@ public partial class MainViewModel : ObservableObject
     private void CopyPassword(VaultEntry? entry)
     {
         entry ??= SelectedEntry;
-        if (entry is null || string.IsNullOrEmpty(entry.Password)) return;
+
+        if (entry is null || string.IsNullOrEmpty(entry.Password))
+            return;
 
         var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
         _clipboard.CopyWithTimeout(entry.Password, timeout);
+
         StatusMessage = $"Password copied. Clears in {_settings.ClipboardClearSeconds}s.";
         ResetAutoLockTimer();
     }
@@ -508,11 +546,14 @@ public partial class MainViewModel : ObservableObject
 
         if (editor.ShowDialog() == true && editor.Result is { } newEntry)
         {
-            LoginViewModel.CurrentVault!.AddEntry(newEntry);
+            _vaultSession.Vault!.AddEntry(newEntry);
             Entries.Add(newEntry);
+
             RebuildTagFilters();
             ApplyFilter(preserveSelectionId: newEntry.Id);
+
             await SaveVaultAsync();
+
             StatusMessage = "Entry added.";
             ResetAutoLockTimer();
         }
@@ -525,15 +566,20 @@ public partial class MainViewModel : ObservableObject
         if (entry is null) return;
 
         var editorVm = new EntryEditorViewModel(entry, GetUsedTags());
-        var editor = new EntryEditorWindow(editorVm) { Owner = GetOwnerWindow() };
+        var editor = new EntryEditorWindow(editorVm)
+        {
+            Owner = GetOwnerWindow()
+        };
 
         if (editor.ShowDialog() != true || editor.Result is not { } updated)
             return;
 
         var sensitive = editorVm.GetSensitiveChanges();
+
         if (sensitive.Count > 0)
         {
             var summary = string.Join("\n", sensitive.Select(c => $"• {c.FieldName}"));
+
             var proceed = DialogService.Confirm(
                 $"These sensitive fields will change:\n\n{summary}\n\nContinue?",
                 "Confirm sensitive changes",
@@ -565,6 +611,7 @@ public partial class MainViewModel : ObservableObject
         OnSelectedEntryChanged(SelectedEntry);
 
         await SaveVaultAsync();
+
         StatusMessage = "Entry updated.";
         ResetAutoLockTimer();
     }
@@ -582,13 +629,15 @@ public partial class MainViewModel : ObservableObject
                 noText: "Cancel"))
             return;
 
-        LoginViewModel.CurrentVault!.SoftDelete(entry.Id);
+        _vaultSession.Vault!.SoftDelete(entry.Id);
         Entries.Remove(entry);
         SelectedEntry = null;
 
         RebuildTagFilters();
         ApplyFilter(preserveSelectionId: null);
+
         await SaveVaultAsync();
+
         UpdateEntryStatus("moved to trash");
         ResetAutoLockTimer();
     }
@@ -613,7 +662,10 @@ public partial class MainViewModel : ObservableObject
 
             if (imported.Count == 0)
             {
-                DialogService.Info("No valid password entries found in the file.", "Import");
+                DialogService.Info(
+                    "No valid password entries found in the file.",
+                    "Import");
+
                 StatusMessage = "Import finished — nothing imported.";
                 return;
             }
@@ -628,7 +680,8 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            var vault = LoginViewModel.CurrentVault!;
+            var vault = _vaultSession.Vault!;
+
             foreach (var e in imported)
             {
                 vault.AddEntry(e);
@@ -637,13 +690,18 @@ public partial class MainViewModel : ObservableObject
 
             RebuildTagFilters();
             ApplyFilter();
+
             await SaveVaultAsync();
+
             StatusMessage = $"Imported {imported.Count} entries.";
             ResetAutoLockTimer();
         }
         catch (Exception ex)
         {
-            DialogService.Error($"Import failed:\n{ex.Message}", "Import Error");
+            DialogService.Error(
+                $"Import failed:\n{ex.Message}",
+                "Import Error");
+
             StatusMessage = "Import failed.";
         }
     }
@@ -652,7 +710,11 @@ public partial class MainViewModel : ObservableObject
     private void OpenHealth()
     {
         var vm = new VaultHealthViewModel(Entries);
-        var win = new VaultHealthWindow(vm) { Owner = GetOwnerWindow() };
+        var win = new VaultHealthWindow(vm)
+        {
+            Owner = GetOwnerWindow()
+        };
+
         if (win.ShowDialog() == true && win.SelectedEntryId is { } id)
         {
             if (FilteredEntries.All(e => e.Id != id))
@@ -668,25 +730,34 @@ public partial class MainViewModel : ObservableObject
             if (SelectedEntry is not null)
                 RequestScrollToEntry?.Invoke(this, EventArgs.Empty);
         }
+
         ResetAutoLockTimer();
     }
 
     [RelayCommand]
     private async Task OpenTrashAsync()
     {
-        var vault = LoginViewModel.CurrentVault;
+        var vault = _vaultSession.Vault;
         if (vault is null) return;
 
         var vm = new TrashViewModel(vault);
-        var win = new TrashWindow(vm) { Owner = GetOwnerWindow() };
+        var win = new TrashWindow(vm)
+        {
+            Owner = GetOwnerWindow()
+        };
+
         win.ShowDialog();
 
         Entries.Clear();
+
         foreach (var e in vault.Entries)
             Entries.Add(e);
+
         RebuildTagFilters();
         ApplyFilter(preserveSelectionId: SelectedEntry?.Id);
+
         await SaveVaultAsync();
+
         UpdateEntryStatus();
         ResetAutoLockTimer();
     }
@@ -694,10 +765,14 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task ExportBackupAsync()
     {
-        var sourcePath = LoginViewModel.CurrentVaultPath;
+        var sourcePath = _vaultSession.VaultPath;
+
         if (string.IsNullOrEmpty(sourcePath))
         {
-            DialogService.Warning("No vault file is open.", "Export Backup");
+            DialogService.Warning(
+                "No vault file is open.",
+                "Export Backup");
+
             return;
         }
 
@@ -717,18 +792,23 @@ public partial class MainViewModel : ObservableObject
         {
             await _vaultService.SaveVaultAsync(
                 dlg.FileName,
-                LoginViewModel.CurrentMasterPassword!,
-                LoginViewModel.CurrentVault!);
+                _vaultSession.GetSecret(),
+                _vaultSession.Vault!);
 
             StatusMessage = "Encrypted backup exported.";
+
             DialogService.Success(
                 $"Backup saved to:\n{dlg.FileName}\n\nThis file is encrypted with your master password — store it offline.",
                 "Backup exported");
+
             ResetAutoLockTimer();
         }
         catch (Exception ex)
         {
-            DialogService.Error($"Backup failed:\n{ex.Message}", "Export Backup");
+            DialogService.Error(
+                $"Backup failed:\n{ex.Message}",
+                "Export Backup");
+
             StatusMessage = "Backup failed.";
         }
     }
@@ -736,9 +816,9 @@ public partial class MainViewModel : ObservableObject
     private async Task SaveVaultAsync()
     {
         await _vaultService.SaveVaultAsync(
-            LoginViewModel.CurrentVaultPath!,
-            LoginViewModel.CurrentMasterPassword!,
-            LoginViewModel.CurrentVault!);
+            _vaultSession.VaultPath!,
+            _vaultSession.GetSecret(),
+            _vaultSession.Vault!);
     }
 }
 

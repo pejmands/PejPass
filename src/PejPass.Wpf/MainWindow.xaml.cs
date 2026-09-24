@@ -11,10 +11,14 @@ namespace PejPass.Wpf;
 
 public partial class MainWindow : Window
 {
-    public MainWindow(MainViewModel viewModel)
+    private readonly VaultSession _vaultSession;
+
+    public MainWindow(MainViewModel viewModel, VaultSession vaultSession)
     {
         InitializeComponent();
         DataContext = viewModel;
+
+        _vaultSession = vaultSession;
 
         viewModel.PropertyChanged += (_, e) =>
         {
@@ -50,7 +54,7 @@ public partial class MainWindow : Window
             if (System.Windows.Application.Current?.Windows.OfType<LoginWindow>().Any(w => w.IsVisible) == true)
                 return;
 
-            LoginViewModel.ClearSession();
+            _vaultSession.Clear();
             System.Windows.Application.Current?.Shutdown();
         };
 
