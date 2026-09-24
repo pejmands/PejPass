@@ -21,6 +21,8 @@ public partial class App : System.Windows.Application
 {
     public static IServiceProvider Services { get; private set; } = null!;
 
+    private const double WindowCornerRadius = 10;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         var launchVaultPath = ParseVaultPathArg(e.Args);
@@ -165,41 +167,84 @@ public partial class App : System.Windows.Application
         if (sender is not Window window)
             return;
 
-        if (WindowChrome.GetWindowChrome(window) is null)
-        {
-            WindowChrome.SetWindowChrome(window, new WindowChrome
-            {
-                CaptionHeight = 40,
-                ResizeBorderThickness = new Thickness(5),
-                GlassFrameThickness = new Thickness(0),
-                CornerRadius = new CornerRadius(0),
-                UseAeroCaptionButtons = false
-            });
-        }
+        // Avoid double-wrapping on re-load
+        if (window.Content is Border { Tag: "ChromeRoot" })
+            return;
 
-        if (FindVisualChild<AppTitleBar>(window) is null)
-            InjectTitleBar(window);
+        ApplyWindowChrome(window, window.WindowState == WindowState.Maximized ? 0 : WindowCornerRadius);
+        EnsureChromeShell(window);
+
+        window.StateChanged -= OnWindowStateChangedForChrome;
+        window.StateChanged += OnWindowStateChangedForChrome;
     }
 
-    private static void InjectTitleBar(Window window)
+    private static void OnWindowStateChangedForChrome(object? sender, EventArgs e)
+    {
+        if (sender is not Window window)
+            return;
+
+        var radius = window.WindowState == WindowState.Maximized ? 0 : WindowCornerRadius;
+        ApplyWindowChrome(window, radius);
+
+        if (window.Content is Border root && Equals(root.Tag, "ChromeRoot"))
+            root.CornerRadius = new CornerRadius(radius);
+    }
+
+    private static void ApplyWindowChrome(Window window, double radius)
+    {
+        WindowChrome.SetWindowChrome(window, new WindowChrome
+        {
+            CaptionHeight = 40,
+            ResizeBorderThickness = new Thickness(6),
+            GlassFrameThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(radius),
+            UseAeroCaptionButtons = false
+        });
+    }
+
+    /// <summary>
+    /// Outer rounded frame + 1px themed border; inject title bar when missing.
+    /// </summary>
+    private static void EnsureChromeShell(Window window)
     {
         if (window.Content is not UIElement body)
             return;
 
         window.Content = null;
 
-        var bar = new AppTitleBar
+        UIElement content = body;
+        if (FindVisualChild<AppTitleBar>(body) is null)
         {
-            Title = window.Title,
-            ShowMinimize = window.ResizeMode is not ResizeMode.NoResize,
-            ShowMaximize = window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip
+            var bar = new AppTitleBar
+            {
+                Title = window.Title,
+                ShowMinimize = window.ResizeMode is not ResizeMode.NoResize,
+                ShowMaximize = window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip
+            };
+
+            var dock = new DockPanel();
+            DockPanel.SetDock(bar, Dock.Top);
+            dock.Children.Add(bar);
+            dock.Children.Add(body);
+            content = dock;
+        }
+
+        var radius = window.WindowState == WindowState.Maximized ? 0 : WindowCornerRadius;
+
+        var root = new Border
+        {
+            Tag = "ChromeRoot",
+            CornerRadius = new CornerRadius(radius),
+            BorderThickness = new Thickness(1),
+            ClipToBounds = true,
+            Child = content
         };
 
-        var dock = new DockPanel();
-        DockPanel.SetDock(bar, Dock.Top);
-        dock.Children.Add(bar);
-        dock.Children.Add(body);
-        window.Content = dock;
+        root.SetResourceReference(Border.BorderBrushProperty, "BorderBrush");
+        root.SetResourceReference(Border.BackgroundProperty, "BgBrush");
+
+        window.SetResourceReference(Window.BackgroundProperty, "BgBrush");
+        window.Content = root;
     }
 
     private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
