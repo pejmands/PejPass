@@ -10,7 +10,7 @@ public sealed class VaultStoreValidationTests
     public async Task OpenAsync_WhenSaltLengthIsTooSmall_ThrowsInvalidDataException()
     {
         var path = CreateVaultFile(
-            version: 1,
+            version: 2,
             saltLength: 15);
 
         try
@@ -30,7 +30,7 @@ public sealed class VaultStoreValidationTests
     public async Task OpenAsync_WhenSaltLengthIsTooLarge_ThrowsInvalidDataException()
     {
         var path = CreateVaultFile(
-            version: 1,
+            version: 2,
             saltLength: 65);
 
         try
@@ -49,14 +49,13 @@ public sealed class VaultStoreValidationTests
     [Fact]
     public async Task OpenAsync_WhenFileIsTooShort_ThrowsInvalidDataException()
     {
-        var path = Path.GetTempFileName();
+        var path = CreateVaultFile(
+            version: 2,
+            saltLength: 16,
+            minimumHeaderOnly: true);
 
         try
         {
-            await File.WriteAllBytesAsync(
-                path,
-                "PEJP"u8.ToArray());
-
             var store = CreateStore();
 
             await Assert.ThrowsAsync<InvalidDataException>(() =>
@@ -72,9 +71,9 @@ public sealed class VaultStoreValidationTests
     public async Task OpenAsync_WhenCiphertextIsEmpty_ThrowsInvalidDataException()
     {
         var path = CreateVaultFile(
-            version: 1,
+            version: 2,
             saltLength: 16,
-            includeCiphertext: false);
+            ciphertextLength: 0);
 
         try
         {
@@ -93,7 +92,7 @@ public sealed class VaultStoreValidationTests
     public async Task OpenAsync_WhenVersionIsUnsupported_ThrowsNotSupportedException()
     {
         var path = CreateVaultFile(
-            version: 2,
+            version: 3,
             saltLength: 16);
 
         try
@@ -118,52 +117,43 @@ public sealed class VaultStoreValidationTests
 
     private static string CreateVaultFile(
         byte version,
-        ushort saltLength,
-        bool includeCiphertext = true)
+        int saltLength,
+        bool minimumHeaderOnly = false,
+        int ciphertextLength = 1)
     {
-        var path = Path.GetTempFileName();
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"{Guid.NewGuid():N}.pejp");
 
         using var stream = new FileStream(
             path,
-            FileMode.Create,
+            FileMode.CreateNew,
             FileAccess.Write,
             FileShare.None);
 
         stream.Write("PEJP"u8);
         stream.WriteByte(version);
-
-        stream.Write(BitConverter.GetBytes(saltLength));
+        stream.Write(
+            BitConverter.GetBytes((ushort)saltLength));
 
         stream.Write(new byte[saltLength]);
+
+        if (minimumHeaderOnly)
+            return path;
+
         stream.Write(new byte[12]);
         stream.Write(new byte[16]);
 
-        if (includeCiphertext)
-            stream.WriteByte(0);
+        if (ciphertextLength > 0)
+            stream.Write(new byte[ciphertextLength]);
 
         return path;
     }
 
-    private sealed class FakeFileMover : IFileMover
-    {
-        public void Move(
-            string sourcePath,
-            string destinationPath,
-            bool overwrite)
-        {
-            File.Move(sourcePath, destinationPath, overwrite);
-        }
-    }
-
     private sealed class FakeCryptoService : ICryptoService
     {
-        public byte[] GenerateSalt(int length)
-        {
-            return new byte[length];
-        }
-
         public byte[] DeriveKey(
-            string password,
+            string masterPassword,
             byte[] salt)
         {
             return new byte[32];
@@ -190,9 +180,24 @@ public sealed class VaultStoreValidationTests
             return ciphertext;
         }
 
+        public byte[] GenerateSalt(int length = 16)
+        {
+            return new byte[length];
+        }
+
         public void ZeroMemory(byte[] data)
         {
             Array.Clear(data);
+        }
+    }
+
+    private sealed class FakeFileMover : IFileMover
+    {
+        public void Move(
+            string sourcePath,
+            string destinationPath,
+            bool overwrite)
+        {
         }
     }
 }

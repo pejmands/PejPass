@@ -20,7 +20,8 @@ public sealed class VaultStore(
 {
     private static readonly byte[] Magic = Encoding.ASCII.GetBytes("PEJP");
 
-    private const byte CurrentVersion = 1;
+    private const byte LegacyVersion = 1;
+    private const byte CurrentVersion = 2;
     private const int SaltLength = 16;
     private const int MaxSaltLength = 64;
     private const int NonceLength = 12;
@@ -69,104 +70,125 @@ public sealed class VaultStore(
     }
 
     public async Task<Vault> OpenAsync(
-        string path,
-        string masterPassword,
-        CancellationToken ct = default)
+    string path,
+    string masterPassword,
+    CancellationToken ct = default)
     {
-        await using var fs = new FileStream(
+        Vault vault;
+        byte versionValue;
+
+        await using (var fs = new FileStream(
             path,
             FileMode.Open,
             FileAccess.Read,
-            FileShare.Read);
-
-        var minimumHeaderLength =
-            Magic.Length +
-            sizeof(byte) +
-            sizeof(ushort) +
-            SaltLength +
-            NonceLength +
-            TagLength +
-            1;
-
-        if (fs.Length < minimumHeaderLength)
-            throw new InvalidDataException(
-                "Vault file is too short.");
-
-        var magic = new byte[Magic.Length];
-        await fs.ReadExactlyAsync(magic, ct);
-
-        if (!magic.AsSpan().SequenceEqual(Magic))
-            throw new InvalidDataException(
-                "Not a valid PejPass vault file.");
-
-        var version = new byte[1];
-        await fs.ReadExactlyAsync(version, ct);
-
-        if (version[0] != CurrentVersion)
-            throw new NotSupportedException(
-                $"Unsupported vault version: {version[0]}");
-
-        var saltLenBytes = new byte[sizeof(ushort)];
-        await fs.ReadExactlyAsync(saltLenBytes, ct);
-
-        var saltLen = BitConverter.ToUInt16(saltLenBytes);
-
-        if (saltLen < SaltLength || saltLen > MaxSaltLength)
-            throw new InvalidDataException(
-                $"Invalid salt length: {saltLen}.");
-
-        if (fs.Length - fs.Position <
-            saltLen + NonceLength + TagLength + 1)
+            FileShare.Read))
         {
-            throw new InvalidDataException(
-                "Vault file is truncated.");
-        }
+            var minimumHeaderLength =
+                Magic.Length +
+                sizeof(byte) +
+                sizeof(ushort) +
+                SaltLength +
+                NonceLength +
+                TagLength +
+                1;
 
-        var salt = new byte[saltLen];
-        await fs.ReadExactlyAsync(salt, ct);
+            if (fs.Length < minimumHeaderLength)
+                throw new InvalidDataException(
+                    "Vault file is too short.");
 
-        var associatedData = BuildAssociatedData(version[0], salt);
+            var magic = new byte[Magic.Length];
+            await fs.ReadExactlyAsync(magic, ct);
 
-        var nonce = new byte[NonceLength];
-        await fs.ReadExactlyAsync(nonce, ct);
+            if (!magic.AsSpan().SequenceEqual(Magic))
+                throw new InvalidDataException(
+                    "Not a valid PejPass vault file.");
 
-        var tag = new byte[TagLength];
-        await fs.ReadExactlyAsync(tag, ct);
+            var version = new byte[1];
+            await fs.ReadExactlyAsync(version, ct);
 
-        var ciphertextLength = fs.Length - fs.Position;
+            versionValue = version[0];
 
-        if (ciphertextLength < 1)
-            throw new InvalidDataException(
-                "Vault ciphertext is empty.");
+            if (versionValue != LegacyVersion &&
+                versionValue != CurrentVersion)
+            {
+                throw new NotSupportedException(
+                    $"Unsupported vault version: {versionValue}");
+            }
 
-        if (ciphertextLength > int.MaxValue)
-            throw new InvalidDataException(
-                "Vault ciphertext is too large.");
+            var saltLenBytes = new byte[sizeof(ushort)];
+            await fs.ReadExactlyAsync(saltLenBytes, ct);
 
-        var ciphertext = new byte[(int)ciphertextLength];
-        await fs.ReadExactlyAsync(ciphertext, ct);
+            var saltLen = BitConverter.ToUInt16(saltLenBytes);
 
-        var key = _crypto.DeriveKey(masterPassword, salt);
+            if (saltLen < SaltLength || saltLen > MaxSaltLength)
+                throw new InvalidDataException(
+                    $"Invalid salt length: {saltLen}.");
 
-        try
-        {
-            var plaintext = _crypto.Decrypt(
-                ciphertext,
-                nonce,
-                tag,
-                key,
-                associatedData);
+            if (fs.Length - fs.Position <
+                saltLen + NonceLength + TagLength + 1)
+            {
+                throw new InvalidDataException(
+                    "Vault file is truncated.");
+            }
 
-            var vault = JsonSerializer.Deserialize<Vault>(plaintext)
+            var salt = new byte[saltLen];
+            await fs.ReadExactlyAsync(salt, ct);
+
+            var associatedData =
+                versionValue == CurrentVersion
+                    ? BuildAssociatedData(versionValue, salt)
+                    : null;
+
+            var nonce = new byte[NonceLength];
+            await fs.ReadExactlyAsync(nonce, ct);
+
+            var tag = new byte[TagLength];
+            await fs.ReadExactlyAsync(tag, ct);
+
+            var ciphertextLength = fs.Length - fs.Position;
+
+            if (ciphertextLength < 1)
+                throw new InvalidDataException(
+                    "Vault ciphertext is empty.");
+
+            if (ciphertextLength > int.MaxValue)
+                throw new InvalidDataException(
+                    "Vault ciphertext is too large.");
+
+            var ciphertext = new byte[(int)ciphertextLength];
+            await fs.ReadExactlyAsync(ciphertext, ct);
+
+            var key = _crypto.DeriveKey(masterPassword, salt);
+
+            try
+            {
+                var plaintext = _crypto.Decrypt(
+                    ciphertext,
+                    nonce,
+                    tag,
+                    key,
+                    associatedData);
+
+                vault = JsonSerializer.Deserialize<Vault>(plaintext)
                         ?? throw new InvalidDataException(
                             "Vault data is corrupted.");
+            }
+            finally
+            {
+                _crypto.ZeroMemory(key);
+            }
+        }
 
-            return vault;
-        }
-        finally
+        if (versionValue == LegacyVersion)
         {
-            _crypto.ZeroMemory(key);
+            await SaveAsync(
+                path,
+                masterPassword,
+                vault,
+                ct);
         }
+
+        return vault;
     }
 
     public async Task SaveAsync(
