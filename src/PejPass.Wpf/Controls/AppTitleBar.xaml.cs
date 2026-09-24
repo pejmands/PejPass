@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 
@@ -9,25 +8,16 @@ namespace PejPass.Wpf.Controls;
 public partial class AppTitleBar : UserControl
 {
     public static readonly DependencyProperty TitleProperty =
-        DependencyProperty.Register(
-            nameof(Title),
-            typeof(string),
-            typeof(AppTitleBar),
+        DependencyProperty.Register(nameof(Title), typeof(string), typeof(AppTitleBar),
             new PropertyMetadata(string.Empty));
 
     public static readonly DependencyProperty ShowMinimizeProperty =
-        DependencyProperty.Register(
-            nameof(ShowMinimize),
-            typeof(bool),
-            typeof(AppTitleBar),
-            new PropertyMetadata(true));
+        DependencyProperty.Register(nameof(ShowMinimize), typeof(bool), typeof(AppTitleBar),
+            new PropertyMetadata(true, OnChromeFlagsChanged));
 
     public static readonly DependencyProperty ShowMaximizeProperty =
-        DependencyProperty.Register(
-            nameof(ShowMaximize),
-            typeof(bool),
-            typeof(AppTitleBar),
-            new PropertyMetadata(true));
+        DependencyProperty.Register(nameof(ShowMaximize), typeof(bool), typeof(AppTitleBar),
+            new PropertyMetadata(true, OnChromeFlagsChanged));
 
     public string Title
     {
@@ -53,6 +43,12 @@ public partial class AppTitleBar : UserControl
         Loaded += OnLoaded;
     }
 
+    private static void OnChromeFlagsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is AppTitleBar bar)
+            bar.ApplyChromeFlags();
+    }
+
     private Window? Host => Window.GetWindow(this);
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -65,9 +61,10 @@ public partial class AppTitleBar : UserControl
 
         if (w.ResizeMode is ResizeMode.NoResize or ResizeMode.CanMinimize)
             ShowMaximize = false;
-
         if (w.ResizeMode is ResizeMode.NoResize)
             ShowMinimize = false;
+
+        ApplyChromeFlags();
 
         w.StateChanged += (_, _) => UpdateMaxIcon();
         UpdateMaxIcon();
@@ -80,6 +77,14 @@ public partial class AppTitleBar : UserControl
                 args.Handled = true;
             }
         };
+    }
+
+    private void ApplyChromeFlags()
+    {
+        if (MinButton is not null)
+            MinButton.Visibility = ShowMinimize ? Visibility.Visible : Visibility.Collapsed;
+        if (MaxButton is not null)
+            MaxButton.Visibility = ShowMaximize ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void UpdateMaxIcon()
@@ -118,8 +123,5 @@ public partial class AppTitleBar : UserControl
         UpdateMaxIcon();
     }
 
-    private void Close_Click(object sender, RoutedEventArgs e)
-    {
-        Host?.Close();
-    }
+    private void Close_Click(object sender, RoutedEventArgs e) => Host?.Close();
 }

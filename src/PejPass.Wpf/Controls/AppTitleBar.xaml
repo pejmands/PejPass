@@ -31,8 +31,7 @@
                         Click="Minimize_Click"
                         Width="46" Height="40"
                         shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                        ToolTip="Minimize"
-                        Visibility="{Binding ShowMinimize, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}">
+                        ToolTip="Minimize">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="Bd" Background="Transparent">
@@ -55,8 +54,7 @@
                         Click="Maximize_Click"
                         Width="46" Height="40"
                         shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                        ToolTip="Maximize"
-                        Visibility="{Binding ShowMaximize, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}">
+                        ToolTip="Maximize">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="Bd" Background="Transparent">
