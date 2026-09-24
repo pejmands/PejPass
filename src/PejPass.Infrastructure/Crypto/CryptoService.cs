@@ -46,7 +46,10 @@ public sealed class CryptoService : ICryptoService
         }
     }
 
-    public (byte[] Ciphertext, byte[] Nonce, byte[] Tag) Encrypt(byte[] plaintext, byte[] key)
+    public (byte[] Ciphertext, byte[] Nonce, byte[] Tag) Encrypt(
+    byte[] plaintext,
+    byte[] key,
+    byte[]? associatedData = null)
     {
         if (key.Length != KeySizeBytes)
             throw new ArgumentException("Key must be 32 bytes.", nameof(key));
@@ -58,12 +61,22 @@ public sealed class CryptoService : ICryptoService
         var tag = new byte[TagSizeBytes];
 
         using var aes = new AesGcm(key, TagSizeBytes);
-        aes.Encrypt(nonce, plaintext, ciphertext, tag);
+        aes.Encrypt(
+            nonce,
+            plaintext,
+            ciphertext,
+            tag,
+            associatedData);
 
         return (ciphertext, nonce, tag);
     }
 
-    public byte[] Decrypt(byte[] ciphertext, byte[] nonce, byte[] tag, byte[] key)
+    public byte[] Decrypt(
+        byte[] ciphertext,
+        byte[] nonce,
+        byte[] tag,
+        byte[] key,
+        byte[]? associatedData = null)
     {
         if (key.Length != KeySizeBytes)
             throw new ArgumentException("Key must be 32 bytes.", nameof(key));
@@ -71,7 +84,12 @@ public sealed class CryptoService : ICryptoService
         var plaintext = new byte[ciphertext.Length];
 
         using var aes = new AesGcm(key, TagSizeBytes);
-        aes.Decrypt(nonce, ciphertext, tag, plaintext);
+        aes.Decrypt(
+            nonce,
+            ciphertext,
+            tag,
+            plaintext,
+            associatedData);
 
         return plaintext;
     }

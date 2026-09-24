@@ -171,7 +171,8 @@ public sealed class VaultStoreValidationTests
 
         public (byte[] Ciphertext, byte[] Nonce, byte[] Tag) Encrypt(
             byte[] plaintext,
-            byte[] key)
+            byte[] key,
+            byte[]? associatedData = null)
         {
             return (
                 plaintext,
@@ -183,7 +184,8 @@ public sealed class VaultStoreValidationTests
             byte[] ciphertext,
             byte[] nonce,
             byte[] tag,
-            byte[] key)
+            byte[] key,
+            byte[]? associatedData = null)
         {
             return ciphertext;
         }

@@ -13,12 +13,20 @@ public interface ICryptoService
     /// <summary>
     /// Encrypts plaintext with AES-256-GCM. Returns (ciphertext, nonce, tag).
     /// </summary>
-    (byte[] Ciphertext, byte[] Nonce, byte[] Tag) Encrypt(byte[] plaintext, byte[] key);
+    (byte[] Ciphertext, byte[] Nonce, byte[] Tag) Encrypt(
+        byte[] plaintext,
+        byte[] key,
+        byte[]? associatedData = null);
 
     /// <summary>
     /// Decrypts data encrypted with Encrypt. Throws on authentication failure.
     /// </summary>
-    byte[] Decrypt(byte[] ciphertext, byte[] nonce, byte[] tag, byte[] key);
+    byte[] Decrypt(
+        byte[] ciphertext,
+        byte[] nonce,
+        byte[] tag,
+        byte[] key,
+        byte[]? associatedData = null);
 
     /// <summary>
     /// Generates a cryptographically secure random salt.

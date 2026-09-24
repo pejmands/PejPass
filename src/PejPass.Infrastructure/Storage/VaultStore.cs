@@ -43,7 +43,14 @@ public sealed class VaultStore(
         try
         {
             var json = JsonSerializer.SerializeToUtf8Bytes(vault);
-            var (ciphertext, nonce, tag) = _crypto.Encrypt(json, key);
+            var associatedData = BuildAssociatedData(
+                CurrentVersion,
+                salt);
+
+            var (ciphertext, nonce, tag) = _crypto.Encrypt(
+                json,
+                key,
+                associatedData);
 
             await using var fs = new FileStream(
                 path,
@@ -118,6 +125,8 @@ public sealed class VaultStore(
         var salt = new byte[saltLen];
         await fs.ReadExactlyAsync(salt, ct);
 
+        var associatedData = BuildAssociatedData(version[0], salt);
+
         var nonce = new byte[NonceLength];
         await fs.ReadExactlyAsync(nonce, ct);
 
@@ -145,7 +154,8 @@ public sealed class VaultStore(
                 ciphertext,
                 nonce,
                 tag,
-                key);
+                key,
+                associatedData);
 
             var vault = JsonSerializer.Deserialize<Vault>(plaintext)
                         ?? throw new InvalidDataException(
@@ -180,7 +190,14 @@ public sealed class VaultStore(
         try
         {
             var json = JsonSerializer.SerializeToUtf8Bytes(vault);
-            var (ciphertext, nonce, tag) = _crypto.Encrypt(json, key);
+            var associatedData = BuildAssociatedData(
+                CurrentVersion,
+                salt);
+
+            var (ciphertext, nonce, tag) = _crypto.Encrypt(
+                json,
+                key,
+                associatedData);
 
             await using (var fs = new FileStream(
                 tempPath,
@@ -219,6 +236,20 @@ public sealed class VaultStore(
                 // Do not hide the original save exception if cleanup fails.
             }
         }
+    }
+
+    private static byte[] BuildAssociatedData(
+    byte version,
+    byte[] salt)
+    {
+        using var ms = new MemoryStream();
+
+        ms.Write(Magic);
+        ms.WriteByte(version);
+        ms.Write(BitConverter.GetBytes((ushort)salt.Length));
+        ms.Write(salt);
+
+        return ms.ToArray();
     }
 
     private static async Task WriteVaultAsync(

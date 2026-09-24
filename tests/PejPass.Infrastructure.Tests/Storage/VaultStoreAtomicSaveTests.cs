@@ -1,10 +1,10 @@
-﻿using System.IO;
-using System.Security.Cryptography;
-using PejPass.Application.Interfaces;
+﻿using PejPass.Application.Interfaces;
 using PejPass.Application.Services;
 using PejPass.Domain.Entities;
 using PejPass.Infrastructure.Crypto;
 using PejPass.Infrastructure.Storage;
+using System.IO;
+using System.Security.Cryptography;
 
 namespace PejPass.Infrastructure.Tests.Storage;
 
@@ -231,7 +231,8 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
 
         public (byte[] Ciphertext, byte[] Nonce, byte[] Tag) Encrypt(
             byte[] plaintext,
-            byte[] key)
+            byte[] key,
+            byte[]? associatedData = null)
         {
             if (FailEncryption)
                 throw new InvalidOperationException(
@@ -246,7 +247,8 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
             byte[] ciphertext,
             byte[] nonce,
             byte[] tag,
-            byte[] key) =>
+            byte[] key,
+            byte[]? associatedData = null) =>
             Inner.Decrypt(
                 ciphertext,
                 nonce,
