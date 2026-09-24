@@ -19,7 +19,12 @@ public sealed class VaultStore(
     IFileMover fileMover) : IVaultStore
 {
     private static readonly byte[] Magic = Encoding.ASCII.GetBytes("PEJP");
+
     private const byte CurrentVersion = 1;
+    private const int SaltLength = 16;
+    private const int MaxSaltLength = 64;
+    private const int NonceLength = 12;
+    private const int TagLength = 16;
 
     private readonly ICryptoService _crypto = crypto;
     private readonly IFileMover _fileMover = fileMover;
@@ -32,7 +37,7 @@ public sealed class VaultStore(
         Vault vault,
         CancellationToken ct = default)
     {
-        var salt = _crypto.GenerateSalt(16);
+        var salt = _crypto.GenerateSalt(SaltLength);
         var key = _crypto.DeriveKey(masterPassword, salt);
 
         try
@@ -67,11 +72,25 @@ public sealed class VaultStore(
             FileAccess.Read,
             FileShare.Read);
 
-        var magic = new byte[4];
+        var minimumHeaderLength =
+            Magic.Length +
+            sizeof(byte) +
+            sizeof(ushort) +
+            SaltLength +
+            NonceLength +
+            TagLength +
+            1;
+
+        if (fs.Length < minimumHeaderLength)
+            throw new InvalidDataException(
+                "Vault file is too short.");
+
+        var magic = new byte[Magic.Length];
         await fs.ReadExactlyAsync(magic, ct);
 
         if (!magic.AsSpan().SequenceEqual(Magic))
-            throw new InvalidDataException("Not a valid PejPass vault file.");
+            throw new InvalidDataException(
+                "Not a valid PejPass vault file.");
 
         var version = new byte[1];
         await fs.ReadExactlyAsync(version, ct);
@@ -80,21 +99,42 @@ public sealed class VaultStore(
             throw new NotSupportedException(
                 $"Unsupported vault version: {version[0]}");
 
-        var saltLenBytes = new byte[2];
+        var saltLenBytes = new byte[sizeof(ushort)];
         await fs.ReadExactlyAsync(saltLenBytes, ct);
 
         var saltLen = BitConverter.ToUInt16(saltLenBytes);
 
+        if (saltLen < SaltLength || saltLen > MaxSaltLength)
+            throw new InvalidDataException(
+                $"Invalid salt length: {saltLen}.");
+
+        if (fs.Length - fs.Position <
+            saltLen + NonceLength + TagLength + 1)
+        {
+            throw new InvalidDataException(
+                "Vault file is truncated.");
+        }
+
         var salt = new byte[saltLen];
         await fs.ReadExactlyAsync(salt, ct);
 
-        var nonce = new byte[12];
+        var nonce = new byte[NonceLength];
         await fs.ReadExactlyAsync(nonce, ct);
 
-        var tag = new byte[16];
+        var tag = new byte[TagLength];
         await fs.ReadExactlyAsync(tag, ct);
 
-        var ciphertext = new byte[fs.Length - fs.Position];
+        var ciphertextLength = fs.Length - fs.Position;
+
+        if (ciphertextLength < 1)
+            throw new InvalidDataException(
+                "Vault ciphertext is empty.");
+
+        if (ciphertextLength > int.MaxValue)
+            throw new InvalidDataException(
+                "Vault ciphertext is too large.");
+
+        var ciphertext = new byte[(int)ciphertextLength];
         await fs.ReadExactlyAsync(ciphertext, ct);
 
         var key = _crypto.DeriveKey(masterPassword, salt);
@@ -134,7 +174,7 @@ public sealed class VaultStore(
             directory,
             $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
 
-        var salt = _crypto.GenerateSalt(16);
+        var salt = _crypto.GenerateSalt(SaltLength);
         var key = _crypto.DeriveKey(masterPassword, salt);
 
         try
