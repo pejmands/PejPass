@@ -54,6 +54,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton(themeService);
 
         services.AddSingleton<ICryptoService, CryptoService>();
+        services.AddSingleton<IFileMover, FileMover>();
         services.AddSingleton<IVaultStore, VaultStore>();
         services.AddSingleton<IBrowserImportService, BrowserImportService>();
         services.AddSingleton<ICsvExportService, CsvExportService>();
