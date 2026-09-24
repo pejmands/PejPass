@@ -1,0 +1,57 @@
+<UserControl x:Class="PejPass.Wpf.Controls.TagChipStrip"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Height="44"
+             MinHeight="44">
+
+    <ScrollViewer x:Name="Scroller"
+                  HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Disabled"
+                  Padding="0,0,0,2">
+        <ItemsControl ItemsSource="{Binding ItemsSource, RelativeSource={RelativeSource AncestorType=UserControl}}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button Content="{Binding DisplayLabel}"
+                            Command="{Binding ChipCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            CommandParameter="{Binding}"
+                            Margin="0,0,6,0"
+                            Padding="10,0"
+                            Height="26"
+                            FontSize="11"
+                            FontWeight="SemiBold"
+                            Cursor="Hand"
+                            BorderThickness="1">
+                        <Button.Style>
+                            <Style TargetType="Button"
+                                   BasedOn="{StaticResource {x:Type Button}}">
+                                <Setter Property="Background"
+                                        Value="{DynamicResource SurfaceAltBrush}"/>
+                                <Setter Property="Foreground"
+                                        Value="{DynamicResource TextBrush}"/>
+                                <Setter Property="BorderBrush"
+                                        Value="Transparent"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSelected}"
+                                                 Value="True">
+                                        <Setter Property="Background"
+                                                Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground"
+                                                Value="{DynamicResource ButtonTextBrush}"/>
+                                        <Setter Property="BorderBrush"
+                                                Value="{DynamicResource AccentBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </ScrollViewer>
+</UserControl>
