@@ -1,4 +1,6 @@
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 
 namespace PejPass.Wpf.Services;
 
@@ -10,6 +12,8 @@ public static class SingleInstance
 {
     private const string MutexName = @"Local\PejPass.SingleInstance.Mutex";
     private const string EventName = @"Local\PejPass.SingleInstance.Activate";
+
+    private const int SwRestore = 9;
 
     private static Mutex? _mutex;
     private static EventWaitHandle? _activateEvent;
@@ -52,13 +56,11 @@ public static class SingleInstance
             return false;
         }
 
-        // Drop any stale pending path from a previous crashed session
         PendingVaultOpen.ReadAndClear();
 
         _activateEvent = new EventWaitHandle(false, EventResetMode.AutoReset, EventName);
         _listenCts = new CancellationTokenSource();
 
-        // Explicit background thread so it can never keep the process alive after UI exits
         _listenThread = new Thread(() => ListenForActivation(_listenCts.Token))
         {
             IsBackground = true,
@@ -86,7 +88,6 @@ public static class SingleInstance
 
                 var path = PendingVaultOpen.ReadAndClear();
 
-                // BeginInvoke: never deadlock with a modal dialog on the UI thread
                 app.Dispatcher.BeginInvoke(new Action(() =>
                 {
                     try
@@ -96,7 +97,6 @@ public static class SingleInstance
                     }
                     catch
                     {
-                        // never crash the listen path
                     }
                 }));
             }
@@ -110,7 +110,6 @@ public static class SingleInstance
             }
             catch
             {
-                // keep listening
             }
         }
     }
@@ -121,25 +120,54 @@ public static class SingleInstance
         if (app is null)
             return;
 
-        Window? target = null;
-
-        // Prefer any visible loaded window (MainWindow property may still point at closed Login)
-        foreach (Window w in app.Windows)
-        {
-            if (w.IsVisible && w.IsLoaded)
-                target = w;
-        }
-
-        if (target is null && app.MainWindow is { IsLoaded: true, IsVisible: true } main)
-            target = main;
-
+        var target = FindActivationTarget(app);
         if (target is null)
             return;
+
+        RestoreAndFocus(target);
+    }
+
+    private static Window? FindActivationTarget(System.Windows.Application app)
+    {
+        if (app.MainWindow is { IsLoaded: true } main)
+            return main;
+
+        Window? fallback = null;
+        foreach (Window w in app.Windows)
+        {
+            if (!w.IsLoaded)
+                continue;
+
+            if (w.IsVisible && w.WindowState != WindowState.Minimized)
+                return w;
+
+            fallback = w;
+        }
+
+        return fallback;
+    }
+
+    private static void RestoreAndFocus(Window target)
+    {
+        if (!target.IsVisible)
+            target.Show();
 
         if (target.WindowState == WindowState.Minimized)
             target.WindowState = WindowState.Normal;
 
-        target.Show();
+        try
+        {
+            var hwnd = new WindowInteropHelper(target).EnsureHandle();
+            if (hwnd != IntPtr.Zero)
+            {
+                ShowWindow(hwnd, SwRestore);
+                SetForegroundWindow(hwnd);
+            }
+        }
+        catch
+        {
+        }
+
         target.Activate();
         target.Topmost = true;
         target.Topmost = false;
@@ -167,4 +195,10 @@ public static class SingleInstance
         _listenCts = null;
         _listenThread = null;
     }
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
 }
