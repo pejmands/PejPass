@@ -4,12 +4,15 @@ using PejPass.Application.Services;
 using PejPass.Infrastructure.Crypto;
 using PejPass.Infrastructure.Import;
 using PejPass.Infrastructure.Storage;
+using PejPass.Wpf.Controls;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Shell;
 
 namespace PejPass.Wpf;
@@ -22,17 +25,14 @@ public partial class App : System.Windows.Application
     {
         var launchVaultPath = ParseVaultPathArg(e.Args);
 
-        // Single instance: second launch activates existing window (and forwards vault path)
         if (!SingleInstance.TryAcquire(launchVaultPath))
         {
-            // Hard exit — do not keep a half-started WPF process around
             Environment.Exit(0);
             return;
         }
 
         base.OnStartup(e);
 
-        // Themed custom title bars: extend client area, hide system caption buttons
         EventManager.RegisterClassHandler(
             typeof(Window),
             FrameworkElement.LoadedEvent,
@@ -44,13 +44,11 @@ public partial class App : System.Windows.Application
 
         UiPolish.Register();
 
-        // So double-click on *.pejpass opens PejPass (per-user, no admin required)
         VaultFileAssociation.EnsureRegistered();
 
         var settings = SettingsStore.Load();
         var themeService = new ThemeService(settings);
 
-        // Apply theme AFTER Application.Resources exist
         themeService.Apply();
 
         var services = new ServiceCollection();
@@ -167,17 +165,56 @@ public partial class App : System.Windows.Application
         if (sender is not Window window)
             return;
 
-        if (WindowChrome.GetWindowChrome(window) is not null)
+        if (WindowChrome.GetWindowChrome(window) is null)
+        {
+            WindowChrome.SetWindowChrome(window, new WindowChrome
+            {
+                CaptionHeight = 40,
+                ResizeBorderThickness = new Thickness(5),
+                GlassFrameThickness = new Thickness(0),
+                CornerRadius = new CornerRadius(0),
+                UseAeroCaptionButtons = false
+            });
+        }
+
+        if (FindVisualChild<AppTitleBar>(window) is null)
+            InjectTitleBar(window);
+    }
+
+    private static void InjectTitleBar(Window window)
+    {
+        if (window.Content is not UIElement body)
             return;
 
-        WindowChrome.SetWindowChrome(window, new WindowChrome
+        window.Content = null;
+
+        var bar = new AppTitleBar
         {
-            CaptionHeight = 40,
-            ResizeBorderThickness = new Thickness(5),
-            GlassFrameThickness = new Thickness(0),
-            CornerRadius = new CornerRadius(0),
-            UseAeroCaptionButtons = false
-        });
+            Title = window.Title,
+            ShowMinimize = window.ResizeMode is not ResizeMode.NoResize,
+            ShowMaximize = window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip
+        };
+
+        var dock = new DockPanel();
+        DockPanel.SetDock(bar, Dock.Top);
+        dock.Children.Add(bar);
+        dock.Children.Add(body);
+        window.Content = dock;
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        var count = VisualTreeHelper.GetChildrenCount(parent);
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T match)
+                return match;
+            var nested = FindVisualChild<T>(child);
+            if (nested is not null)
+                return nested;
+        }
+        return null;
     }
 
     protected override void OnExit(ExitEventArgs e)
