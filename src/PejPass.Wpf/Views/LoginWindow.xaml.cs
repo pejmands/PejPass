@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using PejPass.Wpf.ViewModels;
 using System.Windows;
+using System.Windows.Input;
 
 namespace PejPass.Wpf.Views;
 
@@ -23,7 +24,10 @@ public partial class LoginWindow : Window
 
         Loaded += async (_, _) =>
         {
-            MasterPasswordBox.Focus();
+            await Dispatcher.InvokeAsync(
+                () => Keyboard.Focus(MasterPasswordBox),
+                System.Windows.Threading.DispatcherPriority.Input);
+
             await viewModel.RefreshWindowsHelloVisibilityAsync();
         };
     }
