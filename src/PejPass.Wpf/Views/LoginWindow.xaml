@@ -1,6 +1,7 @@
 <Window x:Class="PejPass.Wpf.Views.LoginWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:PejPass.Wpf.Controls"
         Title="PejPass — Unlock or Create Vault"
         Height="520"
         Width="480"
@@ -9,6 +10,8 @@
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanMinimize"
         Background="{DynamicResource BgBrush}">
+    <DockPanel>
+        <controls:AppTitleBar DockPanel.Dock="Top" ShowMinimize="true" ShowMaximize="false"/>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled"
@@ -24,27 +27,25 @@
                        HorizontalAlignment="Center"
                        Margin="0,0,0,8"/>
 
-            <TextBlock Text="Local • Offline • Secure"
+            <TextBlock Text="Local encrypted vault"
                        FontSize="13"
                        Foreground="{DynamicResource MutedBrush}"
                        HorizontalAlignment="Center"
-                       Margin="0,0,0,24"/>
+                       Margin="0,0,0,28"/>
 
+            <!-- Mode -->
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Center"
                         Margin="0,0,0,20">
-
                 <RadioButton Content="Open vault"
                              IsChecked="{Binding IsOpenMode}"
-                             Margin="0,0,20,0"
-                             Foreground="{DynamicResource TextBrush}"/>
-
+                             Margin="0,0,16,0"/>
                 <RadioButton Content="Create vault"
-                             IsChecked="{Binding IsCreateMode}"
-                             Foreground="{DynamicResource TextBrush}"/>
+                             IsChecked="{Binding IsCreateMode}"/>
             </StackPanel>
 
-            <TextBlock Text="Vault path"
+            <!-- Path -->
+            <TextBlock Text="Vault file"
                        Foreground="{DynamicResource MutedBrush}"
                        Margin="0,0,0,6"/>
 
@@ -53,111 +54,63 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-
                 <TextBox Text="{Binding VaultPath, UpdateSourceTrigger=PropertyChanged}"
-                         VerticalContentAlignment="Center"/>
-
+                         TextWrapping="NoWrap"
+                         HorizontalScrollBarVisibility="Auto"
+                         VerticalScrollBarVisibility="Disabled"/>
                 <Button Grid.Column="1"
-                        Content="Browse"
+                        Content="Browse…"
                         Command="{Binding BrowseCommand}"
                         Margin="8,0,0,0"
                         Background="{DynamicResource SurfaceAltBrush}"
                         Foreground="{DynamicResource TextBrush}"/>
             </Grid>
 
+            <!-- Password -->
             <TextBlock Text="Master password"
                        Foreground="{DynamicResource MutedBrush}"
                        Margin="0,0,0,6"/>
 
             <PasswordBox x:Name="MasterPasswordBox"
-                         PasswordChanged="MasterPasswordBox_PasswordChanged"/>
+                         PasswordChanged="MasterPasswordBox_PasswordChanged"
+                         Margin="0,0,0,8"/>
 
-            <Grid Margin="2,8,2,0"
-                  Visibility="{Binding ShowMasterPasswordStrength, Converter={StaticResource BoolToVis}}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
+            <!-- Strength (create mode) -->
+            <StackPanel Visibility="{Binding ShowMasterPasswordStrength, Converter={StaticResource BoolToVis}}"
+                        Margin="0,0,0,12">
                 <ProgressBar Height="6"
-                             Minimum="0"
-                             Maximum="100"
+                             Minimum="0" Maximum="100"
                              Value="{Binding MasterPasswordStrengthProgress}"
                              Background="{DynamicResource SurfaceAltBrush}"/>
-
-                <TextBlock Grid.Column="1"
-                           Margin="10,0,0,0"
+                <TextBlock Text="{Binding MasterPasswordStrengthLabel}"
                            FontSize="11"
-                           VerticalAlignment="Center"
-                           Text="{Binding MasterPasswordStrengthLabel}">
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,4,0,0"/>
+            </StackPanel>
 
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground"
-                                    Value="{DynamicResource MutedBrush}"/>
-
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding MasterPasswordStrengthLevel}"
-                                             Value="1">
-                                    <Setter Property="Foreground"
-                                            Value="{DynamicResource DangerBrush}"/>
-                                </DataTrigger>
-
-                                <DataTrigger Binding="{Binding MasterPasswordStrengthLevel}"
-                                             Value="2">
-                                    <Setter Property="Foreground"
-                                            Value="{DynamicResource DangerBrush}"/>
-                                </DataTrigger>
-
-                                <DataTrigger Binding="{Binding MasterPasswordStrengthLevel}"
-                                             Value="3">
-                                    <Setter Property="Foreground"
-                                            Value="{DynamicResource WarningBrush}"/>
-                                </DataTrigger>
-
-                                <DataTrigger Binding="{Binding MasterPasswordStrengthLevel}"
-                                             Value="4">
-                                    <Setter Property="Foreground"
-                                            Value="{DynamicResource SuccessBrush}"/>
-                                </DataTrigger>
-
-                                <DataTrigger Binding="{Binding MasterPasswordStrengthLevel}"
-                                             Value="5">
-                                    <Setter Property="Foreground"
-                                            Value="{DynamicResource SuccessBrush}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-            </Grid>
-
-            <Button Content="Unlock with Windows Hello"
-                    Margin="0,16,0,0"
-                    Command="{Binding UnlockWithHelloCommand}"
-                    Background="{DynamicResource SurfaceAltBrush}"
-                    Foreground="{DynamicResource TextBrush}"
-                    Visibility="{Binding ShowWindowsHello, Converter={StaticResource BoolToVis}}"/>
-
-            <Border Margin="0,8,0,0"
-                Visibility="{Binding PasswordError, Converter={StaticResource NullOrEmptyToVis}}">
-
-                <TextBlock Text="{Binding PasswordError}"
-                           Foreground="{DynamicResource DangerBrush}"
-                           TextWrapping="Wrap"
-                           FontSize="13"/>
-            </Border>
+            <TextBlock Text="{Binding PasswordError}"
+                       Foreground="{DynamicResource DangerBrush}"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,12"/>
 
             <TextBlock Text="{Binding StatusMessage}"
                        Foreground="{DynamicResource AccentBrush}"
                        TextWrapping="Wrap"
-                       Margin="0,8,0,16"
-                       MinHeight="18"/>
+                       Margin="0,0,0,12"/>
 
             <Button Content="Continue"
                     Command="{Binding SubmitCommand}"
                     IsDefault="True"
-                    HorizontalAlignment="Stretch"/>
+                    Height="40"
+                    Margin="0,0,0,12"/>
+
+            <Button Content="Unlock with Windows Hello"
+                    Command="{Binding UnlockWithHelloCommand}"
+                    Visibility="{Binding ShowWindowsHello, Converter={StaticResource BoolToVis}}"
+                    Background="{DynamicResource SurfaceAltBrush}"
+                    Foreground="{DynamicResource TextBrush}"
+                    Height="40"/>
         </StackPanel>
     </ScrollViewer>
+    </DockPanel>
 </Window>
