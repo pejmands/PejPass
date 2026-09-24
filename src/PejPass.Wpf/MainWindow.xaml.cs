@@ -25,6 +25,12 @@ public partial class MainWindow : Window
                 Dispatcher.BeginInvoke(AttachNotesScrollChain,
                     System.Windows.Threading.DispatcherPriority.Loaded);
             }
+
+            if (e.PropertyName is nameof(MainViewModel.ShowTagFilters))
+            {
+                Dispatcher.BeginInvoke(AttachTagFilterMouseWheel,
+                    System.Windows.Threading.DispatcherPriority.Loaded);
+            }
         };
 
         viewModel.RequestLock += (_, _) =>
@@ -70,8 +76,12 @@ public partial class MainWindow : Window
             if (DataContext is MainViewModel vm)
                 FaviconService.Prefetch(vm.Entries.Select(e => (e.Url, e.Title)));
 
-            AttachTagFilterMouseWheel();
-            Dispatcher.BeginInvoke(AttachNotesScrollChain, System.Windows.Threading.DispatcherPriority.Loaded);
+            // After chrome shell wraps content (class Loaded handler), re-bind wheel
+            Dispatcher.BeginInvoke(() =>
+            {
+                AttachTagFilterMouseWheel();
+                AttachNotesScrollChain();
+            }, System.Windows.Threading.DispatcherPriority.Loaded);
         };
     }
 
@@ -195,24 +205,30 @@ public partial class MainWindow : Window
 
     private void AttachTagFilterMouseWheel()
     {
-        if (FindName("TagFilterScroll") is ScrollViewer named)
-        {
-            named.PreviewMouseWheel -= TagFilterScroll_OnPreviewMouseWheel;
-            named.PreviewMouseWheel += TagFilterScroll_OnPreviewMouseWheel;
-            return;
-        }
+        ScrollViewer? target = FindName("TagFilterScroll") as ScrollViewer;
 
-        foreach (var sv in FindVisualChildren<ScrollViewer>(this))
+        if (target is null)
         {
-            if (sv.VerticalScrollBarVisibility == ScrollBarVisibility.Disabled
-                && sv.HorizontalScrollBarVisibility == ScrollBarVisibility.Auto
-                && sv.Height is >= 36 and <= 52)
+            foreach (var sv in FindVisualChildren<ScrollViewer>(this))
             {
-                sv.PreviewMouseWheel -= TagFilterScroll_OnPreviewMouseWheel;
-                sv.PreviewMouseWheel += TagFilterScroll_OnPreviewMouseWheel;
-                return;
+                if (sv.VerticalScrollBarVisibility == ScrollBarVisibility.Disabled
+                    && sv.HorizontalScrollBarVisibility == ScrollBarVisibility.Auto
+                    && sv.Height is >= 36 and <= 52)
+                {
+                    target = sv;
+                    break;
+                }
             }
         }
+
+        if (target is null)
+            return;
+
+        target.RemoveHandler(UIElement.PreviewMouseWheelEvent,
+            (MouseWheelEventHandler)TagFilterScroll_OnPreviewMouseWheel);
+        target.AddHandler(UIElement.PreviewMouseWheelEvent,
+            (MouseWheelEventHandler)TagFilterScroll_OnPreviewMouseWheel,
+            handledEventsToo: true);
     }
 
     private void TagFilterScroll_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -220,10 +236,11 @@ public partial class MainWindow : Window
         if (sender is not ScrollViewer sv)
             return;
 
-        if (sv.ExtentWidth <= sv.ViewportWidth)
+        if (sv.ExtentWidth <= sv.ViewportWidth + 0.5)
             return;
 
-        sv.ScrollToHorizontalOffset(sv.HorizontalOffset - e.Delta);
+        var notches = e.Delta / 120.0;
+        sv.ScrollToHorizontalOffset(sv.HorizontalOffset - notches * 48.0);
         e.Handled = true;
     }
 
@@ -234,7 +251,6 @@ public partial class MainWindow : Window
 
         foreach (var sv in FindVisualChildren<ScrollViewer>(this))
         {
-            // Notes strip: fixed MaxHeight 160, no horizontal scroll
             if (notes is null
                 && sv.HorizontalScrollBarVisibility == ScrollBarVisibility.Disabled
                 && !double.IsInfinity(sv.MaxHeight)
@@ -246,7 +262,6 @@ public partial class MainWindow : Window
             }
         }
 
-        // Detail pane: the vertical Auto scroller that contains the notes strip
         if (notes is not null)
         {
             var current = VisualTreeHelper.GetParent(notes);
