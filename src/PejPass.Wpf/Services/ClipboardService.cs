@@ -1,13 +1,16 @@
 using PejPass.Application.Interfaces;
-using System.Windows;
 
 namespace PejPass.Wpf.Services;
 
 /// <summary>
 /// Copies text to clipboard and automatically clears it after a timeout.
 /// </summary>
-public sealed class ClipboardService : IClipboardService
+public sealed class ClipboardService(
+    IClipboardProvider clipboard,
+    IUiDispatcher dispatcher) : IClipboardService
 {
+    private readonly IClipboardProvider _clipboard = clipboard;
+    private readonly IUiDispatcher _dispatcher = dispatcher;
     private CancellationTokenSource? _cts;
 
     public void CopyWithTimeout(string text, TimeSpan timeout)
@@ -15,17 +18,21 @@ public sealed class ClipboardService : IClipboardService
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
 
-        Clipboard.SetText(text);
+        _clipboard.SetText(text);
 
-        _ = ClearAfterAsync(timeout, _cts.Token);
+        _ = ClearAfterAsync(
+            timeout,
+            text,
+            _cts.Token);
     }
 
     public void Clear()
     {
         _cts?.Cancel();
+
         try
         {
-            Clipboard.Clear();
+            _clipboard.Clear();
         }
         catch
         {
@@ -33,17 +40,31 @@ public sealed class ClipboardService : IClipboardService
         }
     }
 
-    private static async Task ClearAfterAsync(TimeSpan timeout, CancellationToken ct)
+    private async Task ClearAfterAsync(
+        TimeSpan timeout,
+        string copiedText,
+        CancellationToken ct)
     {
         try
         {
             await Task.Delay(timeout, ct);
+
             if (!ct.IsCancellationRequested)
             {
-                System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+                _dispatcher.Invoke(() =>
                 {
-                    try { Clipboard.Clear(); }
-                    catch { /* ignore */ }
+                    try
+                    {
+                        if (_clipboard.ContainsText() &&
+                            _clipboard.GetText() == copiedText)
+                        {
+                            _clipboard.Clear();
+                        }
+                    }
+                    catch
+                    {
+                        // Clipboard may be locked by another process; ignore.
+                    }
                 });
             }
         }

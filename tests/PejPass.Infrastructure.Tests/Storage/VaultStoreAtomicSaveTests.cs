@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.IO;
+using System.Security.Cryptography;
 using PejPass.Application.Interfaces;
 using PejPass.Application.Services;
 using PejPass.Domain.Entities;
@@ -219,10 +220,12 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
 
         public bool FailEncryption { get; set; }
 
+        public ICryptoService Inner => _inner;
+
         public byte[] DeriveKey(
             string masterPassword,
             byte[] salt) =>
-            _inner.DeriveKey(
+            Inner.DeriveKey(
                 masterPassword,
                 salt);
 
@@ -234,7 +237,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
                 throw new InvalidOperationException(
                     "Simulated encryption failure.");
 
-            return _inner.Encrypt(
+            return Inner.Encrypt(
                 plaintext,
                 key);
         }
@@ -244,17 +247,17 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
             byte[] nonce,
             byte[] tag,
             byte[] key) =>
-            _inner.Decrypt(
+            Inner.Decrypt(
                 ciphertext,
                 nonce,
                 tag,
                 key);
 
         public byte[] GenerateSalt(int length = 16) =>
-            _inner.GenerateSalt(length);
+            Inner.GenerateSalt(length);
 
         public void ZeroMemory(byte[] data) =>
-            _inner.ZeroMemory(data);
+            Inner.ZeroMemory(data);
     }
 
     private sealed class FailingFileMover : IFileMover

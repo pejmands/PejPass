@@ -57,8 +57,9 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IVaultStore, VaultStore>();
         services.AddSingleton<IBrowserImportService, BrowserImportService>();
         services.AddSingleton<ICsvExportService, CsvExportService>();
-        services.AddSingleton<IClipboardService, ClipboardService>();
-        services.AddSingleton<VaultService>();
+        services.AddSingleton<IClipboardProvider, WpfClipboardProvider>();
+        services.AddSingleton<IUiDispatcher>(_ => new WpfUiDispatcher(Current.Dispatcher));
+        services.AddSingleton<IClipboardService, ClipboardService>(); services.AddSingleton<VaultService>();
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<MainViewModel>();
