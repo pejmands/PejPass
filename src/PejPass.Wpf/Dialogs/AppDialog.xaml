@@ -1,18 +1,20 @@
 <Window x:Class="PejPass.Wpf.Dialogs.AppDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:PejPass.Wpf.Controls"
         Title="PejPass"
         SizeToContent="Height"
         Width="440"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
-        Background="{DynamicResource BgBrush}"
-        WindowStyle="None"
-        AllowsTransparency="False">
+        Background="{DynamicResource BgBrush}">
 
-    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-            Background="{DynamicResource SurfaceBrush}" CornerRadius="10" Padding="24">
+    <DockPanel>
+        <controls:AppTitleBar DockPanel.Dock="Top" ShowMinimize="false" ShowMaximize="false"/>
+
+    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0"
+            Background="{DynamicResource BgBrush}" Padding="24">
         <StackPanel>
             <TextBlock x:Name="TitleText" FontSize="18" FontWeight="Bold"
                        Foreground="{DynamicResource TextBrush}" Margin="0,0,0,10"
@@ -28,13 +30,15 @@
                         Background="{DynamicResource SurfaceAltBrush}"
                         Foreground="{DynamicResource TextBrush}"
                         Visibility="Collapsed"/>
-                <Button x:Name="SecondaryButton" Content="Cancel" Click="Secondary_Click"
+                <Button x:Name="SecondaryButton" Content="No" Click="Secondary_Click"
                         Margin="0,0,8,0" Padding="16,8"
                         Background="{DynamicResource SurfaceAltBrush}"
-                        Foreground="{DynamicResource TextBrush}"/>
+                        Foreground="{DynamicResource TextBrush}"
+                        Visibility="Collapsed"/>
                 <Button x:Name="PrimaryButton" Content="OK" Click="Primary_Click"
                         Padding="16,8" IsDefault="True"/>
             </StackPanel>
         </StackPanel>
     </Border>
+    </DockPanel>
 </Window>

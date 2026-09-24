@@ -10,6 +10,7 @@ using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.IO;
 using System.Windows;
+using System.Windows.Shell;
 
 namespace PejPass.Wpf;
 
@@ -30,6 +31,12 @@ public partial class App : System.Windows.Application
         }
 
         base.OnStartup(e);
+
+        // Themed custom title bars: extend client area, hide system caption buttons
+        EventManager.RegisterClassHandler(
+            typeof(Window),
+            FrameworkElement.LoadedEvent,
+            new RoutedEventHandler(ApplyCustomChrome));
 
         ShutdownMode = ShutdownMode.OnMainWindowClose;
 
@@ -89,10 +96,6 @@ public partial class App : System.Windows.Application
         HandleExternalVaultPath(vaultPath);
     }
 
-    /// <summary>
-    /// Apply a vault path from double-click / second instance.
-    /// If a vault is already unlocked, only same-path is a no-op; otherwise ask to lock first.
-    /// </summary>
     public static void HandleExternalVaultPath(string path)
     {
         try
@@ -104,7 +107,6 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        // Already unlocked?
         if (LoginViewModel.CurrentVault is not null)
         {
             var current = LoginViewModel.CurrentVaultPath;
@@ -113,11 +115,10 @@ public partial class App : System.Windows.Application
                 try
                 {
                     if (string.Equals(Path.GetFullPath(current), path, StringComparison.OrdinalIgnoreCase))
-                        return; // same vault — already brought to front
+                        return;
                 }
                 catch
                 {
-                    // fall through to message
                 }
             }
 
@@ -127,7 +128,6 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        // On login screen — point at the file
         foreach (Window w in Current.Windows)
         {
             if (w is LoginWindow { DataContext: LoginViewModel vm })
@@ -160,6 +160,24 @@ public partial class App : System.Windows.Application
         }
 
         return null;
+    }
+
+    private static void ApplyCustomChrome(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Window window)
+            return;
+
+        if (WindowChrome.GetWindowChrome(window) is not null)
+            return;
+
+        WindowChrome.SetWindowChrome(window, new WindowChrome
+        {
+            CaptionHeight = 40,
+            ResizeBorderThickness = new Thickness(5),
+            GlassFrameThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(0),
+            UseAeroCaptionButtons = false
+        });
     }
 
     protected override void OnExit(ExitEventArgs e)
