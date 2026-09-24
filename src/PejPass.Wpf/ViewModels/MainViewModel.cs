@@ -765,9 +765,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task ExportBackupAsync()
     {
-        var sourcePath = _vaultSession.VaultPath;
-
-        if (string.IsNullOrEmpty(sourcePath))
+        if (!_vaultSession.IsActive)
         {
             DialogService.Warning(
                 "No vault file is open.",

@@ -105,8 +105,7 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void ChangeMasterPassword()
     {
-        if (_vaultSession.Vault is null ||
-            string.IsNullOrEmpty(_vaultSession.VaultPath))
+        if (!_vaultSession.IsActive)
         {
             DialogService.Warning("Open a vault first to change the master password.", "Change password");
             return;
