@@ -13,8 +13,8 @@
     <DockPanel>
         <controls:AppTitleBar DockPanel.Dock="Top" ShowMinimize="false" ShowMaximize="false"/>
 
-    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0"
-            Background="{DynamicResource BgBrush}" Padding="24">
+    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            Background="{DynamicResource SurfaceBrush}" CornerRadius="0" Padding="24">
         <StackPanel>
             <TextBlock x:Name="TitleText" FontSize="18" FontWeight="Bold"
                        Foreground="{DynamicResource TextBrush}" Margin="0,0,0,10"
