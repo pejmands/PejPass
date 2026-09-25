@@ -141,6 +141,56 @@ public sealed class HistoryTests
     }
 
     [Fact]
+    public void RestoreHistoryField_RestoresOnlySelectedField()
+    {
+        var vault = new Vault();
+
+        var entry = CreateEntry(title: "Original");
+        entry.Password = "original-password";
+        vault.AddEntry(entry);
+
+        var updated = CloneEntry(entry, title: "Updated");
+        updated.Password = "updated-password";
+
+        Assert.True(vault.UpdateEntry(updated));
+
+        var snapshot = Assert.Single(vault.History);
+
+        Assert.True(vault.RestoreHistoryField(
+            snapshot,
+            EntryHistoryField.Password));
+
+        var restored = Assert.Single(vault.Entries);
+
+        Assert.Equal("Updated", restored.Title);
+        Assert.Equal("original-password", restored.Password);
+    }
+
+    [Fact]
+    public void RestoreHistoryField_PreservesFavorite()
+    {
+        var vault = new Vault();
+
+        var entry = CreateEntry();
+        vault.AddEntry(entry);
+
+        var updated = CloneEntry(entry, title: "Updated");
+
+        Assert.True(vault.UpdateEntry(updated));
+        Assert.True(vault.SetFavorite(entry.Id, true));
+
+        var snapshot = Assert.Single(vault.History);
+
+        Assert.True(vault.RestoreHistoryField(
+            snapshot,
+            EntryHistoryField.Title));
+
+        var restored = Assert.Single(vault.Entries);
+
+        Assert.True(restored.IsFavorite);
+    }
+
+    [Fact]
     public void HistorySnapshot_IsIndependentFromEntryCollections()
     {
         var vault = new Vault();

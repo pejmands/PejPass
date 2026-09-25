@@ -61,35 +61,32 @@
                     </Setter.Value>
                 </Setter>
                 <Style.Triggers>
-                    <EventTrigger RoutedEvent="MouseEnter">
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                 To="0.88"
-                                                 Duration="0:0:0.12">
-                                    <DoubleAnimation.EasingFunction>
-                                        <QuadraticEase EasingMode="EaseOut"/>
-                                    </DoubleAnimation.EasingFunction>
-                                </DoubleAnimation>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </EventTrigger>
-                    <EventTrigger RoutedEvent="MouseLeave">
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                 To="1"
-                                                 Duration="0:0:0.12">
-                                    <DoubleAnimation.EasingFunction>
-                                        <QuadraticEase EasingMode="EaseOut"/>
-                                    </DoubleAnimation.EasingFunction>
-                                </DoubleAnimation>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </EventTrigger>
-                    <Trigger Property="IsEnabled" Value="False">
-                        <Setter Property="Opacity" Value="0.4"/>
+
+                    <MultiTrigger>
+                        <MultiTrigger.Conditions>
+                            <Condition Property="IsMouseOver"
+                       Value="True"/>
+                            <Condition Property="IsEnabled"
+                       Value="True"/>
+                        </MultiTrigger.Conditions>
+
+                        <Setter Property="Opacity"
+                Value="0.88"/>
+
+                    </MultiTrigger>
+
+
+                    <Trigger Property="IsEnabled"
+             Value="False">
+
+                        <Setter Property="Opacity"
+                Value="0.4"/>
+
+                        <Setter Property="Cursor"
+                Value="Arrow"/>
+
                     </Trigger>
+
                 </Style.Triggers>
             </Style>
 

@@ -143,42 +143,253 @@ public sealed class Vault
         return true;
     }
 
+    private static bool IsHistoryCurrent(
+    VaultEntry entry,
+    EntryHistoryItem history)
+    {
+        if (!string.Equals(entry.Title, history.Title, StringComparison.Ordinal) ||
+            !string.Equals(entry.Username, history.Username, StringComparison.Ordinal) ||
+            !string.Equals(entry.Password, history.Password, StringComparison.Ordinal) ||
+            !string.Equals(entry.Url, history.Url, StringComparison.Ordinal) ||
+            !string.Equals(entry.TotpSecret, history.TotpSecret, StringComparison.Ordinal) ||
+            !string.Equals(entry.Notes, history.Notes, StringComparison.Ordinal) ||
+            entry.SortOrder != history.SortOrder ||
+            entry.CreatedAt != history.CreatedAt)
+        {
+            return false;
+        }
+
+        if (!entry.Tags.SequenceEqual(
+                history.Tags,
+                StringComparer.Ordinal))
+        {
+            return false;
+        }
+
+        if (entry.CustomFields.Count != history.CustomFields.Count)
+            return false;
+
+        for (var i = 0; i < entry.CustomFields.Count; i++)
+        {
+            var current = entry.CustomFields[i];
+            var snapshot = history.CustomFields[i];
+
+            if (!string.Equals(
+                    current.Name,
+                    snapshot.Name,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    current.Value,
+                    snapshot.Value,
+                    StringComparison.Ordinal) ||
+                current.IsSecret != snapshot.IsSecret)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public bool RestoreHistory(EntryHistoryItem historyItem)
     {
         ArgumentNullException.ThrowIfNull(historyItem);
 
-        var index = Entries.FindIndex(e => e.Id == historyItem.EntryId);
-        if (index < 0)
+        var fields = new[]
+        {
+        EntryHistoryField.Title,
+        EntryHistoryField.Username,
+        EntryHistoryField.Password,
+        EntryHistoryField.Url,
+        EntryHistoryField.TotpSecret,
+        EntryHistoryField.Notes,
+        EntryHistoryField.Tags,
+        EntryHistoryField.CustomFields
+    };
+
+        return RestoreHistoryFields(historyItem, fields);
+    }
+
+    public bool RestoreHistoryFields(
+        EntryHistoryItem historyItem,
+        IEnumerable<EntryHistoryField> fields)
+    {
+        ArgumentNullException.ThrowIfNull(historyItem);
+        ArgumentNullException.ThrowIfNull(fields);
+
+        var entry = Entries.FirstOrDefault(
+            e => e.Id == historyItem.EntryId);
+
+        if (entry is null)
             return false;
 
-        var current = Entries[index];
+        var selectedFields = fields
+            .Distinct()
+            .ToList();
 
-        AddHistory(current);
+        if (selectedFields.Count == 0)
+            return false;
 
-        Entries[index] = new VaultEntry
+        var changedFields = selectedFields
+            .Where(selectedField =>
+                !IsHistoryFieldEqual(
+                    entry,
+                    historyItem,
+                    selectedField))
+            .ToList();
+
+        if (changedFields.Count == 0)
+            return false;
+
+        // Create one snapshot of the current state before applying all changes.
+        AddHistory(entry);
+
+        foreach (var selectedField in changedFields)
         {
-            Id = historyItem.EntryId,
-            Title = historyItem.Title,
-            Username = historyItem.Username,
-            Password = historyItem.Password,
-            Url = historyItem.Url,
-            TotpSecret = historyItem.TotpSecret,
-            Notes = historyItem.Notes,
-            Tags = [.. historyItem.Tags],
-            CustomFields = [.. historyItem.CustomFields
-                .Select(field => new CustomField
-                {
-                    Name = field.Name,
-                    Value = field.Value,
-                    IsSecret = field.IsSecret
-                })],
-            IsFavorite = current.IsFavorite,
-            SortOrder = historyItem.SortOrder,
-            CreatedAt = historyItem.CreatedAt,
-            UpdatedAt = DateTimeOffset.UtcNow
-        };
+            switch (selectedField)
+            {
+                case EntryHistoryField.Title:
+                    entry.Title = historyItem.Title;
+                    break;
 
+                case EntryHistoryField.Username:
+                    entry.PushUsernameHistory(entry.Username);
+                    entry.Username = historyItem.Username;
+                    break;
+
+                case EntryHistoryField.Password:
+                    entry.PushPasswordHistory(entry.Password);
+                    entry.Password = historyItem.Password;
+                    break;
+
+                case EntryHistoryField.Url:
+                    entry.Url = historyItem.Url;
+                    break;
+
+                case EntryHistoryField.TotpSecret:
+                    entry.TotpSecret = historyItem.TotpSecret;
+                    break;
+
+                case EntryHistoryField.Notes:
+                    entry.Notes = historyItem.Notes;
+                    break;
+
+                case EntryHistoryField.Tags:
+                    entry.Tags = [.. historyItem.Tags];
+                    break;
+
+                case EntryHistoryField.CustomFields:
+                    entry.CustomFields = [.. historyItem.CustomFields
+                    .Select(customField => new CustomField
+                    {
+                        Name = customField.Name,
+                        Value = customField.Value,
+                        IsSecret = customField.IsSecret
+                    })];
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(
+                        nameof(fields),
+                        selectedField,
+                        null);
+            }
+        }
+
+        entry.Touch();
         Touch();
+
+        return true;
+    }
+
+    public bool RestoreHistoryField(
+        EntryHistoryItem historyItem,
+        EntryHistoryField selectedField)
+    {
+        return RestoreHistoryFields(
+            historyItem,
+            [selectedField]);
+    }
+
+    private static bool IsHistoryFieldEqual(
+        VaultEntry entry,
+        EntryHistoryItem historyItem,
+        EntryHistoryField selectedField)
+    {
+        return selectedField switch
+        {
+            EntryHistoryField.Title =>
+                string.Equals(
+                    entry.Title,
+                    historyItem.Title,
+                    StringComparison.Ordinal),
+
+            EntryHistoryField.Username =>
+                string.Equals(
+                    entry.Username,
+                    historyItem.Username,
+                    StringComparison.Ordinal),
+
+            EntryHistoryField.Password =>
+                string.Equals(
+                    entry.Password,
+                    historyItem.Password,
+                    StringComparison.Ordinal),
+
+            EntryHistoryField.Url =>
+                string.Equals(
+                    entry.Url,
+                    historyItem.Url,
+                    StringComparison.Ordinal),
+
+            EntryHistoryField.TotpSecret =>
+                string.Equals(
+                    entry.TotpSecret,
+                    historyItem.TotpSecret,
+                    StringComparison.Ordinal),
+
+            EntryHistoryField.Notes =>
+                string.Equals(
+                    entry.Notes,
+                    historyItem.Notes,
+                    StringComparison.Ordinal),
+
+            EntryHistoryField.Tags =>
+                entry.Tags.SequenceEqual(
+                    historyItem.Tags,
+                    StringComparer.Ordinal),
+
+            EntryHistoryField.CustomFields =>
+                CustomFieldsEqual(
+                    entry.CustomFields,
+                    historyItem.CustomFields),
+
+            _ => false
+        };
+    }
+
+    private static bool CustomFieldsEqual(
+        List<CustomField> left,
+        List<CustomField> right)
+    {
+        if (left.Count != right.Count)
+            return false;
+
+        for (var i = 0; i < left.Count; i++)
+        {
+            if (!string.Equals(
+                    left[i].Name,
+                    right[i].Name,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    left[i].Value,
+                    right[i].Value,
+                    StringComparison.Ordinal) ||
+                left[i].IsSecret != right[i].IsSecret)
+            {
+                return false;
+            }
+        }
 
         return true;
     }
