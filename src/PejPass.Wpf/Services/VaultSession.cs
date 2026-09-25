@@ -34,6 +34,13 @@ public sealed class VaultSession : IDisposable
         _secret = Encoding.UTF8.GetBytes(secret);
     }
 
+    public void ReplaceVault(Vault vault)
+    {
+        ArgumentNullException.ThrowIfNull(vault);
+
+        Vault = vault;
+    }
+
     public string GetSecret()
     {
         if (_secret is not { Length: > 0 })

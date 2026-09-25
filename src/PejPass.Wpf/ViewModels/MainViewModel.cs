@@ -384,7 +384,8 @@ public partial class MainViewModel : ObservableObject
         IsFavoriteSelected = entry.IsFavorite;
 
         ApplyFilter(preserveSelectionId: entry.Id);
-        await SaveVaultAsync();
+        if (!await SaveVaultAsync())
+            return;
 
         StatusMessage = entry.IsFavorite
             ? "Added to favorites."
@@ -553,7 +554,8 @@ public partial class MainViewModel : ObservableObject
             RebuildTagFilters();
             ApplyFilter(preserveSelectionId: newEntry.Id);
 
-            await SaveVaultAsync();
+            if (!await SaveVaultAsync())
+                return;
 
             StatusMessage = "Entry added.";
             ResetAutoLockTimer();
@@ -613,7 +615,8 @@ public partial class MainViewModel : ObservableObject
         RefreshTotp();
         OnSelectedEntryChanged(SelectedEntry);
 
-        await SaveVaultAsync();
+        if (!await SaveVaultAsync())
+            return;
 
         StatusMessage = "Entry updated.";
         ResetAutoLockTimer();
@@ -639,7 +642,8 @@ public partial class MainViewModel : ObservableObject
         RebuildTagFilters();
         ApplyFilter(preserveSelectionId: null);
 
-        await SaveVaultAsync();
+        if (!await SaveVaultAsync())
+            return;
 
         UpdateEntryStatus("moved to trash");
         ResetAutoLockTimer();
@@ -694,7 +698,8 @@ public partial class MainViewModel : ObservableObject
             RebuildTagFilters();
             ApplyFilter();
 
-            await SaveVaultAsync();
+            if (!await SaveVaultAsync())
+                return;
 
             StatusMessage = $"Imported {imported.Count} entries.";
             ResetAutoLockTimer();
@@ -759,7 +764,8 @@ public partial class MainViewModel : ObservableObject
         RebuildTagFilters();
         ApplyFilter(preserveSelectionId: SelectedEntry?.Id);
 
-        await SaveVaultAsync();
+        if (!await SaveVaultAsync())
+            return;
 
         UpdateEntryStatus();
         ResetAutoLockTimer();
@@ -843,12 +849,40 @@ public partial class MainViewModel : ObservableObject
         SelectedEntry = null;
     }
 
-    private async Task SaveVaultAsync()
+    private async Task<bool> SaveVaultAsync()
     {
-        await _vaultService.SaveVaultAsync(
-            _vaultSession.VaultPath!,
-            _vaultSession.GetSecret(),
-            _vaultSession.Vault!);
+        try
+        {
+            await _vaultService.SaveVaultAsync(
+                _vaultSession.VaultPath!,
+                _vaultSession.GetSecret(),
+                _vaultSession.Vault!);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                var vault = await _vaultService.OpenVaultAsync(
+                    _vaultSession.VaultPath!,
+                    _vaultSession.GetSecret());
+
+                _vaultSession.ReplaceVault(vault);
+                LoadVault();
+                SelectedEntry = null;
+            }
+            catch
+            {
+                // Keep the original save error.
+            }
+
+            DialogService.Error(
+                $"Failed to save the vault.\n\n{ex.Message}",
+                "Save failed");
+
+            return false;
+        }
     }
 }
 

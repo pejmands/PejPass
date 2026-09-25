@@ -110,6 +110,22 @@ public partial class HistoryViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            try
+            {
+                var restoredVault = await _vaultService.OpenVaultAsync(
+                    path,
+                    _vaultSession.GetSecret());
+
+                _vaultSession.ReplaceVault(restoredVault);
+                Load();
+                SelectedItem = null;
+                HistoryRestored?.Invoke(this, EventArgs.Empty);
+            }
+            catch
+            {
+                // Keep the original save error.
+            }
+
             DialogService.Error(
                 $"Failed to save the restored entry.\n\n{ex.Message}",
                 "Restore history");
