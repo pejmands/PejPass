@@ -20,8 +20,14 @@ public partial class HistoryViewModel : ObservableObject
     public HistoryRow? SelectedItem
     {
         get => _selectedItem;
-        set => SetProperty(ref _selectedItem, value);
+        set
+        {
+            if (SetProperty(ref _selectedItem, value))
+                OnPropertyChanged(nameof(SelectedSnapshot));
+        }
     }
+
+    public EntryHistoryItem? SelectedSnapshot => SelectedItem?.Snapshot;
 
     public event EventHandler? HistoryRestored;
 
