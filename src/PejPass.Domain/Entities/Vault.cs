@@ -52,6 +52,18 @@ public sealed class Vault
         return true;
     }
 
+    public bool SetFavorite(Guid entryId, bool isFavorite)
+    {
+        var entry = Entries.FirstOrDefault(e => e.Id == entryId);
+        if (entry is null || entry.IsFavorite == isFavorite)
+            return false;
+
+        entry.IsFavorite = isFavorite;
+        Touch();
+
+        return true;
+    }
+
     public void AddHistory(VaultEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
@@ -73,7 +85,6 @@ public sealed class Vault
                     Value = field.Value,
                     IsSecret = field.IsSecret
                 })],
-            IsFavorite = entry.IsFavorite,
             SortOrder = entry.SortOrder,
             CreatedAt = entry.CreatedAt,
             ChangedAt = DateTimeOffset.UtcNow
@@ -104,7 +115,6 @@ public sealed class Vault
             !string.Equals(left.Url, right.Url, StringComparison.Ordinal) ||
             !string.Equals(left.TotpSecret, right.TotpSecret, StringComparison.Ordinal) ||
             !string.Equals(left.Notes, right.Notes, StringComparison.Ordinal) ||
-            left.IsFavorite != right.IsFavorite ||
             left.SortOrder != right.SortOrder ||
             left.CreatedAt != right.CreatedAt)
         {
@@ -162,7 +172,7 @@ public sealed class Vault
                     Value = field.Value,
                     IsSecret = field.IsSecret
                 })],
-            IsFavorite = historyItem.IsFavorite,
+            IsFavorite = current.IsFavorite,
             SortOrder = historyItem.SortOrder,
             CreatedAt = historyItem.CreatedAt,
             UpdatedAt = DateTimeOffset.UtcNow

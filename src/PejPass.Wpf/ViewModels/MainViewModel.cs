@@ -376,18 +376,24 @@ public partial class MainViewModel : ObservableObject
     private async Task ToggleFavoriteAsync(VaultEntry? entry)
     {
         entry ??= SelectedEntry;
-        if (entry is null) return;
+        if (entry is null)
+            return;
 
-        entry.IsFavorite = !entry.IsFavorite;
-        entry.Touch();
+        var isFavorite = !entry.IsFavorite;
 
-        IsFavoriteSelected = entry.IsFavorite;
+        var vault = _vaultSession.Vault!;
+
+        if (!vault.SetFavorite(entry.Id, isFavorite))
+            return;
+
+        IsFavoriteSelected = isFavorite;
 
         ApplyFilter(preserveSelectionId: entry.Id);
+
         if (!await SaveVaultAsync())
             return;
 
-        StatusMessage = entry.IsFavorite
+        StatusMessage = isFavorite
             ? "Added to favorites."
             : "Removed from favorites.";
 
@@ -566,7 +572,8 @@ public partial class MainViewModel : ObservableObject
     private async Task EditEntryAsync(VaultEntry? entry)
     {
         entry ??= SelectedEntry;
-        if (entry is null) return;
+        if (entry is null)
+            return;
 
         var editorVm = new EntryEditorViewModel(entry, GetUsedTags());
         var editor = new EntryEditorWindow(editorVm)
@@ -595,21 +602,28 @@ public partial class MainViewModel : ObservableObject
 
         var vault = _vaultSession.Vault!;
 
-        if (!vault.UpdateEntry(updated))
+        var dataChanged = vault.UpdateEntry(updated);
+        var favoriteChanged = vault.SetFavorite(updated.Id, updated.IsFavorite);
+
+        if (!dataChanged && !favoriteChanged)
         {
             StatusMessage = "No changes.";
             return;
         }
 
+        var persistedEntry = vault.FindEntry(updated.Id)!;
+
         var entryIndex = Entries.IndexOf(entry);
 
         if (entryIndex >= 0)
-            Entries[entryIndex] = updated;
+            Entries[entryIndex] = persistedEntry;
 
-        SelectedEntry = updated;
+        SelectedEntry = persistedEntry;
+
+        IsFavoriteSelected = persistedEntry.IsFavorite;
 
         RebuildTagFilters();
-        ApplyFilter(preserveSelectionId: entry.Id);
+        ApplyFilter(preserveSelectionId: persistedEntry.Id);
         RebuildDisplayCustomFields();
         UpdatePasswordDisplay();
         RefreshTotp();

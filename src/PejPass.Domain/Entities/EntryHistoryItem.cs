@@ -23,8 +23,6 @@ public sealed class EntryHistoryItem
 
     public List<CustomField> CustomFields { get; init; } = [];
 
-    public bool IsFavorite { get; init; }
-
     public int SortOrder { get; init; }
 
     public DateTimeOffset CreatedAt { get; init; }

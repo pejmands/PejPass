@@ -66,7 +66,6 @@ public sealed class HistoryTests
         Assert.Equal("secret", customField.Value);
         Assert.True(customField.IsSecret);
 
-        Assert.Equal(entry.IsFavorite, snapshot.IsFavorite);
         Assert.Equal(entry.SortOrder, snapshot.SortOrder);
         Assert.Equal(entry.CreatedAt, snapshot.CreatedAt);
     }
@@ -86,6 +85,59 @@ public sealed class HistoryTests
         Assert.False(result);
         Assert.Empty(vault.History);
         Assert.Same(entry, vault.Entries[0]);
+    }
+
+    [Fact]
+    public void SetFavorite_DoesNotCreateHistory()
+    {
+        var vault = new Vault();
+
+        var entry = CreateEntry();
+        vault.AddEntry(entry);
+
+        var result = vault.SetFavorite(entry.Id, true);
+
+        Assert.True(result);
+        Assert.True(entry.IsFavorite);
+        Assert.Empty(vault.History);
+    }
+
+    [Fact]
+    public void SetFavorite_WithSameValue_DoesNothing()
+    {
+        var vault = new Vault();
+
+        var entry = CreateEntry();
+        vault.AddEntry(entry);
+
+        var result = vault.SetFavorite(entry.Id, false);
+
+        Assert.False(result);
+        Assert.False(entry.IsFavorite);
+        Assert.Empty(vault.History);
+    }
+
+    [Fact]
+    public void RestoreHistory_PreservesCurrentFavorite()
+    {
+        var vault = new Vault();
+
+        var original = CreateEntry(title: "Original");
+        vault.AddEntry(original);
+
+        var updated = CloneEntry(original, title: "Updated");
+
+        Assert.True(vault.UpdateEntry(updated));
+        Assert.True(vault.SetFavorite(original.Id, true));
+
+        var snapshot = Assert.Single(vault.History);
+
+        Assert.True(vault.RestoreHistory(snapshot));
+
+        var restored = Assert.Single(vault.Entries);
+
+        Assert.Equal("Original", restored.Title);
+        Assert.True(restored.IsFavorite);
     }
 
     [Fact]
