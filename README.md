@@ -2,67 +2,157 @@
 
 **PejPass** is a professional, fully offline password manager for Windows.
 
-Built with **C# / .NET 10**, **WPF**, and modern cryptography.
+Built with **C# / .NET 10**, **WPF**, **CommunityToolkit.Mvvm**, and modern authenticated encryption.
 
 > Your secrets never leave your machine. No accounts. No telemetry. No network.
 
 ## Security Model
 
-| Layer              | Technology                          |
-|--------------------|-------------------------------------|
-| Key Derivation     | **Argon2id** (64 MiB, 3 iterations) |
-| Encryption         | **AES-256-GCM** (authenticated)     |
-| Master Password    | Never stored (not even hashed)      |
-| Storage            | Local encrypted `.pejpass` file     |
-| Memory Protection  | Secure zeroization after use        |
-| Clipboard          | Auto-clear after 30 seconds         |
-| Auto-lock          | Configurable inactivity timeout     |
+| Layer | Technology |
+|---|---|
+| Key Derivation | **Argon2id** |
+| Encryption | **AES-256-GCM** (authenticated encryption) |
+| Master Password | Never stored |
+| Storage | Local encrypted `.pejpass` vault |
+| Memory Handling | Sensitive data cleared after use |
+| Clipboard | Automatic clipboard clearing |
+| Auto-lock | Configurable inactivity timeout |
+| Authentication | Optional Windows Hello unlock |
 
-### Master Password Policy (~75% strict)
+### Master Password Policy
 
 - Minimum length: **12 characters**
-- Must contain: uppercase, lowercase, digit, special character
+- Requires:
+  - Uppercase letter
+  - Lowercase letter
+  - Digit
+  - Special character
 - No spaces
-- Basic common-password rejection
+- Common password rejection
 
 ## Features
 
-- [x] Create / Open / Lock vault
-- [x] Entry management (Add / Edit / Delete)
-- [x] Custom fields (user-defined name/value pairs)
+### Vault Management
+
+- [x] Create encrypted vault
+- [x] Open / lock vault
+- [x] Custom vault location
+- [x] Automatic locking after inactivity
+- [x] Windows Hello authentication
+- [x] Secure local-only storage
+
+### Credential Management
+
+- [x] Add / edit / delete entries
+- [x] Username and password storage
+- [x] URL and notes
+- [x] Custom fields
+- [x] Secret custom fields
+- [x] Search across entries and custom fields
+- [x] Favorites
+- [x] Tags and tag filtering
+
+### Password Features
+
 - [x] Secure password generator
-- [x] Auto-lock on inactivity
-- [x] Clipboard auto-clear
-- [x] Custom vault path (default: `%LOCALAPPDATA%\PejPass`)
-- [x] Search (including custom fields)
-- [x] **Import from browser CSV** (Chrome, Edge, Firefox)
-- [ ] Change master password
-- [ ] Export
-- [ ] Groups / Folders
+- [x] Password history
+- [x] Username history
+- [x] Restore previous passwords/usernames
+- [x] Vault health analysis
 
-## Browser Import
+### Two-Factor Authentication
 
-1. In Chrome / Edge: Settings → Passwords → Export passwords → save as CSV
-2. In Firefox: about:logins → ••• → Export Logins
-3. In PejPass click **Import** and select the CSV file
+- [x] TOTP support
+- [x] Generate time-based verification codes
+- [x] Store TOTP secrets securely
 
-Supported columns (auto-detected):
-`name` / `title`, `url`, `username`, `password`, `notes`
+### History & Restore
+
+PejPass keeps entry history snapshots to protect against accidental changes.
+
+Features:
+
+- [x] View previous entry versions
+- [x] Compare current data with previous snapshots
+- [x] Highlight changed fields
+- [x] Restore selected fields only
+- [x] Restore complete snapshots
+- [x] Delete individual history snapshots
+- [x] Delete all history snapshots
+
+## Import & Export
+
+### Browser Import
+
+Supported browsers:
+
+- Chrome
+- Microsoft Edge
+- Firefox
+
+Steps:
+
+1. Export passwords from your browser as CSV
+2. Open PejPass
+3. Import the CSV file
+
+Supported columns:
+
+```
+name / title
+url
+username
+password
+notes
+```
+
+## User Interface
+
+- Modern WPF interface
+- Light / dark theme support
+- Custom controls and consistent styling
+- Native Windows application
+- No WebView dependency
+
+## Project Structure
+
+```
+src/
+ ├── PejPass.Domain
+ ├── PejPass.Application
+ ├── PejPass.Infrastructure
+ └── PejPass.Wpf
+```
 
 ## Requirements
 
-- Windows 10/11
+- Windows 10 / Windows 11
 - .NET 10 SDK
 
 ## Getting Started
 
 ```bash
 git clone https://github.com/pejmands/PejPass.git
+
 cd PejPass
+
 dotnet restore
+
 dotnet build
+
 dotnet run --project src/PejPass.Wpf
 ```
+
+## Development Status
+
+PejPass is an actively developed personal project.
+
+The current focus areas include:
+
+- Improving user experience
+- Additional import/export options
+- More vault management tools
+- Further security improvements
 
 ## License
 
@@ -70,4 +160,5 @@ MIT
 
 ---
 
-**Disclaimer**: This is a personal project under active development. Use at your own risk. Always keep encrypted backups of your vault.
+**Disclaimer**: PejPass is a personal project under active development.
+Always keep encrypted backups of your vault. Use at your own risk.
