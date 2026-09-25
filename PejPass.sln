@@ -15,6 +15,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PejPass.Infrastructure.Tests", "tests\PejPass.Infrastructure.Tests\PejPass.Infrastructure.Tests.csproj", "{C0D55182-004D-4816-8865-D88346F50979}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PejPass.Domain.Tests", "tests\PejPass.Domain.Tests\PejPass.Domain.Tests.csproj", "{E235D644-781B-4F69-8670-BBC98DD8B8E7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -38,14 +40,20 @@ Global
 		{D4E5F6A7-B8C9-0123-DEF0-234567890123}.Release|x64.ActiveCfg = Release|x64
 		{D4E5F6A7-B8C9-0123-DEF0-234567890123}.Release|x64.Build.0 = Release|x64
 		{C0D55182-004D-4816-8865-D88346F50979}.Debug|x64.ActiveCfg = Debug|x64
+		{C0D55182-004D-4816-8865-D88346F50979}.Debug|x64.Build.0 = Debug|x64
 		{C0D55182-004D-4816-8865-D88346F50979}.Release|x64.ActiveCfg = Release|x64
 		{C0D55182-004D-4816-8865-D88346F50979}.Release|x64.Build.0 = Release|x64
+		{E235D644-781B-4F69-8670-BBC98DD8B8E7}.Debug|x64.ActiveCfg = Debug|x64
+		{E235D644-781B-4F69-8670-BBC98DD8B8E7}.Debug|x64.Build.0 = Debug|x64
+		{E235D644-781B-4F69-8670-BBC98DD8B8E7}.Release|x64.ActiveCfg = Release|x64
+		{E235D644-781B-4F69-8670-BBC98DD8B8E7}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C0D55182-004D-4816-8865-D88346F50979} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{E235D644-781B-4F69-8670-BBC98DD8B8E7} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {9517D2A5-1F93-4E0C-A2E1-BFDFE2A95517}
