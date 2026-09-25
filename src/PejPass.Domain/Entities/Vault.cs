@@ -473,4 +473,29 @@ public sealed class Vault
         Entries.FirstOrDefault(e => e.Id == entryId);
 
     private void Touch() => UpdatedAt = DateTimeOffset.UtcNow;
+
+    public bool RemoveHistory(Guid historyId)
+    {
+        var item = History.FirstOrDefault(
+            h => h.Id == historyId);
+
+        if (item is null)
+            return false;
+
+        History.Remove(item);
+
+        Touch();
+
+        return true;
+    }
+
+    public void ClearHistory()
+    {
+        if (History.Count == 0)
+            return;
+
+        History.Clear();
+
+        Touch();
+    }
 }

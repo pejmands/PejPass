@@ -24,12 +24,21 @@ public partial class HistoryViewModel : ObservableObject
         get => _selectedItem;
         set
         {
-            if (!SetProperty(ref _selectedItem, value))
-                return;
+            if (SetProperty(ref _selectedItem, value))
+            {
+                OnPropertyChanged(nameof(SelectedSnapshot));
+                OnPropertyChanged(nameof(HasSelectedItem));
 
-            BuildComparison();
+                BuildComparison();
+
+                OnPropertyChanged(nameof(HasSelectedFields));
+            }
         }
     }
+
+    public bool HasSelectedItem => SelectedItem is not null;
+
+    public bool HasHistoryItems => Items.Count > 0;
 
     public EntryHistoryItem? SelectedSnapshot =>
         SelectedItem?.Snapshot;
@@ -49,6 +58,11 @@ public partial class HistoryViewModel : ObservableObject
         _vaultService = vaultService;
 
         Load();
+
+        Items.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasHistoryItems));
+        };
     }
 
     private void Load()
@@ -336,31 +350,95 @@ public partial class HistoryViewModel : ObservableObject
             this,
             EventArgs.Empty);
     }
+
+    [RelayCommand]
+    private async Task DeleteHistoryAsync()
+    {
+        if (SelectedItem is null)
+            return;
+
+        var confirmed = DialogService.Confirm(
+            "Delete this history snapshot?",
+            "Delete history",
+            yesText: "Delete",
+            noText: "Cancel");
+
+        if (!confirmed)
+            return;
+
+        var vault = _vaultSession.Vault;
+
+        if (vault is null)
+            return;
+
+        if (!vault.RemoveHistory(SelectedItem.HistoryId))
+            return;
+
+        await SaveAsync();
+
+        Load();
+
+        SelectedItem = null;
+    }
+
+    [RelayCommand]
+    private async Task DeleteAllHistoryAsync()
+    {
+        var vault = _vaultSession.Vault;
+
+        if (vault is null || vault.History.Count == 0)
+            return;
+
+        var confirmed = DialogService.Confirm(
+            "Delete all history snapshots?\n\nThis action cannot be undone.",
+            "Delete all history",
+            yesText: "Delete All",
+            noText: "Cancel");
+
+        if (!confirmed)
+            return;
+
+        vault.ClearHistory();
+
+        await SaveAsync();
+
+        Load();
+
+        SelectedItem = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        var path = _vaultSession.VaultPath;
+
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        await _vaultService.SaveVaultAsync(
+            path,
+            _vaultSession.GetSecret(),
+            _vaultSession.Vault!);
+    }
 }
 
 public sealed class HistoryRow(
     EntryHistoryItem snapshot,
     string title)
 {
-    public Guid EntryId { get; } =
-        snapshot.EntryId;
+    public Guid EntryId { get; } = snapshot.EntryId;
 
-    public string Title { get; } =
-        title;
+    public Guid HistoryId { get; } = snapshot.Id;
 
-    public string Username { get; } =
-        snapshot.Username;
+    public string Title { get; } = title;
 
-    public string Url { get; } =
-        snapshot.Url;
+    public string Username { get; } = snapshot.Username;
 
-    public string ChangedAtText { get; } =
-        snapshot.ChangedAt
-            .ToLocalTime()
-            .ToString("yyyy-MM-dd HH:mm");
+    public string Url { get; } = snapshot.Url;
 
-    public EntryHistoryItem Snapshot { get; } =
-        snapshot;
+    public string ChangedAtText { get; } = snapshot.ChangedAt.ToLocalTime()
+        .ToString("yyyy-MM-dd HH:mm");
+
+    public EntryHistoryItem Snapshot { get; } = snapshot;
 }
 
 public partial class HistoryFieldRow(

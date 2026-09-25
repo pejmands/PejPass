@@ -74,6 +74,64 @@
                          BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.Resources>
+                        <Style TargetType="TextBlock"
+                               x:Key="EmptyHistoryTextStyle">
+                            <Setter Property="Foreground"
+                                    Value="{DynamicResource MutedBrush}"/>
+
+                            <Setter Property="FontSize"
+                                    Value="13"/>
+
+                            <Setter Property="HorizontalAlignment"
+                                    Value="Center"/>
+
+                            <Setter Property="TextAlignment"
+                                    Value="Center"/>
+                        </Style>
+                    </ListBox.Resources>
+
+                    <ListBox.Style>
+                        <Style TargetType="ListBox">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBox">
+                                        <Grid>
+                                            <ItemsPresenter/>
+
+                                            <StackPanel HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility"
+                                                                Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Items.Count}"
+                                                                        Value="0">
+                                                                <Setter Property="Visibility"
+                                                                        Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+
+                                                <TextBlock Text="No history snapshots"
+                                                           FontSize="16"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextBrush}"
+                                                           HorizontalAlignment="Center"/>
+
+                                                <TextBlock Text="Changes made to entries will appear here."
+                                                           Margin="0,8,0,0"
+                                                           Style="{StaticResource EmptyHistoryTextStyle}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+
+                    </ListBox.Style>
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -279,11 +337,23 @@
                 <TextBlock Text="{Binding Items.Count, StringFormat={}{0} history snapshots}"
                            Foreground="{DynamicResource MutedBrush}"
                            VerticalAlignment="Center"/>
-                <Button Content="Restore"
-                        Command="{Binding RestoreCommand}"
-                        IsEnabled="{Binding HasSelectedFields}"
-                        HorizontalAlignment="Right"
-                        IsDefault="True"/>
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right">
+                    <Button Content="Delete"
+                            Command="{Binding DeleteHistoryCommand}"
+                            Margin="0,0,8,0"
+                            IsEnabled="{Binding HasSelectedItem}"/>
+
+                    <Button Content="Delete All"
+                            Command="{Binding DeleteAllHistoryCommand}"
+                            Margin="0,0,8,0"
+                            IsEnabled="{Binding HasHistoryItems}"/>
+                    
+                    <Button Content="Restore"
+                            Command="{Binding RestoreCommand}"
+                            IsEnabled="{Binding HasSelectedFields}"
+                            IsDefault="True"/>
+                </StackPanel>
             </Grid>
         </Grid>
     </DockPanel>
