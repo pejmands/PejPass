@@ -62,6 +62,13 @@
                             Foreground="{DynamicResource TextBrush}"
                             ToolTip="Vault health report (Ctrl+H)"/>
 
+                    <Button Content="History"
+                            Command="{Binding OpenHistoryCommand}"
+                            Margin="0,0,8,0"
+                            Background="{DynamicResource SurfaceAltBrush}"
+                            Foreground="{DynamicResource TextBrush}"
+                            ToolTip="Entry history"/>
+                    
                     <Button Content="Trash"
                             Command="{Binding OpenTrashCommand}"
                             Margin="0,0,8,0"

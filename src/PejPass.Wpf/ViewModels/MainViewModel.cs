@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using PejPass.Application.Interfaces;
 using PejPass.Application.Services;
@@ -590,18 +591,20 @@ public partial class MainViewModel : ObservableObject
                 return;
         }
 
-        entry.Title = updated.Title;
-        entry.Username = updated.Username;
-        entry.Password = updated.Password;
-        entry.Url = updated.Url;
-        entry.TotpSecret = updated.TotpSecret;
-        entry.Notes = updated.Notes;
-        entry.Tags = updated.Tags;
-        entry.CustomFields = updated.CustomFields;
-        entry.PasswordHistory = updated.PasswordHistory;
-        entry.UsernameHistory = updated.UsernameHistory;
-        entry.IsFavorite = updated.IsFavorite;
-        entry.Touch();
+        var vault = _vaultSession.Vault!;
+
+        if (!vault.UpdateEntry(updated))
+        {
+            StatusMessage = "No changes.";
+            return;
+        }
+
+        var entryIndex = Entries.IndexOf(entry);
+
+        if (entryIndex >= 0)
+            Entries[entryIndex] = updated;
+
+        SelectedEntry = updated;
 
         RebuildTagFilters();
         ApplyFilter(preserveSelectionId: entry.Id);
@@ -809,6 +812,35 @@ public partial class MainViewModel : ObservableObject
 
             StatusMessage = "Backup failed.";
         }
+    }
+
+    [RelayCommand]
+    private void OpenHistory()
+    {
+        var window = App.Services.GetRequiredService<HistoryWindow>();
+
+        if (window.DataContext is HistoryViewModel historyViewModel)
+        {
+            historyViewModel.HistoryRestored += OnHistoryRestored;
+        }
+
+        window.Owner = System.Windows.Application.Current.MainWindow;
+
+        try
+        {
+            window.ShowDialog();
+        }
+        finally
+        {
+            if (window.DataContext is HistoryViewModel currentViewModel)
+                currentViewModel.HistoryRestored -= OnHistoryRestored;
+        }
+    }
+
+    private void OnHistoryRestored(object? sender, EventArgs e)
+    {
+        LoadVault();
+        SelectedEntry = null;
     }
 
     private async Task SaveVaultAsync()

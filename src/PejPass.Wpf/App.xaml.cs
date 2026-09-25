@@ -68,10 +68,12 @@ public partial class App : System.Windows.Application
         services.AddTransient<MainViewModel>();
         services.AddTransient<EntryEditorViewModel>();
         services.AddTransient<SettingsViewModel>();
+        services.AddTransient<HistoryViewModel>();
 
         services.AddTransient<LoginWindow>();
         services.AddTransient<MainWindow>();
         services.AddTransient<SettingsWindow>();
+        services.AddTransient<HistoryWindow>();
 
         Services = services.BuildServiceProvider();
 
