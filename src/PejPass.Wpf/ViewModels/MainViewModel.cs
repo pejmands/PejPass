@@ -683,10 +683,6 @@ public partial class MainViewModel : ObservableObject
 
             if (imported.Count == 0)
             {
-                DialogService.Info(
-                    "No valid password entries found in the file.",
-                    "Import");
-
                 SnackbarService.Show("Import finished — nothing imported.", SnackbarKind.Info);
                 return;
             }
@@ -817,10 +813,6 @@ public partial class MainViewModel : ObservableObject
                 _vaultSession.Vault!);
 
             SnackbarService.Show("Encrypted backup exported.");
-
-            DialogService.Success(
-                $"Backup saved to:\n{dlg.FileName}\n\nThis file is encrypted with your master password — store it offline.",
-                "Backup exported");
 
             ResetAutoLockTimer();
         }
