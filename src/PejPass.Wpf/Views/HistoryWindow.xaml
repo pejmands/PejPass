@@ -96,12 +96,13 @@
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBox">
-                                        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                                      HorizontalScrollBarVisibility="Disabled">
-                                            <ItemsPresenter/>
-                                        </ScrollViewer>
+                                        <Grid>
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                          HorizontalScrollBarVisibility="Disabled">
+                                                <ItemsPresenter/>
+                                            </ScrollViewer>
 
-                                        <StackPanel HorizontalAlignment="Center"
+                                            <StackPanel HorizontalAlignment="Center"
                                                         VerticalAlignment="Center">
                                                 <StackPanel.Style>
                                                     <Style TargetType="StackPanel">
@@ -109,7 +110,7 @@
                                                                 Value="Collapsed"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding Items.Count}"
-                                                                        Value="0">
+                                                                         Value="0">
                                                                 <Setter Property="Visibility"
                                                                         Value="Visible"/>
                                                             </DataTrigger>
@@ -132,7 +133,6 @@
                                 </Setter.Value>
                             </Setter>
                         </Style>
-
                     </ListBox.Style>
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
