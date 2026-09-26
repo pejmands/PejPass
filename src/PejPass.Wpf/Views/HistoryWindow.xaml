@@ -379,7 +379,7 @@
                                                     <!-- Select only changed fields -->
                                                     <CheckBox Grid.Column="0"
                                                               IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                                              VerticalAlignment="Top">
+                                                              VerticalAlignment="Center">
                                                         <CheckBox.Style>
                                                             <Style TargetType="CheckBox">
                                                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -393,7 +393,8 @@
                                                     </CheckBox>
 
                                                     <!-- Field name -->
-                                                    <Grid Grid.Column="1">
+                                                    <Grid Grid.Column="1"
+                                                          VerticalAlignment="Center">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="*"/>
                                                             <ColumnDefinition Width="Auto"/>
@@ -401,7 +402,7 @@
                                                         <TextBlock Text="{Binding Name}"
                                                                    FontWeight="SemiBold"
                                                                    Foreground="{DynamicResource TextBrush}"
-                                                                   VerticalAlignment="Top"
+                                                                   VerticalAlignment="Center"
                                                                    Margin="0,0,6,0"
                                                                    TextTrimming="CharacterEllipsis"/>
                                                         <Button Grid.Column="1"
@@ -415,7 +416,8 @@
                                                                 Foreground="{DynamicResource AccentBrush}"
                                                                 Background="Transparent"
                                                                 BorderThickness="0"
-                                                                Cursor="Hand">
+                                                                Cursor="Hand"
+                                                                VerticalAlignment="Center">
                                                             <Button.Style>
                                                                 <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                                                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -431,53 +433,20 @@
                                                     </Grid>
 
                                                     <!-- Current -->
-                                                    <Grid Grid.Column="2">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBlock Text="{Binding CurrentDisplayValue}"
-                                                                   Foreground="{DynamicResource TextBrush}"
-                                                                   TextWrapping="Wrap"
-                                                                   VerticalAlignment="Top"
-                                                                   Margin="0,0,8,0"/>
-                                                    </Grid>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding CurrentDisplayValue}"
+                                                               Foreground="{DynamicResource TextBrush}"
+                                                               TextWrapping="Wrap"
+                                                               VerticalAlignment="Center"
+                                                               Margin="0,0,8,0"/>
 
                                                     <!-- Snapshot -->
-                                                    <Grid Grid.Column="3">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBlock Text="{Binding SnapshotDisplayValue}"
-                                                                   Foreground="{DynamicResource TextBrush}"
-                                                                   TextWrapping="Wrap"
-                                                                   VerticalAlignment="Top"
-                                                                   Margin="0,0,8,0"/>
-                                                        <Button Grid.Column="1"
-                                                                Content="&#xE890;"
-                                                                Command="{Binding ToggleSecretVisibilityCommand}"
-                                                                Width="28"
-                                                                Height="28"
-                                                                Padding="0"
-                                                                FontFamily="Segoe MDL2 Assets"
-                                                                FontSize="13"
-                                                                Background="Transparent"
-                                                                BorderThickness="0"
-                                                                Cursor="Hand"
-                                                                ToolTip="Show or hide secret">
-                                                            <Button.Style>
-                                                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsSecret}" Value="True">
-                                                                            <Setter Property="Visibility" Value="Visible"/>
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </Button.Style>
-                                                        </Button>
-                                                    </Grid>
+                                                    <TextBlock Grid.Column="3"
+                                                               Text="{Binding SnapshotDisplayValue}"
+                                                               Foreground="{DynamicResource TextBrush}"
+                                                               TextWrapping="Wrap"
+                                                               VerticalAlignment="Center"
+                                                               Margin="0,0,8,0"/>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
