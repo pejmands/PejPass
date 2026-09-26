@@ -197,6 +197,16 @@ public partial class MainWindow : Window
         }
     }
 
+    private void MoreActionsButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.ContextMenu is null)
+            return;
+
+        button.ContextMenu.PlacementTarget = button;
+        button.ContextMenu.IsOpen = true;
+        e.Handled = true;
+    }
+
     private void FocusSearch()
     {
         SearchBox.Focus();
