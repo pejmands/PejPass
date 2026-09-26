@@ -14,10 +14,13 @@
 
     <Window.Resources>
         <Style x:Key="SectionHeader" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-            <Setter Property="Margin" Value="0,8,0,12"/>
+            <Setter Property="Margin" Value="0,12,0,10"/>
+            <Setter Property="Padding" Value="0,0,0,8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
         </Style>
     </Window.Resources>
 
@@ -31,8 +34,15 @@
             <StackPanel Margin="0,0,12,0">
 
                 <!-- Identity -->
-                <TextBlock Text="Identity"
-                           Style="{StaticResource SectionHeader}"/>
+                <Border BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        Margin="0,12,0,10"
+                        Padding="0,0,0,8">
+                    <TextBlock Text="Identity"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"/>
+                </Border>
 
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -80,8 +90,15 @@
                          VerticalScrollBarVisibility="Disabled"/>
 
                 <!-- Password -->
-                <TextBlock Text="Password"
-                           Style="{StaticResource SectionHeader}"/>
+                <Border BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        Margin="0,12,0,10"
+                        Padding="0,0,0,8">
+                    <TextBlock Text="Password"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"/>
+                </Border>
 
                 <Grid Margin="0,0,0,8">
                     <Grid.ColumnDefinitions>
@@ -171,8 +188,15 @@
                 </Grid>
 
                 <!-- Two-factor authentication -->
-                <TextBlock Text="Two-factor authentication"
-                           Style="{StaticResource SectionHeader}"/>
+                <Border BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        Margin="0,12,0,10"
+                        Padding="0,0,0,8">
+                    <TextBlock Text="Two-factor authentication"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"/>
+                </Border>
 
                 <TextBlock Text="TOTP Secret (Base32)"
                            Foreground="{DynamicResource MutedBrush}"
@@ -216,13 +240,16 @@
                            Foreground="{DynamicResource MutedBrush}"
                            Margin="0,0,0,20"/>
 
-                <!-- Organization -->
-                <TextBlock Text="Organization"
-                           Style="{StaticResource SectionHeader}"/>
-
-                <TextBlock Text="Tags (comma separated)"
-                           Foreground="{DynamicResource MutedBrush}"
-                           Margin="0,0,0,6"/>
+                <!-- Tags -->
+                <Border BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        Margin="0,12,0,10"
+                        Padding="0,0,0,8">
+                    <TextBlock Text="Tags"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"/>
+                </Border>
 
                 <TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}"
                          Margin="0,0,0,6"
@@ -235,10 +262,17 @@
                                        Margin="0,0,0,20"/>
 
                 <!-- Additional information -->
-                <TextBlock Text="Additional information"
-                           Style="{StaticResource SectionHeader}"/>
+                <Border BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        Margin="0,12,0,10"
+                        Padding="0,0,0,8">
+                    <TextBlock Text="Additional information"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"/>
+                </Border>
 
-                <!-- Custom Fields Header -->
+                <!-- Custom Fields -->
                 <Grid Margin="0,0,0,8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -246,6 +280,8 @@
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Text="Custom Fields"
+                               FontSize="12"
+                               FontWeight="SemiBold"
                                Foreground="{DynamicResource MutedBrush}"
                                VerticalAlignment="Center"/>
 
@@ -257,7 +293,6 @@
                             FontSize="12"/>
                 </Grid>
 
-                <!-- Custom Fields -->
                 <ItemsControl ItemsSource="{Binding CustomFields}"
                               Margin="0,0,0,20">
                     <ItemsControl.ItemTemplate>
