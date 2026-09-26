@@ -59,34 +59,39 @@
                     </StackPanel>
 
                     <Button Grid.Column="1"
-                            Content="&#xE734;"
-                            IsChecked="{Binding IsFavorite}"
-                            Command="{Binding ToggleFavoriteCommand}"
                             Width="36"
                             Height="36"
+                            Padding="10,0,10,3"
                             Margin="12,0,0,0"
-                            FontFamily="Segoe MDL2 Assets"
-                            FontSize="16"
+                            VerticalAlignment="Bottom"
+                            Command="{Binding ToggleFavoriteCommand}"
                             Background="{DynamicResource SurfaceAltBrush}"
-                            Foreground="{DynamicResource MutedBrush}"
                             BorderThickness="0"
-                            Cursor="Hand"
-                            ToolTip="Add to favorites">
+                            Cursor="Hand">
                         <Button.Style>
                             <Style TargetType="Button"
                                    BasedOn="{StaticResource {x:Type Button}}">
-                                <Setter Property="Content" Value="&#xE734;"/>
-                                <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                <Setter Property="ToolTip" Value="Add to favorites"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsFavorite}" Value="True">
-                                        <Setter Property="Content" Value="&#xE735;"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
                                         <Setter Property="ToolTip" Value="Remove from favorites"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
+                        <TextBlock FontSize="16"
+                                   Foreground="{DynamicResource TextBrush}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="☆"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                            <Setter Property="Text" Value="★"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Button>
                 </Grid>
 
