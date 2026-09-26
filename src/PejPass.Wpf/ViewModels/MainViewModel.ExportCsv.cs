@@ -50,7 +50,8 @@ public partial class MainViewModel
             var csvExport = global::PejPass.Wpf.App.Services.GetRequiredService<ICsvExportService>();
             await csvExport.ExportToCsvAsync(dlg.FileName, Entries);
 
-            StatusMessage = $"Exported {Entries.Count} entries to CSV.";
+            SnackbarService.Show($"Exported {Entries.Count} entries to CSV.");
+
             DialogService.Warning(
                 $"Saved {Entries.Count} entries to:\n{dlg.FileName}\n\n" +
                 "This file is unencrypted. Delete it when you no longer need it.",
