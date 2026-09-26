@@ -27,15 +27,13 @@
                        Foreground="{DynamicResource TextBrush}"/>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Style="{StaticResource SecondaryButton}"
-                        Content="Cancel"
+                <Button Content="Cancel"
                         Command="{Binding CancelScanCommand}"
                         Width="70"
-                        Background="{DynamicResource SurfaceAltBrush}"
-                        Foreground="{DynamicResource TextBrush}"
                         ToolTip="Cancel the running health scan">
                     <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Style TargetType="Button"
+                               BasedOn="{StaticResource SecondaryButton}">
                             <Setter Property="Visibility" Value="Collapsed"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsScanning}" Value="True">
@@ -45,15 +43,13 @@
                         </Style>
                     </Button.Style>
                 </Button>
-                <Button Style="{StaticResource SecondaryButton}"
-                        Content="Rescan"
+                <Button Content="Rescan"
                         Width="70"
                         Command="{Binding RefreshCommand}"
-                        Background="{DynamicResource SurfaceAltBrush}"
-                        Foreground="{DynamicResource TextBrush}"
                         ToolTip="Run health scan again">
                     <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Style TargetType="Button"
+                               BasedOn="{StaticResource SecondaryButton}">
                             <Setter Property="Visibility" Value="Visible"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsScanning}" Value="True">
