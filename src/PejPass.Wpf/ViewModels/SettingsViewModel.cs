@@ -89,8 +89,8 @@ public partial class SettingsViewModel : ObservableObject
         SettingsStore.Save(_settings);
         _themeService.Apply();
 
-        SnackbarService.Show("Settings saved.");
         RequestClose?.Invoke(this, EventArgs.Empty);
+        SnackbarService.Show("Settings saved.");
     }
 
     public void RevertPreview()
