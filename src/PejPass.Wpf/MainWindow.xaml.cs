@@ -4,7 +4,6 @@ using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -14,10 +13,8 @@ namespace PejPass.Wpf;
 public partial class MainWindow : Window
 {
     private readonly VaultSession _vaultSession;
-    private readonly Popup _snackbarPopup;
-    private readonly Border _snackbarBorder;
-    private readonly TextBlock _snackbarText;
     private readonly DispatcherTimer _snackbarTimer;
+
 
     public MainWindow(MainViewModel viewModel, VaultSession vaultSession)
     {
@@ -26,39 +23,10 @@ public partial class MainWindow : Window
 
         _vaultSession = vaultSession;
 
-        _snackbarText = new TextBlock
-        {
-            FontSize = 13,
-            TextWrapping = TextWrapping.Wrap,
-            Foreground = (Brush)FindResource("TextBrush")
-        };
-
-        _snackbarBorder = new Border
-        {
-            Background = (Brush)FindResource("SurfaceAltBrush"),
-            BorderBrush = (Brush)FindResource("SuccessBrush"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(14, 10),
-            Width = 360,
-            Child = _snackbarText
-        };
-
-        _snackbarPopup = new Popup
-        {
-            PlacementTarget = this,
-            Placement = PlacementMode.Bottom,
-            AllowsTransparency = true,
-            StaysOpen = true,
-            IsHitTestVisible = false,
-            Child = _snackbarBorder
-        };
-
         _snackbarTimer = new DispatcherTimer();
         _snackbarTimer.Tick += (_, _) => HideSnackbar();
-
-        SizeChanged += (_, _) => UpdateSnackbarPosition();
         SnackbarService.Shown += OnSnackbarShown;
+
 
         viewModel.PropertyChanged += (_, e) =>
         {
@@ -91,7 +59,7 @@ public partial class MainWindow : Window
         {
             SnackbarService.Shown -= OnSnackbarShown;
             _snackbarTimer.Stop();
-            _snackbarPopup.IsOpen = false;
+            SnackbarBorder.Visibility = Visibility.Collapsed;
             viewModel.StopBackgroundTimers();
 
             if (System.Windows.Application.Current?.Windows.OfType<LoginWindow>().Any(w => w.IsVisible) == true)
@@ -242,32 +210,40 @@ public partial class MainWindow : Window
 
     private void OnSnackbarShown(object? sender, SnackbarEventArgs e)
     {
-        _snackbarText.Text = e.Message;
-        _snackbarBorder.BorderBrush = e.Kind switch
+        SnackbarText.Text = e.Message;
+
+        var brushKey = e.Kind switch
         {
-            SnackbarKind.Info => (Brush)FindResource("AccentBrush"),
-            SnackbarKind.Warning => (Brush)FindResource("WarningBrush"),
-            SnackbarKind.Error => (Brush)FindResource("DangerBrush"),
-            _ => (Brush)FindResource("SuccessBrush")
+            SnackbarKind.Info => "AccentBrush",
+            SnackbarKind.Warning => "WarningBrush",
+            SnackbarKind.Error => "DangerBrush",
+            _ => "SuccessBrush"
         };
 
-        UpdateSnackbarPosition();
+        var icon = e.Kind switch
+        {
+            SnackbarKind.Info => "&#xE946;",
+            SnackbarKind.Warning => "&#xE7BA;",
+            SnackbarKind.Error => "&#xE711;",
+            _ => "&#xE73E;"
+        };
+
+        var brush = (Brush)FindResource(brushKey);
+        SnackbarBorder.BorderBrush = brush;
+        SnackbarAccent.Background = brush;
+        SnackbarIcon.Foreground = brush;
+        SnackbarIcon.Text = icon;
+
         _snackbarTimer.Stop();
         _snackbarTimer.Interval = e.Duration;
         _snackbarTimer.Start();
-        _snackbarPopup.IsOpen = true;
+        SnackbarBorder.Visibility = Visibility.Visible;
     }
 
     private void HideSnackbar()
     {
         _snackbarTimer.Stop();
-        _snackbarPopup.IsOpen = false;
-    }
-
-    private void UpdateSnackbarPosition()
-    {
-        _snackbarPopup.HorizontalOffset = Math.Max(0, (ActualWidth - 360) / 2);
-        _snackbarPopup.VerticalOffset = -16;
+        SnackbarBorder.Visibility = Visibility.Collapsed;
     }
 
     private void MoreActionsButton_OnPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
