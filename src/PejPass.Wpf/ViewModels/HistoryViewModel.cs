@@ -78,18 +78,88 @@ public partial class HistoryViewModel : ObservableObject
             return;
         }
 
+        var historiesByEntry = vault.History
+            .GroupBy(h => h.EntryId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .OrderByDescending(h => h.ChangedAt)
+                    .ToList());
+
         foreach (var history in vault.History
                      .OrderByDescending(h => h.ChangedAt))
         {
             var entry = vault.Entries
                 .FirstOrDefault(e => e.Id == history.EntryId);
 
+            var historyList = historiesByEntry[history.EntryId];
+            var index = historyList.FindIndex(h => h.Id == history.Id);
+            var newerSnapshot = index > 0 ? historyList[index - 1] : null;
+
+            var changedFields = GetChangedFields(
+                history,
+                newerSnapshot,
+                index == 0 ? entry : null);
+
             Items.Add(new HistoryRow(
                 history,
-                entry?.Title ?? "(Deleted entry)"));
+                entry?.Title ?? "(Deleted entry)",
+                changedFields));
         }
 
         SelectedItem = null;
+    }
+
+    private static IReadOnlyList<string> GetChangedFields(
+        EntryHistoryItem snapshot,
+        EntryHistoryItem? newerSnapshot,
+        VaultEntry? currentEntry)
+    {
+        var newer = newerSnapshot;
+        var changed = new List<string>();
+
+        if (newer is not null)
+        {
+            AddIfChanged(changed, "Title", snapshot.Title, newer.Title);
+            AddIfChanged(changed, "Username", snapshot.Username, newer.Username);
+            AddIfChanged(changed, "Password", snapshot.Password, newer.Password);
+            AddIfChanged(changed, "URL", snapshot.Url, newer.Url);
+            AddIfChanged(changed, "TOTP", snapshot.TotpSecret, newer.TotpSecret);
+            AddIfChanged(changed, "Notes", snapshot.Notes, newer.Notes);
+            AddIfChanged(changed, "Tags", FormatTags(snapshot.Tags), FormatTags(newer.Tags));
+            AddIfChanged(
+                changed,
+                "Custom Fields",
+                FormatCustomFields(snapshot.CustomFields),
+                FormatCustomFields(newer.CustomFields));
+        }
+        else if (currentEntry is not null)
+        {
+            AddIfChanged(changed, "Title", snapshot.Title, currentEntry.Title);
+            AddIfChanged(changed, "Username", snapshot.Username, currentEntry.Username);
+            AddIfChanged(changed, "Password", snapshot.Password, currentEntry.Password);
+            AddIfChanged(changed, "URL", snapshot.Url, currentEntry.Url);
+            AddIfChanged(changed, "TOTP", snapshot.TotpSecret, currentEntry.TotpSecret);
+            AddIfChanged(changed, "Notes", snapshot.Notes, currentEntry.Notes);
+            AddIfChanged(changed, "Tags", FormatTags(snapshot.Tags), FormatTags(currentEntry.Tags));
+            AddIfChanged(
+                changed,
+                "Custom Fields",
+                FormatCustomFields(snapshot.CustomFields),
+                FormatCustomFields(currentEntry.CustomFields));
+        }
+
+        return changed;
+    }
+
+    private static void AddIfChanged(
+        List<string> changed,
+        string name,
+        string olderValue,
+        string newerValue)
+    {
+        if (!string.Equals(olderValue, newerValue, StringComparison.Ordinal))
+            changed.Add(name);
     }
 
     private void BuildComparison()
@@ -423,7 +493,8 @@ public partial class HistoryViewModel : ObservableObject
 
 public sealed class HistoryRow(
     EntryHistoryItem snapshot,
-    string title)
+    string title,
+    IReadOnlyList<string> changedFields)
 {
     public Guid EntryId { get; } = snapshot.EntryId;
 
@@ -435,10 +506,36 @@ public sealed class HistoryRow(
 
     public string Url { get; } = snapshot.Url;
 
-    public string ChangedAtText { get; } = snapshot.ChangedAt.ToLocalTime()
-        .ToString("yyyy-MM-dd HH:mm");
+    public string ChangedAtText { get; } = FormatChangedAt(snapshot.ChangedAt);
+
+    public IReadOnlyList<string> ChangedFields { get; } = changedFields;
+
+    public string ChangeSummary { get; } = changedFields.Count switch
+    {
+        0 => "No field changes detected",
+        1 => $"{changedFields[0]} changed",
+        _ => $"{changedFields.Count} fields changed"
+    };
 
     public EntryHistoryItem Snapshot { get; } = snapshot;
+
+    private static string FormatChangedAt(DateTimeOffset value)
+    {
+        var local = value.ToLocalTime();
+        var today = DateTimeOffset.Now.Date;
+        var date = local.Date;
+
+        if (date == today)
+            return $"Today · {local:HH:mm}";
+
+        if (date == today.AddDays(-1))
+            return $"Yesterday · {local:HH:mm}";
+
+        return local.DayOfYear == DateTimeOffset.Now.DayOfYear &&
+               local.Year == DateTimeOffset.Now.Year
+            ? local.ToString("MMM d · HH:mm")
+            : local.ToString("MMM d, yyyy · HH:mm");
+    }
 }
 
 public partial class HistoryFieldRow(
