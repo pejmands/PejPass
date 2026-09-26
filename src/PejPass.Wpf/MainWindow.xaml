@@ -68,9 +68,10 @@
                     <Button Style="{StaticResource ToolbarIconButton}"
                             Content="&#xE712;"
                             Margin="0,0,6,0"
-                            ToolTip="More actions">
+                            ToolTip="More actions"
+                            Click="MoreActionsButton_Click">
                         <Button.ContextMenu>
-                            <ContextMenu>
+                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                                 <MenuItem Header="Backup" Command="{Binding ExportBackupCommand}"/>
                                 <MenuItem Header="Restore" Command="{Binding RestoreBackupCommand}"/>
                                 <Separator/>
