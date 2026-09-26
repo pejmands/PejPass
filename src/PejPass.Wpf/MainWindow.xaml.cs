@@ -222,10 +222,10 @@ public partial class MainWindow : Window
 
         var icon = e.Kind switch
         {
-            SnackbarKind.Info => "&#xE946;",
-            SnackbarKind.Warning => "&#xE7BA;",
-            SnackbarKind.Error => "&#xE711;",
-            _ => "&#xE73E;"
+            SnackbarKind.Info => "\uE946",
+            SnackbarKind.Warning => "\uE7BA",
+            SnackbarKind.Error => "\uE711",
+            _ => "\uE73E"
         };
 
         var brush = (Brush)FindResource(brushKey);
