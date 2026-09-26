@@ -218,11 +218,9 @@ public partial class EntryEditorViewModel : ObservableObject
         }
 
         var who = string.Join(" · ", new[] { result.Issuer, result.Account }.Where(s => !string.IsNullOrWhiteSpace(s)));
-        DialogService.Success(
-            string.IsNullOrEmpty(who)
+        SnackbarService.Show(string.IsNullOrEmpty(who)
                 ? "TOTP secret imported from QR code."
-                : $"TOTP secret imported.\n{who}",
-            "TOTP import");
+                : $"TOTP secret imported.\n{who}");
     }
 
     [RelayCommand]
