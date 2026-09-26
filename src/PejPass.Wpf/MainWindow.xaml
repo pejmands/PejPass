@@ -166,6 +166,7 @@
                         </Grid>
 
                         <Button Grid.Column="1"
+                                Style="{StaticResource PrimaryButton}"
                                 Content="Add Entry"
                                 Command="{Binding AddEntryCommand}"
                                 Height="40"
@@ -492,6 +493,7 @@
                                 </Border>
 
                                 <Button Grid.Column="1"
+                                        Style="{StaticResource SecondaryButton}"
                                         Content="Copy"
                                         Margin="8,0,0,0"
                                         Command="{Binding CopyUrlCommand}"
@@ -499,6 +501,7 @@
                                         Foreground="{DynamicResource TextBrush}"/>
 
                                 <Button Grid.Column="2"
+                                        Style="{StaticResource SecondaryButton}"
                                         Content="Open"
                                         Margin="8,0,0,0"
                                         Command="{Binding OpenUrlCommand}"/>
@@ -531,6 +534,7 @@
                             </Border>
 
                             <Button Grid.Column="1"
+                                    Style="{StaticResource SecondaryButton}"
                                     Content="Copy"
                                     Margin="8,0,0,0"
                                     Command="{Binding CopyUsernameCommand}"
@@ -567,6 +571,7 @@
                             </Border>
 
                             <Button Grid.Column="1"
+                                    Style="{StaticResource SecondaryButton}"
                                     Content="{Binding ShowPasswordButtonText}"
                                     Margin="8,0,0,0"
                                     Command="{Binding TogglePasswordVisibilityCommand}"
@@ -574,6 +579,7 @@
                                     Foreground="{DynamicResource TextBrush}"/>
 
                             <Button Grid.Column="2"
+                                    Style="{StaticResource SecondaryButton}"
                                     Content="Copy"
                                     Margin="8,0,0,0"
                                     Command="{Binding CopyPasswordCommand}"
@@ -621,6 +627,7 @@
                                     </StackPanel>
 
                                     <Button Grid.Column="1"
+                                            Style="{StaticResource SecondaryButton}"
                                             Margin="12,0,0,0"
                                             Content="Copy"
                                             VerticalAlignment="Center"
@@ -692,6 +699,7 @@
                                             </Border>
 
                                             <Button Grid.Column="2"
+                                                    Style="{StaticResource SecondaryButton}"
                                                     Content="{Binding RevealButtonText}"
                                                     Margin="6,0,0,0"
                                                     Padding="10,6"
@@ -704,6 +712,7 @@
                                                                          Converter={StaticResource BoolToVis}}"/>
 
                                             <Button Grid.Column="3"
+                                                    Style="{StaticResource SecondaryButton}"
                                                     Content="Copy"
                                                     Margin="6,0,0,0"
                                                     Padding="10,6"
@@ -753,14 +762,16 @@
                         <!-- Actions -->
                         <StackPanel Orientation="Horizontal"
                                     Margin="0,0,0,0">
-                            <Button Content="Edit"
+                            <Button Style="{StaticResource SecondaryButton}"
+                                    Content="Edit"
                                     Command="{Binding EditEntryCommand}"
                                     CommandParameter="{Binding SelectedEntry}"
                                     Padding="20,8"
                                     Margin="0,0,8,0"
                                     ToolTip="Edit (Ctrl+E)"/>
 
-                            <Button Content="Delete"
+                            <Button Style="{StaticResource DestructiveButton}"
+                                    Content="Delete"
                                     Command="{Binding DeleteEntryCommand}"
                                     CommandParameter="{Binding SelectedEntry}"
                                     Padding="20,8"
