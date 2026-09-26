@@ -117,6 +117,56 @@
                 </Style.Triggers>
             </Style>
 
+            <!-- Overflow menu -->
+            <Style x:Key="ToolbarContextMenu" TargetType="ContextMenu">
+                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="Padding" Value="6"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="HasDropShadow" Value="True"/>
+            </Style>
+
+            <Style x:Key="ToolbarMenuItem" TargetType="MenuItem">
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Padding" Value="8,7"/>
+                <Setter Property="Margin" Value="0,1"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="MenuItem">
+                            <Border x:Name="MenuItemBorder"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="5"
+                                    Padding="{TemplateBinding Padding}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="24"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ContentPresenter Grid.Column="0"
+                                                      ContentSource="Icon"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"/>
+                                    <ContentPresenter Grid.Column="1"
+                                                      ContentSource="Header"
+                                                      VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsHighlighted" Value="True">
+                                    <Setter TargetName="MenuItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.4"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <!-- TextBox -->
             <Style TargetType="TextBox">
                 <Setter Property="Height" Value="40"/>
