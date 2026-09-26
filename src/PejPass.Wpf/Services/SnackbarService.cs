@@ -12,7 +12,7 @@ public static class SnackbarService
         SnackbarKind kind = SnackbarKind.Success,
         TimeSpan? duration = null)
     {
-        var dispatcher = Application.Current?.Dispatcher;
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
         if (dispatcher is null)
             return;
 
