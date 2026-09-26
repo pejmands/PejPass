@@ -59,6 +59,7 @@
                          HorizontalScrollBarVisibility="Auto"
                          VerticalScrollBarVisibility="Disabled"/>
                 <Button Grid.Column="1"
+                        Style="{StaticResource SecondaryButton}"
                         Content="Browse…"
                         Command="{Binding BrowseCommand}"
                         Margin="8,0,0,0"
@@ -98,13 +99,15 @@
                        TextWrapping="Wrap"
                        Margin="0,0,0,12"/>
 
-            <Button Content="Continue"
+            <Button Style="{StaticResource PrimaryButton}"
+                    Content="Continue"
                     Command="{Binding SubmitCommand}"
                     IsDefault="True"
                     Height="40"
                     Margin="0,0,0,12"/>
 
-            <Button Content="Unlock with Windows Hello"
+            <Button Style="{StaticResource SecondaryButton}"
+                    Content="Unlock with Windows Hello"
                     Command="{Binding UnlockWithHelloCommand}"
                     Visibility="{Binding ShowWindowsHello, Converter={StaticResource BoolToVis}}"
                     Background="{DynamicResource SurfaceAltBrush}"
