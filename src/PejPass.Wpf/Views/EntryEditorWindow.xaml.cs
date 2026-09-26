@@ -67,6 +67,37 @@ public partial class EntryEditorWindow : Window
         }
     }
 
+    private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is EntryEditorViewModel vm)
+            vm.Password = PasswordBox.Password;
+    }
+
+    private void PasswordVisibilityButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not EntryEditorViewModel vm)
+            return;
+
+        if (PasswordBox.Visibility == Visibility.Visible)
+        {
+            PasswordTextBox.Text = vm.Password;
+            PasswordBox.Visibility = Visibility.Collapsed;
+            PasswordTextBox.Visibility = Visibility.Visible;
+            PasswordVisibilityButton.ToolTip = "Hide password";
+            PasswordTextBox.Focus();
+            PasswordTextBox.CaretIndex = PasswordTextBox.Text.Length;
+        }
+        else
+        {
+            PasswordBox.Password = vm.Password;
+            PasswordTextBox.Visibility = Visibility.Collapsed;
+            PasswordBox.Visibility = Visibility.Visible;
+            PasswordVisibilityButton.ToolTip = "Show password";
+            PasswordBox.Focus();
+            PasswordBox.SelectAll();
+        }
+    }
+
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not EntryEditorViewModel vm)
