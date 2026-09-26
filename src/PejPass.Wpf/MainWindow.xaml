@@ -274,7 +274,7 @@
                             <Setter Property="Padding"
                                     Value="0"/>
                             <Setter Property="Margin"
-                                    Value="0,0,0,4"/>
+                                    Value="0,0,0,2"/>
                             <Setter Property="Focusable"
                                     Value="True"/>
 
@@ -282,13 +282,24 @@
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBoxItem">
                                         <Border x:Name="Bd"
-                                                Background="{DynamicResource SurfaceBrush}"
-                                                CornerRadius="8"
-                                                Padding="12,10"
-                                                BorderThickness="1"
-                                                BorderBrush="Transparent"
+                                                Background="Transparent"
+                                                CornerRadius="6"
+                                                Padding="10,8"
                                                 SnapsToDevicePixels="True">
-                                            <ContentPresenter/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="3"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <Border x:Name="SelectionIndicator"
+                                                        Width="3"
+                                                        Background="Transparent"
+                                                        CornerRadius="2"/>
+
+                                                <ContentPresenter Grid.Column="1"
+                                                                  Margin="9,0,0,0"/>
+                                            </Grid>
                                         </Border>
 
                                         <ControlTemplate.Triggers>
@@ -296,7 +307,7 @@
                                                      Value="True">
                                                 <Setter TargetName="Bd"
                                                         Property="Background"
-                                                        Value="{DynamicResource SurfaceAltBrush}"/>
+                                                        Value="{DynamicResource SurfaceBrush}"/>
                                             </Trigger>
 
                                             <Trigger Property="IsSelected"
@@ -304,8 +315,8 @@
                                                 <Setter TargetName="Bd"
                                                         Property="Background"
                                                         Value="{DynamicResource SurfaceAltBrush}"/>
-                                                <Setter TargetName="Bd"
-                                                        Property="BorderBrush"
+                                                <Setter TargetName="SelectionIndicator"
+                                                        Property="Background"
                                                         Value="{DynamicResource AccentBrush}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
