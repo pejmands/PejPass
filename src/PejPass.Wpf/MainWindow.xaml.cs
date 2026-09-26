@@ -197,6 +197,11 @@ public partial class MainWindow : Window
         }
     }
 
+    private void MoreActionsButton_OnPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+    }
+
     private void MoreActionsButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button button || button.ContextMenu is null)
