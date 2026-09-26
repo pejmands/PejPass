@@ -12,6 +12,15 @@
         ShowInTaskbar="False"
         Background="{DynamicResource BgBrush}">
 
+    <Window.Resources>
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Margin" Value="0,8,0,12"/>
+        </Style>
+    </Window.Resources>
+
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
@@ -21,7 +30,10 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="0,0,12,0">
 
-                <!-- Title -->
+                <!-- Identity -->
+                <TextBlock Text="Identity"
+                           Style="{StaticResource SectionHeader}"/>
+
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -38,6 +50,277 @@
                                  HorizontalScrollBarVisibility="Auto"
                                  VerticalScrollBarVisibility="Disabled"/>
                     </StackPanel>
+
+                    <CheckBox Grid.Column="1"
+                              Content="Favorite"
+                              IsChecked="{Binding IsFavorite}"
+                              VerticalAlignment="Bottom"
+                              Margin="12,0,0,6"
+                              ToolTip="Pin this entry to the top of the list"/>
+                </Grid>
+
+                <TextBlock Text="Username"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,12,0,6"/>
+
+                <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="0,0,0,12"
+                         TextWrapping="NoWrap"
+                         HorizontalScrollBarVisibility="Auto"
+                         VerticalScrollBarVisibility="Disabled"/>
+
+                <TextBlock Text="URL"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,0,0,6"/>
+
+                <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="0,0,0,20"
+                         TextWrapping="NoWrap"
+                         HorizontalScrollBarVisibility="Auto"
+                         VerticalScrollBarVisibility="Disabled"/>
+
+                <!-- Password -->
+                <TextBlock Text="Password"
+                           Style="{StaticResource SectionHeader}"/>
+
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"
+                             FontFamily="Consolas"
+                             TextWrapping="NoWrap"
+                             HorizontalScrollBarVisibility="Auto"
+                             VerticalScrollBarVisibility="Disabled"/>
+
+                    <Button Grid.Column="1"
+                            Content="Generate"
+                            Margin="8,0,0,0"
+                            Padding="12,6"
+                            Height="32"
+                            Command="{Binding GeneratePasswordCommand}"
+                            ToolTip="Quick generate (20 chars, secure defaults)"/>
+
+                    <Button Grid.Column="2"
+                            Content="Options…"
+                            Margin="8,0,0,0"
+                            Padding="12,6"
+                            Height="32"
+                            Command="{Binding OpenAdvancedGeneratorCommand}"
+                            Background="{DynamicResource SurfaceAltBrush}"
+                            Foreground="{DynamicResource TextBrush}"
+                            ToolTip="Advanced password generator"/>
+                </Grid>
+
+                <!-- Password Strength -->
+                <Grid Margin="0,4,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ProgressBar Height="6"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding PasswordStrengthProgress}"
+                                 Background="{DynamicResource SurfaceAltBrush}"/>
+
+                    <TextBlock Grid.Column="1"
+                               Margin="10,0,0,0"
+                               FontSize="11"
+                               VerticalAlignment="Center"
+                               Text="{Binding PasswordStrengthLabel}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground"
+                                        Value="{DynamicResource MutedBrush}"/>
+
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PasswordStrengthLevel}"
+                                                 Value="1">
+                                        <Setter Property="Foreground"
+                                                Value="{DynamicResource DangerBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding PasswordStrengthLevel}"
+                                                 Value="2">
+                                        <Setter Property="Foreground"
+                                                Value="{DynamicResource DangerBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding PasswordStrengthLevel}"
+                                                 Value="3">
+                                        <Setter Property="Foreground"
+                                                Value="{DynamicResource WarningBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding PasswordStrengthLevel}"
+                                                 Value="4">
+                                        <Setter Property="Foreground"
+                                                Value="{DynamicResource SuccessBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding PasswordStrengthLevel}"
+                                                 Value="5">
+                                        <Setter Property="Foreground"
+                                                Value="{DynamicResource SuccessBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+
+                <!-- Two-factor authentication -->
+                <TextBlock Text="Two-factor authentication"
+                           Style="{StaticResource SectionHeader}"/>
+
+                <TextBlock Text="TOTP Secret (Base32)"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,0,0,6"/>
+
+                <TextBox Text="{Binding TotpSecret, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="0,0,0,6"
+                         FontFamily="Consolas"
+                         TextWrapping="NoWrap"
+                         HorizontalScrollBarVisibility="Auto"
+                         VerticalScrollBarVisibility="Disabled"
+                         ToolTip="Paste the authenticator secret key (Base32). Leave empty to disable TOTP."/>
+
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <Button Content="From image…"
+                            Command="{Binding ImportTotpFromFileCommand}"
+                            Padding="12,6"
+                            Height="32"
+                            Margin="0,0,8,0"
+                            Background="{DynamicResource SurfaceAltBrush}"
+                            Foreground="{DynamicResource TextBrush}"
+                            ToolTip="Decode TOTP QR code from an image file"/>
+                    <Button Content="From clipboard"
+                            Command="{Binding ImportTotpFromClipboardCommand}"
+                            Padding="12,6"
+                            Height="32"
+                            Background="{DynamicResource SurfaceAltBrush}"
+                            Foreground="{DynamicResource TextBrush}"
+                            ToolTip="Decode TOTP QR code from an image on the clipboard"/>
+                </StackPanel>
+
+                <TextBlock Text="{Binding TotpErrorMessage}"
+                           FontSize="11"
+                           Foreground="{DynamicResource DangerBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,4"
+                           Visibility="{Binding TotpErrorMessage, Converter={StaticResource NullOrEmptyToVis}}"/>
+
+                <TextBlock Text="Optional — used to generate 2FA codes in the main window"
+                           FontSize="11"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,0,0,20"/>
+
+                <!-- Organization -->
+                <TextBlock Text="Organization"
+                           Style="{StaticResource SectionHeader}"/>
+
+                <TextBlock Text="Tags (comma separated)"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,0,0,6"/>
+
+                <TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="0,0,0,6"
+                         TextWrapping="NoWrap"
+                         HorizontalScrollBarVisibility="Auto"
+                         VerticalScrollBarVisibility="Disabled"/>
+
+                <controls:TagChipStrip ItemsSource="{Binding SuggestedTags}"
+                                       ChipCommand="{Binding ToggleSuggestedTagCommand}"
+                                       Margin="0,0,0,20"/>
+
+                <!-- Additional information -->
+                <TextBlock Text="Additional information"
+                           Style="{StaticResource SectionHeader}"/>
+
+                <!-- Custom Fields Header -->
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Custom Fields"
+                               Foreground="{DynamicResource MutedBrush}"
+                               VerticalAlignment="Center"/>
+
+                    <Button Grid.Column="1"
+                            Content="+ Add Field"
+                            Command="{Binding AddCustomFieldCommand}"
+                            Padding="10,4"
+                            Height="32"
+                            FontSize="12"/>
+                </Grid>
+
+                <!-- Custom Fields -->
+                <ItemsControl ItemsSource="{Binding CustomFields}"
+                              Margin="0,0,0,20">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Field name"
+                                         Margin="0,0,6,0"
+                                         TextWrapping="NoWrap"
+                                         HorizontalScrollBarVisibility="Auto"
+                                         VerticalScrollBarVisibility="Disabled"/>
+
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Field value"
+                                         Margin="2,0,6,0"
+                                         TextWrapping="NoWrap"
+                                         HorizontalScrollBarVisibility="Auto"
+                                         VerticalScrollBarVisibility="Disabled"/>
+
+                                <CheckBox Grid.Column="2"
+                                          IsChecked="{Binding IsSecret}"
+                                          Content="Secret"
+                                          Foreground="{DynamicResource MutedBrush}"
+                                          VerticalAlignment="Center"
+                                          Margin="4,0,10,0"
+                                          ToolTip="Hide value in the main window like a password"/>
+
+                                <Button Grid.Column="3"
+                                        Content="✕"
+                                        Command="{Binding DataContext.RemoveCustomFieldCommand,
+                                                          RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}"
+                                        Padding="8,4"
+                                        Height="32"
+                                        Background="{DynamicResource DangerBrush}"
+                                        ToolTip="Remove field"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Notes -->
+                <TextBlock Text="Notes"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,0,0,6"/>
+
+                <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
+                         Height="100"
+                         MaxHeight="160"
+                         TextWrapping="Wrap"
+                         AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Disabled"/>
+
+            </StackPanel>
 
                     <CheckBox Grid.Column="1"
                               Content="Favorite"
