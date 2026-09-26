@@ -23,7 +23,8 @@
                        FontWeight="Bold"
                        Foreground="{DynamicResource TextBrush}"/>
 
-            <Button Content="Empty Trash"
+            <Button Style="{StaticResource DestructiveButton}"
+                    Content="Empty Trash"
                     Command="{Binding EmptyTrashCommand}"
                     HorizontalAlignment="Right"
                     Background="{DynamicResource DangerBrush}"/>
@@ -137,6 +138,7 @@
                         </StackPanel>
 
                         <Button Grid.Column="2"
+                                Style="{StaticResource SecondaryButton}"
                                 Content="Restore"
                                 Height="32"
                                 Margin="8,0,0,0"
@@ -145,6 +147,7 @@
                                 CommandParameter="{Binding}"/>
 
                         <Button Grid.Column="3"
+                                Style="{StaticResource DestructiveButton}"
                                 Content="Delete permanently"
                                 Height="32"
                                 Margin="8,0,0,0"
@@ -166,7 +169,8 @@
                        Foreground="{DynamicResource MutedBrush}"
                        VerticalAlignment="Center"/>
 
-            <Button Content="Close"
+            <Button Style="{StaticResource SecondaryButton}"
+                    Content="Close"
                     HorizontalAlignment="Right"
                     Click="Close_Click"
                     Background="{DynamicResource SurfaceAltBrush}"
