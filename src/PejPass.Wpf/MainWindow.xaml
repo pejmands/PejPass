@@ -166,12 +166,12 @@
                         </Grid>
 
                         <Button Grid.Column="1"
-                                Content="+"
+                                Content="Add Entry"
                                 Command="{Binding AddEntryCommand}"
-                                Width="44"
                                 Height="40"
-                                FontSize="18"
-                                FontWeight="Bold"
+                                Padding="14,0"
+                                FontSize="12"
+                                FontWeight="SemiBold"
                                 ToolTip="Add entry (Ctrl+N)"/>
                     </Grid>
                 </Border>
