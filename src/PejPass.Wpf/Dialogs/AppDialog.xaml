@@ -28,12 +28,10 @@
                 <Button x:Name="TertiaryButton" Content="Cancel" Click="Tertiary_Click"
                         Margin="0,0,8,0" Padding="16,8"
                         Style="{StaticResource SecondaryButton}"
-                        Foreground="{DynamicResource TextBrush}"
                         Visibility="Collapsed"/>
                 <Button x:Name="SecondaryButton" Content="No" Click="Secondary_Click"
                         Margin="0,0,8,0" Padding="16,8"
-                        Background="{DynamicResource SurfaceAltBrush}"
-                        Foreground="{DynamicResource TextBrush}"
+                        Style="{StaticResource SecondaryButton}"
                         Visibility="Collapsed"/>
                 <Button x:Name="PrimaryButton" Content="OK" Click="Primary_Click"
                         Padding="16,8" IsDefault="True" Style="{StaticResource PrimaryButton}"/>
