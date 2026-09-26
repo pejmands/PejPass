@@ -27,7 +27,8 @@
                        Foreground="{DynamicResource TextBrush}"/>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Cancel"
+                <Button Style="{StaticResource SecondaryButton}"
+                        Content="Cancel"
                         Command="{Binding CancelScanCommand}"
                         Width="70"
                         Background="{DynamicResource SurfaceAltBrush}"
@@ -44,7 +45,8 @@
                         </Style>
                     </Button.Style>
                 </Button>
-                <Button Content="Rescan"
+                <Button Style="{StaticResource SecondaryButton}"
+                        Content="Rescan"
                         Width="70"
                         Command="{Binding RefreshCommand}"
                         Background="{DynamicResource SurfaceAltBrush}"
@@ -272,6 +274,7 @@
                             </StackPanel>
 
                             <Button Grid.Column="2"
+                                    Style="{StaticResource SecondaryButton}"
                                     Content="Open"
                                     Height="32"
                                     MinWidth="64"
@@ -288,6 +291,7 @@
 
         <!-- Footer -->
         <Button Grid.Row="4"
+                Style="{StaticResource SecondaryButton}"
                 Content="Close"
                 HorizontalAlignment="Right"
                 Margin="0,16,0,0"
