@@ -192,6 +192,7 @@
                     </StackPanel>
 
                     <Button Grid.Column="1"
+                            Style="{StaticResource SecondaryButton}"
                             Content="Change password…"
                             Command="{Binding ChangeMasterPasswordCommand}"
                             HorizontalAlignment="Left"
@@ -262,12 +263,14 @@
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Margin="0,16,0,0">
-            <Button Content="Cancel"
+            <Button Style="{StaticResource SecondaryButton}"
+                    Content="Cancel"
                     Command="{Binding CancelCommand}"
                     Margin="0,0,8,0"
                     Background="{DynamicResource SurfaceAltBrush}"
                     Foreground="{DynamicResource TextBrush}"/>
-            <Button Content="Save"
+            <Button Style="{StaticResource PrimaryButton}"
+                    Content="Save"
                     Command="{Binding SaveCommand}"
                     IsDefault="True"/>
         </StackPanel>
