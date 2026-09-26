@@ -393,12 +393,42 @@
                                                     </CheckBox>
 
                                                     <!-- Field name -->
-                                                    <TextBlock Grid.Column="1"
-                                                               Text="{Binding Name}"
-                                                               FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource TextBrush}"
-                                                               VerticalAlignment="Top"
-                                                               Margin="0,0,12,0"/>
+                                                    <Grid Grid.Column="1">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource TextBrush}"
+                                                                   VerticalAlignment="Top"
+                                                                   Margin="0,0,6,0"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <Button Grid.Column="1"
+                                                                Content="&#xE890;"
+                                                                Command="{Binding ToggleSecretVisibilityCommand}"
+                                                                Width="24"
+                                                                Height="24"
+                                                                Padding="0"
+                                                                FontFamily="Segoe MDL2 Assets"
+                                                                FontSize="13"
+                                                                Foreground="{DynamicResource AccentBrush}"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Cursor="Hand">
+                                                            <Button.Style>
+                                                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Setter Property="ToolTip" Value="Show or hide secret"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsSecret}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Button.Style>
+                                                        </Button>
+                                                    </Grid>
 
                                                     <!-- Current -->
                                                     <Grid Grid.Column="2">
@@ -411,29 +441,6 @@
                                                                    TextWrapping="Wrap"
                                                                    VerticalAlignment="Top"
                                                                    Margin="0,0,8,0"/>
-                                                        <Button Grid.Column="1"
-                                                                Content="&#xE890;"
-                                                                Command="{Binding ToggleSecretVisibilityCommand}"
-                                                                Width="28"
-                                                                Height="28"
-                                                                Padding="0"
-                                                                FontFamily="Segoe MDL2 Assets"
-                                                                FontSize="13"
-                                                                Background="Transparent"
-                                                                BorderThickness="0"
-                                                                Cursor="Hand"
-                                                                ToolTip="Show or hide secret">
-                                                            <Button.Style>
-                                                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsSecret}" Value="True">
-                                                                            <Setter Property="Visibility" Value="Visible"/>
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </Button.Style>
-                                                        </Button>
                                                     </Grid>
 
                                                     <!-- Snapshot -->
