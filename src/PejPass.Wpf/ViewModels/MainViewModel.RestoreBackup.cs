@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PejPass.Domain.Entities;
 using PejPass.Wpf.Dialogs;
+using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
 
 namespace PejPass.Wpf.ViewModels;
