@@ -132,6 +132,12 @@ public partial class EntryEditorViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ToggleFavorite()
+    {
+        IsFavorite = !IsFavorite;
+    }
+
+    [RelayCommand]
     private void ImportTotpFromFile()
     {
         var dlg = new OpenFileDialog
