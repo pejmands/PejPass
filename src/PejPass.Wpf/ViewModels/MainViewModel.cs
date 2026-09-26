@@ -539,7 +539,7 @@ public partial class MainViewModel : ObservableObject
         var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
         _clipboard.CopyWithTimeout(entry.Password, timeout);
 
-        StatusMessage = $"Password copied. Clears in {_settings.ClipboardClearSeconds}s.";
+        SnackbarService.Show($"Password copied. Clears in {_settings.ClipboardClearSeconds}s.");
         ResetAutoLockTimer();
     }
 
