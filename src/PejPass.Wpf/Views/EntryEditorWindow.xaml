@@ -176,7 +176,8 @@
                     </Border>
                 </Grid>
 
-                <Button Content="Generate password"
+                <Button Style="{StaticResource SecondaryButton}"
+                        Content="Generate password"
                         Command="{Binding OpenAdvancedGeneratorCommand}"
                         HorizontalAlignment="Left"
                         Padding="14,7"
@@ -251,7 +252,8 @@
                            Margin="0,0,0,6"/>
 
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                    <Button Content="From image"
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Content="From image"
                             Command="{Binding ImportTotpFromFileCommand}"
                             Padding="12,6"
                             Height="32"
@@ -259,7 +261,8 @@
                             Background="{DynamicResource SurfaceAltBrush}"
                             Foreground="{DynamicResource TextBrush}"
                             ToolTip="Import a QR code from an image file"/>
-                    <Button Content="From clipboard"
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Content="From clipboard"
                             Command="{Binding ImportTotpFromClipboardCommand}"
                             Padding="12,6"
                             Height="32"
@@ -326,6 +329,7 @@
                                VerticalAlignment="Center"/>
 
                     <Button Grid.Column="1"
+                            Style="{StaticResource SecondaryButton}"
                             Content="+ Add Field"
                             Command="{Binding AddCustomFieldCommand}"
                             Padding="10,4"
@@ -404,13 +408,15 @@
                     HorizontalAlignment="Right"
                     Margin="0,16,0,0">
 
-            <Button Content="Cancel"
+            <Button Style="{StaticResource SecondaryButton}"
+                    Content="Cancel"
                     Click="Cancel_Click"
                     Margin="0,0,8,0"
                     Background="{DynamicResource SurfaceBrush}"
                     Foreground="{DynamicResource TextBrush}"/>
 
-            <Button Content="Save"
+            <Button Style="{StaticResource PrimaryButton}"
+                    Content="Save"
                     Click="Save_Click"
                     IsDefault="True"/>
         </StackPanel>
