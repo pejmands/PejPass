@@ -116,6 +116,8 @@ public partial class VaultHealthViewModel : ObservableObject
         var n = _entries.Count;
         if (n == 0)
         {
+            HealthScore = 100;
+            HealthLabel = "Excellent";
             ScanProgress = 100;
             ScanStatus = "No entries to scan.";
             IsScanning = false;
@@ -227,6 +229,7 @@ public partial class VaultHealthViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
+            UpdateHealthSummary();
             ScanStatus = TotalIssues == 0
                 ? "Scan cancelled."
                 : $"Scan cancelled — {TotalIssues} issue(s) found so far.";
@@ -278,17 +281,35 @@ public partial class VaultHealthViewModel : ObservableObject
 
     private void UpdateHealthSummary()
     {
+        if (_allIssues.Count == 0)
+        {
+            HealthScore = 100;
+            HealthLabel = "Excellent";
+            return;
+        }
+
         var entryCount = Math.Max(1, _entries.Count);
 
-        var weightedIssues =
-            WeakCount * 4 +
-            DuplicateCount * 3 +
-            UsernameEqualsPasswordCount * 3 +
-            MissingTotpCount +
-            StaleCount;
+        // Score each affected entry once. Multiple issues on the same entry
+        // increase its penalty, but cannot count as several fully independent entries.
+        var penalty = _allIssues
+            .GroupBy(issue => issue.EntryId)
+            .Sum(group =>
+            {
+                var severities = group.Select(GetIssueSeverity).OrderByDescending(x => x).ToList();
+                var entryPenalty = severities[0];
 
-        var penalty = weightedIssues * 100.0 / entryCount;
-        HealthScore = Math.Clamp((int)Math.Round(100 - penalty), 0, 100);
+                // Additional issue types on the same entry matter, but less than
+                // the primary issue, preventing duplicate counting from dominating.
+                entryPenalty += (severities.Count - 1) * 0.5;
+
+                return Math.Min(entryPenalty, 5.0);
+            });
+
+        HealthScore = Math.Clamp(
+            (int)Math.Round(100 - penalty * 100.0 / (entryCount * 4.0)),
+            0,
+            100);
 
         HealthLabel = HealthScore switch
         {
@@ -298,6 +319,16 @@ public partial class VaultHealthViewModel : ObservableObject
             _ => "At risk"
         };
     }
+
+    private static double GetIssueSeverity(HealthIssue issue) => issue.Kind switch
+    {
+        HealthIssueKind.WeakPassword => 4.0,
+        HealthIssueKind.DuplicatePassword => 3.0,
+        HealthIssueKind.UsernameEqualsPassword => 3.0,
+        HealthIssueKind.MissingTotp => 1.0,
+        HealthIssueKind.StalePassword => 1.0,
+        _ => 0.0
+    };
 
     private void AddIssue(HealthIssue issue, int filter)
     {
