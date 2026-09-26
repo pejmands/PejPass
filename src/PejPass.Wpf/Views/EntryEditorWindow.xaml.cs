@@ -2,6 +2,7 @@ using PejPass.Domain.Entities;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -19,6 +20,8 @@ public partial class EntryEditorWindow : Window
         App.PrepareCustomChrome(this);
 
         DataContext = viewModel;
+        viewModel.PropertyChanged += ViewModel_PropertyChanged;
+        PasswordBox.Password = viewModel.Password;
         Title = viewModel.Original is null ? "Add Entry" : "Edit Entry";
 
         Loaded += (_, _) =>
@@ -67,10 +70,22 @@ public partial class EntryEditorWindow : Window
         }
     }
 
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(EntryEditorViewModel.Password) &&
+            PasswordBox.Password != (sender as EntryEditorViewModel)?.Password)
+        {
+            PasswordBox.Password = (sender as EntryEditorViewModel)?.Password ?? string.Empty;
+        }
+    }
+
     private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
-        if (DataContext is EntryEditorViewModel vm)
+        if (DataContext is EntryEditorViewModel vm &&
+            vm.Password != PasswordBox.Password)
+        {
             vm.Password = PasswordBox.Password;
+        }
     }
 
     private void PasswordVisibilityButton_Click(object sender, RoutedEventArgs e)
@@ -96,6 +111,14 @@ public partial class EntryEditorWindow : Window
             PasswordBox.Focus();
             PasswordBox.SelectAll();
         }
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        if (DataContext is EntryEditorViewModel vm)
+            vm.PropertyChanged -= ViewModel_PropertyChanged;
+
+        base.OnClosed(e);
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
