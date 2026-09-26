@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using PejPass.Application.Interfaces;
 using PejPass.Wpf.Dialogs;
+using PejPass.Wpf.Services;
 
 namespace PejPass.Wpf.ViewModels;
 
