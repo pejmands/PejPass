@@ -174,35 +174,39 @@
             </StackPanel>
         </Grid>
 
-        <!-- Scan status and filter -->
-        <DockPanel Grid.Row="3"
-                   Margin="0,0,0,12">
-
-            <ComboBox DockPanel.Dock="Right"
-                      Width="200"
-                      Height="40"
-                      ItemsSource="{Binding FilterOptions}"
-                      SelectedIndex="{Binding SelectedFilterIndex}"
-                      IsEnabled="{Binding IsReady}"/>
-
-            <StackPanel Margin="0,0,12,0">
-                <TextBlock Text="{Binding ScanStatus}"
-                           FontSize="12"
-                           Foreground="{DynamicResource MutedBrush}"
-                           Margin="0,0,0,4"/>
-
-                <ProgressBar Height="6"
-                             Minimum="0"
-                             Maximum="100"
-                             Value="{Binding ScanProgress}"
-                             Background="{DynamicResource SurfaceAltBrush}"/>
-            </StackPanel>
-        </DockPanel>
-
         <!-- Issues -->
-        <DockPanel Grid.Row="3"
-                   Margin="0,70,0,0">
-            <ListBox ItemsSource="{Binding Issues}"
+        <Grid Grid.Row="3">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Scan status and filter -->
+            <DockPanel Grid.Row="0"
+                       Margin="0,0,0,12">
+                <ComboBox DockPanel.Dock="Right"
+                          Width="200"
+                          Height="40"
+                          ItemsSource="{Binding FilterOptions}"
+                          SelectedIndex="{Binding SelectedFilterIndex}"
+                          IsEnabled="{Binding IsReady}"/>
+
+                <StackPanel Margin="0,0,12,0">
+                    <TextBlock Text="{Binding ScanStatus}"
+                               FontSize="12"
+                               Foreground="{DynamicResource MutedBrush}"
+                               Margin="0,0,0,4"/>
+
+                    <ProgressBar Height="6"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding ScanProgress}"
+                                 Background="{DynamicResource SurfaceAltBrush}"/>
+                </StackPanel>
+            </DockPanel>
+
+            <ListBox Grid.Row="1"
+                     ItemsSource="{Binding Issues}"
                      Background="Transparent"
                      BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -275,7 +279,7 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
-        </DockPanel>
+        </Grid>
 
         <!-- Footer -->
         <Button Grid.Row="4"
