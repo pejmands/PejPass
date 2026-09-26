@@ -90,6 +90,33 @@
                 </Style.Triggers>
             </Style>
 
+            <!-- Compact icon buttons -->
+            <Style x:Key="ToolbarIconButton" TargetType="Button">
+                <Setter Property="Width" Value="36"/>
+                <Setter Property="Height" Value="36"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+                <Setter Property="FontSize" Value="15"/>
+                <Setter Property="FontWeight" Value="Normal"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter Property="Opacity" Value="0.82"/></Trigger>
+                    <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4"/><Setter Property="Cursor" Value="Arrow"/></Trigger>
+                </Style.Triggers>
+            </Style>
+
             <!-- TextBox -->
             <Style TargetType="TextBox">
                 <Setter Property="Height" Value="40"/>
