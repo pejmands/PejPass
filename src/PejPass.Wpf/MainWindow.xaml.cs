@@ -12,6 +12,10 @@ namespace PejPass.Wpf;
 public partial class MainWindow : Window
 {
     private readonly VaultSession _vaultSession;
+    private readonly Popup _snackbarPopup;
+    private readonly Border _snackbarBorder;
+    private readonly TextBlock _snackbarText;
+    private readonly DispatcherTimer _snackbarTimer;
 
     public MainWindow(MainViewModel viewModel, VaultSession vaultSession)
     {
@@ -19,6 +23,40 @@ public partial class MainWindow : Window
         DataContext = viewModel;
 
         _vaultSession = vaultSession;
+
+        _snackbarText = new TextBlock
+        {
+            FontSize = 13,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = (Brush)FindResource("TextBrush")
+        };
+
+        _snackbarBorder = new Border
+        {
+            Background = (Brush)FindResource("SurfaceAltBrush"),
+            BorderBrush = (Brush)FindResource("SuccessBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(14, 10),
+            Width = 360,
+            Child = _snackbarText
+        };
+
+        _snackbarPopup = new Popup
+        {
+            PlacementTarget = this,
+            Placement = PlacementMode.Bottom,
+            AllowsTransparency = true,
+            StaysOpen = true,
+            IsHitTestVisible = false,
+            Child = _snackbarBorder
+        };
+
+        _snackbarTimer = new DispatcherTimer();
+        _snackbarTimer.Tick += (_, _) => HideSnackbar();
+
+        SizeChanged += (_, _) => UpdateSnackbarPosition();
+        SnackbarService.Shown += OnSnackbarShown;
 
         viewModel.PropertyChanged += (_, e) =>
         {
@@ -49,6 +87,9 @@ public partial class MainWindow : Window
 
         Closed += (_, _) =>
         {
+            SnackbarService.Shown -= OnSnackbarShown;
+            _snackbarTimer.Stop();
+            _snackbarPopup.IsOpen = false;
             viewModel.StopBackgroundTimers();
 
             if (System.Windows.Application.Current?.Windows.OfType<LoginWindow>().Any(w => w.IsVisible) == true)
@@ -195,6 +236,36 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 break;
         }
+    }
+
+    private void OnSnackbarShown(object? sender, SnackbarEventArgs e)
+    {
+        _snackbarText.Text = e.Message;
+        _snackbarBorder.BorderBrush = e.Kind switch
+        {
+            SnackbarKind.Info => (Brush)FindResource("AccentBrush"),
+            SnackbarKind.Warning => (Brush)FindResource("WarningBrush"),
+            SnackbarKind.Error => (Brush)FindResource("DangerBrush"),
+            _ => (Brush)FindResource("SuccessBrush")
+        };
+
+        UpdateSnackbarPosition();
+        _snackbarTimer.Stop();
+        _snackbarTimer.Interval = e.Duration;
+        _snackbarTimer.Start();
+        _snackbarPopup.IsOpen = true;
+    }
+
+    private void HideSnackbar()
+    {
+        _snackbarTimer.Stop();
+        _snackbarPopup.IsOpen = false;
+    }
+
+    private void UpdateSnackbarPosition()
+    {
+        _snackbarPopup.HorizontalOffset = Math.Max(0, (ActualWidth - 360) / 2);
+        _snackbarPopup.VerticalOffset = -16;
     }
 
     private void MoreActionsButton_OnPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
