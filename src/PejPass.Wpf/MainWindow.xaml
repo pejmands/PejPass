@@ -65,47 +65,39 @@
                             Background="{DynamicResource BorderBrush}"
                             Margin="0,0,10,0"/>
 
-                    <Button Style="{StaticResource ToolbarIconButton}"
+                    <Button x:Name="MoreActionsButton"
+                            Style="{StaticResource ToolbarIconButton}"
                             Content="&#xE712;"
                             Margin="0,0,6,0"
                             ToolTip="More actions"
                             Click="MoreActionsButton_Click"
                             PreviewMouseRightButtonDown="MoreActionsButton_OnPreviewMouseRightButtonDown">
-                        <Button.ContextMenu>
-                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
-                                         Style="{StaticResource ToolbarContextMenu}">
-                                <MenuItem Header="Backup"
-                                          Command="{Binding ExportBackupCommand}"
-                                          Style="{StaticResource ToolbarMenuItem}">
-                                    <MenuItem.Icon>
-                                        <TextBlock Text="&#xE72F;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Restore"
-                                          Command="{Binding RestoreBackupCommand}"
-                                          Style="{StaticResource ToolbarMenuItem}">
-                                    <MenuItem.Icon>
-                                        <TextBlock Text="&#xE777;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <Separator Margin="4,5"
-                                           Background="{DynamicResource BorderBrush}"/>
-                                <MenuItem Header="Import CSV"
-                                          Command="{Binding ImportCommand}"
-                                          Style="{StaticResource ToolbarMenuItem}">
-                                    <MenuItem.Icon>
-                                        <TextBlock Text="&#xE8B5;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Export CSV"
-                                          Command="{Binding ExportCsvCommand}"
-                                          Style="{StaticResource ToolbarMenuItem}">
-                                    <MenuItem.Icon>
-                                        <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                            </ContextMenu>
-                        </Button.ContextMenu>
+                        <Popup x:Name="MoreActionsPopup"
+                               PlacementTarget="{Binding ElementName=MoreActionsButton}"
+                               Placement="Bottom"
+                               HorizontalOffset="0"
+                               VerticalOffset="6"
+                               StaysOpen="False"
+                               AllowsTransparency="True">
+                            <Border Style="{StaticResource ToolbarOverflowBorder}">
+                                <StackPanel>
+                                    <MenuItem Header="Backup"
+                                              Command="{Binding PlacementTarget.DataContext.ExportBackupCommand, ElementName=MoreActionsPopup}"
+                                              Style="{StaticResource ToolbarMenuItem}"/>
+                                    <MenuItem Header="Restore"
+                                              Command="{Binding PlacementTarget.DataContext.RestoreBackupCommand, ElementName=MoreActionsPopup}"
+                                              Style="{StaticResource ToolbarMenuItem}"/>
+                                    <Separator Margin="4,5"
+                                               Background="{DynamicResource BorderBrush}"/>
+                                    <MenuItem Header="Import CSV"
+                                              Command="{Binding PlacementTarget.DataContext.ImportCommand, ElementName=MoreActionsPopup}"
+                                              Style="{StaticResource ToolbarMenuItem}"/>
+                                    <MenuItem Header="Export CSV"
+                                              Command="{Binding PlacementTarget.DataContext.ExportCsvCommand, ElementName=MoreActionsPopup}"
+                                              Style="{StaticResource ToolbarMenuItem}"/>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
                     </Button>
 
                     <Button Style="{StaticResource ToolbarIconButton}"
