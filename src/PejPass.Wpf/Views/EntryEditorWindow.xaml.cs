@@ -109,7 +109,8 @@ public partial class EntryEditorWindow : Window
             PasswordBox.Visibility = Visibility.Visible;
             PasswordVisibilityButton.ToolTip = "Show password";
             PasswordBox.Focus();
-            PasswordBox.SelectAll();
+            PasswordBox.Focus();
+            PasswordBox.Password = vm.Password;
         }
     }
 
