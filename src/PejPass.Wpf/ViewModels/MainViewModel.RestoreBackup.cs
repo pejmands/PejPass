@@ -136,12 +136,8 @@ public partial class MainViewModel
                 ApplyFilter(preserveSelectionId: null);
                 await SaveVaultAsync();
 
-                StatusMessage = $"Vault restored from backup ({currentVault.Entries.Count} entries).";
-                DialogService.Success(
-                    $"Current vault replaced with backup data.\n\n" +
-                    $"{currentVault.Entries.Count} entries · {currentVault.Trash.Count} in trash\n\n" +
-                    $"Saved to:\n{currentPath}",
-                    "Restore complete");
+                SnackbarService.Show(
+                    $"Vault restored from backup · {currentVault.Entries.Count} entries · {currentVault.Trash.Count} in trash.");
             }
             else
             {
@@ -264,7 +260,11 @@ public partial class MainViewModel
                     lines.Add("Note: trash affected this merge (see counts above).");
                 }
 
-                DialogService.Success(string.Join('\n', lines), "Restore complete");
+                SnackbarService.Show(
+                    totalChanged > 0
+                        ? $"Merge finished · +{totalChanged} changed · {totalSkipped} skipped."
+                        : "Merge finished — nothing new to add.",
+                    totalChanged > 0 ? SnackbarKind.Success : SnackbarKind.Info);
             }
 
             ResetAutoLockTimer();
