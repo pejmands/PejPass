@@ -88,9 +88,9 @@ public partial class TrashViewModel : ObservableObject
         if (row is null) return;
 
         if (!DialogService.Confirm(
-                $"Permanently delete \"{row.Title}\"?\n\nThis cannot be undone.",
-                "Purge",
-                yesText: "Purge",
+                $"This entry will be permanently deleted and cannot be recovered.\n\n\"{row.Title}\"",
+                "Delete permanently",
+                yesText: "Delete permanently",
                 noText: "Cancel"))
             return;
 
@@ -110,9 +110,9 @@ public partial class TrashViewModel : ObservableObject
         if (_all.Count == 0) return;
 
         if (!DialogService.Confirm(
-                $"Permanently delete all {_all.Count} item(s) in Trash?\n\nThis cannot be undone.",
-                "Empty Trash",
-                yesText: "Empty Trash",
+                $"All {_all.Count} item(s) in Trash will be permanently deleted and cannot be recovered.",
+                "Empty Trash permanently",
+                yesText: "Delete all permanently",
                 noText: "Cancel"))
             return;
 
