@@ -510,6 +510,8 @@ public sealed class HistoryRow(
 
     public IReadOnlyList<string> ChangedFields { get; } = changedFields;
 
+    public bool IsExpanded { get; set; }
+
     public string ChangeSummary { get; } = changedFields.Count switch
     {
         0 => "No field changes detected",
@@ -531,8 +533,7 @@ public sealed class HistoryRow(
         if (date == today.AddDays(-1))
             return $"Yesterday · {local:HH:mm}";
 
-        return local.DayOfYear == DateTimeOffset.Now.DayOfYear &&
-               local.Year == DateTimeOffset.Now.Year
+        return local.Year == DateTimeOffset.Now.Year
             ? local.ToString("MMM d · HH:mm")
             : local.ToString("MMM d, yyyy · HH:mm");
     }
