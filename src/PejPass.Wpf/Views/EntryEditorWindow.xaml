@@ -255,22 +255,28 @@
                          VerticalScrollBarVisibility="Disabled"
                          ToolTip="Paste the authenticator secret key (Base32). Leave empty to disable TOTP."/>
 
+                <TextBlock Text="Import QR code"
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,0,0,6"/>
+
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                    <Button Content="From image…"
+                    <Button Content="From image"
                             Command="{Binding ImportTotpFromFileCommand}"
                             Padding="12,6"
                             Height="32"
                             Margin="0,0,8,0"
                             Background="{DynamicResource SurfaceAltBrush}"
                             Foreground="{DynamicResource TextBrush}"
-                            ToolTip="Decode TOTP QR code from an image file"/>
+                            ToolTip="Import a QR code from an image file"/>
                     <Button Content="From clipboard"
                             Command="{Binding ImportTotpFromClipboardCommand}"
                             Padding="12,6"
                             Height="32"
                             Background="{DynamicResource SurfaceAltBrush}"
                             Foreground="{DynamicResource TextBrush}"
-                            ToolTip="Decode TOTP QR code from an image on the clipboard"/>
+                            ToolTip="Import a QR code image from the clipboard"/>
                 </StackPanel>
 
                 <TextBlock Text="{Binding TotpErrorMessage}"
