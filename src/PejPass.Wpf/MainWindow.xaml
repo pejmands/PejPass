@@ -772,5 +772,55 @@
                 </ScrollViewer>
             </Grid>
         </Grid>
-    </DockPanel>
+        </DockPanel>
+
+        <Border x:Name="SnackbarBorder"
+                Width="360"
+                MinHeight="54"
+                MaxHeight="100"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Margin="0,0,24,24"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource SuccessBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Visibility="Collapsed"
+                IsHitTestVisible="False">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="4"/>
+                    <ColumnDefinition Width="42"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border x:Name="SnackbarAccent"
+                        Grid.Column="0"
+                        Background="{DynamicResource SuccessBrush}"
+                        CornerRadius="8,0,0,8"/>
+                <Border Grid.Column="1"
+                        Width="30"
+                        Height="30"
+                        Margin="12,0,0,0"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Background="{DynamicResource SurfaceAltBrush}"
+                        CornerRadius="15">
+                    <TextBlock x:Name="SnackbarIcon"
+                               Text="&#xE73E;"
+                               FontFamily="Segoe MDL2 Assets"
+                               FontSize="13"
+                               Foreground="{DynamicResource SuccessBrush}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock x:Name="SnackbarText"
+                           Grid.Column="2"
+                           Margin="4,11,14,11"
+                           FontSize="13"
+                           Foreground="{DynamicResource TextBrush}"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>
