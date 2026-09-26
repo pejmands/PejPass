@@ -35,13 +35,13 @@ public partial class MainWindow : Window
                 or nameof(MainViewModel.SelectedEntry))
             {
                 Dispatcher.BeginInvoke(AttachNotesScrollChain,
-                    System.Windows.Threading.DispatcherPriority.Loaded);
+                    DispatcherPriority.Loaded);
             }
 
             if (e.PropertyName is nameof(MainViewModel.ShowTagFilters))
             {
                 Dispatcher.BeginInvoke(AttachTagFilterMouseWheel,
-                    System.Windows.Threading.DispatcherPriority.Loaded);
+                    DispatcherPriority.Loaded);
             }
         };
 
@@ -77,7 +77,7 @@ public partial class MainWindow : Window
                 EntryList.ScrollIntoView(viewModel.SelectedEntry);
                 EntryList.UpdateLayout();
                 EntryList.ScrollIntoView(viewModel.SelectedEntry);
-            }, System.Windows.Threading.DispatcherPriority.Loaded);
+            }, DispatcherPriority.Loaded);
         };
 
         PreviewKeyDown += OnPreviewKeyDown;
@@ -97,7 +97,7 @@ public partial class MainWindow : Window
             {
                 AttachTagFilterMouseWheel();
                 AttachNotesScrollChain();
-            }, System.Windows.Threading.DispatcherPriority.Loaded);
+            }, DispatcherPriority.Loaded);
         };
     }
 
