@@ -3,6 +3,7 @@ using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using System.ComponentModel;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -12,17 +13,49 @@ namespace PejPass.Wpf.Views;
 
 public partial class EntryEditorWindow : Window
 {
+    private static readonly PropertyInfo PasswordSelectionProperty =
+        typeof(PasswordBox).GetProperty(
+            "Selection",
+            BindingFlags.Instance | BindingFlags.NonPublic)
+        ?? throw new InvalidOperationException("PasswordBox.Selection was not found.");
+
+    private static readonly MethodInfo PasswordSelectMethod =
+        typeof(PasswordBox).GetMethod(
+            "Select",
+            BindingFlags.Instance | BindingFlags.NonPublic)
+        ?? throw new InvalidOperationException("PasswordBox.Select was not found.");
+
+    private static readonly Type TextRangeType =
+        typeof(PasswordBox).Assembly.GetType("System.Windows.Documents.ITextRange")
+        ?? throw new InvalidOperationException("ITextRange was not found.");
+
+    private static readonly PropertyInfo TextRangeStartProperty =
+        TextRangeType.GetProperty("Start")
+        ?? throw new InvalidOperationException("ITextRange.Start was not found.");
+
+    private static readonly PropertyInfo TextRangeEndProperty =
+        TextRangeType.GetProperty("End")
+        ?? throw new InvalidOperationException("ITextRange.End was not found.");
+
+    private static readonly PropertyInfo TextPointerOffsetProperty =
+        TextRangeStartProperty.PropertyType.GetProperty(
+            "Offset",
+            BindingFlags.Instance | BindingFlags.NonPublic)
+        ?? throw new InvalidOperationException("TextPointer.Offset was not found.");
+
     public VaultEntry? Result { get; private set; }
 
     public EntryEditorWindow(EntryEditorViewModel viewModel)
     {
         InitializeComponent();
         App.PrepareCustomChrome(this);
+        App.SetCustomWindowTitle(
+            this,
+            viewModel.Original is null ? "Add Entry" : "Edit Entry");
 
         DataContext = viewModel;
         viewModel.PropertyChanged += ViewModel_PropertyChanged;
         PasswordBox.Password = viewModel.Password;
-        Title = viewModel.Original is null ? "Add Entry" : "Edit Entry";
 
         Loaded += (_, _) =>
             Dispatcher.BeginInvoke(AttachNotesScrollChain, DispatcherPriority.Loaded);
@@ -95,24 +128,59 @@ public partial class EntryEditorWindow : Window
 
         if (PasswordBox.Visibility == Visibility.Visible)
         {
+            var selection = GetPasswordBoxSelection();
+
             PasswordTextBox.Text = vm.Password;
             PasswordBox.Visibility = Visibility.Collapsed;
             PasswordTextBox.Visibility = Visibility.Visible;
-            PasswordVisibilityButton.ToolTip = "Hide password";
+
             PasswordTextBox.Focus();
-            PasswordTextBox.CaretIndex = PasswordTextBox.Text.Length;
+            PasswordTextBox.Select(selection.Start, selection.Length);
+            PasswordVisibilityButton.ToolTip = "Hide password";
         }
         else
         {
+            var selectionStart = PasswordTextBox.SelectionStart;
+            var selectionLength = PasswordTextBox.SelectionLength;
+
             PasswordBox.Password = vm.Password;
             PasswordTextBox.Visibility = Visibility.Collapsed;
             PasswordBox.Visibility = Visibility.Visible;
+
+            PasswordBox.Focus();
+            SetPasswordBoxSelection(selectionStart, selectionLength);
             PasswordVisibilityButton.ToolTip = "Show password";
-            PasswordBox.Focus();
-            PasswordBox.Focus();
-            PasswordBox.Password = vm.Password;
         }
     }
+
+    private PasswordBoxSelection GetPasswordBoxSelection()
+    {
+        var selection = PasswordSelectionProperty.GetValue(PasswordBox);
+        if (selection is null)
+            return new PasswordBoxSelection(0, 0);
+
+        var start = TextRangeStartProperty.GetValue(selection);
+        var end = TextRangeEndProperty.GetValue(selection);
+
+        if (start is null || end is null)
+            return new PasswordBoxSelection(0, 0);
+
+        var startOffset = (int)(TextPointerOffsetProperty.GetValue(start) ?? 0);
+        var endOffset = (int)(TextPointerOffsetProperty.GetValue(end) ?? startOffset);
+
+        return new PasswordBoxSelection(
+            startOffset,
+            Math.Max(0, endOffset - startOffset));
+    }
+
+    private void SetPasswordBoxSelection(int start, int length)
+    {
+        start = Math.Clamp(start, 0, PasswordBox.Password.Length);
+        length = Math.Clamp(length, 0, PasswordBox.Password.Length - start);
+        PasswordSelectMethod.Invoke(PasswordBox, [start, length]);
+    }
+
+    private readonly record struct PasswordBoxSelection(int Start, int Length);
 
     protected override void OnClosed(EventArgs e)
     {
