@@ -126,56 +126,67 @@
                                Foreground="{DynamicResource TextBrush}"/>
                 </Border>
 
+                <!-- Password input -->
                 <Grid Margin="0,0,0,8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                    <Border Background="{DynamicResource SurfaceBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6">
+                        <Grid>
+                            <PasswordBox x:Name="PasswordBox"
+                                         PasswordChanged="PasswordBox_PasswordChanged"
+                                         Padding="12,0,44,0"
+                                         FontFamily="Consolas"
+                                         FontSize="14"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         VerticalContentAlignment="Center"
+                                         Visibility="Visible"/>
 
-                    <TextBox Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"
-                             FontFamily="Consolas"
-                             TextWrapping="NoWrap"
-                             HorizontalScrollBarVisibility="Auto"
-                             VerticalScrollBarVisibility="Disabled"/>
+                            <TextBox x:Name="PasswordTextBox"
+                                     Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"
+                                     Padding="12,0,44,0"
+                                     FontFamily="Consolas"
+                                     FontSize="14"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     TextWrapping="NoWrap"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     VerticalScrollBarVisibility="Disabled"
+                                     Visibility="Collapsed"/>
 
-                    <Button Grid.Column="1"
-                            Content="Generate"
-                            Margin="8,0,0,0"
-                            Padding="12,6"
-                            Height="32"
-                            Command="{Binding GeneratePasswordCommand}"
-                            ToolTip="Quick generate (20 chars, secure defaults)"/>
-
-                    <Button Grid.Column="2"
-                            Content="Options…"
-                            Margin="8,0,0,0"
-                            Padding="12,6"
-                            Height="32"
-                            Command="{Binding OpenAdvancedGeneratorCommand}"
-                            Background="{DynamicResource SurfaceAltBrush}"
-                            Foreground="{DynamicResource TextBrush}"
-                            ToolTip="Advanced password generator"/>
+                            <Button x:Name="PasswordVisibilityButton"
+                                    Content="&#xE890;"
+                                    Click="PasswordVisibilityButton_Click"
+                                    Width="36"
+                                    Height="36"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,4,0"
+                                    Padding="0"
+                                    FontFamily="Segoe MDL2 Assets"
+                                    FontSize="15"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Cursor="Hand"
+                                    ToolTip="Show password"/>
+                        </Grid>
+                    </Border>
                 </Grid>
 
+                <Button Content="Generate password"
+                        Command="{Binding OpenAdvancedGeneratorCommand}"
+                        HorizontalAlignment="Left"
+                        Padding="14,7"
+                        Margin="0,0,0,16"
+                        ToolTip="Generate a password and customize its options"/>
+
                 <!-- Password Strength -->
-                <Grid Margin="0,4,0,20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <ProgressBar Height="6"
-                                 Minimum="0"
-                                 Maximum="100"
-                                 Value="{Binding PasswordStrengthProgress}"
-                                 Background="{DynamicResource SurfaceAltBrush}"/>
-
-                    <TextBlock Grid.Column="1"
-                               Margin="10,0,0,0"
+                <StackPanel Margin="0,0,0,20">
+                    <TextBlock Text="{Binding PasswordStrengthLabel}"
                                FontSize="11"
-                               VerticalAlignment="Center"
-                               Text="{Binding PasswordStrengthLabel}">
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,6">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Foreground"
@@ -211,7 +222,13 @@
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
-                </Grid>
+
+                    <ProgressBar Height="6"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding PasswordStrengthProgress}"
+                                 Background="{DynamicResource SurfaceAltBrush}"/>
+                </StackPanel>
 
                 <!-- Two-factor authentication -->
                 <Border BorderBrush="{DynamicResource BorderBrush}"
