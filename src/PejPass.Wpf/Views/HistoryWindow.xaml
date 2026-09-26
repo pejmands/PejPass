@@ -165,26 +165,116 @@
                         <DataTemplate>
                             <Grid>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="24"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Title}"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextBrush}"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Username}"
-                                               FontSize="12"
-                                               Foreground="{DynamicResource MutedBrush}"
-                                               Margin="0,3,0,0"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding ChangedAtText}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource MutedBrush}"
-                                           VerticalAlignment="Center"
-                                           Margin="12,0,0,0"/>
+
+                                <!-- Timeline -->
+                                <Grid Grid.Column="0">
+                                    <Border Width="1"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Stretch"
+                                            Background="{DynamicResource BorderBrush}"
+                                            Margin="0,14,0,0"/>
+                                    <Ellipse Width="9"
+                                             Height="9"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Top"
+                                             Margin="0,7,0,0"
+                                             Fill="{DynamicResource AccentBrush}"/>
+                                </Grid>
+
+                                <!-- Event card -->
+                                <Border Grid.Column="1"
+                                        Background="{DynamicResource SurfaceBrush}"
+                                        CornerRadius="8"
+                                        Padding="14,12"
+                                        Margin="8,0,0,6">
+                                    <Expander IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
+                                              BorderThickness="0">
+                                        <Expander.Header>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Title}"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextBrush}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding ChangedAtText}"
+                                                               FontSize="11"
+                                                               Foreground="{DynamicResource MutedBrush}"
+                                                               Margin="0,3,0,0"/>
+                                                    <TextBlock Text="{Binding ChangeSummary}"
+                                                               FontSize="12"
+                                                               Foreground="{DynamicResource MutedBrush}"
+                                                               Margin="0,5,0,0"/>
+                                                </StackPanel>
+
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Username}"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource MutedBrush}"
+                                                           VerticalAlignment="Center"
+                                                           Margin="12,0,0,0"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </Grid>
+                                        </Expander.Header>
+
+                                        <Border Margin="0,12,0,0"
+                                                Padding="10,10,10,2"
+                                                Background="{DynamicResource SurfaceAltBrush}"
+                                                CornerRadius="6">
+                                            <StackPanel>
+                                                <TextBlock Text="Changed fields"
+                                                           FontSize="11"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource MutedBrush}"
+                                                           Margin="0,0,0,8"/>
+
+                                                <ItemsControl ItemsSource="{Binding ChangedFields}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="{DynamicResource SurfaceBrush}"
+                                                                    CornerRadius="4"
+                                                                    Padding="8,4"
+                                                                    Margin="0,0,6,6">
+                                                                <TextBlock Text="{Binding StringFormat={}{0} changed}"
+                                                                           FontSize="11"
+                                                                           Foreground="{DynamicResource TextBrush}"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+
+                                                <TextBlock Text="No field changes detected."
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource MutedBrush}"
+                                                           Margin="0,0,0,8">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding ChangedFields.Count}"
+                                                                             Value="0">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Border>
+                                    </Expander>
+                                </Border>
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
