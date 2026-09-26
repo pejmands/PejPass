@@ -393,9 +393,9 @@ public partial class MainViewModel : ObservableObject
         if (!await SaveVaultAsync())
             return;
 
-        StatusMessage = isFavorite
+        SnackbarService.Show(isFavorite
             ? "Added to favorites."
-            : "Removed from favorites.";
+            : "Removed from favorites.");
 
         ResetAutoLockTimer();
     }
@@ -442,7 +442,7 @@ public partial class MainViewModel : ObservableObject
         var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
         _clipboard.CopyWithTimeout(item.Value, timeout);
 
-        StatusMessage = $"\"{item.Name}\" copied. Clears in {_settings.ClipboardClearSeconds}s.";
+        SnackbarService.Show($"\"{item.Name}\" copied. Clears in {_settings.ClipboardClearSeconds}s.");
         ResetAutoLockTimer();
     }
 
@@ -455,7 +455,7 @@ public partial class MainViewModel : ObservableObject
         var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
         _clipboard.CopyWithTimeout(SelectedEntry.Username, timeout);
 
-        StatusMessage = $"Username copied. Clears in {_settings.ClipboardClearSeconds}s.";
+        SnackbarService.Show($"Username copied. Clears in {_settings.ClipboardClearSeconds}s.");
         ResetAutoLockTimer();
     }
 
@@ -468,7 +468,7 @@ public partial class MainViewModel : ObservableObject
         var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
         _clipboard.CopyWithTimeout(SelectedEntry.Url, timeout);
 
-        StatusMessage = $"URL copied. Clears in {_settings.ClipboardClearSeconds}s.";
+        SnackbarService.Show($"URL copied. Clears in {_settings.ClipboardClearSeconds}s.");
         ResetAutoLockTimer();
     }
 
@@ -481,7 +481,7 @@ public partial class MainViewModel : ObservableObject
         var timeout = TimeSpan.FromSeconds(_settings.ClipboardClearSeconds);
         _clipboard.CopyWithTimeout(TotpCode, timeout);
 
-        StatusMessage = $"TOTP code copied. Clears in {_settings.ClipboardClearSeconds}s.";
+        SnackbarService.Show($"TOTP code copied. Clears in {_settings.ClipboardClearSeconds}s.");
         ResetAutoLockTimer();
     }
 
@@ -507,7 +507,7 @@ public partial class MainViewModel : ObservableObject
                 UseShellExecute = true
             });
 
-            StatusMessage = "Opened in browser.";
+            SnackbarService.Show("Opened in browser");
             ResetAutoLockTimer();
         }
         catch (Exception ex)
@@ -563,7 +563,7 @@ public partial class MainViewModel : ObservableObject
             if (!await SaveVaultAsync())
                 return;
 
-            StatusMessage = "Entry added.";
+            SnackbarService.Show("Entry added.");
             ResetAutoLockTimer();
         }
     }
@@ -607,7 +607,7 @@ public partial class MainViewModel : ObservableObject
 
         if (!dataChanged && !favoriteChanged)
         {
-            StatusMessage = "No changes.";
+            SnackbarService.Show("No changes.", SnackbarKind.Info);
             return;
         }
 
@@ -632,7 +632,7 @@ public partial class MainViewModel : ObservableObject
         if (!await SaveVaultAsync())
             return;
 
-        StatusMessage = "Entry updated.";
+        SnackbarService.Show("Entry updated.");
         ResetAutoLockTimer();
     }
 
@@ -687,7 +687,7 @@ public partial class MainViewModel : ObservableObject
                     "No valid password entries found in the file.",
                     "Import");
 
-                StatusMessage = "Import finished — nothing imported.";
+                SnackbarService.Show("Import finished — nothing imported.", SnackbarKind.Info);
                 return;
             }
 
@@ -697,7 +697,7 @@ public partial class MainViewModel : ObservableObject
                     yesText: "Import",
                     noText: "Cancel"))
             {
-                StatusMessage = "Import cancelled.";
+                SnackbarService.Show("Import cancelled.", SnackbarKind.Info);
                 return;
             }
 
@@ -715,7 +715,7 @@ public partial class MainViewModel : ObservableObject
             if (!await SaveVaultAsync())
                 return;
 
-            StatusMessage = $"Imported {imported.Count} entries.";
+            SnackbarService.Show($"Imported {imported.Count} entries.");
             ResetAutoLockTimer();
         }
         catch (Exception ex)
@@ -816,7 +816,7 @@ public partial class MainViewModel : ObservableObject
                 _vaultSession.GetSecret(),
                 _vaultSession.Vault!);
 
-            StatusMessage = "Encrypted backup exported.";
+            SnackbarService.Show("Encrypted backup exported.");
 
             DialogService.Success(
                 $"Backup saved to:\n{dlg.FileName}\n\nThis file is encrypted with your master password — store it offline.",
