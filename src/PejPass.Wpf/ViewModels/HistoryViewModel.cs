@@ -205,8 +205,9 @@ public partial class HistoryViewModel : ObservableObject
         AddField(
             EntryHistoryField.Password,
             "Password",
-            MaskSecret(current.Password),
-            MaskSecret(snapshot.Password));
+            current.Password,
+            snapshot.Password,
+            isSecret: true);
 
         AddField(
             EntryHistoryField.Url,
@@ -217,8 +218,9 @@ public partial class HistoryViewModel : ObservableObject
         AddField(
             EntryHistoryField.TotpSecret,
             "TOTP",
-            MaskSecret(current.TotpSecret),
-            MaskSecret(snapshot.TotpSecret));
+            current.TotpSecret,
+            snapshot.TotpSecret,
+            isSecret: true);
 
         AddField(
             EntryHistoryField.Notes,
@@ -245,7 +247,8 @@ public partial class HistoryViewModel : ObservableObject
         EntryHistoryField field,
         string name,
         string currentValue,
-        string snapshotValue)
+        string snapshotValue,
+        bool isSecret = false)
     {
         var isChanged = !string.Equals(
             currentValue,
@@ -257,7 +260,8 @@ public partial class HistoryViewModel : ObservableObject
             name,
             currentValue,
             snapshotValue,
-            isChanged);
+            isChanged,
+            isSecret);
 
         row.PropertyChanged += OnFieldPropertyChanged;
 
@@ -544,7 +548,8 @@ public partial class HistoryFieldRow(
     string name,
     string currentValue,
     string snapshotValue,
-    bool isChanged) : ObservableObject
+    bool isChanged,
+    bool isSecret) : ObservableObject
 {
     public EntryHistoryField Field { get; } = field;
 
@@ -555,6 +560,45 @@ public partial class HistoryFieldRow(
     public string SnapshotValue { get; } = snapshotValue;
 
     public bool IsChanged { get; } = isChanged;
+
+    public bool IsSecret { get; } = isSecret;
+
+    [ObservableProperty]
+    public partial bool IsSecretVisible { get; set; }
+
+    public string CurrentDisplayValue =>
+        IsSecret && !IsSecretVisible
+            ? MaskSecret(CurrentValue)
+            : string.IsNullOrEmpty(CurrentValue)
+                ? "(empty)"
+                : CurrentValue;
+
+    public string SnapshotDisplayValue =>
+        IsSecret && !IsSecretVisible
+            ? MaskSecret(SnapshotValue)
+            : string.IsNullOrEmpty(SnapshotValue)
+                ? "(empty)"
+                : SnapshotValue;
+
+    partial void OnIsSecretVisibleChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CurrentDisplayValue));
+        OnPropertyChanged(nameof(SnapshotDisplayValue));
+    }
+
+    [RelayCommand]
+    private void ToggleSecretVisibility()
+    {
+        if (IsSecret)
+            IsSecretVisible = !IsSecretVisible;
+    }
+
+    private static string MaskSecret(string value)
+    {
+        return string.IsNullOrEmpty(value)
+            ? "(empty)"
+            : "••••••••";
+    }
 
     private bool _isSelected;
 
