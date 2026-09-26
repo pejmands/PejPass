@@ -1,5 +1,4 @@
 using System.Windows;
-using System.Windows.Media;
 
 namespace PejPass.Wpf.Dialogs;
 
@@ -39,18 +38,8 @@ public partial class AppDialog : Window
             TertiaryButton.IsCancel = true;
         }
 
-        // Tint primary button by type
-        PrimaryButton.Background = type switch
-        {
-            AppDialogType.Error or AppDialogType.Confirm when primaryText is "Delete" or "Yes"
-                => (Brush)FindResource("DangerBrush"),
-            AppDialogType.Warning => (Brush)FindResource("WarningBrush"),
-            AppDialogType.Success => (Brush)FindResource("SuccessBrush"),
-            _ => (Brush)FindResource("AccentBrush")
-        };
-
-        if (type is AppDialogType.Error or AppDialogType.Warning)
-            PrimaryButton.Foreground = (Brush)FindResource("ButtonTextBrush");
+        if (primaryText is "Delete" or "Yes" or "Delete permanently" or "Delete all permanently")
+            PrimaryButton.Style = (Style)FindResource("DestructiveButton");
     }
 
     private void Primary_Click(object sender, RoutedEventArgs e)
