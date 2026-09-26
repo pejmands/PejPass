@@ -58,12 +58,36 @@
                                  VerticalScrollBarVisibility="Disabled"/>
                     </StackPanel>
 
-                    <CheckBox Grid.Column="1"
-                              Content="Favorite"
-                              IsChecked="{Binding IsFavorite}"
-                              VerticalAlignment="Bottom"
-                              Margin="12,0,0,6"
-                              ToolTip="Pin this entry to the top of the list"/>
+                    <Button Grid.Column="1"
+                            Content="&#xE734;"
+                            IsChecked="{Binding IsFavorite}"
+                            Command="{Binding ToggleFavoriteCommand}"
+                            Width="36"
+                            Height="36"
+                            Margin="12,0,0,0"
+                            FontFamily="Segoe MDL2 Assets"
+                            FontSize="16"
+                            Background="{DynamicResource SurfaceAltBrush}"
+                            Foreground="{DynamicResource MutedBrush}"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            ToolTip="Add to favorites">
+                        <Button.Style>
+                            <Style TargetType="Button"
+                                   BasedOn="{StaticResource {x:Type Button}}">
+                                <Setter Property="Content" Value="&#xE734;"/>
+                                <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                        <Setter Property="Content" Value="&#xE735;"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                        <Setter Property="ToolTip" Value="Remove from favorites"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                 </Grid>
 
                 <TextBlock Text="Username"
