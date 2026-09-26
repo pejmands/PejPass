@@ -89,7 +89,7 @@ public partial class SettingsViewModel : ObservableObject
         SettingsStore.Save(_settings);
         _themeService.Apply();
 
-        DialogService.Success("Settings saved.", "Settings");
+        SnackbarService.Show("Settings saved.");
         RequestClose?.Invoke(this, EventArgs.Empty);
     }
 
