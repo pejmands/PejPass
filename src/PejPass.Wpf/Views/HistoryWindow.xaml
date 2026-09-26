@@ -96,10 +96,12 @@
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBox">
-                                        <Grid>
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                      HorizontalScrollBarVisibility="Disabled">
                                             <ItemsPresenter/>
+                                        </ScrollViewer>
 
-                                            <StackPanel HorizontalAlignment="Center"
+                                        <StackPanel HorizontalAlignment="Center"
                                                         VerticalAlignment="Center">
                                                 <StackPanel.Style>
                                                     <Style TargetType="StackPanel">
@@ -134,6 +136,8 @@
                     </ListBox.Style>
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
+                            <EventSetter Event="PreviewMouseLeftButtonDown"
+                                         Handler="HistoryListBoxItem_PreviewMouseLeftButtonDown"/>
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                             <Setter Property="Padding" Value="0"/>
                             <Setter Property="Margin" Value="0,0,12,6"/>
