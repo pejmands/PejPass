@@ -36,6 +36,12 @@ public partial class VaultHealthViewModel : ObservableObject
     public partial int StaleCount { get; set; }
 
     [ObservableProperty]
+    public partial int HealthScore { get; set; }
+
+    [ObservableProperty]
+    public partial string HealthLabel { get; set; } = "Scanning…";
+
+    [ObservableProperty]
     public partial bool IsScanning { get; set; }
 
     [ObservableProperty]
@@ -101,6 +107,8 @@ public partial class VaultHealthViewModel : ObservableObject
         UsernameEqualsPasswordCount = 0;
         MissingTotpCount = 0;
         StaleCount = 0;
+        HealthScore = 0;
+        HealthLabel = "Scanning…";
 
         CancelScanCommand.NotifyCanExecuteChanged();
         await YieldUiAsync().ConfigureAwait(true);
@@ -207,6 +215,8 @@ public partial class VaultHealthViewModel : ObservableObject
                     await YieldUiAsync().ConfigureAwait(true);
             }
 
+            UpdateHealthSummary();
+
             ScanProgress = 100;
             ScanStatus = TotalIssues == 0
                 ? "No issues found."
@@ -264,6 +274,29 @@ public partial class VaultHealthViewModel : ObservableObject
 
         var shown = others.Take(maxShow).Select(t => $"«{t}»");
         return "Also used by: " + string.Join(", ", shown) + $", +{others.Count - maxShow} more";
+    }
+
+    private void UpdateHealthSummary()
+    {
+        var entryCount = Math.Max(1, _entries.Count);
+
+        var weightedIssues =
+            WeakCount * 4 +
+            DuplicateCount * 3 +
+            UsernameEqualsPasswordCount * 3 +
+            MissingTotpCount +
+            StaleCount;
+
+        var penalty = weightedIssues * 100.0 / entryCount;
+        HealthScore = Math.Clamp((int)Math.Round(100 - penalty), 0, 100);
+
+        HealthLabel = HealthScore switch
+        {
+            >= 90 => "Excellent",
+            >= 75 => "Good",
+            >= 50 => "Needs attention",
+            _ => "At risk"
+        };
     }
 
     private void AddIssue(HealthIssue issue, int filter)
