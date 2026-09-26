@@ -78,22 +78,23 @@
                                HorizontalOffset="0"
                                VerticalOffset="6"
                                StaysOpen="False"
-                               AllowsTransparency="True">
+                               AllowsTransparency="True"
+                               DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                             <Border Style="{StaticResource ToolbarOverflowBorder}">
                                 <StackPanel>
                                     <MenuItem Header="Backup"
-                                              Command="{Binding PlacementTarget.DataContext.ExportBackupCommand, ElementName=MoreActionsPopup}"
+                                              Command="{Binding ExportBackupCommand}"
                                               Style="{StaticResource ToolbarMenuItem}"/>
                                     <MenuItem Header="Restore"
-                                              Command="{Binding PlacementTarget.DataContext.RestoreBackupCommand, ElementName=MoreActionsPopup}"
+                                              Command="{Binding RestoreBackupCommand}"
                                               Style="{StaticResource ToolbarMenuItem}"/>
                                     <Separator Margin="4,5"
                                                Background="{DynamicResource BorderBrush}"/>
                                     <MenuItem Header="Import CSV"
-                                              Command="{Binding PlacementTarget.DataContext.ImportCommand, ElementName=MoreActionsPopup}"
+                                              Command="{Binding ImportCommand}"
                                               Style="{StaticResource ToolbarMenuItem}"/>
                                     <MenuItem Header="Export CSV"
-                                              Command="{Binding PlacementTarget.DataContext.ExportCsvCommand, ElementName=MoreActionsPopup}"
+                                              Command="{Binding ExportCsvCommand}"
                                               Style="{StaticResource ToolbarMenuItem}"/>
                                 </StackPanel>
                             </Border>
