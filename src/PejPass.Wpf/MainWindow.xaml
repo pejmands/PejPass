@@ -69,14 +69,41 @@
                             Content="&#xE712;"
                             Margin="0,0,6,0"
                             ToolTip="More actions"
-                            Click="MoreActionsButton_Click">
+                            Click="MoreActionsButton_Click"
+                            PreviewMouseRightButtonDown="MoreActionsButton_OnPreviewMouseRightButtonDown">
                         <Button.ContextMenu>
-                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                <MenuItem Header="Backup" Command="{Binding ExportBackupCommand}"/>
-                                <MenuItem Header="Restore" Command="{Binding RestoreBackupCommand}"/>
-                                <Separator/>
-                                <MenuItem Header="Import CSV" Command="{Binding ImportCommand}"/>
-                                <MenuItem Header="Export CSV" Command="{Binding ExportCsvCommand}"/>
+                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                                         Style="{StaticResource ToolbarContextMenu}">
+                                <MenuItem Header="Backup"
+                                          Command="{Binding ExportBackupCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}">
+                                    <MenuItem.Icon>
+                                        <TextBlock Text="&#xE72F;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Restore"
+                                          Command="{Binding RestoreBackupCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}">
+                                    <MenuItem.Icon>
+                                        <TextBlock Text="&#xE777;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator Margin="4,5"
+                                           Background="{DynamicResource BorderBrush}"/>
+                                <MenuItem Header="Import CSV"
+                                          Command="{Binding ImportCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}">
+                                    <MenuItem.Icon>
+                                        <TextBlock Text="&#xE8B5;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Export CSV"
+                                          Command="{Binding ExportCsvCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}">
+                                    <MenuItem.Icon>
+                                        <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
