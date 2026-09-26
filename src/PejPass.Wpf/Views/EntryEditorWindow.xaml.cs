@@ -29,19 +29,23 @@ public partial class EntryEditorWindow : Window
         typeof(PasswordBox).Assembly.GetType("System.Windows.Documents.ITextRange")
         ?? throw new InvalidOperationException("ITextRange was not found.");
 
-    private static readonly PropertyInfo TextRangeStartProperty =
-        TextRangeType.GetProperty("Start")
+    private static readonly MethodInfo TextRangeStartMethod =
+        TextRangeType.GetProperty("Start")?.GetGetMethod()
         ?? throw new InvalidOperationException("ITextRange.Start was not found.");
 
-    private static readonly PropertyInfo TextRangeEndProperty =
-        TextRangeType.GetProperty("End")
+    private static readonly MethodInfo TextRangeEndMethod =
+        TextRangeType.GetProperty("End")?.GetGetMethod()
         ?? throw new InvalidOperationException("ITextRange.End was not found.");
 
+    private static readonly Type PasswordTextPointerType =
+        typeof(PasswordBox).Assembly.GetType("System.Windows.Controls.PasswordTextPointer")
+        ?? throw new InvalidOperationException("PasswordTextPointer was not found.");
+
     private static readonly PropertyInfo TextPointerOffsetProperty =
-        TextRangeStartProperty.PropertyType.GetProperty(
+        PasswordTextPointerType.GetProperty(
             "Offset",
             BindingFlags.Instance | BindingFlags.NonPublic)
-        ?? throw new InvalidOperationException("TextPointer.Offset was not found.");
+        ?? throw new InvalidOperationException("PasswordTextPointer.Offset was not found.");
 
     public VaultEntry? Result { get; private set; }
 
@@ -66,7 +70,6 @@ public partial class EntryEditorWindow : Window
         ScrollViewer? formScroll = null;
         foreach (var sv in FindVisualChildren<ScrollViewer>(this))
         {
-            // Outer form scroller (not the TextBox internal one)
             if (sv.TemplatedParent is null)
             {
                 formScroll = sv;
@@ -156,17 +159,15 @@ public partial class EntryEditorWindow : Window
     private PasswordBoxSelection GetPasswordBoxSelection()
     {
         var selection = PasswordSelectionProperty.GetValue(PasswordBox);
+
         if (selection is null)
             return new PasswordBoxSelection(0, 0);
 
-        var start = TextRangeStartProperty.GetValue(selection);
-        var end = TextRangeEndProperty.GetValue(selection);
+        var start = TextRangeStartMethod.Invoke(selection, null);
+        var end = TextRangeEndMethod.Invoke(selection, null);
 
-        if (start is null || end is null)
-            return new PasswordBoxSelection(0, 0);
-
-        var startOffset = (int)(TextPointerOffsetProperty.GetValue(start) ?? 0);
-        var endOffset = (int)(TextPointerOffsetProperty.GetValue(end) ?? startOffset);
+        var startOffset = (int?)(TextPointerOffsetProperty.GetValue(start) as int?) ?? 0;
+        var endOffset = (int?)(TextPointerOffsetProperty.GetValue(end) as int?) ?? startOffset;
 
         return new PasswordBoxSelection(
             startOffset,
