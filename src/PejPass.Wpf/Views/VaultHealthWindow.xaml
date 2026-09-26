@@ -72,14 +72,19 @@
                 Margin="0,0,0,16">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="140"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
                 <StackPanel HorizontalAlignment="Center"
                             VerticalAlignment="Center">
-                    <TextBlock Text="{Binding HealthScore}"
-                               FontSize="34"
+                    <TextBlock Text="Health score"
+                               FontSize="11"
+                               Foreground="{DynamicResource MutedBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,2"/>
+                    <TextBlock Text="{Binding HealthScore, StringFormat={}{0} / 100}"
+                               FontSize="30"
                                FontWeight="Bold"
                                Foreground="{DynamicResource TextBrush}"
                                HorizontalAlignment="Center"/>
