@@ -123,7 +123,7 @@ public partial class MainWindow : Window
                 vm.LockCommand.Execute(null);
                 e.Handled = true;
             }
-            else if (ctrl && (e.Key == Key.F || e.Key == Key.K))
+            else if (ctrl && e.Key == Key.K)
             {
                 FocusSearch();
                 e.Handled = true;
@@ -144,7 +144,6 @@ public partial class MainWindow : Window
 
         switch (e.Key)
         {
-            case Key.F:
             case Key.K:
                 FocusSearch();
                 e.Handled = true;
