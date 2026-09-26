@@ -71,35 +71,34 @@
                             Margin="0,0,6,0"
                             ToolTip="More actions"
                             Click="MoreActionsButton_Click"
-                            PreviewMouseRightButtonDown="MoreActionsButton_OnPreviewMouseRightButtonDown">
-                        <Popup x:Name="MoreActionsPopup"
-                               PlacementTarget="{Binding ElementName=MoreActionsButton}"
-                               Placement="Bottom"
-                               HorizontalOffset="0"
-                               VerticalOffset="6"
-                               StaysOpen="False"
-                               AllowsTransparency="True"
-                               DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                            <Border Style="{StaticResource ToolbarOverflowBorder}">
-                                <StackPanel>
-                                    <MenuItem Header="Backup"
-                                              Command="{Binding ExportBackupCommand}"
-                                              Style="{StaticResource ToolbarMenuItem}"/>
-                                    <MenuItem Header="Restore"
-                                              Command="{Binding RestoreBackupCommand}"
-                                              Style="{StaticResource ToolbarMenuItem}"/>
-                                    <Separator Margin="4,5"
-                                               Background="{DynamicResource BorderBrush}"/>
-                                    <MenuItem Header="Import CSV"
-                                              Command="{Binding ImportCommand}"
-                                              Style="{StaticResource ToolbarMenuItem}"/>
-                                    <MenuItem Header="Export CSV"
-                                              Command="{Binding ExportCsvCommand}"
-                                              Style="{StaticResource ToolbarMenuItem}"/>
-                                </StackPanel>
-                            </Border>
-                        </Popup>
-                    </Button>
+                            PreviewMouseRightButtonDown="MoreActionsButton_OnPreviewMouseRightButtonDown"/>
+                    <Popup x:Name="MoreActionsPopup"
+                           PlacementTarget="{Binding ElementName=MoreActionsButton}"
+                           Placement="Bottom"
+                           HorizontalOffset="0"
+                           VerticalOffset="6"
+                           StaysOpen="False"
+                           AllowsTransparency="True"
+                           DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <Border Style="{StaticResource ToolbarOverflowBorder}">
+                            <StackPanel>
+                                <MenuItem Header="Backup"
+                                          Command="{Binding ExportBackupCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}"/>
+                                <MenuItem Header="Restore"
+                                          Command="{Binding RestoreBackupCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}"/>
+                                <Separator Margin="4,5"
+                                           Background="{DynamicResource BorderBrush}"/>
+                                <MenuItem Header="Import CSV"
+                                          Command="{Binding ImportCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}"/>
+                                <MenuItem Header="Export CSV"
+                                          Command="{Binding ExportCsvCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}"/>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
 
                     <Button Style="{StaticResource ToolbarIconButton}"
                             Content="&#xE72E;"
