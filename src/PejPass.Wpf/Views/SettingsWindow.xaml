@@ -88,10 +88,17 @@
                     <StackPanel Grid.Column="1"
                                 Orientation="Horizontal"
                                 VerticalAlignment="Center">
-                        <TextBox Text="{Binding AutoLockMinutes, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="70"
-                                 Height="36"
-                                 VerticalContentAlignment="Center"/>
+                        <StackPanel>
+                            <TextBox x:Name="AutoLockTextBox"
+                                     Text="{Binding AutoLockMinutes, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="70"
+                                     Height="36"
+                                     VerticalContentAlignment="Center"/>
+                            <TextBlock Style="{StaticResource ValidationErrorText}"
+                                       Text="{Binding AutoLockError, StringFormat=⚠ {0}}"
+                                       Visibility="{Binding AutoLockError, Converter={StaticResource NullOrEmptyToVis}}"
+                                       Margin="0,5,0,0"/>
+                        </StackPanel>
                         <TextBlock Text="min"
                                    VerticalAlignment="Center"
                                    Margin="10,0,0,0"
@@ -154,10 +161,17 @@
                     <StackPanel Grid.Column="1"
                                 Orientation="Horizontal"
                                 VerticalAlignment="Center">
-                        <TextBox Text="{Binding ClipboardClearSeconds, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="70"
-                                 Height="36"
-                                 VerticalContentAlignment="Center"/>
+                        <StackPanel>
+                            <TextBox x:Name="ClipboardTextBox"
+                                     Text="{Binding ClipboardClearSeconds, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="70"
+                                     Height="36"
+                                     VerticalContentAlignment="Center"/>
+                            <TextBlock Style="{StaticResource ValidationErrorText}"
+                                       Text="{Binding ClipboardError, StringFormat=⚠ {0}}"
+                                       Visibility="{Binding ClipboardError, Converter={StaticResource NullOrEmptyToVis}}"
+                                       Margin="0,5,0,0"/>
+                        </StackPanel>
                         <TextBlock Text="sec"
                                    VerticalAlignment="Center"
                                    Margin="10,0,0,0"
