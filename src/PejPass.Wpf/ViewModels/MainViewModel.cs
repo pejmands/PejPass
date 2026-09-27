@@ -427,6 +427,9 @@ public partial class MainViewModel : ObservableObject
 
         var isFavorite = !entry.IsFavorite;
 
+        if (!await EnsureVaultWritableAsync())
+            return;
+
         var vault = _vaultSession.Vault!;
         var snapshot = vault.CreateSnapshot();
 
@@ -604,6 +607,9 @@ public partial class MainViewModel : ObservableObject
 
         if (editor.ShowDialog() == true && editor.Result is { } newEntry)
         {
+            if (!await EnsureVaultWritableAsync())
+                return;
+
             var vault = _vaultSession.Vault!;
             var snapshot = vault.CreateSnapshot();
 
@@ -655,6 +661,9 @@ public partial class MainViewModel : ObservableObject
             if (!proceed)
                 return;
         }
+
+        if (!await EnsureVaultWritableAsync())
+            return;
 
         var vault = _vaultSession.Vault!;
         var vaultEntryIndex = vault.Entries.FindIndex(e => e.Id == updated.Id);
@@ -730,6 +739,9 @@ public partial class MainViewModel : ObservableObject
                 noText: "Cancel"))
             return;
 
+        if (!await EnsureVaultWritableAsync())
+            return;
+
         var vault = _vaultSession.Vault!;
         var snapshot = vault.CreateSnapshot();
 
@@ -785,6 +797,9 @@ public partial class MainViewModel : ObservableObject
                 SnackbarService.Show("Import cancelled.", SnackbarKind.Info);
                 return;
             }
+
+            if (!await EnsureVaultWritableAsync())
+                return;
 
             var vault = _vaultSession.Vault!;
             var snapshot = vault.CreateSnapshot();
@@ -855,8 +870,11 @@ public partial class MainViewModel : ObservableObject
         var vault = _vaultSession.Vault;
         if (vault is null) return;
 
+        if (!await EnsureVaultWritableAsync())
+            return;
+
         var snapshot = vault.CreateSnapshot();
-        var vm = new TrashViewModel(vault);
+        var vm = new TrashViewModel(vault, EnsureVaultWritableAsync);
         var win = new TrashWindow(vm)
         {
             Owner = GetOwnerWindow()
@@ -982,6 +1000,28 @@ public partial class MainViewModel : ObservableObject
         RebuildTagFilters();
         ApplyFilter(preserveSelectionId: null);
         UpdateEntryStatus();
+    }
+
+    private async Task<bool> EnsureVaultWritableAsync()
+    {
+        var path = _vaultSession.VaultPath;
+
+        if (string.IsNullOrEmpty(path))
+            return false;
+
+        try
+        {
+            await _vaultService.EnsureVaultWritableAsync(path);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            DialogService.Error(
+                $"The vault cannot be modified right now.\\n\\n{ex.Message}",
+                "Vault unavailable");
+
+            return false;
+        }
     }
 
     private async Task<bool> SaveVaultAsync()
