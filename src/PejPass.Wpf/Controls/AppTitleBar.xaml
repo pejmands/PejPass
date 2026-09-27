@@ -28,6 +28,7 @@
             <StackPanel Grid.Column="1" Orientation="Horizontal">
 
                 <Button x:Name="MinButton"
+                        IsTabStop="False"
                         Click="Minimize_Click"
                         Width="46" Height="40"
                         shell:WindowChrome.IsHitTestVisibleInChrome="True"
@@ -51,6 +52,7 @@
                 </Button>
 
                 <Button x:Name="MaxButton"
+                        IsTabStop="False"
                         Click="Maximize_Click"
                         Width="46" Height="40"
                         shell:WindowChrome.IsHitTestVisibleInChrome="True"
@@ -76,6 +78,7 @@
                 </Button>
 
                 <Button x:Name="CloseButton"
+                        IsTabStop="False"
                         Click="Close_Click"
                         Width="46" Height="40"
                         shell:WindowChrome.IsHitTestVisibleInChrome="True"
