@@ -45,6 +45,7 @@ public partial class SettingsViewModel : ObservableObject
     public string[] ThemeOptions { get; } = ["System", "Dark", "Light"];
 
     public event EventHandler? RequestClose;
+    public event EventHandler? ValidationFailed;
 
     public SettingsViewModel(
         AppSettings settings,
@@ -85,6 +86,7 @@ public partial class SettingsViewModel : ObservableObject
         if (!string.IsNullOrEmpty(AutoLockError) ||
             !string.IsNullOrEmpty(ClipboardError))
         {
+            ValidationFailed?.Invoke(this, EventArgs.Empty);
             return;
         }
 
