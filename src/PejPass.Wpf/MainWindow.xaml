@@ -389,6 +389,15 @@
                                 Visibility="{Binding IsEntryListEmpty,
                                                      Converter={StaticResource BoolToVis}}">
                         <StackPanel HorizontalAlignment="Center">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasActiveEntryFilter}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
                             <TextBlock Text="No entries yet"
                                        FontSize="16"
                                        FontWeight="SemiBold"
