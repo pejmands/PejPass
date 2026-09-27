@@ -40,7 +40,7 @@ public partial class AppDialog : Window
             TertiaryButton.IsCancel = true;
         }
 
-        if (primaryText is "Delete" or "Yes" or "Delete permanently" or "Delete all permanently")
+        if (primaryText is "Delete" or "Delete All" or "Yes" or "Delete permanently" or "Delete all permanently")
             PrimaryButton.Style = (Style)FindResource("DestructiveButton");
     }
 
