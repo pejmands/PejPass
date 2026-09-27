@@ -4,6 +4,8 @@
         Title="Trash"
         Height="520"
         Width="640"
+        MinWidth="520"
+        MinHeight="440"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
         ShowInTaskbar="False"
