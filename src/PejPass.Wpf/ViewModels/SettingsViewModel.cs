@@ -31,6 +31,12 @@ public partial class SettingsViewModel : ObservableObject
     public partial int ClipboardClearSeconds { get; set; }
 
     [ObservableProperty]
+    public partial string? AutoLockError { get; set; }
+
+    [ObservableProperty]
+    public partial string? ClipboardError { get; set; }
+
+    [ObservableProperty]
     public partial int SelectedThemeIndex { get; set; }
 
     [ObservableProperty]
@@ -74,9 +80,13 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void Save()
     {
-        if (AutoLockMinutes < 0) AutoLockMinutes = 0;
-        if (ClipboardClearSeconds < 5) ClipboardClearSeconds = 5;
-        if (ClipboardClearSeconds > 300) ClipboardClearSeconds = 300;
+        Validate();
+
+        if (!string.IsNullOrEmpty(AutoLockError) ||
+            !string.IsNullOrEmpty(ClipboardError))
+        {
+            return;
+        }
 
         try
         {
@@ -115,6 +125,20 @@ public partial class SettingsViewModel : ObservableObject
 
         RequestClose?.Invoke(this, EventArgs.Empty);
         SnackbarService.Show("Settings saved.");
+    }
+
+    private void Validate()
+    {
+        AutoLockError = AutoLockMinutes < 0
+            ? "Auto-lock cannot be negative."
+            : null;
+
+        ClipboardError = ClipboardClearSeconds switch
+        {
+            < 5 => "Clipboard timeout must be at least 5 seconds.",
+            > 300 => "Clipboard timeout cannot exceed 300 seconds.",
+            _ => null
+        };
     }
 
     public void RevertPreview()
