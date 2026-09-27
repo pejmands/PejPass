@@ -60,6 +60,8 @@ public partial class MainViewModel
         Vault backupVault;
         try
         {
+            IsBusy = true;
+            BusyMessage = "Opening backup...";
             StatusMessage = "Opening backup…";
             backupVault = await _vaultService.OpenVaultAsync(backupPath, prompt.Password);
         }
@@ -70,6 +72,10 @@ public partial class MainViewModel
                 "Restore Backup");
             StatusMessage = "Restore failed.";
             return;
+        }
+        finally
+        {
+            IsBusy = false;
         }
 
         var entryCount = backupVault.Entries.Count;
@@ -100,6 +106,9 @@ public partial class MainViewModel
 
         try
         {
+            IsBusy = true;
+            BusyMessage = "Restoring backup...";
+
             if (replace)
             {
                 if (!DialogService.Confirm(
@@ -274,6 +283,10 @@ public partial class MainViewModel
         {
             DialogService.Error($"Restore failed:\n{ex.Message}", "Restore Backup");
             StatusMessage = "Restore failed.";
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 
