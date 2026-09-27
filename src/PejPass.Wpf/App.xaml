@@ -62,6 +62,11 @@
                 </Setter>
                 <Style.Triggers>
 
+                    <Trigger Property="IsKeyboardFocused" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                    </Trigger>
+
                     <MultiTrigger>
                         <MultiTrigger.Conditions>
                             <Condition Property="IsMouseOver"
@@ -118,10 +123,16 @@
                 <Setter Property="FontWeight" Value="Normal"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="6"
+                                    Padding="{TemplateBinding Padding}">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                         </ControlTemplate>
@@ -186,13 +197,21 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="TextBox">
-                            <Border Background="{TemplateBinding Background}"
+                            <Border x:Name="TextBoxBorder"
+                                    Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
                                     CornerRadius="6"
                                     Padding="{TemplateBinding Padding}">
                                 <ScrollViewer x:Name="PART_ContentHost"/>
                             </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="TextBoxBorder"
+                                            Property="BorderBrush"
+                                            Value="{DynamicResource AccentBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
@@ -211,13 +230,21 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="PasswordBox">
-                            <Border Background="{TemplateBinding Background}"
+                            <Border x:Name="PasswordBoxBorder"
+                                    Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
                                     CornerRadius="6"
                                     Padding="{TemplateBinding Padding}">
                                 <ScrollViewer x:Name="PART_ContentHost"/>
                             </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="PasswordBoxBorder"
+                                            Property="BorderBrush"
+                                            Value="{DynamicResource AccentBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
@@ -279,6 +306,12 @@
                                             Value="{DynamicResource AccentBrush}"/>
                                 </Trigger>
 
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="Box"
+                                            Property="BorderBrush"
+                                            Value="{DynamicResource AccentBrush}"/>
+                                </Trigger>
+
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter Property="Opacity" Value="0.5"/>
                                 </Trigger>
@@ -327,6 +360,12 @@
                                 </Trigger>
 
                                 <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Outer"
+                                            Property="Stroke"
+                                            Value="{DynamicResource AccentBrush}"/>
+                                </Trigger>
+
+                                <Trigger Property="IsKeyboardFocused" Value="True">
                                     <Setter TargetName="Outer"
                                             Property="Stroke"
                                             Value="{DynamicResource AccentBrush}"/>
