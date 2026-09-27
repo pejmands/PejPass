@@ -515,10 +515,26 @@ public partial class HistoryViewModel : ObservableObject
         SelectedItem = null;
     }
 
-    private Task<bool> EnsureVaultWritableAsync()
+    private async Task<bool> EnsureVaultWritableAsync()
     {
-        // Temporarily disabled for testing.
-        return Task.FromResult(true);
+        var path = _vaultSession.VaultPath;
+
+        if (string.IsNullOrEmpty(path))
+            return false;
+
+        try
+        {
+            await _vaultService.EnsureVaultWritableAsync(path);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            DialogService.Error(
+                $"The vault cannot be modified right now.\n\n{ex.Message}",
+                "Vault unavailable");
+
+            return false;
+        }
     }
 
     private async Task<bool> SaveAsync(Vault snapshot, string actionTitle)
