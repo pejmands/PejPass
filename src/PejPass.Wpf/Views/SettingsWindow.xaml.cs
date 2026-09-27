@@ -17,6 +17,8 @@ public partial class SettingsWindow : Window
         DataContext = viewModel;
         _vm = viewModel;
 
+        viewModel.ValidationFailed += (_, _) => FocusFirstInvalidField();
+
         viewModel.RequestClose += (_, _) =>
         {
             _committed = true;
