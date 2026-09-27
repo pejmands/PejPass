@@ -266,6 +266,7 @@
             <Button Style="{StaticResource SecondaryButton}"
                     Content="Cancel"
                     Command="{Binding CancelCommand}"
+                    IsCancel="True"
                     Margin="0,0,8,0"
                     Background="{DynamicResource SurfaceAltBrush}"
                     Foreground="{DynamicResource TextBrush}"/>
