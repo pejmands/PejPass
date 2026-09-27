@@ -65,6 +65,16 @@ public partial class VaultHealthViewModel : ObservableObject
 
     public ObservableCollection<HealthIssueRow> Issues { get; } = [];
 
+    public bool IsEmptyVault => _entries.Count == 0;
+    public bool HasNoIssues =>
+        IsReady &&
+        _entries.Count > 0 &&
+        TotalIssues == 0;
+    public bool HasNoMatchingIssues =>
+        IsReady &&
+        TotalIssues > 0 &&
+        Issues.Count == 0;
+
     public event EventHandler<Guid>? RequestOpenEntry;
 
     private readonly List<HealthIssue> _allIssues = [];
@@ -226,6 +236,7 @@ public partial class VaultHealthViewModel : ObservableObject
 
             // Final ordered view (peers of same password sit together)
             RebuildVisibleIssues(SelectedFilterIndex);
+            NotifyEmptyStateProperties();
         }
         catch (OperationCanceledException)
         {
@@ -234,6 +245,7 @@ public partial class VaultHealthViewModel : ObservableObject
                 ? "Scan cancelled."
                 : $"Scan cancelled — {TotalIssues} issue(s) found so far.";
             RebuildVisibleIssues(SelectedFilterIndex);
+            NotifyEmptyStateProperties();
         }
         finally
         {
@@ -396,7 +408,18 @@ public partial class VaultHealthViewModel : ObservableObject
         _ => true
     };
 
-    partial void OnSelectedFilterIndexChanged(int value) => RebuildVisibleIssues(value);
+    partial void OnSelectedFilterIndexChanged(int value)
+    {
+        RebuildVisibleIssues(value);
+        NotifyEmptyStateProperties();
+    }
+
+    private void NotifyEmptyStateProperties()
+    {
+        OnPropertyChanged(nameof(IsEmptyVault));
+        OnPropertyChanged(nameof(HasNoIssues));
+        OnPropertyChanged(nameof(HasNoMatchingIssues));
+    }
 
     [RelayCommand]
     private async Task RefreshAsync() => await StartScanAsync();
