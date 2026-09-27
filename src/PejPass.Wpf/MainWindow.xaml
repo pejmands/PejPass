@@ -69,17 +69,20 @@
                         <Border Style="{StaticResource ToolbarOverflowBorder}">
                             <StackPanel>
                                 <MenuItem Header="Vault Health"
+                                          InputGestureText="Ctrl+H"
                                           Command="{Binding OpenHealthCommand}"
                                           Style="{StaticResource ToolbarMenuItem}"/>
                                 <MenuItem Header="History"
                                           Command="{Binding OpenHistoryCommand}"
                                           Style="{StaticResource ToolbarMenuItem}"/>
                                 <MenuItem Header="Trash"
+                                          InputGestureText="Ctrl+Shift+T"
                                           Command="{Binding OpenTrashCommand}"
                                           Style="{StaticResource ToolbarMenuItem}"/>
                                 <Separator Margin="4,5"
                                            Background="{DynamicResource BorderBrush}"/>
                                 <MenuItem Header="Backup"
+                                          InputGestureText="Ctrl+B"
                                           Command="{Binding ExportBackupCommand}"
                                           Style="{StaticResource ToolbarMenuItem}"/>
                                 <MenuItem Header="Restore"
