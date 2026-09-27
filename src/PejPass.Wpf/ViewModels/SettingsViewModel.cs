@@ -71,6 +71,27 @@ public partial class SettingsViewModel : ObservableObject
         _suppressThemePreview = false;
     }
 
+    partial void OnAutoLockMinutesChanged(int value) => ValidateAutoLock();
+
+    partial void OnClipboardClearSecondsChanged(int value) => ValidateClipboard();
+
+    private void ValidateAutoLock()
+    {
+        AutoLockError = AutoLockMinutes < 0
+            ? "Auto-lock cannot be negative."
+            : null;
+    }
+
+    private void ValidateClipboard()
+    {
+        ClipboardError = ClipboardClearSeconds switch
+        {
+            < 5 => "Clipboard timeout must be at least 5 seconds.",
+            > 300 => "Clipboard timeout cannot exceed 300 seconds.",
+            _ => null
+        };
+    }
+
     partial void OnSelectedThemeIndexChanged(int value)
     {
         if (_suppressThemePreview) return;
@@ -131,16 +152,8 @@ public partial class SettingsViewModel : ObservableObject
 
     private void Validate()
     {
-        AutoLockError = AutoLockMinutes < 0
-            ? "Auto-lock cannot be negative."
-            : null;
-
-        ClipboardError = ClipboardClearSeconds switch
-        {
-            < 5 => "Clipboard timeout must be at least 5 seconds.",
-            > 300 => "Clipboard timeout cannot exceed 300 seconds.",
-            _ => null
-        };
+        ValidateAutoLock();
+        ValidateClipboard();
     }
 
     public void RevertPreview()
