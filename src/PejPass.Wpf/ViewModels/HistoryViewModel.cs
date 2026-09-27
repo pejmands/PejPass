@@ -401,6 +401,8 @@ public partial class HistoryViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            var rollbackSucceeded = false;
+
             try
             {
                 var restoredVault =
@@ -410,14 +412,18 @@ public partial class HistoryViewModel : ObservableObject
 
                 _vaultSession.ReplaceVault(restoredVault);
                 Load();
-
-                HistoryRestored?.Invoke(
-                    this,
-                    EventArgs.Empty);
+                rollbackSucceeded = true;
             }
             catch
             {
                 // Keep the original save error.
+            }
+
+            if (rollbackSucceeded)
+            {
+                HistoryRestored?.Invoke(
+                    this,
+                    EventArgs.Empty);
             }
 
             DialogService.Error(
