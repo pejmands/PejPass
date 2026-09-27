@@ -5,6 +5,7 @@
         Height="520"
         Width="640"
         WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
         ShowInTaskbar="False"
         Background="{DynamicResource BgBrush}">
 
