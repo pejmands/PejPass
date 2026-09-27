@@ -28,6 +28,7 @@
                 <Button x:Name="TertiaryButton" Content="Cancel" Click="Tertiary_Click"
                         Margin="0,0,8,0" Padding="16,8"
                         Style="{StaticResource SecondaryButton}"
+                        IsCancel="True"
                         Visibility="Collapsed"/>
                 <Button x:Name="SecondaryButton" Content="No" Click="Secondary_Click"
                         Margin="0,0,8,0" Padding="16,8"
