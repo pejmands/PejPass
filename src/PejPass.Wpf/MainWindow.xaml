@@ -285,6 +285,8 @@
                                     <ControlTemplate TargetType="ListBoxItem">
                                         <Border x:Name="Bd"
                                                 Background="Transparent"
+                                                BorderBrush="Transparent"
+                                                BorderThickness="1"
                                                 CornerRadius="6"
                                                 Padding="10,8"
                                                 SnapsToDevicePixels="True">
@@ -319,6 +321,13 @@
                                                         Value="{DynamicResource SurfaceAltBrush}"/>
                                                 <Setter TargetName="SelectionIndicator"
                                                         Property="Background"
+                                                        Value="{DynamicResource AccentBrush}"/>
+                                            </Trigger>
+
+                                            <Trigger Property="IsKeyboardFocusWithin"
+                                                     Value="True">
+                                                <Setter TargetName="Bd"
+                                                        Property="BorderBrush"
                                                         Value="{DynamicResource AccentBrush}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
