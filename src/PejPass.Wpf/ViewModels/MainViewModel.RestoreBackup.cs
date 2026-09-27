@@ -103,7 +103,6 @@ public partial class MainViewModel
         }
 
         var replace = choice == AppDialogResult.Primary;
-        var snapshot = currentVault.CreateSnapshot();
 
         try
         {
@@ -124,6 +123,10 @@ public partial class MainViewModel
                     return;
                 }
 
+                if (!await EnsureVaultWritableAsync())
+                    return;
+
+                var snapshot = currentVault.CreateSnapshot();
                 currentVault.Entries.Clear();
                 currentVault.Trash.Clear();
                 foreach (var e in backupVault.Entries)
@@ -156,6 +159,11 @@ public partial class MainViewModel
             }
             else
             {
+                if (!await EnsureVaultWritableAsync())
+                    return;
+
+                var snapshot = currentVault.CreateSnapshot();
+
                 // ---- Merge with explicit active-vs-trash rules ----
                 // Map fingerprint → entry (or trashed entry) in the CURRENT vault
                 var activeByFp = new Dictionary<string, VaultEntry>(StringComparer.Ordinal);
