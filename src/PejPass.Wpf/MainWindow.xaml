@@ -254,7 +254,8 @@
                 </Grid>
 
                 <!-- Entries -->
-                <ListBox x:Name="EntryList"
+                <Grid>
+                    <ListBox x:Name="EntryList"
                          ItemsSource="{Binding FilteredEntries}"
                          SelectedItem="{Binding SelectedEntry}"
                          IsSynchronizedWithCurrentItem="False"
@@ -381,7 +382,56 @@
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
-                </ListBox>
+                    </ListBox>
+
+                    <StackPanel HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Visibility="{Binding IsEntryListEmpty,
+                                                     Converter={StaticResource BoolToVis}}">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="No entries yet"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Add your first entry to get started."
+                                       FontSize="13"
+                                       Margin="0,8,0,0"
+                                       Foreground="{DynamicResource MutedBrush}"
+                                       HorizontalAlignment="Center"/>
+                            <Button Style="{StaticResource PrimaryButton}"
+                                    Content="Add Entry"
+                                    Command="{Binding AddEntryCommand}"
+                                    Height="40"
+                                    Padding="16,0"
+                                    Margin="0,16,0,0"
+                                    HorizontalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel HorizontalAlignment="Center">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasActiveEntryFilter}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Text="No matching entries"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Try a different search or filter."
+                                       FontSize="13"
+                                       Margin="0,8,0,0"
+                                       Foreground="{DynamicResource MutedBrush}"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
             </DockPanel>
 
             <!-- Divider -->
