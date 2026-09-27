@@ -7,6 +7,8 @@ public partial class PasswordPromptWindow : Window
 {
     public string Password { get; private set; } = string.Empty;
 
+    public Func<string, Task<string?>>? ValidatePasswordAsync { get; set; }
+
     public PasswordPromptWindow(string title, string message)
     {
         InitializeComponent();
@@ -28,21 +30,52 @@ public partial class PasswordPromptWindow : Window
         };
     }
 
-    private void Ok_Click(object sender, RoutedEventArgs e)
+    private async void Ok_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrEmpty(PasswordInput.Password))
+        var password = PasswordInput.Password;
+
+        if (string.IsNullOrEmpty(password))
         {
-            PasswordErrorText.Text = "⚠ Password is required.";
-            PasswordErrorText.Visibility = Visibility.Visible;
-            PasswordInput.Focus();
-            Keyboard.Focus(PasswordInput);
+            ShowError("Password is required.");
             return;
         }
 
-        PasswordErrorText.Visibility = Visibility.Collapsed;
-        Password = PasswordInput.Password;
-        DialogResult = true;
-        Close();
+        OkButton.IsEnabled = false;
+
+        try
+        {
+            if (ValidatePasswordAsync is not null)
+            {
+                var error = await ValidatePasswordAsync(password);
+
+                if (!string.IsNullOrEmpty(error))
+                {
+                    ShowError(error);
+                    return;
+                }
+            }
+
+            PasswordErrorText.Visibility = Visibility.Collapsed;
+            Password = password;
+            DialogResult = true;
+            Close();
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+        finally
+        {
+            OkButton.IsEnabled = true;
+        }
+    }
+
+    private void ShowError(string message)
+    {
+        PasswordErrorText.Text = $"⚠ {message}";
+        PasswordErrorText.Visibility = Visibility.Visible;
+        PasswordInput.Focus();
+        Keyboard.Focus(PasswordInput);
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e)
