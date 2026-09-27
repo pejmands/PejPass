@@ -5,7 +5,7 @@
         Height="760"
         Width="560"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="CanResizeWithGrip"
+        ResizeMode="CanResize"
         MinHeight="520"
         MinWidth="480"
         ShowInTaskbar="False"
