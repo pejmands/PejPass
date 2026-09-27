@@ -249,7 +249,7 @@
                         <TextBlock Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6" FontFamily="Consolas" FontSize="12"><Run FontWeight="SemiBold" Text="Ctrl+S"/><Run Foreground="{DynamicResource MutedBrush}" Text="  Settings"/></TextBlock>
                         <TextBlock Foreground="{DynamicResource TextBrush}" FontFamily="Consolas" FontSize="12"><Run FontWeight="SemiBold" Text="Esc"/><Run Foreground="{DynamicResource MutedBrush}" Text="  Clear selection"/></TextBlock>
                     </StackPanel>
-                </Border> </Border>
+                </Border>
             </StackPanel>
         </ScrollViewer>
 
