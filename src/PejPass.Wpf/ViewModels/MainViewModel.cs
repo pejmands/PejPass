@@ -884,6 +884,14 @@ public partial class MainViewModel : ObservableObject
 
     private async Task<bool> SaveVaultAsync()
     {
+        var ownsBusyState = !IsBusy;
+
+        if (ownsBusyState)
+        {
+            IsBusy = true;
+            BusyMessage = "Saving vault...";
+        }
+
         try
         {
             await _vaultService.SaveVaultAsync(
@@ -915,6 +923,11 @@ public partial class MainViewModel : ObservableObject
                 "Save failed");
 
             return false;
+        }
+        finally
+        {
+            if (ownsBusyState)
+                IsBusy = false;
         }
     }
 }
