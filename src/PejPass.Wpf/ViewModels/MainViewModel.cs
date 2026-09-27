@@ -600,14 +600,20 @@ public partial class MainViewModel : ObservableObject
 
         if (editor.ShowDialog() == true && editor.Result is { } newEntry)
         {
-            _vaultSession.Vault!.AddEntry(newEntry);
+            var vault = _vaultSession.Vault!;
+            var snapshot = vault.CreateSnapshot();
+
+            vault.AddEntry(newEntry);
             Entries.Add(newEntry);
 
             RebuildTagFilters();
             ApplyFilter(preserveSelectionId: newEntry.Id);
 
             if (!await SaveVaultAsync())
+            {
+                RestoreVaultSnapshot(snapshot);
                 return;
+            }
 
             SnackbarService.Show("Entry added.");
             ResetAutoLockTimer();
@@ -720,7 +726,10 @@ public partial class MainViewModel : ObservableObject
                 noText: "Cancel"))
             return;
 
-        _vaultSession.Vault!.SoftDelete(entry.Id);
+        var vault = _vaultSession.Vault!;
+        var snapshot = vault.CreateSnapshot();
+
+        vault.SoftDelete(entry.Id);
         Entries.Remove(entry);
         SelectedEntry = null;
 
@@ -728,7 +737,10 @@ public partial class MainViewModel : ObservableObject
         ApplyFilter(preserveSelectionId: null);
 
         if (!await SaveVaultAsync())
+        {
+            RestoreVaultSnapshot(snapshot);
             return;
+        }
 
         UpdateEntryStatus("moved to trash");
         ResetAutoLockTimer();
@@ -771,6 +783,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             var vault = _vaultSession.Vault!;
+            var snapshot = vault.CreateSnapshot();
 
             foreach (var e in imported)
             {
@@ -782,7 +795,10 @@ public partial class MainViewModel : ObservableObject
             ApplyFilter();
 
             if (!await SaveVaultAsync())
+            {
+                RestoreVaultSnapshot(snapshot);
                 return;
+            }
 
             SnackbarService.Show($"Imported {imported.Count} entries.");
             ResetAutoLockTimer();
@@ -835,6 +851,7 @@ public partial class MainViewModel : ObservableObject
         var vault = _vaultSession.Vault;
         if (vault is null) return;
 
+        var snapshot = vault.CreateSnapshot();
         var vm = new TrashViewModel(vault);
         var win = new TrashWindow(vm)
         {
@@ -851,8 +868,18 @@ public partial class MainViewModel : ObservableObject
         RebuildTagFilters();
         ApplyFilter(preserveSelectionId: SelectedEntry?.Id);
 
-        if (!await SaveVaultAsync())
+        if (!vm.HasChanges)
+        {
+            UpdateEntryStatus();
+            ResetAutoLockTimer();
             return;
+        }
+
+        if (!await SaveVaultAsync())
+        {
+            RestoreVaultSnapshot(snapshot);
+            return;
+        }
 
         UpdateEntryStatus();
         ResetAutoLockTimer();
@@ -937,6 +964,20 @@ public partial class MainViewModel : ObservableObject
     {
         await LoadVaultAsync();
         SelectedEntry = null;
+    }
+
+    private void RestoreVaultSnapshot(Vault snapshot)
+    {
+        _vaultSession.Vault!.RestoreSnapshot(snapshot);
+
+        Entries.Clear();
+        foreach (var entry in _vaultSession.Vault.Entries)
+            Entries.Add(entry);
+
+        SelectedEntry = null;
+        RebuildTagFilters();
+        ApplyFilter(preserveSelectionId: null);
+        UpdateEntryStatus();
     }
 
     private async Task<bool> SaveVaultAsync()
