@@ -367,6 +367,9 @@ public partial class HistoryViewModel : ObservableObject
         if (!confirmed)
             return;
 
+        if (!await EnsureVaultWritableAsync())
+            return;
+
         var snapshot = vault.CreateSnapshot();
 
         if (!vault.RestoreHistoryFields(
@@ -445,6 +448,9 @@ public partial class HistoryViewModel : ObservableObject
         if (vault is null)
             return;
 
+        if (!await EnsureVaultWritableAsync())
+            return;
+
         var snapshot = vault.CreateSnapshot();
 
         if (!vault.RemoveHistory(SelectedItem.HistoryId))
@@ -485,6 +491,9 @@ public partial class HistoryViewModel : ObservableObject
         if (!confirmed)
             return;
 
+        if (!await EnsureVaultWritableAsync())
+            return;
+
         var snapshot = vault.CreateSnapshot();
         vault.ClearHistory();
 
@@ -504,6 +513,28 @@ public partial class HistoryViewModel : ObservableObject
         Load();
 
         SelectedItem = null;
+    }
+
+    private async Task<bool> EnsureVaultWritableAsync()
+    {
+        var path = _vaultSession.VaultPath;
+
+        if (string.IsNullOrEmpty(path))
+            return false;
+
+        try
+        {
+            await _vaultService.EnsureVaultWritableAsync(path);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            DialogService.Error(
+                $"The vault cannot be modified right now.\\n\\n{ex.Message}",
+                "Vault unavailable");
+
+            return false;
+        }
     }
 
     private async Task<bool> SaveAsync(Vault snapshot, string actionTitle)
