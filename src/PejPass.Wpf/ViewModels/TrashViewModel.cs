@@ -11,6 +11,7 @@ public partial class TrashViewModel : ObservableObject
     private readonly Vault _vault;
     private readonly List<TrashRow> _all = [];
     private readonly Func<Task<bool>> _ensureWritable;
+    private readonly Func<Task<bool>> _saveVault;
 
     public ObservableCollection<TrashRow> Items { get; } = [];
 
@@ -28,12 +29,14 @@ public partial class TrashViewModel : ObservableObject
 
     public event EventHandler? Changed;
 
-    public bool HasChanges { get; private set; }
-
-    public TrashViewModel(Vault vault, Func<Task<bool>> ensureWritable)
+    public TrashViewModel(
+        Vault vault,
+        Func<Task<bool>> ensureWritable,
+        Func<Task<bool>> saveVault)
     {
         _vault = vault;
         _ensureWritable = ensureWritable;
+        _saveVault = saveVault;
         Reload();
     }
 
@@ -84,12 +87,16 @@ public partial class TrashViewModel : ObservableObject
     {
         if (row is null || !await _ensureWritable()) return;
 
+        var snapshot = _vault.CreateSnapshot();
+
         if (!_vault.RestoreFromTrash(row.EntryId))
+            return;
+
+        if (!await SaveAndRollbackAsync(snapshot))
             return;
 
         _all.RemoveAll(r => r.EntryId == row.EntryId);
         ApplyFilter();
-        HasChanges = true;
         Changed?.Invoke(this, EventArgs.Empty);
         StatusMessage = $"Restored \"{row.Title}\".";
         if (_all.Count == 0)
@@ -111,12 +118,16 @@ public partial class TrashViewModel : ObservableObject
         if (!await _ensureWritable())
             return;
 
+        var snapshot = _vault.CreateSnapshot();
+
         if (!_vault.PurgeFromTrash(row.EntryId))
+            return;
+
+        if (!await SaveAndRollbackAsync(snapshot))
             return;
 
         _all.RemoveAll(r => r.EntryId == row.EntryId);
         ApplyFilter();
-        HasChanges = true;
         Changed?.Invoke(this, EventArgs.Empty);
         if (_all.Count == 0)
             StatusMessage = "Trash is empty.";
@@ -137,12 +148,27 @@ public partial class TrashViewModel : ObservableObject
         if (!await _ensureWritable())
             return;
 
+        var snapshot = _vault.CreateSnapshot();
+
         _vault.EmptyTrash();
+
+        if (!await SaveAndRollbackAsync(snapshot))
+            return;
+
         _all.Clear();
         ApplyFilter();
-        HasChanges = true;
         Changed?.Invoke(this, EventArgs.Empty);
         StatusMessage = "Trash is empty.";
+    }
+
+    private async Task<bool> SaveAndRollbackAsync(Vault snapshot)
+    {
+        if (await _saveVault())
+            return true;
+
+        _vault.RestoreSnapshot(snapshot);
+        Reload();
+        return false;
     }
 }
 
