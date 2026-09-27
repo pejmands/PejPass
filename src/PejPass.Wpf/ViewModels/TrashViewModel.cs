@@ -27,6 +27,8 @@ public partial class TrashViewModel : ObservableObject
 
     public event EventHandler? Changed;
 
+    public bool HasChanges { get; private set; }
+
     public TrashViewModel(Vault vault)
     {
         _vault = vault;
@@ -85,6 +87,9 @@ public partial class TrashViewModel : ObservableObject
 
         _all.RemoveAll(r => r.EntryId == row.EntryId);
         ApplyFilter();
+        HasChanges = true;
+        HasChanges = true;
+        HasChanges = true;
         Changed?.Invoke(this, EventArgs.Empty);
         StatusMessage = $"Restored \"{row.Title}\".";
         if (_all.Count == 0)
