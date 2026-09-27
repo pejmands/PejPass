@@ -109,6 +109,21 @@ public partial class MainWindow : Window
         var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
 
+        if (IsTypingInInput())
+        {
+            if (ctrl && e.Key == Key.L)
+            {
+                vm.LockCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (ctrl && e.Key == Key.K)
+            {
+                FocusSearch();
+                e.Handled = true;
+            }
+            return;
+        }
+
         if (e.Key == Key.Escape)
         {
             vm.SelectedEntry = null;
