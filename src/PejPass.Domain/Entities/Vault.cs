@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace PejPass.Domain.Entities;
 
 /// <summary>
@@ -25,6 +27,24 @@ public sealed class Vault
     public static TimeSpan TrashRetention { get; } = TimeSpan.FromDays(30);
 
     public const int MaxHistoryPerEntry = 10;
+
+    public Vault CreateSnapshot()
+    {
+        return JsonSerializer.Deserialize<Vault>(
+            JsonSerializer.Serialize(this))
+            ?? throw new InvalidOperationException("Failed to create vault snapshot.");
+    }
+
+    public void RestoreSnapshot(Vault snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        Name = snapshot.Name;
+        Entries = snapshot.Entries;
+        History = snapshot.History;
+        Trash = snapshot.Trash;
+        UpdatedAt = snapshot.UpdatedAt;
+    }
 
     public void AddEntry(VaultEntry entry)
     {
