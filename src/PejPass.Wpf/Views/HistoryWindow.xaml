@@ -11,11 +11,18 @@
         ResizeMode="CanResize"
         ShowInTaskbar="False"
         Background="{DynamicResource BgBrush}">
-    <DockPanel>
-        <controls:AppTitleBar DockPanel.Dock="Top"
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <controls:AppTitleBar Grid.Row="0"
                               ShowMinimize="false"
                               ShowMaximize="true"/>
-        <Grid Margin="16">
+
+        <Grid Grid.Row="1"
+              Margin="16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -481,7 +488,9 @@
         </Grid>
 
         <!-- Busy overlay -->
-        <Border Panel.ZIndex="100"
+        <Border Grid.Row="0"
+                Grid.RowSpan="2"
+                Panel.ZIndex="100"
                 Background="#80000000"
                 Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
             <Border HorizontalAlignment="Center"
@@ -500,5 +509,5 @@
                 </StackPanel>
             </Border>
         </Border>
-    </DockPanel>
+    </Grid>
 </Window>
