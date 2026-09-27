@@ -178,7 +178,7 @@
 
                 <!-- Tag Filters: single-row horizontal strip (does not grow with tag count) -->
                 <ScrollViewer DockPanel.Dock="Top"
-                              Margin="16,0,16,8"
+                              Margin="16,0,16,12"
                               Height="44"
                               HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Disabled"
@@ -275,7 +275,7 @@
                             <Setter Property="Padding"
                                     Value="0"/>
                             <Setter Property="Margin"
-                                    Value="0,0,0,2"/>
+                                    Value="0,0,0,4"/>
                             <Setter Property="Focusable"
                                     Value="True"/>
 
@@ -368,7 +368,7 @@
 
                                     <TextBlock Text="{Binding Username}"
                                                FontSize="12"
-                                               Margin="0,3,0,0"
+                                               Margin="0,4,0,0"
                                                Foreground="{DynamicResource MutedBrush}"
                                                TextTrimming="CharacterEllipsis"
                                                ToolTip="{Binding Username}"/>
