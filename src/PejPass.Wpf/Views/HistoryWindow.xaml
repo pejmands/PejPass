@@ -146,6 +146,8 @@
                                     <ControlTemplate TargetType="ListBoxItem">
                                         <Border x:Name="ItemBorder"
                                                 Background="{DynamicResource SurfaceBrush}"
+                                                BorderBrush="Transparent"
+                                                BorderThickness="1"
                                                 CornerRadius="8"
                                                 Padding="14,12">
                                             <ContentPresenter/>
@@ -158,6 +160,9 @@
                                             </Trigger>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+                                            </Trigger>
+                                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
