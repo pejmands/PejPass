@@ -27,6 +27,18 @@ public partial class SettingsWindow : Window
         Closing += OnClosing;
     }
 
+    private void FocusFirstInvalidField()
+    {
+        if (!string.IsNullOrEmpty(_vm.AutoLockError))
+        {
+            AutoLockTextBox.Focus();
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(_vm.ClipboardError))
+            ClipboardTextBox.Focus();
+    }
+
     private void OnClosing(object? sender, CancelEventArgs e)
     {
         if (_committed) return;
