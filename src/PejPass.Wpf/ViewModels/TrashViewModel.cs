@@ -13,6 +13,12 @@ public partial class TrashViewModel : ObservableObject
 
     public ObservableCollection<TrashRow> Items { get; } = [];
 
+    public bool IsTrashEmpty => _all.Count == 0;
+    public bool HasNoSearchResults =>
+        _all.Count > 0 &&
+        Items.Count == 0 &&
+        !string.IsNullOrWhiteSpace(SearchText);
+
     [ObservableProperty]
     public partial string SearchText { get; set; } = string.Empty;
 
@@ -54,6 +60,9 @@ public partial class TrashViewModel : ObservableObject
 
         foreach (var row in source)
             Items.Add(row);
+
+        OnPropertyChanged(nameof(IsTrashEmpty));
+        OnPropertyChanged(nameof(HasNoSearchResults));
 
         if (_all.Count == 0)
             StatusMessage = "Trash is empty.";
