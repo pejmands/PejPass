@@ -54,7 +54,8 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBox Text="{Binding VaultPath, UpdateSourceTrigger=PropertyChanged}"
+                <TextBox x:Name="VaultPathTextBox"
+                         Text="{Binding VaultPath, UpdateSourceTrigger=PropertyChanged}"
                          TextWrapping="NoWrap"
                          HorizontalScrollBarVisibility="Auto"
                          VerticalScrollBarVisibility="Disabled"/>
@@ -66,6 +67,11 @@
                         Background="{DynamicResource SurfaceAltBrush}"
                         Foreground="{DynamicResource TextBrush}"/>
             </Grid>
+
+            <TextBlock Style="{StaticResource ValidationErrorText}"
+                       Text="{Binding VaultPathError, StringFormat=⚠ {0}}"
+                       Visibility="{Binding VaultPathError, Converter={StaticResource NullOrEmptyToVis}}"
+                       Margin="0,-8,0,12"/>
 
             <!-- Password -->
             <TextBlock Text="Master password"
@@ -89,9 +95,9 @@
                            Margin="0,4,0,0"/>
             </StackPanel>
 
-            <TextBlock Text="{Binding PasswordError}"
-                       Foreground="{DynamicResource DangerBrush}"
-                       TextWrapping="Wrap"
+            <TextBlock Style="{StaticResource ValidationErrorText}"
+                       Text="{Binding PasswordError, StringFormat=⚠ {0}}"
+                       Visibility="{Binding PasswordError, Converter={StaticResource NullOrEmptyToVis}}"
                        Margin="0,0,0,12"/>
 
             <TextBlock Text="{Binding StatusMessage}"
