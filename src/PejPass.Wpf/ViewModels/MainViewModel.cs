@@ -873,8 +873,11 @@ public partial class MainViewModel : ObservableObject
         if (!await EnsureVaultWritableAsync())
             return;
 
-        var snapshot = vault.CreateSnapshot();
-        var vm = new TrashViewModel(vault, EnsureVaultWritableAsync);
+        var vm = new TrashViewModel(
+            vault,
+            EnsureVaultWritableAsync,
+            SaveVaultAsync);
+
         var win = new TrashWindow(vm)
         {
             Owner = GetOwnerWindow()
@@ -889,20 +892,6 @@ public partial class MainViewModel : ObservableObject
 
         RebuildTagFilters();
         ApplyFilter(preserveSelectionId: SelectedEntry?.Id);
-
-        if (!vm.HasChanges)
-        {
-            UpdateEntryStatus();
-            ResetAutoLockTimer();
-            return;
-        }
-
-        if (!await SaveVaultAsync())
-        {
-            RestoreVaultSnapshot(snapshot);
-            return;
-        }
-
         UpdateEntryStatus();
         ResetAutoLockTimer();
     }
