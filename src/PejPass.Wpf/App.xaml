@@ -370,9 +370,9 @@
                                 </Trigger>
 
                                 <Trigger Property="IsKeyboardFocused" Value="True">
-                                    <Setter TargetName="Box"
-                                            Property="BorderBrush"
-                                            Value="{DynamicResource AccentBrush}"/>
+                                    <Setter TargetName="FocusRing"
+                                            Property="Visibility"
+                                            Value="Visible"/>
                                 </Trigger>
 
                                 <Trigger Property="IsEnabled" Value="False">
@@ -429,9 +429,9 @@
                                 </Trigger>
 
                                 <Trigger Property="IsKeyboardFocused" Value="True">
-                                    <Setter TargetName="Outer"
-                                            Property="Stroke"
-                                            Value="{DynamicResource AccentBrush}"/>
+                                    <Setter TargetName="FocusRing"
+                                            Property="Visibility"
+                                            Value="Visible"/>
                                 </Trigger>
 
                                 <Trigger Property="IsEnabled" Value="False">
