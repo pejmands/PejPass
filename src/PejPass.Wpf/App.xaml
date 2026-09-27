@@ -73,8 +73,8 @@
                                 </Border>
 
                                 <Border x:Name="FocusRing"
-                                        BorderBrush="{TemplateBinding Foreground}"
-                                        BorderThickness="2"
+                                        BorderBrush="{DynamicResource BorderFocusBrush}"
+                                        BorderThickness="1"
                                         CornerRadius="6"
                                         Visibility="Collapsed"
                                         IsHitTestVisible="False"/>
