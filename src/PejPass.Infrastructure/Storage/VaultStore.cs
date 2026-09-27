@@ -32,6 +32,33 @@ public sealed class VaultStore(
 
     public bool Exists(string path) => File.Exists(path);
 
+    public async Task EnsureWritableAsync(string path, CancellationToken ct = default)
+    {
+        if (!File.Exists(path))
+            throw new FileNotFoundException("Vault file not found.", path);
+
+        ct.ThrowIfCancellationRequested();
+
+        try
+        {
+            await using var fs = new FileStream(
+                path,
+                FileMode.Open,
+                FileAccess.Write,
+                FileShare.Read,
+                bufferSize: 1,
+                useAsync: true);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            throw new IOException("The vault file is not writable. It may be locked or access may be denied.");
+        }
+        catch (IOException)
+        {
+            throw new IOException("The vault file is currently locked or unavailable for writing.");
+        }
+    }
+
     public async Task CreateAsync(
         string path,
         string masterPassword,
