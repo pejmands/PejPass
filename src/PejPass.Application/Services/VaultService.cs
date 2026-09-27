@@ -30,6 +30,11 @@ public sealed class VaultService(IVaultStore store)
         return await _store.OpenAsync(path, masterPassword, ct);
     }
 
+    public async Task EnsureVaultWritableAsync(string path, CancellationToken ct = default)
+    {
+        await _store.EnsureWritableAsync(path, ct);
+    }
+
     public async Task SaveVaultAsync(string path, string masterPassword, Vault vault, CancellationToken ct = default)
     {
         await _store.SaveAsync(path, masterPassword, vault, ct);
