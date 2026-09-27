@@ -715,7 +715,6 @@ public partial class MainViewModel : ObservableObject
             {
                 vault.AddEntry(e);
                 Entries.Add(e);
-                await Task.Delay(100);
             }
 
             RebuildTagFilters();
