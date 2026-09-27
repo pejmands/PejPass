@@ -12,6 +12,14 @@ public partial class LoginWindow : Window
         InitializeComponent();
         DataContext = viewModel;
 
+        viewModel.ValidationFailed += (_, _) =>
+        {
+            if (!string.IsNullOrEmpty(viewModel.VaultPathError))
+                VaultPathTextBox.Focus();
+            else if (!string.IsNullOrEmpty(viewModel.PasswordError))
+                MasterPasswordBox.Focus();
+        };
+
         viewModel.RequestClose += (_, _) =>
         {
             MasterPasswordBox.Clear();
