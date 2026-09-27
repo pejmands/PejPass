@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 
 namespace PejPass.Wpf.Dialogs;
 
@@ -11,6 +12,7 @@ public partial class AppDialog : Window
     {
         InitializeComponent();
         App.PrepareCustomChrome(this);
+        PreviewKeyDown += OnPreviewKeyDown;
 
         TitleText.Text = title;
         MessageText.Text = message;
@@ -40,6 +42,25 @@ public partial class AppDialog : Window
 
         if (primaryText is "Delete" or "Yes" or "Delete permanently" or "Delete all permanently")
             PrimaryButton.Style = (Style)FindResource("DestructiveButton");
+    }
+
+    private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape)
+            return;
+
+        if (TertiaryButton.Visibility == Visibility.Visible)
+        {
+            Tertiary_Click(TertiaryButton, new RoutedEventArgs());
+        }
+        else
+        {
+            Result = AppDialogResult.None;
+            DialogResult = false;
+            Close();
+        }
+
+        e.Handled = true;
     }
 
     private void Primary_Click(object sender, RoutedEventArgs e)
