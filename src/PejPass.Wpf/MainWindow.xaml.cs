@@ -109,13 +109,6 @@ public partial class MainWindow : Window
         var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
 
-        if (e.Key == Key.Escape)
-        {
-            vm.SelectedEntry = null;
-            e.Handled = true;
-            return;
-        }
-
         if (IsTypingInInput())
         {
             if (ctrl && e.Key == Key.L)
@@ -131,8 +124,25 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (e.Key == Key.Escape)
+        {
+            vm.SelectedEntry = null;
+            e.Handled = true;
+            return;
+        }
+
         if (!ctrl)
         {
+            if (e.Key == Key.Enter &&
+                EntryList.IsKeyboardFocusWithin &&
+                vm.SelectedEntry is not null &&
+                vm.EditEntryCommand.CanExecute(vm.SelectedEntry))
+            {
+                vm.EditEntryCommand.Execute(vm.SelectedEntry);
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.Delete && vm.SelectedEntry is not null)
             {
                 if (vm.DeleteEntryCommand.CanExecute(vm.SelectedEntry))
