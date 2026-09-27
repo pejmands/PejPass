@@ -244,8 +244,8 @@
                 </StackPanel>
             </DockPanel>
 
-            <ListBox Grid.Row="1"
-                     ItemsSource="{Binding Issues}"
+            <Grid Grid.Row="1">
+                <ListBox ItemsSource="{Binding Issues}"
                      Background="Transparent"
                      BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -328,7 +328,53 @@
                         </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
-            </ListBox>
+                </ListBox>
+
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding IsEmptyVault, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="No entries to scan"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Add entries to run a vault health check."
+                               FontSize="13"
+                               Margin="0,8,0,0"
+                               Foreground="{DynamicResource MutedBrush}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding HasNoIssues, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="No issues found"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Your current entries passed all health checks."
+                               FontSize="13"
+                               Margin="0,8,0,0"
+                               Foreground="{DynamicResource MutedBrush}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding HasNoMatchingIssues, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="No matching issues"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Try a different issue filter."
+                               FontSize="13"
+                               Margin="0,8,0,0"
+                               Foreground="{DynamicResource MutedBrush}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
         </Grid>
 
         <!-- Footer -->
