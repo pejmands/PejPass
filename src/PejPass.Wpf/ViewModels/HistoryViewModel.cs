@@ -17,6 +17,12 @@ public partial class HistoryViewModel : ObservableObject
 
     public ObservableCollection<HistoryFieldRow> Fields { get; } = [];
 
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
+    public partial string BusyMessage { get; set; } = string.Empty;
+
     private HistoryRow? _selectedItem;
 
     public HistoryRow? SelectedItem
@@ -385,6 +391,9 @@ public partial class HistoryViewModel : ObservableObject
 
         try
         {
+            IsBusy = true;
+            BusyMessage = "Restoring history...";
+
             await _vaultService.SaveVaultAsync(
                 path,
                 _vaultSession.GetSecret(),
@@ -417,6 +426,10 @@ public partial class HistoryViewModel : ObservableObject
 
             return;
         }
+        finally
+        {
+            IsBusy = false;
+        }
 
         Load();
 
@@ -448,7 +461,16 @@ public partial class HistoryViewModel : ObservableObject
         if (!vault.RemoveHistory(SelectedItem.HistoryId))
             return;
 
-        await SaveAsync();
+        try
+        {
+            IsBusy = true;
+            BusyMessage = "Deleting history...";
+            await SaveAsync();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
 
         Load();
 
@@ -474,7 +496,16 @@ public partial class HistoryViewModel : ObservableObject
 
         vault.ClearHistory();
 
-        await SaveAsync();
+        try
+        {
+            IsBusy = true;
+            BusyMessage = "Deleting all history...";
+            await SaveAsync();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
 
         Load();
 
