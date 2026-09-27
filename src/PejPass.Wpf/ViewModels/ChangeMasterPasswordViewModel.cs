@@ -24,7 +24,13 @@ public partial class ChangeMasterPasswordViewModel(
     public partial string ConfirmPassword { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string? ErrorMessage { get; set; }
+    public partial string? CurrentPasswordError { get; set; }
+
+    [ObservableProperty]
+    public partial string? NewPasswordError { get; set; }
+
+    [ObservableProperty]
+    public partial string? ConfirmPasswordError { get; set; }
 
     [ObservableProperty]
     public partial bool IsBusy { get; set; }
@@ -68,7 +74,9 @@ public partial class ChangeMasterPasswordViewModel(
     [RelayCommand]
     private async Task ChangeAsync()
     {
-        ErrorMessage = null;
+        CurrentPasswordError = null;
+        NewPasswordError = null;
+        ConfirmPasswordError = null;
         Success = false;
 
         var path = _vaultSession.VaultPath;
@@ -76,26 +84,26 @@ public partial class ChangeMasterPasswordViewModel(
 
         if (string.IsNullOrEmpty(path) || vault is null)
         {
-            ErrorMessage = "No vault is open.";
+            CurrentPasswordError = "No vault is open.";
             return;
         }
 
         if (string.IsNullOrEmpty(CurrentPassword))
         {
-            ErrorMessage = "Enter your current master password.";
+            CurrentPasswordError = "Enter your current master password.";
             return;
         }
 
         if (!string.Equals(NewPassword, ConfirmPassword, StringComparison.Ordinal))
         {
-            ErrorMessage = "New password and confirmation do not match.";
+            ConfirmPasswordError = "New password and confirmation do not match.";
             return;
         }
 
         var validation = MasterPasswordPolicy.Validate(NewPassword);
         if (!validation.IsValid)
         {
-            ErrorMessage = validation.ErrorMessage;
+            NewPasswordError = validation.ErrorMessage;
             return;
         }
 
@@ -123,11 +131,11 @@ public partial class ChangeMasterPasswordViewModel(
                 msg.Contains("padding", StringComparison.OrdinalIgnoreCase) ||
                 msg.Contains("mac", StringComparison.OrdinalIgnoreCase))
             {
-                ErrorMessage = "Current master password is incorrect.";
+                CurrentPasswordError = "Current master password is incorrect.";
             }
             else
             {
-                ErrorMessage = msg;
+                CurrentPasswordError = msg;
             }
         }
         finally
