@@ -74,6 +74,13 @@
                                       ClickMode="Press"/>
 
                         <!-- Selected content -->
+                        <Border x:Name="FocusRing"
+                                BorderBrush="{DynamicResource BorderFocusBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Visibility="Collapsed"
+                                IsHitTestVisible="False"/>
+
                         <ContentPresenter x:Name="ContentSite"
                                           IsHitTestVisible="False"
                                           Content="{TemplateBinding SelectionBoxItem}"
@@ -110,6 +117,12 @@
                         </Popup>
                     </Grid>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="FocusRing"
+                                    Property="Visibility"
+                                    Value="Visible"/>
+                        </Trigger>
+
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.5"/>
                         </Trigger>
