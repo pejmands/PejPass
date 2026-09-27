@@ -13,31 +13,56 @@
     <DockPanel>
         <controls:AppTitleBar DockPanel.Dock="Top" ShowMinimize="false" ShowMaximize="false"/>
 
-    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-            Background="{DynamicResource SurfaceBrush}" CornerRadius="0" Padding="24">
-        <StackPanel>
-            <TextBlock x:Name="TitleText" FontSize="18" FontWeight="Bold"
-                       Foreground="{DynamicResource TextBrush}" Margin="0,0,0,10"
-                       TextWrapping="Wrap"/>
+        <Border BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                Background="{DynamicResource SurfaceBrush}"
+                CornerRadius="0"
+                Padding="24">
+            <StackPanel>
+                <ScrollViewer MaxHeight="420"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <TextBlock x:Name="TitleText"
+                                   FontSize="18"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource TextBrush}"
+                                   Margin="0,0,0,10"
+                                   TextWrapping="Wrap"/>
 
-            <TextBlock x:Name="MessageText" FontSize="14"
-                       Foreground="{DynamicResource MutedBrush}"
-                       TextWrapping="Wrap" Margin="0,0,0,24"/>
+                        <TextBlock x:Name="MessageText"
+                                   FontSize="14"
+                                   Foreground="{DynamicResource MutedBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,24"/>
+                    </StackPanel>
+                </ScrollViewer>
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="TertiaryButton" Content="Cancel" Click="Tertiary_Click"
-                        Margin="0,0,8,0" Padding="16,8"
-                        Style="{StaticResource SecondaryButton}"
-                        IsCancel="True"
-                        Visibility="Collapsed"/>
-                <Button x:Name="SecondaryButton" Content="No" Click="Secondary_Click"
-                        Margin="0,0,8,0" Padding="16,8"
-                        Style="{StaticResource SecondaryButton}"
-                        Visibility="Collapsed"/>
-                <Button x:Name="PrimaryButton" Content="OK" Click="Primary_Click"
-                        Padding="16,8" IsDefault="True" Style="{StaticResource PrimaryButton}"/>
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right">
+                    <Button x:Name="TertiaryButton"
+                            Content="Cancel"
+                            Click="Tertiary_Click"
+                            Margin="0,0,8,0"
+                            Padding="16,8"
+                            Style="{StaticResource SecondaryButton}"
+                            IsCancel="True"
+                            Visibility="Collapsed"/>
+                    <Button x:Name="SecondaryButton"
+                            Content="No"
+                            Click="Secondary_Click"
+                            Margin="0,0,8,0"
+                            Padding="16,8"
+                            Style="{StaticResource SecondaryButton}"
+                            Visibility="Collapsed"/>
+                    <Button x:Name="PrimaryButton"
+                            Content="OK"
+                            Click="Primary_Click"
+                            Padding="16,8"
+                            IsDefault="True"
+                            Style="{StaticResource PrimaryButton}"/>
+                </StackPanel>
             </StackPanel>
-        </StackPanel>
-    </Border>
+        </Border>
     </DockPanel>
 </Window>
