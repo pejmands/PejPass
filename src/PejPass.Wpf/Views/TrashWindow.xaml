@@ -68,8 +68,8 @@
         </Grid>
 
         <!-- Trash items -->
-        <ListBox x:Name="TrashList"
-                 Grid.Row="2"
+        <Grid Grid.Row="2">
+            <ListBox x:Name="TrashList"
                  ItemsSource="{Binding Items}"
                  Background="Transparent"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -172,7 +172,38 @@
                     </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
-        </ListBox>
+            </ListBox>
+
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding IsTrashEmpty, Converter={StaticResource BoolToVis}}">
+                <TextBlock Text="Trash is empty"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextBrush}"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="Deleted entries you remove will appear here."
+                           FontSize="13"
+                           Margin="0,8,0,0"
+                           Foreground="{DynamicResource MutedBrush}"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding HasNoSearchResults, Converter={StaticResource BoolToVis}}">
+                <TextBlock Text="No matching items"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextBrush}"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="Try a different search."
+                           FontSize="13"
+                           Margin="0,8,0,0"
+                           Foreground="{DynamicResource MutedBrush}"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
 
         <!-- Footer -->
         <Grid Grid.Row="3"
