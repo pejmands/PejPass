@@ -71,7 +71,7 @@
             <TextBlock Style="{StaticResource ValidationErrorText}"
                        Text="{Binding VaultPathError, StringFormat=⚠ {0}}"
                        Visibility="{Binding VaultPathError, Converter={StaticResource NullOrEmptyToVis}}"
-                       Margin="0,-8,0,12"/>
+                       Margin="0,-4,0,12"/>
 
             <!-- Password -->
             <TextBlock Text="Master password"
@@ -80,7 +80,7 @@
 
             <PasswordBox x:Name="MasterPasswordBox"
                          PasswordChanged="MasterPasswordBox_PasswordChanged"
-                         Margin="0,0,0,8"/>
+                         Margin="0,0,0,12"/>
 
             <!-- Strength (create mode) -->
             <StackPanel Visibility="{Binding ShowMasterPasswordStrength, Converter={StaticResource BoolToVis}}"

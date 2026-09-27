@@ -479,7 +479,7 @@
                     <StackPanel MaxWidth="560">
 
                         <!-- Title -->
-                        <Grid Margin="0,0,0,8">
+                        <Grid Margin="0,0,0,12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -663,7 +663,7 @@
 
                             <Border Background="{DynamicResource SurfaceAltBrush}"
                                     CornerRadius="8"
-                                    Padding="14">
+                                    Padding="16">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -824,8 +824,7 @@
                         </StackPanel>
 
                         <!-- Actions -->
-                        <StackPanel Orientation="Horizontal"
-                                    Margin="0,0,0,0">
+                        <StackPanel Orientation="Horizontal">
                             <Button Style="{StaticResource SecondaryButton}"
                                     Content="Edit"
                                     Command="{Binding EditEntryCommand}"

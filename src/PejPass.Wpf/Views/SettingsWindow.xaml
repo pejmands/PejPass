@@ -11,7 +11,7 @@
         ShowInTaskbar="False"
         Background="{DynamicResource BgBrush}">
 
-    <Grid Margin="18">
+    <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -82,7 +82,7 @@
                                    FontSize="11"
                                    Foreground="{DynamicResource MutedBrush}"
                                    TextWrapping="Wrap"
-                                   Margin="0,3,12,0"/>
+                                   Margin="0,4,12,0"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1"
@@ -121,7 +121,7 @@
                                    FontSize="11"
                                    Foreground="{DynamicResource MutedBrush}"
                                    TextWrapping="Wrap"
-                                   Margin="0,3,12,0"/>
+                                   Margin="0,4,12,0"/>
                     </StackPanel>
 
                     <CheckBox Grid.Column="1"
@@ -156,7 +156,7 @@
                                    FontSize="11"
                                    Foreground="{DynamicResource MutedBrush}"
                                    TextWrapping="Wrap"
-                                   Margin="0,3,12,0"/>
+                                   Margin="0,4,12,0"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1"
@@ -206,7 +206,7 @@
                                    FontSize="11"
                                    Foreground="{DynamicResource MutedBrush}"
                                    TextWrapping="Wrap"
-                                   Margin="0,3,12,0"/>
+                                   Margin="0,4,12,0"/>
                     </StackPanel>
 
                     <Button Grid.Column="1"
@@ -231,7 +231,7 @@
 
                 <Border Background="{DynamicResource SurfaceBrush}"
                         CornerRadius="8"
-                        Padding="14,12"
+                        Padding="16,12"
                         Margin="0,0,0,8">
                     <StackPanel>
                         <TextBlock Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6" FontFamily="Consolas" FontSize="12"><Run FontWeight="SemiBold" Text="Ctrl+N"/><Run Foreground="{DynamicResource MutedBrush}" Text="  New entry"/></TextBlock>
