@@ -88,7 +88,7 @@
                     <StackPanel Grid.Column="1"
                                 Orientation="Horizontal"
                                 VerticalAlignment="Center">
-                        <StackPanel>
+                        <Grid>
                             <TextBox x:Name="AutoLockTextBox"
                                      Text="{Binding AutoLockMinutes, UpdateSourceTrigger=PropertyChanged}"
                                      Width="70"
@@ -97,8 +97,9 @@
                             <TextBlock Style="{StaticResource ValidationErrorText}"
                                        Text="{Binding AutoLockError, StringFormat=⚠ {0}}"
                                        Visibility="{Binding AutoLockError, Converter={StaticResource NullOrEmptyToVis}}"
-                                       Margin="0,5,0,0"/>
-                        </StackPanel>
+                                       Margin="0,41,0,0"
+                                       Height="28"/>
+                        </Grid>
                         <TextBlock Text="min"
                                    VerticalAlignment="Center"
                                    Margin="10,0,0,0"
@@ -161,7 +162,7 @@
                     <StackPanel Grid.Column="1"
                                 Orientation="Horizontal"
                                 VerticalAlignment="Center">
-                        <StackPanel>
+                        <Grid>
                             <TextBox x:Name="ClipboardTextBox"
                                      Text="{Binding ClipboardClearSeconds, UpdateSourceTrigger=PropertyChanged}"
                                      Width="70"
@@ -170,8 +171,9 @@
                             <TextBlock Style="{StaticResource ValidationErrorText}"
                                        Text="{Binding ClipboardError, StringFormat=⚠ {0}}"
                                        Visibility="{Binding ClipboardError, Converter={StaticResource NullOrEmptyToVis}}"
-                                       Margin="0,5,0,0"/>
-                        </StackPanel>
+                                       Margin="0,41,0,0"
+                                       Height="28"/>
+                        </Grid>
                         <TextBlock Text="sec"
                                    VerticalAlignment="Center"
                                    Margin="10,0,0,0"
