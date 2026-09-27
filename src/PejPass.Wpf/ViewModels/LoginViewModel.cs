@@ -27,7 +27,12 @@ public partial class LoginViewModel : ObservableObject
     public partial string MasterPassword { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial string? VaultPathError { get; set; }
+
+    [ObservableProperty]
     public partial string? PasswordError { get; set; }
+
+    public event EventHandler? ValidationFailed;
 
     [ObservableProperty]
     public partial string StatusMessage { get; set; } = string.Empty;
@@ -98,6 +103,7 @@ public partial class LoginViewModel : ObservableObject
         IsOpenMode = true;
         IsCreateMode = false;
         VaultPath = path;
+        VaultPathError = null;
         PasswordError = null;
         StatusMessage = File.Exists(path)
             ? "Vault selected from file. Enter master password to unlock."
@@ -199,6 +205,7 @@ public partial class LoginViewModel : ObservableObject
     [RelayCommand]
     private async Task UnlockWithHelloAsync()
     {
+        VaultPathError = null;
         PasswordError = null;
         StatusMessage = string.Empty;
 
@@ -212,7 +219,7 @@ public partial class LoginViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(VaultPath) ||
             !File.Exists(VaultPath))
         {
-            PasswordError =
+            VaultPathError =
                 "Select an existing vault file first.";
             return;
         }
@@ -298,12 +305,14 @@ public partial class LoginViewModel : ObservableObject
     [RelayCommand]
     private async Task SubmitAsync()
     {
+        VaultPathError = null;
         PasswordError = null;
         StatusMessage = string.Empty;
 
         if (string.IsNullOrWhiteSpace(VaultPath))
         {
-            PasswordError = "Please select a vault path.";
+            VaultPathError = "Please select a vault path.";
+            ValidationFailed?.Invoke(this, EventArgs.Empty);
             return;
         }
 
@@ -315,14 +324,15 @@ public partial class LoginViewModel : ObservableObject
             if (!validation.IsValid)
             {
                 PasswordError = validation.ErrorMessage;
+                ValidationFailed?.Invoke(this, EventArgs.Empty);
                 return;
             }
 
             if (File.Exists(VaultPath))
             {
-                PasswordError =
-                    "A vault already exists here.\n" +
-                    "Switch to «Open vault», or pick another path.";
+                VaultPathError =
+                    "A vault already exists here. Switch to «Open vault», or pick another path.";
+                ValidationFailed?.Invoke(this, EventArgs.Empty);
                 return;
             }
         }
@@ -330,9 +340,9 @@ public partial class LoginViewModel : ObservableObject
         {
             if (!File.Exists(VaultPath))
             {
-                PasswordError =
-                    "No vault at this path.\n" +
-                    "Use «Create vault» or Browse to an existing file.";
+                VaultPathError =
+                    "No vault at this path. Use «Create vault» or Browse to an existing file.";
+                ValidationFailed?.Invoke(this, EventArgs.Empty);
                 return;
             }
         }
