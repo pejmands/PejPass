@@ -134,7 +134,7 @@ public partial class MainViewModel : ObservableObject
 
         SelectedSortIndex = (int)_settings.SortMode;
 
-        LoadVault();
+        _ = LoadVaultAsync();
         StartAutoLockTimer();
         StartTotpTimer();
     }
@@ -244,10 +244,11 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void LoadVault()
+    private async Task LoadVaultAsync()
     {
         var vault = _vaultSession.Vault;
-        if (vault is null) return;
+        if (vault is null)
+            return;
 
         VaultName = vault.Name;
         Entries.Clear();
@@ -256,9 +257,43 @@ public partial class MainViewModel : ObservableObject
             Entries.Add(e);
 
         var purged = vault.PurgeExpiredTrash();
+
         RebuildTagFilters();
         ApplyFilter(preserveSelectionId: null);
         UpdateEntryStatus(purged > 0 ? $"purged {purged} expired trash item(s)" : null);
+
+        if (purged == 0 || string.IsNullOrEmpty(_vaultSession.VaultPath))
+            return;
+
+        try
+        {
+            var ownsBusyState = !IsBusy;
+
+            if (ownsBusyState)
+            {
+                IsBusy = true;
+                BusyMessage = "Saving vault...";
+            }
+
+            await _vaultService.SaveVaultAsync(
+                _vaultSession.VaultPath,
+                _vaultSession.GetSecret(),
+                vault);
+        }
+        catch (Exception ex)
+        {
+            DialogService.Error(
+                $"Failed to save expired trash cleanup.\n\n{ex.Message}",
+                "Save failed");
+        }
+        finally
+        {
+            if (!IsBusy)
+                return;
+
+            if (BusyMessage == "Saving vault...")
+                IsBusy = false;
+        }
     }
 
     private void UpdateEntryStatus(string? extra = null)
@@ -876,9 +911,9 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void OnHistoryRestored(object? sender, EventArgs e)
+    private async void OnHistoryRestored(object? sender, EventArgs e)
     {
-        LoadVault();
+        await LoadVaultAsync();
         SelectedEntry = null;
     }
 
@@ -910,7 +945,7 @@ public partial class MainViewModel : ObservableObject
                     _vaultSession.GetSecret());
 
                 _vaultSession.ReplaceVault(vault);
-                LoadVault();
+                await LoadVaultAsync();
                 SelectedEntry = null;
             }
             catch
