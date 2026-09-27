@@ -51,10 +51,15 @@
                                    Foreground="{DynamicResource MutedBrush}"
                                    Margin="0,0,0,6"/>
 
-                        <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
+                        <TextBox x:Name="TitleTextBox"
+                                 Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
                                  TextWrapping="NoWrap"
                                  HorizontalScrollBarVisibility="Auto"
                                  VerticalScrollBarVisibility="Disabled"/>
+
+                        <TextBlock Style="{StaticResource ValidationErrorText}"
+                                   Text="{Binding TitleErrorMessage, StringFormat=⚠ {0}}"
+                                   Visibility="{Binding TitleErrorMessage, Converter={StaticResource NullOrEmptyToVis}}"/>
                     </StackPanel>
 
                     <Button Grid.Column="1"
@@ -271,11 +276,8 @@
                             ToolTip="Import a QR code image from the clipboard"/>
                 </StackPanel>
 
-                <TextBlock Text="{Binding TotpErrorMessage}"
-                           FontSize="11"
-                           Foreground="{DynamicResource DangerBrush}"
-                           TextWrapping="Wrap"
-                           Margin="0,0,0,4"
+                <TextBlock Style="{StaticResource ValidationErrorText}"
+                           Text="{Binding TotpErrorMessage, StringFormat=⚠ {0}}"
                            Visibility="{Binding TotpErrorMessage, Converter={StaticResource NullOrEmptyToVis}}"/>
 
                 <TextBlock Text="Optional — used to generate 2FA codes in the main window"
