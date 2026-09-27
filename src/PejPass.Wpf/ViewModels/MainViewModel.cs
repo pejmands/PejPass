@@ -647,6 +647,15 @@ public partial class MainViewModel : ObservableObject
         }
 
         var vault = _vaultSession.Vault!;
+        var vaultEntryIndex = vault.Entries.FindIndex(e => e.Id == updated.Id);
+        var entryIndex = Entries.IndexOf(entry);
+
+        if (vaultEntryIndex < 0)
+            return;
+
+        var originalEntry = vault.Entries[vaultEntryIndex];
+        var originalHistory = vault.History.ToList();
+        var originalUpdatedAt = vault.UpdatedAt;
 
         var dataChanged = vault.UpdateEntry(updated);
         var favoriteChanged = vault.SetFavorite(updated.Id, updated.IsFavorite);
@@ -658,8 +667,6 @@ public partial class MainViewModel : ObservableObject
         }
 
         var persistedEntry = vault.FindEntry(updated.Id)!;
-
-        var entryIndex = Entries.IndexOf(entry);
 
         if (entryIndex >= 0)
             Entries[entryIndex] = persistedEntry;
@@ -676,7 +683,25 @@ public partial class MainViewModel : ObservableObject
         OnSelectedEntryChanged(SelectedEntry);
 
         if (!await SaveVaultAsync())
+        {
+            vault.Entries[vaultEntryIndex] = originalEntry;
+            vault.History.Clear();
+            vault.History.AddRange(originalHistory);
+            vault.UpdatedAt = originalUpdatedAt;
+
+            if (entryIndex >= 0)
+                Entries[entryIndex] = originalEntry;
+
+            SelectedEntry = originalEntry;
+            RebuildTagFilters();
+            ApplyFilter(preserveSelectionId: originalEntry.Id);
+            RebuildDisplayCustomFields();
+            UpdatePasswordDisplay();
+            RefreshTotp();
+            OnSelectedEntryChanged(SelectedEntry);
+
             return;
+        }
 
         SnackbarService.Show("Entry updated.");
         ResetAutoLockTimer();
