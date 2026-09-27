@@ -106,6 +106,11 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<VaultEntry> FilteredEntries { get; } = [];
     public ObservableCollection<CustomFieldDisplayItem> DisplayCustomFields { get; } = [];
 
+    public bool IsEntryListEmpty => FilteredEntries.Count == 0;
+    public bool HasActiveEntryFilter =>
+        !string.IsNullOrWhiteSpace(SearchText) ||
+        !string.IsNullOrWhiteSpace(SelectedTagFilter);
+
     public MainViewModel(
         VaultService vaultService,
         IClipboardService clipboard,
@@ -298,6 +303,9 @@ public partial class MainViewModel : ObservableObject
 
         foreach (var e in source)
             FilteredEntries.Add(e);
+
+        OnPropertyChanged(nameof(IsEntryListEmpty));
+        OnPropertyChanged(nameof(HasActiveEntryFilter));
 
         if (keepId is { } id)
             SelectedEntry = FilteredEntries.FirstOrDefault(e => e.Id == id);
