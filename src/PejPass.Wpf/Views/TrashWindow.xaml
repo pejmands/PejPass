@@ -48,8 +48,8 @@
                        Visibility="{Binding Text, ElementName=TrashSearchBox, Converter={StaticResource EmptyStringToVis}}"/>
 
             <Button Content="✕"
-                    Width="22"
-                    Height="22"
+                    Width="32"
+                    Height="32"
                     VerticalAlignment="Center"
                     HorizontalAlignment="Right"
                     Margin="0,0,8,0"
