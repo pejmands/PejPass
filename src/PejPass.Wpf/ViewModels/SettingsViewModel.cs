@@ -78,15 +78,39 @@ public partial class SettingsViewModel : ObservableObject
         if (ClipboardClearSeconds < 5) ClipboardClearSeconds = 5;
         if (ClipboardClearSeconds > 300) ClipboardClearSeconds = 300;
 
+        try
+        {
+            SettingsStore.EnsureWritable();
+        }
+        catch (Exception ex)
+        {
+            DialogService.Error(
+                $"The settings cannot be modified right now.\n\n{ex.Message}",
+                "Settings unavailable");
+
+            RevertPreview();
+            return;
+        }
+
         _settings.AutoLockMinutes = AutoLockMinutes;
         _settings.ClipboardClearSeconds = ClipboardClearSeconds;
         _settings.Theme = (ThemeMode)SelectedThemeIndex;
         _settings.WindowsHelloEnabled = WindowsHelloEnabled;
 
+        if (!SettingsStore.TrySave(_settings))
+        {
+            RevertPreview();
+
+            DialogService.Error(
+                "Failed to save settings. The changes were not applied.",
+                "Save failed");
+
+            return;
+        }
+
         if (!WindowsHelloEnabled)
             SessionPasswordCache.Clear();
 
-        SettingsStore.Save(_settings);
         _themeService.Apply();
 
         RequestClose?.Invoke(this, EventArgs.Empty);
