@@ -22,7 +22,7 @@
                             CommandParameter="{Binding}"
                             Margin="0,0,6,0"
                             Padding="10,0"
-                            Height="26"
+                            Height="32"
                             FontSize="11"
                             FontWeight="SemiBold"
                             Cursor="Hand"
