@@ -465,7 +465,9 @@ public partial class HistoryViewModel : ObservableObject
         {
             IsBusy = true;
             BusyMessage = "Deleting history...";
-            await SaveAsync();
+
+            if (!await SaveAsync())
+                return;
         }
         finally
         {
@@ -500,7 +502,9 @@ public partial class HistoryViewModel : ObservableObject
         {
             IsBusy = true;
             BusyMessage = "Deleting all history...";
-            await SaveAsync();
+
+            if (!await SaveAsync())
+                return;
         }
         finally
         {
@@ -512,17 +516,44 @@ public partial class HistoryViewModel : ObservableObject
         SelectedItem = null;
     }
 
-    private async Task SaveAsync()
+    private async Task<bool> SaveAsync()
     {
         var path = _vaultSession.VaultPath;
 
         if (string.IsNullOrEmpty(path))
-            return;
+            return false;
 
-        await _vaultService.SaveVaultAsync(
-            path,
-            _vaultSession.GetSecret(),
-            _vaultSession.Vault!);
+        try
+        {
+            await _vaultService.SaveVaultAsync(
+                path,
+                _vaultSession.GetSecret(),
+                _vaultSession.Vault!);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                var restoredVault = await _vaultService.OpenVaultAsync(
+                    path,
+                    _vaultSession.GetSecret());
+
+                _vaultSession.ReplaceVault(restoredVault);
+                Load();
+            }
+            catch
+            {
+                // Keep the original save error.
+            }
+
+            DialogService.Error(
+                $"Failed to save the history changes.\n\n{ex.Message}",
+                "Delete history");
+
+            return false;
+        }
     }
 }
 
