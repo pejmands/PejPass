@@ -144,7 +144,8 @@ public partial class MainViewModel
 
                 SelectedEntry = null;
                 ApplyFilter(preserveSelectionId: null);
-                await SaveVaultAsync();
+                if (!await SaveVaultAsync())
+                    return;
 
                 SnackbarService.Show(
                     $"Vault restored from backup · {currentVault.Entries.Count} entries · {currentVault.Trash.Count} in trash.");
@@ -234,7 +235,8 @@ public partial class MainViewModel
 
                 SelectedEntry = null;
                 ApplyFilter(preserveSelectionId: null);
-                await SaveVaultAsync();
+                if (!await SaveVaultAsync())
+                    return;
 
                 var totalSkipped = skippedAlreadyInList + skippedTrashAlreadyInList + skippedTrashAlreadyInTrash;
                 var totalChanged = addedToList + restoredFromTrash + addedToTrash;
