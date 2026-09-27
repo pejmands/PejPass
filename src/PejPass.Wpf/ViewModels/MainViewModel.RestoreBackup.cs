@@ -54,29 +54,28 @@ public partial class MainViewModel
             Owner = GetOwnerWindow()
         };
 
-        if (prompt.ShowDialog() != true || string.IsNullOrEmpty(prompt.Password))
+        Vault? backupVault = null;
+
+        prompt.ValidatePasswordAsync = async password =>
+        {
+            try
+            {
+                backupVault = await _vaultService.OpenVaultAsync(
+                    backupPath,
+                    password);
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return $"Could not open backup: {ex.Message}";
+            }
+        };
+
+        if (prompt.ShowDialog() != true || backupVault is null)
             return;
 
-        Vault backupVault;
-        try
-        {
-            IsBusy = true;
-            BusyMessage = "Opening backup...";
-            StatusMessage = "Opening backup…";
-            backupVault = await _vaultService.OpenVaultAsync(backupPath, prompt.Password);
-        }
-        catch (Exception ex)
-        {
-            DialogService.Error(
-                $"Could not open backup (wrong password or corrupt file):\n{ex.Message}",
-                "Restore Backup");
-            StatusMessage = "Restore failed.";
-            return;
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        StatusMessage = "Backup opened successfully.";
 
         var entryCount = backupVault.Entries.Count;
         var trashCount = backupVault.Trash.Count;
