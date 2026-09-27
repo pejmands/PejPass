@@ -20,10 +20,26 @@ public partial class PasswordPromptWindow : Window
             PasswordInput.Focus();
             Keyboard.Focus(PasswordInput);
         };
+
+        PasswordInput.PasswordChanged += (_, _) =>
+        {
+            if (!string.IsNullOrEmpty(PasswordInput.Password))
+                PasswordErrorText.Visibility = Visibility.Collapsed;
+        };
     }
 
     private void Ok_Click(object sender, RoutedEventArgs e)
     {
+        if (string.IsNullOrEmpty(PasswordInput.Password))
+        {
+            PasswordErrorText.Text = "⚠ Password is required.";
+            PasswordErrorText.Visibility = Visibility.Visible;
+            PasswordInput.Focus();
+            Keyboard.Focus(PasswordInput);
+            return;
+        }
+
+        PasswordErrorText.Visibility = Visibility.Collapsed;
         Password = PasswordInput.Password;
         DialogResult = true;
         Close();
