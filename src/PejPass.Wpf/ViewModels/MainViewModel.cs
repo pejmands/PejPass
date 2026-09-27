@@ -686,6 +686,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            IsBusy = true;
             StatusMessage = "Importing...";
             var imported = await _importService.ImportFromCsvAsync(dlg.FileName);
 
@@ -729,6 +730,10 @@ public partial class MainViewModel : ObservableObject
                 "Import Error");
 
             StatusMessage = "Import failed.";
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 
