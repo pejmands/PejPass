@@ -40,6 +40,9 @@ public partial class MainViewModel : ObservableObject
     public partial string StatusMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
     public partial string SearchText { get; set; } = string.Empty;
 
     [ObservableProperty]
