@@ -19,5 +19,10 @@ public interface IVaultStore
     /// </summary>
     Task SaveAsync(string path, string masterPassword, Vault vault, CancellationToken ct = default);
 
+    /// <summary>
+    /// Checks whether the existing vault file can currently be opened for writing.
+    /// </summary>
+    Task EnsureWritableAsync(string path, CancellationToken ct = default);
+
     bool Exists(string path);
 }
