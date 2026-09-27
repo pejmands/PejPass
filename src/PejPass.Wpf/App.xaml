@@ -92,6 +92,9 @@
 
                     </MultiTrigger>
 
+                    <Trigger Property="IsPressed" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource SurfacePressedBrush}"/>
+                    </Trigger>
 
                     <Trigger Property="IsEnabled"
              Value="False">
