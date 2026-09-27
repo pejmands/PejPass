@@ -489,5 +489,26 @@
                 </StackPanel>
             </Grid>
         </Grid>
+
+        <!-- Busy overlay -->
+        <Border Panel.ZIndex="100"
+                Background="#80000000"
+                Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
+            <Border HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="{DynamicResource SurfaceBrush}"
+                    Margin="24"
+                    Padding="24">
+                <StackPanel>
+                    <ProgressBar Width="180"
+                                 Height="4"
+                                 IsIndeterminate="True"/>
+                    <TextBlock Text="{Binding BusyMessage}"
+                               Margin="0,12,0,0"
+                               Foreground="{DynamicResource TextBrush}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Border>
     </DockPanel>
 </Window>
