@@ -103,6 +103,7 @@ public partial class MainViewModel
         }
 
         var replace = choice == AppDialogResult.Primary;
+        var snapshot = currentVault.CreateSnapshot();
 
         try
         {
@@ -145,7 +146,10 @@ public partial class MainViewModel
                 SelectedEntry = null;
                 ApplyFilter(preserveSelectionId: null);
                 if (!await SaveVaultAsync())
+                {
+                    RestoreVaultSnapshot(snapshot);
                     return;
+                }
 
                 SnackbarService.Show(
                     $"Vault restored from backup · {currentVault.Entries.Count} entries · {currentVault.Trash.Count} in trash.");
@@ -236,7 +240,10 @@ public partial class MainViewModel
                 SelectedEntry = null;
                 ApplyFilter(preserveSelectionId: null);
                 if (!await SaveVaultAsync())
+                {
+                    RestoreVaultSnapshot(snapshot);
                     return;
+                }
 
                 var totalSkipped = skippedAlreadyInList + skippedTrashAlreadyInList + skippedTrashAlreadyInTrash;
                 var totalChanged = addedToList + restoredFromTrash + addedToTrash;
