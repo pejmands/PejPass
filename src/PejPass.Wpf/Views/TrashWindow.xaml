@@ -84,11 +84,21 @@
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ListBoxItem">
-                                <Border Background="{DynamicResource SurfaceBrush}"
+                                <Border x:Name="ItemBorder"
+                                        Background="{DynamicResource SurfaceBrush}"
+                                        BorderBrush="Transparent"
+                                        BorderThickness="1"
                                         CornerRadius="8"
                                         Padding="12,10">
                                     <ContentPresenter/>
                                 </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                        <Setter TargetName="ItemBorder"
+                                                Property="BorderBrush"
+                                                Value="{DynamicResource AccentBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
                             </ControlTemplate>
                         </Setter.Value>
                     </Setter>
