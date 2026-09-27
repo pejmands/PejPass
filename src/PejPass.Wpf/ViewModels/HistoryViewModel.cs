@@ -367,6 +367,8 @@ public partial class HistoryViewModel : ObservableObject
         if (!confirmed)
             return;
 
+        var snapshot = vault.CreateSnapshot();
+
         if (!vault.RestoreHistoryFields(
                 SelectedItem.Snapshot,
                 selectedFields))
@@ -401,30 +403,8 @@ public partial class HistoryViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            var rollbackSucceeded = false;
-
-            try
-            {
-                var restoredVault =
-                    await _vaultService.OpenVaultAsync(
-                        path,
-                        _vaultSession.GetSecret());
-
-                _vaultSession.ReplaceVault(restoredVault);
-                Load();
-                rollbackSucceeded = true;
-            }
-            catch
-            {
-                // Keep the original save error.
-            }
-
-            if (rollbackSucceeded)
-            {
-                HistoryRestored?.Invoke(
-                    this,
-                    EventArgs.Empty);
-            }
+            _vaultSession.Vault!.RestoreSnapshot(snapshot);
+            Load();
 
             DialogService.Error(
                 $"Failed to save the restored fields.\n\n{ex.Message}",
@@ -432,6 +412,7 @@ public partial class HistoryViewModel : ObservableObject
 
             return;
         }
+
         finally
         {
             IsBusy = false;
@@ -464,6 +445,8 @@ public partial class HistoryViewModel : ObservableObject
         if (vault is null)
             return;
 
+        var snapshot = vault.CreateSnapshot();
+
         if (!vault.RemoveHistory(SelectedItem.HistoryId))
             return;
 
@@ -472,7 +455,7 @@ public partial class HistoryViewModel : ObservableObject
             IsBusy = true;
             BusyMessage = "Deleting history...";
 
-            if (!await SaveAsync())
+            if (!await SaveAsync(snapshot, "Delete history"))
                 return;
         }
         finally
@@ -502,6 +485,7 @@ public partial class HistoryViewModel : ObservableObject
         if (!confirmed)
             return;
 
+        var snapshot = vault.CreateSnapshot();
         vault.ClearHistory();
 
         try
@@ -509,7 +493,7 @@ public partial class HistoryViewModel : ObservableObject
             IsBusy = true;
             BusyMessage = "Deleting all history...";
 
-            if (!await SaveAsync())
+            if (!await SaveAsync(snapshot, "Delete all history"))
                 return;
         }
         finally
@@ -522,7 +506,7 @@ public partial class HistoryViewModel : ObservableObject
         SelectedItem = null;
     }
 
-    private async Task<bool> SaveAsync()
+    private async Task<bool> SaveAsync(Vault snapshot, string actionTitle)
     {
         var path = _vaultSession.VaultPath;
 
@@ -540,23 +524,12 @@ public partial class HistoryViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            try
-            {
-                var restoredVault = await _vaultService.OpenVaultAsync(
-                    path,
-                    _vaultSession.GetSecret());
-
-                _vaultSession.ReplaceVault(restoredVault);
-                Load();
-            }
-            catch
-            {
-                // Keep the original save error.
-            }
+            _vaultSession.Vault!.RestoreSnapshot(snapshot);
+            Load();
 
             DialogService.Error(
                 $"Failed to save the history changes.\n\n{ex.Message}",
-                "Delete history");
+                actionTitle);
 
             return false;
         }
