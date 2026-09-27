@@ -196,17 +196,14 @@ public partial class EntryEditorWindow : Window
         if (DataContext is not EntryEditorViewModel vm)
             return;
 
-        if (string.IsNullOrWhiteSpace(vm.Title))
+        if (!vm.IsValid())
         {
-            DialogService.Warning("Title is required.", "Validation");
-            return;
-        }
+            if (!string.IsNullOrEmpty(vm.TitleErrorMessage))
+            {
+                TitleTextBox.Focus();
+                return;
+            }
 
-        if (!vm.IsTotpSecretValid())
-        {
-            DialogService.Warning(
-                "TOTP secret is invalid.\n\nEnter a valid Base32 authenticator key, or clear the field to disable TOTP.",
-                "Invalid TOTP");
             return;
         }
 
