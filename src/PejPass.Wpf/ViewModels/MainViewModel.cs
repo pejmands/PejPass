@@ -428,6 +428,7 @@ public partial class MainViewModel : ObservableObject
         var isFavorite = !entry.IsFavorite;
 
         var vault = _vaultSession.Vault!;
+        var snapshot = vault.CreateSnapshot();
 
         if (!vault.SetFavorite(entry.Id, isFavorite))
             return;
@@ -437,7 +438,10 @@ public partial class MainViewModel : ObservableObject
         ApplyFilter(preserveSelectionId: entry.Id);
 
         if (!await SaveVaultAsync())
+        {
+            RestoreVaultSnapshot(snapshot);
             return;
+        }
 
         SnackbarService.Show(isFavorite
             ? "Added to favorites."
