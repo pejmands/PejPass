@@ -265,10 +265,10 @@ public partial class MainViewModel : ObservableObject
         if (purged == 0 || string.IsNullOrEmpty(_vaultSession.VaultPath))
             return;
 
+        var ownsBusyState = !IsBusy;
+
         try
         {
-            var ownsBusyState = !IsBusy;
-
             if (ownsBusyState)
             {
                 IsBusy = true;
@@ -288,10 +288,7 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
-            if (!IsBusy)
-                return;
-
-            if (BusyMessage == "Saving vault...")
+            if (ownsBusyState)
                 IsBusy = false;
         }
     }
