@@ -858,7 +858,7 @@
                     <ProgressBar Width="180"
                              Height="4"
                              IsIndeterminate="True"/>
-                <TextBlock Text="Importing..."
+                <TextBlock Text="{Binding BusyMessage}"
                            Margin="0,12,0,0"
                            Foreground="{DynamicResource TextBrush}"
                            HorizontalAlignment="Center"/>
