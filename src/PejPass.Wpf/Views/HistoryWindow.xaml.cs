@@ -11,7 +11,7 @@ public partial class HistoryWindow : Window
     {
         InitializeComponent();
         App.PrepareCustomChrome(this);
- 
+
         DataContext = viewModel;
     }
 

@@ -88,7 +88,7 @@ public partial class SettingsViewModel : ObservableObject
                 $"The settings cannot be modified right now.\n\n{ex.Message}",
                 "Settings unavailable");
 
-            RevertPreview();
+            //RevertPreview();
             return;
         }
 
