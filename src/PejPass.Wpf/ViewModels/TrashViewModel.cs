@@ -185,7 +185,9 @@ public sealed class TrashRow
     {
         EntryId = item.Entry.Id;
         Title = item.Entry.Title;
-        Username = item.Entry.Username;
+        Username = string.IsNullOrWhiteSpace(item.Entry.Username)
+            ? "No username"
+            : item.Entry.Username;
         Url = item.Entry.Url;
         DeletedAtText = item.DeletedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
 
