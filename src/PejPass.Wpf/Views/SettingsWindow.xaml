@@ -215,8 +215,6 @@
                             Command="{Binding ChangeMasterPasswordCommand}"
                             HorizontalAlignment="Left"
                             Padding="12,7"
-                            Background="{DynamicResource SurfaceAltBrush}"
-                            Foreground="{DynamicResource TextBrush}"
                             ToolTip="Verify current password and set a new one"/>
                 </Grid>
 
