@@ -8,6 +8,7 @@
         MinWidth="900"
         MinHeight="560"
         WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
         ShowInTaskbar="False"
         Background="{DynamicResource BgBrush}">
     <DockPanel>
