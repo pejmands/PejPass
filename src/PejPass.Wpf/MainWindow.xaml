@@ -866,7 +866,7 @@
             </Border>
         </Border>
 
-        <Border x:Name="SnackbarBorder",
+        <Border x:Name="SnackbarBorder"
                 Width="360"
                 MinHeight="54"
                 MaxHeight="100"
