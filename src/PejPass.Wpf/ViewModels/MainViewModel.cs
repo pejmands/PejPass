@@ -43,6 +43,9 @@ public partial class MainViewModel : ObservableObject
     public partial bool IsBusy { get; set; }
 
     [ObservableProperty]
+    public partial string BusyMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
     public partial string SearchText { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -690,6 +693,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             IsBusy = true;
+            BusyMessage = "Importing...";
             StatusMessage = "Importing...";
             var imported = await _importService.ImportFromCsvAsync(dlg.FileName);
 
@@ -823,6 +827,9 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            IsBusy = true;
+            BusyMessage = "Exporting backup...";
+
             await _vaultService.SaveVaultAsync(
                 dlg.FileName,
                 _vaultSession.GetSecret(),
@@ -839,6 +846,10 @@ public partial class MainViewModel : ObservableObject
                 "Export Backup");
 
             StatusMessage = "Backup failed.";
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 
