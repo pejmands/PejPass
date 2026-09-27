@@ -411,6 +411,7 @@
             <Button Style="{StaticResource SecondaryButton}"
                     Content="Cancel"
                     Click="Cancel_Click"
+                    IsCancel="True"
                     Margin="0,0,8,0"
                     Background="{DynamicResource SurfaceBrush}"
                     Foreground="{DynamicResource TextBrush}"/>
