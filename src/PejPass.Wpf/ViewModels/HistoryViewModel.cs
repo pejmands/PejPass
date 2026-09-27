@@ -530,7 +530,7 @@ public partial class HistoryViewModel : ObservableObject
         catch (Exception ex)
         {
             DialogService.Error(
-                $"The vault cannot be modified right now.\\n\\n{ex.Message}",
+                $"The vault cannot be modified right now.\n\n{ex.Message}",
                 "Vault unavailable");
 
             return false;
