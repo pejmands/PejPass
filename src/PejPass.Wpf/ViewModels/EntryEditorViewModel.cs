@@ -22,6 +22,9 @@ public partial class EntryEditorViewModel : ObservableObject
     public partial string Username { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial string? TitleErrorMessage { get; set; }
+
+    [ObservableProperty]
     public partial string Password { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -85,6 +88,13 @@ public partial class EntryEditorViewModel : ObservableObject
         }
     }
 
+    partial void OnTitleChanged(string value)
+    {
+        TitleErrorMessage = string.IsNullOrWhiteSpace(value)
+            ? "Title is required."
+            : null;
+    }
+
     partial void OnPasswordChanged(string value) => UpdatePasswordStrength();
 
     partial void OnTotpSecretChanged(string value) => ValidateTotpSecret();
@@ -107,6 +117,14 @@ public partial class EntryEditorViewModel : ObservableObject
     {
         ValidateTotpSecret();
         return string.IsNullOrEmpty(TotpErrorMessage);
+    }
+
+    public bool IsValid()
+    {
+        OnTitleChanged(Title);
+        ValidateTotpSecret();
+        return string.IsNullOrEmpty(TitleErrorMessage) &&
+               string.IsNullOrEmpty(TotpErrorMessage);
     }
 
     private static string NormalizeTotpSecret(string? raw)
