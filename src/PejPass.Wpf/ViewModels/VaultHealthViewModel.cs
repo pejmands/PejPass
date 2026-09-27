@@ -91,7 +91,11 @@ public partial class VaultHealthViewModel : ObservableObject
         ScanStatus = $"Scanning {_entries.Count} entries…";
     }
 
-    partial void OnIsReadyChanged(bool value) => OpenEntryCommand.NotifyCanExecuteChanged();
+    partial void OnIsReadyChanged(bool value)
+    {
+        OpenEntryCommand.NotifyCanExecuteChanged();
+        NotifyEmptyStateProperties();
+    }
 
     partial void OnIsScanningChanged(bool value) => CancelScanCommand.NotifyCanExecuteChanged();
 
