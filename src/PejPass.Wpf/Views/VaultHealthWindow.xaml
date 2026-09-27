@@ -78,20 +78,48 @@
                             VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal"
                                 HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
                                 Margin="0,0,0,4">
                         <TextBlock Text="Vault health"
                                    FontSize="11"
                                    Foreground="{DynamicResource MutedBrush}"
                                    VerticalAlignment="Center"/>
-                        <Border Background="{DynamicResource SurfaceAltBrush}"
-                                CornerRadius="4"
+                        <Border CornerRadius="4"
                                 Padding="7,3"
                                 Margin="8,0,0,0"
                                 VerticalAlignment="Center">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background"
+                                            Value="{DynamicResource SurfaceAltBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HealthLabel}"
+                                                     Value="Excellent">
+                                            <Setter Property="Background"
+                                                    Value="{DynamicResource SuccessBrush}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HealthLabel}"
+                                                     Value="Good">
+                                            <Setter Property="Background"
+                                                    Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HealthLabel}"
+                                                     Value="Needs attention">
+                                            <Setter Property="Background"
+                                                    Value="{DynamicResource WarningBrush}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HealthLabel}"
+                                                     Value="At risk">
+                                            <Setter Property="Background"
+                                                    Value="{DynamicResource DangerBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
                             <TextBlock Text="{Binding HealthLabel}"
                                        FontSize="10"
                                        FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextBrush}"/>
+                                       Foreground="{DynamicResource ButtonTextBrush}"/>
                         </Border>
                     </StackPanel>
                     <TextBlock Text="{Binding HealthScore, StringFormat={}{0}%}"
