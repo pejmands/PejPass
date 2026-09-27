@@ -870,9 +870,6 @@ public partial class MainViewModel : ObservableObject
         var vault = _vaultSession.Vault;
         if (vault is null) return;
 
-        if (!await EnsureVaultWritableAsync())
-            return;
-
         var vm = new TrashViewModel(
             vault,
             EnsureVaultWritableAsync,
