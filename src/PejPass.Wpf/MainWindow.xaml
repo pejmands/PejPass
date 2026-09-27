@@ -846,6 +846,24 @@
         </Grid>
         </DockPanel>
 
+        <Border Panel.ZIndex="100"
+                Background="#80000000"
+                Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Background="{DynamicResource SurfaceBrush}"
+                        Margin="24"
+                        Padding="24">
+                <ProgressBar Width="180"
+                             Height="4"
+                             IsIndeterminate="True"/>
+                <TextBlock Text="Importing..."
+                           Margin="0,12,0,0"
+                           Foreground="{DynamicResource TextBrush}"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
         <Border x:Name="SnackbarBorder"
                 Width="360"
                 MinHeight="54"
