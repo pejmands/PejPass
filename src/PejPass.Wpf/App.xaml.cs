@@ -195,12 +195,13 @@ public partial class App : System.Windows.Application
         window.StateChanged += OnWindowStateChangedForChrome;
     }
 
-    public static void SetCustomWindowTitle(Window window, string title)
+    public static void SetCustomWindowTitle(Window window, string title, string? filePath = null)
     {
         if (window.Content is DependencyObject content &&
             FindVisualChild<AppTitleBar>(content) is AppTitleBar titleBar)
         {
             titleBar.Title = title;
+            titleBar.FilePath = filePath ?? string.Empty;
         }
     }
 
