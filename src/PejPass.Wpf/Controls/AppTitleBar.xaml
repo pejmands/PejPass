@@ -22,7 +22,8 @@
                       Style="{StaticResource PejPassContextMenuItem}"
                       Header="Maximize"
                       Click="MaximizeMenuItem_Click"/>
-            <Separator Style="{StaticResource PejPassContextMenuSeparator}"/>
+            <Separator x:Name="TitleBarSeparator"
+                       Style="{StaticResource PejPassContextMenuSeparator}"/>
             <MenuItem x:Name="CloseMenuItem"
                       Style="{StaticResource PejPassContextMenuItem}"
                       Header="Close"
