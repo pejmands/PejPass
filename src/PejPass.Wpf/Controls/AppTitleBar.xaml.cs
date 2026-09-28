@@ -180,6 +180,11 @@ public partial class AppTitleBar : UserControl
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
+        CopyFilePathMenuItem.Visibility =
+            string.IsNullOrWhiteSpace(FilePath)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
         TitleBarSeparator.Visibility =
             RestoreMenuItem.Visibility == Visibility.Visible ||
             MinimizeMenuItem.Visibility == Visibility.Visible ||
