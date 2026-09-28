@@ -75,6 +75,19 @@ public partial class AppTitleBar : UserControl
             {
                 Maximize_Click(this, args);
                 args.Handled = true;
+                return;
+            }
+
+            if (args.ClickCount == 1 && Host is { } window)
+            {
+                try
+                {
+                    window.DragMove();
+                }
+                catch (InvalidOperationException)
+                {
+                    // The drag can be interrupted when the window state changes.
+                }
             }
         };
     }
