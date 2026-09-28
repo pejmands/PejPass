@@ -27,10 +27,16 @@ public partial class LoginViewModel : ObservableObject
     public partial string MasterPassword { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial string ConfirmMasterPassword { get; set; } = string.Empty;
+
+    [ObservableProperty]
     public partial string? VaultPathError { get; set; }
 
     [ObservableProperty]
     public partial string? PasswordError { get; set; }
+
+    [ObservableProperty]
+    public partial string? ConfirmPasswordError { get; set; }
 
     public event EventHandler? ValidationFailed;
 
@@ -117,6 +123,8 @@ public partial class LoginViewModel : ObservableObject
         if (value)
             IsOpenMode = false;
 
+        OnPropertyChanged(nameof(SubmitButtonText));
+
         _ = RefreshWindowsHelloVisibilityAsync();
         UpdateMasterPasswordStrength();
     }
@@ -126,14 +134,27 @@ public partial class LoginViewModel : ObservableObject
         if (value)
             IsCreateMode = false;
 
+        OnPropertyChanged(nameof(SubmitButtonText));
+
         _ = RefreshWindowsHelloVisibilityAsync();
     }
+
+    public string SubmitButtonText =>
+        IsCreateMode ? "Create Vault" : "Unlock";
 
     partial void OnVaultPathChanged(string value) =>
         _ = RefreshWindowsHelloVisibilityAsync();
 
     partial void OnMasterPasswordChanged(string value) =>
         UpdateMasterPasswordStrength();
+
+    partial void OnConfirmMasterPasswordChanged(string value)
+    {
+        if (!string.IsNullOrEmpty(ConfirmPasswordError))
+        {
+            ConfirmPasswordError = null;
+        }
+    }
 
     private void UpdateMasterPasswordStrength()
     {
@@ -307,6 +328,7 @@ public partial class LoginViewModel : ObservableObject
     {
         VaultPathError = null;
         PasswordError = null;
+        ConfirmPasswordError = null;
         StatusMessage = string.Empty;
 
         if (string.IsNullOrWhiteSpace(VaultPath))
@@ -324,6 +346,15 @@ public partial class LoginViewModel : ObservableObject
             if (!validation.IsValid)
             {
                 PasswordError = validation.ErrorMessage;
+                ValidationFailed?.Invoke(this, EventArgs.Empty);
+                return;
+            }
+
+            if (MasterPassword != ConfirmMasterPassword)
+            {
+                ConfirmPasswordError =
+                    "Passwords do not match.";
+
                 ValidationFailed?.Invoke(this, EventArgs.Empty);
                 return;
             }
@@ -396,6 +427,9 @@ public partial class LoginViewModel : ObservableObject
             _settings.LastVaultPath = VaultPath;
             SettingsStore.Save(_settings);
 
+            MasterPassword = string.Empty;
+            ConfirmMasterPassword = string.Empty;
+            
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)

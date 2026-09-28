@@ -48,4 +48,15 @@ public partial class LoginWindow : Window
         if (DataContext is LoginViewModel vm)
             vm.MasterPassword = MasterPasswordBox.Password;
     }
+
+    private void ConfirmMasterPasswordBox_PasswordChanged(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (DataContext is LoginViewModel vm)
+        {
+            vm.ConfirmMasterPassword =
+                ConfirmMasterPasswordBox.Password;
+        }
+    }
 }

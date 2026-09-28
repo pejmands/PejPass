@@ -190,42 +190,11 @@
                         ToolTip="Generate a password and customize its options"/>
 
                 <!-- Password Strength -->
-                <StackPanel Margin="0,0,0,20">
-                    <TextBlock Text="{Binding PasswordStrengthLabel}"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               Margin="0,0,0,6">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground"
-                                        Value="{DynamicResource MutedBrush}"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding PasswordStrengthLevel}" Value="1">
-                                        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding PasswordStrengthLevel}" Value="2">
-                                        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding PasswordStrengthLevel}" Value="3">
-                                        <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding PasswordStrengthLevel}" Value="4">
-                                        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding PasswordStrengthLevel}" Value="5">
-                                        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-
-                    <ProgressBar Height="6"
-                                 Minimum="0"
-                                 Maximum="100"
-                                 Value="{Binding PasswordStrengthProgress}"
-                                 Background="{DynamicResource SurfaceAltBrush}"/>
-                </StackPanel>
+                <controls:PasswordStrengthIndicator
+    StrengthLabel="{Binding PasswordStrengthLabel}"
+    StrengthLevel="{Binding PasswordStrengthLevel}"
+    StrengthProgress="{Binding PasswordStrengthProgress}"
+    Margin="0,0,0,20"/>
 
                 <!-- Two-factor authentication -->
                 <Border BorderBrush="{DynamicResource BorderBrush}"
