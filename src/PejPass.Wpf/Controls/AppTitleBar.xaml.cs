@@ -11,6 +11,10 @@ public partial class AppTitleBar : UserControl
         DependencyProperty.Register(nameof(Title), typeof(string), typeof(AppTitleBar),
             new PropertyMetadata(string.Empty));
 
+    public static readonly DependencyProperty FilePathProperty =
+        DependencyProperty.Register(nameof(FilePath), typeof(string), typeof(AppTitleBar),
+            new PropertyMetadata(string.Empty));
+
     public static readonly DependencyProperty ShowMinimizeProperty =
         DependencyProperty.Register(nameof(ShowMinimize), typeof(bool), typeof(AppTitleBar),
             new PropertyMetadata(true, OnChromeFlagsChanged));
@@ -23,6 +27,12 @@ public partial class AppTitleBar : UserControl
     {
         get => (string)GetValue(TitleProperty);
         set => SetValue(TitleProperty, value);
+    }
+
+    public string FilePath
+    {
+        get => (string)GetValue(FilePathProperty);
+        set => SetValue(FilePathProperty, value);
     }
 
     public bool ShowMinimize
@@ -199,6 +209,21 @@ public partial class AppTitleBar : UserControl
         {
             w.WindowState = WindowState.Maximized;
             UpdateMaxIcon();
+        }
+    }
+
+    private void CopyFilePathMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(FilePath))
+            return;
+
+        try
+        {
+            Clipboard.SetText(FilePath);
+        }
+        catch
+        {
+            // Clipboard access can fail temporarily when another process owns it.
         }
     }
 
