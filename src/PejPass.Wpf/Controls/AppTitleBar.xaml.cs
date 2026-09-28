@@ -157,10 +157,12 @@ public partial class AppTitleBar : UserControl
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
-        CloseMenuItem.Visibility =
-            w.ResizeMode != ResizeMode.NoResize
+        TitleBarSeparator.Visibility =
+            RestoreMenuItem.Visibility == Visibility.Visible ||
+            MinimizeMenuItem.Visibility == Visibility.Visible ||
+            MaximizeMenuItem.Visibility == Visibility.Visible
                 ? Visibility.Visible
-                : Visibility.Visible;
+                : Visibility.Collapsed;
     }
 
     private void RestoreMenuItem_Click(object sender, RoutedEventArgs e)
