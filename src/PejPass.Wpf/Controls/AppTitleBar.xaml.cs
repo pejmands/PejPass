@@ -69,6 +69,16 @@ public partial class AppTitleBar : UserControl
         if (string.IsNullOrEmpty(Title))
             Title = w.Title;
 
+        if (string.IsNullOrWhiteSpace(FilePath))
+        {
+            var filePath = w.GetType()
+                .GetProperty("VaultPath", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+                ?.GetValue(w) as string;
+
+            if (!string.IsNullOrWhiteSpace(filePath))
+                FilePath = filePath;
+        }
+
         if (w.ResizeMode is ResizeMode.NoResize or ResizeMode.CanMinimize)
             ShowMaximize = false;
         if (w.ResizeMode is ResizeMode.NoResize)
