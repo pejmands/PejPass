@@ -6,53 +6,55 @@
              MinHeight="40"
              Background="{DynamicResource SurfaceBrush}">
 
+    <!-- Custom title-bar menu (themed). System drag / double-click maximize stay with WindowChrome. -->
     <UserControl.ContextMenu>
         <ContextMenu x:Name="TitleBarContextMenu"
                      Style="{StaticResource PejPassContextMenu}"
                      Opened="TitleBarContextMenu_Opened">
             <MenuItem x:Name="RestoreMenuItem"
-          Style="{StaticResource PejPassContextMenuItem}"
-          Header="Restore"
-          Click="RestoreMenuItem_Click"/>
+                      Style="{StaticResource PejPassContextMenuItem}"
+                      Header="Restore"
+                      Click="RestoreMenuItem_Click"/>
 
             <MenuItem x:Name="MinimizeMenuItem"
-          Style="{StaticResource PejPassContextMenuItem}"
-          Header="Minimize"
-          Click="MinimizeMenuItem_Click"/>
+                      Style="{StaticResource PejPassContextMenuItem}"
+                      Header="Minimize"
+                      Click="MinimizeMenuItem_Click"/>
 
             <MenuItem x:Name="MaximizeMenuItem"
-          Style="{StaticResource PejPassContextMenuItem}"
-          Header="Maximize"
-          Click="MaximizeMenuItem_Click"/>
+                      Style="{StaticResource PejPassContextMenuItem}"
+                      Header="Maximize"
+                      Click="MaximizeMenuItem_Click"/>
 
             <Separator x:Name="TitleBarSeparator"
                        Style="{StaticResource PejPassContextMenuSeparator}"/>
 
             <MenuItem x:Name="CopyFilePathMenuItem"
-          Style="{StaticResource PejPassContextMenuItem}"
-          Header="Copy file path"
-          Click="CopyFilePathMenuItem_Click"/>
+                      Style="{StaticResource PejPassContextMenuItem}"
+                      Header="Copy file path"
+                      Click="CopyFilePathMenuItem_Click"/>
 
             <MenuItem x:Name="OpenFileLocationMenuItem"
-          Style="{StaticResource PejPassContextMenuItem}"
-          Header="Open file location"
-          Click="OpenFileLocationMenuItem_Click"/>
+                      Style="{StaticResource PejPassContextMenuItem}"
+                      Header="Open file location"
+                      Click="OpenFileLocationMenuItem_Click"/>
 
             <Separator x:Name="FileActionsSeparator"
                        Style="{StaticResource PejPassContextMenuSeparator}"/>
 
             <MenuItem x:Name="CloseMenuItem"
-          Style="{StaticResource PejPassContextMenuItem}"
-          Header="Close"
-          Click="CloseMenuItem_Click"/>
+                      Style="{StaticResource PejPassContextMenuItem}"
+                      Header="Close"
+                      InputGestureText="Alt+F4"
+                      Click="CloseMenuItem_Click"/>
         </ContextMenu>
     </UserControl.ContextMenu>
 
+    <!-- No IsHitTestVisibleInChrome on the caption surface so WindowChrome owns drag + double-click maximize.
+         Only the chrome buttons opt into hit-testing. -->
     <Border BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="0,0,0,1"
-            Background="{DynamicResource SurfaceBrush}"
-            shell:WindowChrome.IsHitTestVisibleInChrome="True"
-            PreviewMouseRightButtonDown="TitleBar_PreviewMouseRightButtonDown">
+            Background="{DynamicResource SurfaceBrush}">
         <Grid Margin="12,0,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -66,6 +68,7 @@
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextBrush}"
                        TextTrimming="CharacterEllipsis"
+                       IsHitTestVisible="False"
                        ToolTip="{Binding FilePath, RelativeSource={RelativeSource AncestorType=UserControl}}"
                        Margin="0,0,8,0"/>
 
