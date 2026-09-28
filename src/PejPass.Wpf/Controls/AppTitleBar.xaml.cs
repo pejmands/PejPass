@@ -123,5 +123,47 @@ public partial class AppTitleBar : UserControl
         UpdateMaxIcon();
     }
 
+    private void TitleBarContextMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        var w = Host;
+        if (w is null)
+            return;
+
+        RestoreMenuItem.Visibility =
+            ShowMaximize && w.WindowState == WindowState.Maximized
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        MinimizeMenuItem.Visibility =
+            ShowMinimize && w.WindowState != WindowState.Minimized
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        MaximizeMenuItem.Visibility =
+            ShowMaximize && w.WindowState != WindowState.Maximized
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+    }
+
+    private void RestoreMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (Host is { } w)
+            w.WindowState = WindowState.Normal;
+    }
+
+    private void MinimizeMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (Host is { } w)
+            w.WindowState = WindowState.Minimized;
+    }
+
+    private void MaximizeMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (Host is { } w)
+            w.WindowState = WindowState.Maximized;
+    }
+
+    private void CloseMenuItem_Click(object sender, RoutedEventArgs e) => Host?.Close();
+
     private void Close_Click(object sender, RoutedEventArgs e) => Host?.Close();
 }

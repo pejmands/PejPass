@@ -255,9 +255,137 @@
                 </Setter>
             </Style>
 
+            <!-- Themed context menus -->
+            <Style x:Key="PejPassContextMenu" TargetType="ContextMenu">
+                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="6,5"/>
+                <Setter Property="HasDropShadow" Value="True"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ContextMenu">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="6"
+                                    Padding="{TemplateBinding Padding}">
+                                <ItemsPresenter/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="PejPassContextMenuItem" TargetType="MenuItem">
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Padding" Value="10,7"/>
+                <Setter Property="Margin" Value="0,1"/>
+                <Setter Property="MinWidth" Value="170"/>
+                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="MenuItem">
+                            <Border x:Name="MenuItemBorder"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="5">
+                                <ContentPresenter ContentSource="Header"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsHighlighted" Value="True">
+                                    <Setter TargetName="MenuItemBorder"
+                                            Property="Background"
+                                            Value="{DynamicResource SurfaceHoverBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Foreground"
+                                            Value="{DynamicResource TextDisabledBrush}"/>
+                                    <Setter Property="Opacity" Value="0.5"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="PejPassContextMenuSeparator" TargetType="Separator">
+                <Setter Property="Height" Value="1"/>
+                <Setter Property="Margin" Value="6,4"/>
+                <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}"/>
+            </Style>
+
+            <ContextMenu x:Key="TextBoxContextMenu"
+                         x:Shared="False"
+                         Style="{StaticResource PejPassContextMenu}">
+                <MenuItem Style="{StaticResource PejPassContextMenuItem}"
+                          Header="Undo"
+                          InputGestureText="Ctrl+Z"
+                          Command="{x:Static ApplicationCommands.Undo}"
+                          CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <Separator Style="{StaticResource PejPassContextMenuSeparator}"/>
+                <MenuItem Style="{StaticResource PejPassContextMenuItem}"
+                          Header="Cut"
+                          InputGestureText="Ctrl+X"
+                          Command="{x:Static ApplicationCommands.Cut}"
+                          CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Style="{StaticResource PejPassContextMenuItem}"
+                          Header="Copy"
+                          InputGestureText="Ctrl+C"
+                          Command="{x:Static ApplicationCommands.Copy}"
+                          CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Style="{StaticResource PejPassContextMenuItem}"
+                          Header="Paste"
+                          InputGestureText="Ctrl+V"
+                          Command="{x:Static ApplicationCommands.Paste}"
+                          CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Style="{StaticResource PejPassContextMenuItem}"
+                          Header="Delete"
+                          Command="{x:Static ApplicationCommands.Delete}"
+                          CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <Separator Style="{StaticResource PejPassContextMenuSeparator}"/>
+                <MenuItem Style="{StaticResource PejPassContextMenuItem}"
+                          Header="Select All"
+                          InputGestureText="Ctrl+A"
+                          Command="{x:Static ApplicationCommands.SelectAll}"
+                          CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            </ContextMenu>
+
+            <ContextMenu x:Key="PasswordBoxContextMenu"
+                         x:Shared="False"
+                         Style="{StaticResource PejPassContextMenu}">
+                <MenuItem Style="{StaticResource PejPassContextMenuItem}"
+                          Header="Undo"
+                          InputGestureText="Ctrl+Z"
+                          Command="{x:Static ApplicationCommands.Undo}"
+                          CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <Separator Style="{StaticResource PejPassContextMenuSeparator}"/>
+                <MenuItem Style="{StaticResource PejPassContextMenuItem}"
+                          Header="Cut"
+                          InputGestureText="Ctrl+X"
+                          Command="{x:Static ApplicationCommands.Cut}"
+                          CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Style="{StaticResource PejPassContextMenuItem}"
+                          Header="Paste"
+                          InputGestureText="Ctrl+V"
+                          Command="{x:Static ApplicationCommands.Paste}"
+                          CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <Separator Style="{StaticResource PejPassContextMenuSeparator}"/>
+                <MenuItem Style="{StaticResource PejPassContextMenuItem}"
+                          Header="Select All"
+                          InputGestureText="Ctrl+A"
+                          Command="{x:Static ApplicationCommands.SelectAll}"
+                          CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            </ContextMenu>
+
             <!-- TextBox -->
             <Style TargetType="TextBox">
                 <Setter Property="Height" Value="40"/>
+                <Setter Property="ContextMenu" Value="{StaticResource TextBoxContextMenu}"/>
                 <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                 <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
@@ -290,6 +418,7 @@
             <!-- PasswordBox -->
             <Style TargetType="PasswordBox">
                 <Setter Property="Height" Value="40"/>
+                <Setter Property="ContextMenu" Value="{StaticResource PasswordBoxContextMenu}"/>
                 <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                 <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
