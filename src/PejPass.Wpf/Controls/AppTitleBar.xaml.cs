@@ -129,26 +129,37 @@ public partial class AppTitleBar : UserControl
         if (w is null)
             return;
 
-        RestoreMenuItem.Visibility =
-            ShowMaximize && w.WindowState == WindowState.Maximized
-                ? Visibility.Visible
-                : Visibility.Collapsed;
+        var canMinimize = ShowMinimize && w.ResizeMode is ResizeMode.CanMinimize or ResizeMode.CanResize or ResizeMode.CanResizeWithGrip;
+        var canMaximize = ShowMaximize && w.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip;
 
-        MinimizeMenuItem.Visibility =
-            ShowMinimize && w.WindowState != WindowState.Minimized
+        RestoreMenuItem.Visibility =
+            canMaximize && w.WindowState == WindowState.Maximized
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
         MaximizeMenuItem.Visibility =
-            ShowMaximize && w.WindowState != WindowState.Maximized
+            canMaximize && w.WindowState != WindowState.Maximized
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+
+        MinimizeMenuItem.Visibility =
+            canMinimize && w.WindowState != WindowState.Minimized
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        CloseMenuItem.Visibility =
+            w.ResizeMode != ResizeMode.NoResize
+                ? Visibility.Visible
+                : Visibility.Visible;
     }
 
     private void RestoreMenuItem_Click(object sender, RoutedEventArgs e)
     {
         if (Host is { } w)
+        {
             w.WindowState = WindowState.Normal;
+            UpdateMaxIcon();
+        }
     }
 
     private void MinimizeMenuItem_Click(object sender, RoutedEventArgs e)
@@ -160,7 +171,10 @@ public partial class AppTitleBar : UserControl
     private void MaximizeMenuItem_Click(object sender, RoutedEventArgs e)
     {
         if (Host is { } w)
+        {
             w.WindowState = WindowState.Maximized;
+            UpdateMaxIcon();
+        }
     }
 
     private void CloseMenuItem_Click(object sender, RoutedEventArgs e) => Host?.Close();
