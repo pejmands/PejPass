@@ -1,7 +1,6 @@
 using PejPass.Wpf.Services;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -167,14 +166,17 @@ public partial class AppTitleBar : UserControl
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        // Right-click on the caption area (non-client) → themed custom menu, not system menu.
+        // Caption right-click → themed menu (block system menu).
+        // Only open on UP to avoid double-open / jitter; still mark DOWN handled.
         if (msg is WmNcRButtonUp or WmNcRButtonDown)
         {
-            var hit = wParam.ToInt32();
-            if (hit == HtCaption)
+            if (wParam.ToInt32() == HtCaption)
             {
                 if (msg == WmNcRButtonUp)
-                    OpenTitleBarMenuAtCursor();
+                {
+                    // Defer until after the NC message finishes so placement is stable.
+                    Dispatcher.BeginInvoke(OpenTitleBarMenuAtCursor);
+                }
 
                 handled = true;
             }
@@ -188,31 +190,13 @@ public partial class AppTitleBar : UserControl
         if (TitleBarContextMenu is null)
             return;
 
+        // MousePoint aligns the menu origin with the cursor (DPI-safe, no manual offset).
+        TitleBarContextMenu.CustomPopupPlacementCallback = null;
         TitleBarContextMenu.PlacementTarget = this;
-        TitleBarContextMenu.Placement = PlacementMode.Custom;
-        TitleBarContextMenu.CustomPopupPlacementCallback = PlaceMenuAtCursor;
+        TitleBarContextMenu.Placement = PlacementMode.MousePoint;
+        TitleBarContextMenu.HorizontalOffset = 0;
+        TitleBarContextMenu.VerticalOffset = 0;
         TitleBarContextMenu.IsOpen = true;
-    }
-
-    private CustomPopupPlacement[] PlaceMenuAtCursor(Size popupSize, Size targetSize, Point offset)
-    {
-        GetCursorPos(out var screen);
-        // PointFromScreen expects screen pixels and returns DIP relative to this visual.
-        var relative = PointFromScreen(new Point(screen.X, screen.Y));
-        return
-        [
-            new CustomPopupPlacement(relative, PopupPrimaryAxis.Horizontal)
-        ];
-    }
-
-    [DllImport("user32.dll")]
-    private static extern bool GetCursorPos(out PointNative lpPoint);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct PointNative
-    {
-        public int X;
-        public int Y;
     }
 
     private void ApplyChromeFlags()
