@@ -3,9 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:PejPass.Wpf.Controls"
         Title="PejPass — Unlock or Create Vault"
-        Height="620"
-        Width="490"
-        MinHeight="500"
+        SizeToContent="Height"
+        Height="450"
+        Width="500"
+        MinHeight="450"
         MinWidth="400"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanMinimize"
@@ -18,7 +19,7 @@
 
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
-                      Padding="32,24,32,24">
+                      Margin="20">
 
             <StackPanel VerticalAlignment="Top"
                         MaxWidth="440">
@@ -44,10 +45,12 @@
                     <RadioButton Content="Open vault"
                                  IsChecked="{Binding IsOpenMode}"
                                  GroupName="VaultMode"
+                                 Checked="VaultMode_Checked"
                                  Margin="0,0,16,0"/>
 
                     <RadioButton Content="Create vault"
                                  GroupName="VaultMode"
+                                 Checked="VaultMode_Checked"
                                  IsChecked="{Binding IsCreateMode}"/>
                 </StackPanel>
 

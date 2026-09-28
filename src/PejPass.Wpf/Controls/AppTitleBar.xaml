@@ -6,6 +6,30 @@
              MinHeight="40"
              Background="{DynamicResource SurfaceBrush}">
 
+    <UserControl.ContextMenu>
+        <ContextMenu x:Name="TitleBarContextMenu"
+                     Style="{StaticResource PejPassContextMenu}"
+                     Opened="TitleBarContextMenu_Opened">
+            <MenuItem x:Name="RestoreMenuItem"
+                      Style="{StaticResource PejPassContextMenuItem}"
+                      Header="Restore"
+                      Click="RestoreMenuItem_Click"/>
+            <MenuItem x:Name="MinimizeMenuItem"
+                      Style="{StaticResource PejPassContextMenuItem}"
+                      Header="Minimize"
+                      Click="MinimizeMenuItem_Click"/>
+            <MenuItem x:Name="MaximizeMenuItem"
+                      Style="{StaticResource PejPassContextMenuItem}"
+                      Header="Maximize"
+                      Click="MaximizeMenuItem_Click"/>
+            <Separator Style="{StaticResource PejPassContextMenuSeparator}"/>
+            <MenuItem x:Name="CloseMenuItem"
+                      Style="{StaticResource PejPassContextMenuItem}"
+                      Header="Close"
+                      Click="CloseMenuItem_Click"/>
+        </ContextMenu>
+    </UserControl.ContextMenu>
+
     <Border BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="0,0,0,1"
             Background="{DynamicResource SurfaceBrush}">

@@ -23,6 +23,7 @@ public partial class LoginWindow : Window
         viewModel.RequestClose += (_, _) =>
         {
             MasterPasswordBox.Clear();
+            ConfirmMasterPasswordBox.Clear();
 
             var main = App.Services.GetRequiredService<MainWindow>();
             App.PrepareCustomChrome(main);
@@ -41,6 +42,17 @@ public partial class LoginWindow : Window
 
             await viewModel.RefreshWindowsHelloVisibilityAsync();
         };
+    }
+
+    private void ClearPasswordInputs()
+    {
+        MasterPasswordBox.Clear();
+        ConfirmMasterPasswordBox.Clear();
+    }
+
+    private void VaultMode_Checked(object sender, RoutedEventArgs e)
+    {
+        ClearPasswordInputs();
     }
 
     private void MasterPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)

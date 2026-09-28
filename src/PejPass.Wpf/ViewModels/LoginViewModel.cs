@@ -121,7 +121,10 @@ public partial class LoginViewModel : ObservableObject
     partial void OnIsCreateModeChanged(bool value)
     {
         if (value)
+        {
             IsOpenMode = false;
+            ResetModeState();
+        }
 
         OnPropertyChanged(nameof(SubmitButtonText));
 
@@ -132,7 +135,10 @@ public partial class LoginViewModel : ObservableObject
     partial void OnIsOpenModeChanged(bool value)
     {
         if (value)
+        {
             IsCreateMode = false;
+            ResetModeState();
+        }
 
         OnPropertyChanged(nameof(SubmitButtonText));
 
@@ -191,6 +197,17 @@ public partial class LoginViewModel : ObservableObject
         {
             ShowWindowsHello = false;
         }
+    }
+
+    private void ResetModeState()
+    {
+        MasterPassword = string.Empty;
+        ConfirmMasterPassword = string.Empty;
+
+        VaultPathError = null;
+        PasswordError = null;
+        ConfirmPasswordError = null;
+        StatusMessage = string.Empty;
     }
 
     [RelayCommand]
