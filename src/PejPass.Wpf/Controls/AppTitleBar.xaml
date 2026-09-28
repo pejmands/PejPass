@@ -54,7 +54,6 @@
                        Foreground="{DynamicResource TextBrush}"
                        TextTrimming="CharacterEllipsis"
                        ToolTip="{Binding FilePath, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                       IsHitTestVisible="False"
                        Margin="0,0,8,0"/>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal">
