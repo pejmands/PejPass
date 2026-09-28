@@ -15,6 +15,11 @@ public partial class AppTitleBar : UserControl
 {
     private const int WmNcRButtonUp = 0x00A5;
     private const int WmNcRButtonDown = 0x00A4;
+    private const int WmSysCommand = 0x0112;
+    private const int WmContextMenu = 0x007B;
+    private const int WmNcHitTest = 0x0084;
+    private const int ScKeyMenu = 0xF100;   // Alt+Space
+    private const int ScMouseMenu = 0xF090; // system menu via mouse
     private const int HtCaption = 2;
 
     private HwndSource? _hwndSource;
@@ -150,10 +155,18 @@ public partial class AppTitleBar : UserControl
     {
         DetachCaptionMenuHook();
 
-        var helper = new WindowInteropHelper(window);
-        helper.EnsureHandle();
-        _hwndSource = HwndSource.FromHwnd(helper.Handle);
-        _hwndSource?.AddHook(WndProc);
+        void Attach()
+        {
+            var helper = new WindowInteropHelper(window);
+            helper.EnsureHandle();
+            _hwndSource = HwndSource.FromHwnd(helper.Handle);
+            _hwndSource?.AddHook(WndProc);
+        }
+
+        if (new WindowInteropHelper(window).Handle != IntPtr.Zero)
+            Attach();
+        else
+            window.SourceInitialized += (_, _) => Attach();
     }
 
     private void DetachCaptionMenuHook()
@@ -167,15 +180,13 @@ public partial class AppTitleBar : UserControl
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        // Caption right-click → themed menu (block system menu).
-        // Only open on UP to avoid double-open / jitter; still mark DOWN handled.
+        // Caption right-click → themed menu only (never the system menu).
         if (msg is WmNcRButtonUp or WmNcRButtonDown)
         {
             if (wParam.ToInt32() == HtCaption)
             {
                 if (msg == WmNcRButtonUp)
                 {
-                    // Capture cursor now (device pixels); open after the NC message finishes.
                     GetCursorPos(out var pt);
                     var screenX = pt.X;
                     var screenY = pt.Y;
@@ -183,11 +194,51 @@ public partial class AppTitleBar : UserControl
                 }
 
                 handled = true;
+                return IntPtr.Zero;
+            }
+        }
+
+        // Alt+Space / system-menu mouse trigger → themed menu instead of OS menu.
+        if (msg == WmSysCommand)
+        {
+            var cmd = wParam.ToInt32() & 0xFFF0;
+            if (cmd is ScKeyMenu or ScMouseMenu)
+            {
+                GetCursorPos(out var pt);
+                var screenX = pt.X;
+                var screenY = pt.Y;
+                Dispatcher.BeginInvoke(() => OpenTitleBarMenuAtScreenPoint(screenX, screenY));
+                handled = true;
+                return IntPtr.Zero;
+            }
+        }
+
+        // Context menu only when the hit-test is the caption (do not steal client menus).
+        if (msg == WmContextMenu)
+        {
+            GetCursorPos(out var pt);
+            var hit = (int)SendMessage(
+                hwnd,
+                WmNcHitTest,
+                IntPtr.Zero,
+                MakeLParam(pt.X, pt.Y));
+
+            if (hit == HtCaption)
+            {
+                Dispatcher.BeginInvoke(() => OpenTitleBarMenuAtScreenPoint(pt.X, pt.Y));
+                handled = true;
+                return IntPtr.Zero;
             }
         }
 
         return IntPtr.Zero;
     }
+
+    private static IntPtr MakeLParam(int lo, int hi) =>
+        (IntPtr)((hi << 16) | (lo & 0xFFFF));
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
     private void OpenTitleBarMenuAtScreenPoint(int screenX, int screenY)
     {
