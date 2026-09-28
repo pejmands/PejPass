@@ -1,6 +1,7 @@
 using PejPass.Wpf.Services;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -174,8 +175,11 @@ public partial class AppTitleBar : UserControl
             {
                 if (msg == WmNcRButtonUp)
                 {
-                    // Defer until after the NC message finishes so placement is stable.
-                    Dispatcher.BeginInvoke(OpenTitleBarMenuAtCursor);
+                    // Capture cursor now (device pixels); open after the NC message finishes.
+                    GetCursorPos(out var pt);
+                    var screenX = pt.X;
+                    var screenY = pt.Y;
+                    Dispatcher.BeginInvoke(() => OpenTitleBarMenuAtScreenPoint(screenX, screenY));
                 }
 
                 handled = true;
@@ -185,18 +189,47 @@ public partial class AppTitleBar : UserControl
         return IntPtr.Zero;
     }
 
-    private void OpenTitleBarMenuAtCursor()
+    private void OpenTitleBarMenuAtScreenPoint(int screenX, int screenY)
     {
         if (TitleBarContextMenu is null)
             return;
 
-        // MousePoint aligns the menu origin with the cursor (DPI-safe, no manual offset).
+        // Close first so a previous open (e.g. dismissed by left-click) cannot leave
+        // stale Placement/offset that throws the next open far from the cursor.
+        if (TitleBarContextMenu.IsOpen)
+            TitleBarContextMenu.IsOpen = false;
+
+        // Screen device pixels → WPF DIP for PlacementMode.Absolute.
+        var dip = DevicePixelsToDip(screenX, screenY);
+
         TitleBarContextMenu.CustomPopupPlacementCallback = null;
-        TitleBarContextMenu.PlacementTarget = this;
-        TitleBarContextMenu.Placement = PlacementMode.MousePoint;
-        TitleBarContextMenu.HorizontalOffset = 0;
-        TitleBarContextMenu.VerticalOffset = 0;
+        TitleBarContextMenu.PlacementTarget = null;
+        TitleBarContextMenu.Placement = PlacementMode.Absolute;
+        TitleBarContextMenu.HorizontalOffset = dip.X;
+        TitleBarContextMenu.VerticalOffset = dip.Y;
         TitleBarContextMenu.IsOpen = true;
+    }
+
+    private Point DevicePixelsToDip(int screenX, int screenY)
+    {
+        var source = PresentationSource.FromVisual(this)
+                     ?? (Host is { } w ? PresentationSource.FromVisual(w) : null);
+
+        if (source?.CompositionTarget is { } ct)
+            return ct.TransformFromDevice.Transform(new Point(screenX, screenY));
+
+        // Fallback: assume 96 DPI
+        return new Point(screenX, screenY);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out PointNative lpPoint);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PointNative
+    {
+        public int X;
+        public int Y;
     }
 
     private void ApplyChromeFlags()
