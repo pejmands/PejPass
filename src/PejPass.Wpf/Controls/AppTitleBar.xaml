@@ -24,6 +24,10 @@
                       Click="MaximizeMenuItem_Click"/>
             <Separator x:Name="TitleBarSeparator"
                        Style="{StaticResource PejPassContextMenuSeparator}"/>
+            <MenuItem x:Name="CopyFilePathMenuItem"
+                      Style="{StaticResource PejPassContextMenuItem}"
+                      Header="Copy file path"
+                      Click="CopyFilePathMenuItem_Click"/>
             <MenuItem x:Name="CloseMenuItem"
                       Style="{StaticResource PejPassContextMenuItem}"
                       Header="Close"
@@ -49,6 +53,7 @@
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextBrush}"
                        TextTrimming="CharacterEllipsis"
+                       ToolTip="{Binding FilePath, RelativeSource={RelativeSource AncestorType=UserControl}}"
                        IsHitTestVisible="False"
                        Margin="0,0,8,0"/>
 
