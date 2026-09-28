@@ -10,6 +10,7 @@ using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -233,7 +234,45 @@ public partial class App : System.Windows.Application
             CornerRadius = new CornerRadius(radius),
             UseAeroCaptionButtons = false
         });
+
+        // Native system menu conflicts with the themed AppTitleBar menu (esp. Login / prompts).
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
+        if (hwnd != IntPtr.Zero)
+            StripNativeSystemMenu(hwnd);
+        else
+            window.SourceInitialized += (_, _) =>
+                StripNativeSystemMenu(new System.Windows.Interop.WindowInteropHelper(window).Handle);
     }
+
+    private const int GwlStyle = -16;
+    private const int WsSysMenu = 0x00080000;
+
+    private static void StripNativeSystemMenu(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero)
+            return;
+
+        var style = GetWindowLongPtr(hwnd, GwlStyle).ToInt64();
+        SetWindowLongPtr(hwnd, GwlStyle, (IntPtr)(style & ~WsSysMenu));
+    }
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
+    private static extern IntPtr GetWindowLongPtr32(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
+    private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLong")]
+    private static extern IntPtr SetWindowLongPtr32(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
+    private static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+    private static IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex) =>
+        IntPtr.Size == 8 ? GetWindowLongPtr64(hWnd, nIndex) : GetWindowLongPtr32(hWnd, nIndex);
+
+    private static IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong) =>
+        IntPtr.Size == 8 ? SetWindowLongPtr64(hWnd, nIndex, dwNewLong) : SetWindowLongPtr32(hWnd, nIndex, dwNewLong);
 
     /// <summary>
     /// Outer rounded frame + 1px themed border; inject title bar when missing.
