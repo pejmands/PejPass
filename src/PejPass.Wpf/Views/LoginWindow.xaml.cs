@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PejPass.Wpf.ViewModels;
 using System.Windows;
 using System.Windows.Input;
+using System.IO;
 
 namespace PejPass.Wpf.Views;
 
@@ -26,6 +27,12 @@ public partial class LoginWindow : Window
             ConfirmMasterPasswordBox.Clear();
 
             var main = App.Services.GetRequiredService<MainWindow>();
+
+            var vaultFileName = Path.GetFileName(viewModel.VaultPath);
+            main.Title = string.IsNullOrWhiteSpace(vaultFileName)
+                ? "PejPass"
+                : $"PejPass — {vaultFileName}";
+
             App.PrepareCustomChrome(main);
 
             System.Windows.Application.Current.MainWindow = main;
