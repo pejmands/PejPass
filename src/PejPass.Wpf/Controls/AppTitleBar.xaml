@@ -11,27 +11,40 @@
                      Style="{StaticResource PejPassContextMenu}"
                      Opened="TitleBarContextMenu_Opened">
             <MenuItem x:Name="RestoreMenuItem"
-                      Style="{StaticResource PejPassContextMenuItem}"
-                      Header="Restore"
-                      Click="RestoreMenuItem_Click"/>
+          Style="{StaticResource PejPassContextMenuItem}"
+          Header="Restore"
+          Click="RestoreMenuItem_Click"/>
+
             <MenuItem x:Name="MinimizeMenuItem"
-                      Style="{StaticResource PejPassContextMenuItem}"
-                      Header="Minimize"
-                      Click="MinimizeMenuItem_Click"/>
+          Style="{StaticResource PejPassContextMenuItem}"
+          Header="Minimize"
+          Click="MinimizeMenuItem_Click"/>
+
             <MenuItem x:Name="MaximizeMenuItem"
-                      Style="{StaticResource PejPassContextMenuItem}"
-                      Header="Maximize"
-                      Click="MaximizeMenuItem_Click"/>
+          Style="{StaticResource PejPassContextMenuItem}"
+          Header="Maximize"
+          Click="MaximizeMenuItem_Click"/>
+
             <Separator x:Name="TitleBarSeparator"
                        Style="{StaticResource PejPassContextMenuSeparator}"/>
+
             <MenuItem x:Name="CopyFilePathMenuItem"
-                      Style="{StaticResource PejPassContextMenuItem}"
-                      Header="Copy file path"
-                      Click="CopyFilePathMenuItem_Click"/>
+          Style="{StaticResource PejPassContextMenuItem}"
+          Header="Copy file path"
+          Click="CopyFilePathMenuItem_Click"/>
+
+            <MenuItem x:Name="OpenFileLocationMenuItem"
+          Style="{StaticResource PejPassContextMenuItem}"
+          Header="Open file location"
+          Click="OpenFileLocationMenuItem_Click"/>
+
+            <Separator x:Name="FileActionsSeparator"
+                       Style="{StaticResource PejPassContextMenuSeparator}"/>
+
             <MenuItem x:Name="CloseMenuItem"
-                      Style="{StaticResource PejPassContextMenuItem}"
-                      Header="Close"
-                      Click="CloseMenuItem_Click"/>
+          Style="{StaticResource PejPassContextMenuItem}"
+          Header="Close"
+          Click="CloseMenuItem_Click"/>
         </ContextMenu>
     </UserControl.ContextMenu>
 

@@ -1,7 +1,9 @@
+using PejPass.Wpf.Services;
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Shapes;
 
 namespace PejPass.Wpf.Controls;
 
@@ -12,8 +14,13 @@ public partial class AppTitleBar : UserControl
             new PropertyMetadata(string.Empty));
 
     public static readonly DependencyProperty FilePathProperty =
-        DependencyProperty.Register(nameof(FilePath), typeof(string), typeof(AppTitleBar),
-            new PropertyMetadata(string.Empty));
+        DependencyProperty.Register(
+            nameof(FilePath),
+            typeof(string),
+            typeof(AppTitleBar),
+            new PropertyMetadata(
+                string.Empty,
+                OnFilePathChanged));
 
     public static readonly DependencyProperty ShowMinimizeProperty =
         DependencyProperty.Register(nameof(ShowMinimize), typeof(bool), typeof(AppTitleBar),
@@ -22,6 +29,19 @@ public partial class AppTitleBar : UserControl
     public static readonly DependencyProperty ShowMaximizeProperty =
         DependencyProperty.Register(nameof(ShowMaximize), typeof(bool), typeof(AppTitleBar),
             new PropertyMetadata(true, OnChromeFlagsChanged));
+
+    public static readonly DependencyProperty ShowFileActionsProperty =
+    DependencyProperty.Register(
+        nameof(ShowFileActions),
+        typeof(bool),
+        typeof(AppTitleBar),
+        new PropertyMetadata(false));
+
+    public bool ShowFileActions
+    {
+        get => (bool)GetValue(ShowFileActionsProperty);
+        set => SetValue(ShowFileActionsProperty, value);
+    }
 
     public string Title
     {
@@ -33,6 +53,26 @@ public partial class AppTitleBar : UserControl
     {
         get => (string)GetValue(FilePathProperty);
         set => SetValue(FilePathProperty, value);
+    }
+
+    private static void OnFilePathChanged(
+    DependencyObject d,
+    DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not AppTitleBar titleBar)
+            return;
+
+        titleBar.UpdateFileActionsState();
+    }
+
+    private void UpdateFileActionsState()
+    {
+        if (OpenFileLocationMenuItem is null)
+            return;
+
+        OpenFileLocationMenuItem.IsEnabled =
+            !string.IsNullOrWhiteSpace(FilePath) &&
+            File.Exists(FilePath);
     }
 
     public bool ShowMinimize
@@ -89,7 +129,41 @@ public partial class AppTitleBar : UserControl
                 return;
             }
 
-            if (args.ClickCount == 1 && Host is { } window)
+            if (Host is not { } window)
+                return;
+
+            if (window.WindowState == WindowState.Maximized)
+            {
+                var startPoint = args.GetPosition(window);
+
+                MouseMove += StartRestoreDrag;
+
+                void StartRestoreDrag(object? sender, System.Windows.Input.MouseEventArgs moveArgs)
+                {
+                    if (moveArgs.LeftButton != System.Windows.Input.MouseButtonState.Pressed)
+                    {
+                        MouseMove -= StartRestoreDrag;
+                        return;
+                    }
+
+                    MouseMove -= StartRestoreDrag;
+
+                    var restoreBounds = window.RestoreBounds;
+
+                    window.WindowState = WindowState.Normal;
+
+                    window.Left =
+                        SystemParameters.WorkArea.Left +
+                        startPoint.X -
+                        (restoreBounds.Width / 2);
+
+                    window.Top =
+                        SystemParameters.WorkArea.Top;
+
+                    window.DragMove();
+                }
+            }
+            else
             {
                 try
                 {
@@ -97,7 +171,6 @@ public partial class AppTitleBar : UserControl
                 }
                 catch (InvalidOperationException)
                 {
-                    // The drag can be interrupted when the window state changes.
                 }
             }
         };
@@ -105,10 +178,8 @@ public partial class AppTitleBar : UserControl
 
     private void ApplyChromeFlags()
     {
-        if (MinButton is not null)
-            MinButton.Visibility = ShowMinimize ? Visibility.Visible : Visibility.Collapsed;
-        if (MaxButton is not null)
-            MaxButton.Visibility = ShowMaximize ? Visibility.Visible : Visibility.Collapsed;
+        MinButton?.Visibility = ShowMinimize ? Visibility.Visible : Visibility.Collapsed;
+        MaxButton?.Visibility = ShowMaximize ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void UpdateMaxIcon()
@@ -117,7 +188,7 @@ public partial class AppTitleBar : UserControl
         if (w is null) return;
 
         MaxButton.ApplyTemplate();
-        if (MaxButton.Template?.FindName("MaxIcon", MaxButton) is not Path path)
+        if (MaxButton.Template?.FindName("MaxIcon", MaxButton) is not System.Windows.Shapes.Path path)
             return;
 
         if (w.WindowState == WindowState.Maximized)
@@ -165,6 +236,7 @@ public partial class AppTitleBar : UserControl
 
         var canMinimize = ShowMinimize && w.ResizeMode is ResizeMode.CanMinimize or ResizeMode.CanResize or ResizeMode.CanResizeWithGrip;
         var canMaximize = ShowMaximize && w.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip;
+        var hasFilePath = string.IsNullOrWhiteSpace(FilePath);
 
         RestoreMenuItem.Visibility =
             canMaximize && w.WindowState == WindowState.Maximized
@@ -182,7 +254,17 @@ public partial class AppTitleBar : UserControl
                 : Visibility.Collapsed;
 
         CopyFilePathMenuItem.Visibility =
-            string.IsNullOrWhiteSpace(FilePath)
+            hasFilePath
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        OpenFileLocationMenuItem.Visibility =
+            hasFilePath
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        FileActionsSeparator.Visibility =
+            hasFilePath
                 ? Visibility.Collapsed
                 : Visibility.Visible;
 
@@ -226,10 +308,36 @@ public partial class AppTitleBar : UserControl
         try
         {
             Clipboard.SetText(FilePath);
+            SnackbarService.Show("File path copied");
         }
         catch
         {
-            // Clipboard access can fail temporarily when another process owns it.
+            SnackbarService.Show("Could not copy file path");
+        }
+    }
+
+    private void OpenFileLocationMenuItem_Click(
+    object sender,
+    RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(FilePath) ||
+            !File.Exists(FilePath))
+        {
+            SnackbarService.Show("Vault file not found");
+            return;
+        }
+
+        try
+        {
+            Process.Start(
+                "explorer.exe",
+                $"/select,\"{FilePath}\"");
+
+            SnackbarService.Show("Opened file location");
+        }
+        catch
+        {
+            SnackbarService.Show("Could not open file location");
         }
     }
 
