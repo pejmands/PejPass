@@ -123,6 +123,16 @@ public partial class AppTitleBar : UserControl
         UpdateMaxIcon();
     }
 
+    private void TitleBar_PreviewMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (TitleBarContextMenu is null)
+            return;
+
+        TitleBarContextMenu.PlacementTarget = this;
+        TitleBarContextMenu.IsOpen = true;
+        e.Handled = true;
+    }
+
     private void TitleBarContextMenu_Opened(object sender, RoutedEventArgs e)
     {
         var w = Host;
