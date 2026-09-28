@@ -32,7 +32,9 @@
 
     <Border BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="0,0,0,1"
-            Background="{DynamicResource SurfaceBrush}">
+            Background="{DynamicResource SurfaceBrush}"
+            shell:WindowChrome.IsHitTestVisibleInChrome="True"
+            PreviewMouseRightButtonDown="TitleBar_PreviewMouseRightButtonDown">
         <Grid Margin="12,0,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
