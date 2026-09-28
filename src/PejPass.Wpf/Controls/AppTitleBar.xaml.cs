@@ -21,6 +21,8 @@ public partial class AppTitleBar : UserControl
     private const int ScKeyMenu = 0xF100;   // Alt+Space
     private const int ScMouseMenu = 0xF090; // system menu via mouse
     private const int HtCaption = 2;
+    private const int GwlStyle = -16;
+    private const int WsSysMenu = 0x00080000;
 
     private HwndSource? _hwndSource;
 
@@ -159,6 +161,9 @@ public partial class AppTitleBar : UserControl
         {
             var helper = new WindowInteropHelper(window);
             helper.EnsureHandle();
+            // Remove WS_SYSMENU so the OS never shows the native system menu
+            // (fixes Login / PasswordPrompt where NC messages alone were not enough).
+            StripSystemMenu(helper.Handle);
             _hwndSource = HwndSource.FromHwnd(helper.Handle);
             _hwndSource?.AddHook(WndProc);
         }
@@ -167,6 +172,12 @@ public partial class AppTitleBar : UserControl
             Attach();
         else
             window.SourceInitialized += (_, _) => Attach();
+    }
+
+    private static void StripSystemMenu(IntPtr hwnd)
+    {
+        var style = GetWindowLongPtr(hwnd, GwlStyle).ToInt64();
+        SetWindowLongPtr(hwnd, GwlStyle, (IntPtr)(style & ~WsSysMenu));
     }
 
     private void DetachCaptionMenuHook()
@@ -198,11 +209,19 @@ public partial class AppTitleBar : UserControl
             }
         }
 
-        // Alt+Space / system-menu mouse trigger → themed menu instead of OS menu.
+        // Alt+Space → themed menu at window top-left (like the classic system menu).
+        // SC_MOUSEMENU → themed menu at cursor.
         if (msg == WmSysCommand)
         {
             var cmd = wParam.ToInt32() & 0xFFF0;
-            if (cmd is ScKeyMenu or ScMouseMenu)
+            if (cmd == ScKeyMenu)
+            {
+                Dispatcher.BeginInvoke(OpenTitleBarMenuAtWindowTopLeft);
+                handled = true;
+                return IntPtr.Zero;
+            }
+
+            if (cmd == ScMouseMenu)
             {
                 GetCursorPos(out var pt);
                 var screenX = pt.X;
@@ -239,6 +258,41 @@ public partial class AppTitleBar : UserControl
 
     [DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
+    private static extern IntPtr GetWindowLongPtr32(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
+    private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLong")]
+    private static extern IntPtr SetWindowLongPtr32(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
+    private static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+    private static IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex) =>
+        IntPtr.Size == 8 ? GetWindowLongPtr64(hWnd, nIndex) : GetWindowLongPtr32(hWnd, nIndex);
+
+    private static IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong) =>
+        IntPtr.Size == 8 ? SetWindowLongPtr64(hWnd, nIndex, dwNewLong) : SetWindowLongPtr32(hWnd, nIndex, dwNewLong);
+
+    private void OpenTitleBarMenuAtWindowTopLeft()
+    {
+        if (TitleBarContextMenu is null || Host is not { } w)
+            return;
+
+        if (TitleBarContextMenu.IsOpen)
+            TitleBarContextMenu.IsOpen = false;
+
+        // Anchor at the window's top-left (classic system-menu position), not under the cursor.
+        TitleBarContextMenu.CustomPopupPlacementCallback = null;
+        TitleBarContextMenu.PlacementTarget = w;
+        TitleBarContextMenu.Placement = PlacementMode.Relative;
+        TitleBarContextMenu.HorizontalOffset = 0;
+        TitleBarContextMenu.VerticalOffset = 0;
+        TitleBarContextMenu.IsOpen = true;
+    }
 
     private void OpenTitleBarMenuAtScreenPoint(int screenX, int screenY)
     {
