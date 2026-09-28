@@ -28,12 +28,14 @@ public partial class LoginWindow : Window
 
             var main = App.Services.GetRequiredService<MainWindow>();
 
-            var vaultFileName = Path.GetFileName(viewModel.VaultPath);
+            var vaultFilePath = viewModel.VaultPath;
+            var vaultFileName = Path.GetFileNameWithoutExtension(vaultFilePath);
             main.Title = string.IsNullOrWhiteSpace(vaultFileName)
                 ? "PejPass"
                 : $"PejPass — {vaultFileName}";
 
             App.PrepareCustomChrome(main);
+            App.SetCustomWindowTitle(main, main.Title, vaultFilePath);
 
             System.Windows.Application.Current.MainWindow = main;
 
