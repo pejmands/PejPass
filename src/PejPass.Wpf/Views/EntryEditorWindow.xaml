@@ -35,7 +35,7 @@
                         Margin="0,12,0,10"
                         Padding="0,0,0,8">
                     <TextBlock Text="Identity"
-                               FontSize="13"
+                               FontSize="{DynamicResource AppFontSize13}"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}"/>
                 </Border>
@@ -83,7 +83,7 @@
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
-                        <TextBlock FontSize="16"
+                        <TextBlock FontSize="{DynamicResource AppFontSize16}"
                                    Foreground="{DynamicResource TextBrush}">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -125,7 +125,7 @@
                         Margin="0,12,0,10"
                         Padding="0,0,0,8">
                     <TextBlock Text="Password"
-                               FontSize="13"
+                               FontSize="{DynamicResource AppFontSize13}"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}"/>
                 </Border>
@@ -141,7 +141,7 @@
                                          PasswordChanged="PasswordBox_PasswordChanged"
                                          Padding="12,0,44,0"
                                          FontFamily="Consolas"
-                                         FontSize="14"
+                                         FontSize="{DynamicResource AppFontSize14}"
                                          Height="40"
                                          Background="Transparent"
                                          BorderThickness="0"
@@ -152,7 +152,7 @@
                                      Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"
                                      Padding="12,0,44,0"
                                      FontFamily="Consolas"
-                                     FontSize="14"
+                                     FontSize="{DynamicResource AppFontSize14}"
                                      Height="40"
                                      Background="Transparent"
                                      BorderThickness="0"
@@ -171,7 +171,7 @@
                                     Margin="0,0,4,0"
                                     Padding="0"
                                     FontFamily="Segoe MDL2 Assets"
-                                    FontSize="15"
+                                    FontSize="{DynamicResource AppFontSize15}"
                                     Foreground="{DynamicResource AccentBrush}"
                                     Background="Transparent"
                                     BorderThickness="0"
@@ -202,7 +202,7 @@
                         Margin="0,12,0,10"
                         Padding="0,0,0,8">
                     <TextBlock Text="Two-factor authentication"
-                               FontSize="13"
+                               FontSize="{DynamicResource AppFontSize13}"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}"/>
                 </Border>
@@ -221,7 +221,7 @@
                                          PasswordChanged="TotpSecretBox_PasswordChanged"
                                          Padding="12,0,44,0"
                                          FontFamily="Consolas"
-                                         FontSize="14"
+                                         FontSize="{DynamicResource AppFontSize14}"
                                          Height="40"
                                          Background="Transparent"
                                          BorderThickness="0"
@@ -231,7 +231,7 @@
                                      Text="{Binding TotpSecret, UpdateSourceTrigger=PropertyChanged}"
                                      Padding="12,0,44,0"
                                      FontFamily="Consolas"
-                                     FontSize="14"
+                                     FontSize="{DynamicResource AppFontSize14}"
                                      Height="40"
                                      Background="Transparent"
                                      BorderThickness="0"
@@ -251,7 +251,7 @@
                                     Margin="0,0,4,0"
                                     Padding="0"
                                     FontFamily="Segoe MDL2 Assets"
-                                    FontSize="15"
+                                    FontSize="{DynamicResource AppFontSize15}"
                                     Foreground="{DynamicResource AccentBrush}"
                                     Background="Transparent"
                                     BorderThickness="0"
@@ -262,7 +262,7 @@
                 </Grid>
 
                 <TextBlock Text="Import QR code"
-                           FontSize="12"
+                           FontSize="{DynamicResource AppFontSize12}"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource MutedBrush}"
                            Margin="0,0,0,6"/>
@@ -292,7 +292,7 @@
                            Visibility="{Binding TotpErrorMessage, Converter={StaticResource NullOrEmptyToVis}}"/>
 
                 <TextBlock Text="Optional — used to generate 2FA codes in the main window"
-                           FontSize="11"
+                           FontSize="{DynamicResource AppFontSize11}"
                            Foreground="{DynamicResource MutedBrush}"
                            Margin="0,0,0,20"/>
 
@@ -302,7 +302,7 @@
                         Margin="0,12,0,10"
                         Padding="0,0,0,8">
                     <TextBlock Text="Tags"
-                               FontSize="13"
+                               FontSize="{DynamicResource AppFontSize13}"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}"/>
                 </Border>
@@ -323,7 +323,7 @@
                         Margin="0,12,0,10"
                         Padding="0,0,0,8">
                     <TextBlock Text="Additional information"
-                               FontSize="13"
+                               FontSize="{DynamicResource AppFontSize13}"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}"/>
                 </Border>
@@ -336,7 +336,7 @@
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Text="Custom Fields"
-                               FontSize="12"
+                               FontSize="{DynamicResource AppFontSize12}"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource MutedBrush}"
                                VerticalAlignment="Center"/>
@@ -347,7 +347,7 @@
                             Command="{Binding AddCustomFieldCommand}"
                             Padding="10,4"
                             Height="32"
-                            FontSize="12"/>
+                            FontSize="{DynamicResource AppFontSize12}"/>
                 </Grid>
 
                 <ItemsControl ItemsSource="{Binding CustomFields}"
