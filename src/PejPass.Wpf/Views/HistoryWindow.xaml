@@ -118,8 +118,8 @@
                                                         <Setter Property="Visibility"
                                                                 Value="Collapsed"/>
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Items.Count}"
-                                                                         Value="0">
+                                                            <DataTrigger Binding="{Binding HasHistoryItems}"
+                                                                         Value="False">
                                                                 <Setter Property="Visibility"
                                                                         Value="Visible"/>
                                                             </DataTrigger>
@@ -134,6 +134,33 @@
                                                            HorizontalAlignment="Center"/>
 
                                                 <TextBlock Text="Changes made to entries will appear here."
+                                                           Margin="0,8,0,0"
+                                                           Style="{StaticResource EmptyHistoryTextStyle}"/>
+                                            </StackPanel>
+
+                                            <StackPanel HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility"
+                                                                Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasNoSearchResults}"
+                                                                         Value="True">
+                                                                <Setter Property="Visibility"
+                                                                        Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+
+                                                <TextBlock Text="No matching history snapshots"
+                                                           FontSize="16"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextBrush}"
+                                                           HorizontalAlignment="Center"/>
+
+                                                <TextBlock Text="Try a different search."
                                                            Margin="0,8,0,0"
                                                            Style="{StaticResource EmptyHistoryTextStyle}"/>
                                             </StackPanel>
@@ -458,7 +485,7 @@
             <!-- Footer -->
             <Grid Grid.Row="3"
                   Margin="0,16,0,0">
-                <TextBlock Text="{Binding Items.Count, StringFormat={}{0} history snapshots}"
+                <TextBlock Text="{Binding FilteredItems.Count, StringFormat={}{0} history snapshots}"
                            Foreground="{DynamicResource MutedBrush}"
                            VerticalAlignment="Center"/>
                 <StackPanel Orientation="Horizontal"
