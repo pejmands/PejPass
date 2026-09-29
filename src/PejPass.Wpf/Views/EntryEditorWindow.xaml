@@ -22,9 +22,11 @@
         <Style x:Key="CustomFieldMoveButton"
                TargetType="Button"
                BasedOn="{StaticResource SecondaryButton}">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}"/>
+                    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                     <Setter Property="Opacity" Value="1"/>
                 </Trigger>
             </Style.Triggers>
@@ -303,7 +305,7 @@
 
                                 <Button Grid.Column="3"
                                         Style="{StaticResource CustomFieldMoveButton}"
-                                        Content="↑"
+                                        Content="▲"
                                         Command="{Binding DataContext.MoveCustomFieldUpCommand,
                                                   RelativeSource={RelativeSource AncestorType=Window}}"
                                         CommandParameter="{Binding}"
@@ -314,7 +316,7 @@
 
                                 <Button Grid.Column="4"
                                         Style="{StaticResource CustomFieldMoveButton}"
-                                        Content="↓"
+                                        Content="▼"
                                         Command="{Binding DataContext.MoveCustomFieldDownCommand,
                                                   RelativeSource={RelativeSource AncestorType=Window}}"
                                         CommandParameter="{Binding}"
