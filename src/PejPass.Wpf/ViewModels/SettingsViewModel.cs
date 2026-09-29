@@ -22,7 +22,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly int _savedClipboard;
     private readonly bool _savedWindowsHello;
 
-    private readonly bool _suppressThemePreview;
+    private bool _suppressThemePreview;
 
     [ObservableProperty]
     public partial int AutoLockMinutes { get; set; }
@@ -117,11 +117,12 @@ public partial class SettingsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            RevertPreview();
+
             DialogService.Error(
                 $"The settings cannot be modified right now.\n\n{ex.Message}",
                 "Settings unavailable");
 
-            //RevertPreview();
             return;
         }
 
@@ -162,6 +163,20 @@ public partial class SettingsViewModel : ObservableObject
         _settings.AutoLockMinutes = _savedAutoLock;
         _settings.ClipboardClearSeconds = _savedClipboard;
         _settings.WindowsHelloEnabled = _savedWindowsHello;
+
+        _suppressThemePreview = true;
+        try
+        {
+            AutoLockMinutes = _savedAutoLock;
+            ClipboardClearSeconds = _savedClipboard;
+            SelectedThemeIndex = (int)_savedTheme;
+            WindowsHelloEnabled = _savedWindowsHello;
+        }
+        finally
+        {
+            _suppressThemePreview = false;
+        }
+
         _themeService.Apply();
     }
 
