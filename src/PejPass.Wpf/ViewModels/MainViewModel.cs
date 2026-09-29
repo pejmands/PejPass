@@ -609,7 +609,7 @@ public partial class MainViewModel : ObservableObject
     {
         _autoLockTimer?.Stop();
         _totpTimer?.Stop();
-        _clipboard.Clear();
+        _clipboard.ClearIfOwned();
         _vaultSession.Clear();
 
         StatusMessage = "Vault locked.";
