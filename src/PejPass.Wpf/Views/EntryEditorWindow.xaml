@@ -54,7 +54,6 @@
                         <TextBox x:Name="TitleTextBox"
                                  Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
                                  TextWrapping="NoWrap"
-                                 HorizontalScrollBarVisibility="Auto"
                                  VerticalScrollBarVisibility="Disabled"/>
 
                         <TextBlock Style="{StaticResource ValidationErrorText}"
@@ -106,7 +105,6 @@
                 <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
                          Margin="0,0,0,12"
                          TextWrapping="NoWrap"
-                         HorizontalScrollBarVisibility="Auto"
                          VerticalScrollBarVisibility="Disabled"/>
 
                 <TextBlock Text="URL"
@@ -116,7 +114,6 @@
                 <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}"
                          Margin="0,0,0,20"
                          TextWrapping="NoWrap"
-                         HorizontalScrollBarVisibility="Auto"
                          VerticalScrollBarVisibility="Disabled"/>
 
                 <!-- Password -->
@@ -157,7 +154,6 @@
                                      Background="Transparent"
                                      BorderThickness="0"
                                      TextWrapping="NoWrap"
-                                     HorizontalScrollBarVisibility="Auto"
                                      VerticalScrollBarVisibility="Disabled"
                                      Visibility="Collapsed"/>
 
@@ -236,7 +232,6 @@
                                      Background="Transparent"
                                      BorderThickness="0"
                                      TextWrapping="NoWrap"
-                                     HorizontalScrollBarVisibility="Auto"
                                      VerticalScrollBarVisibility="Disabled"
                                      Visibility="Collapsed"
                                      ToolTip="Paste the authenticator secret key (Base32). Leave empty to disable TOTP."/>
@@ -310,7 +305,6 @@
                 <TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}"
                          Margin="0,0,0,6"
                          TextWrapping="NoWrap"
-                         HorizontalScrollBarVisibility="Auto"
                          VerticalScrollBarVisibility="Disabled"/>
 
                 <controls:TagChipStrip ItemsSource="{Binding SuggestedTags}"
@@ -368,7 +362,6 @@
                                          ToolTip="Field name"
                                          Margin="0,0,6,0"
                                          TextWrapping="NoWrap"
-                                         HorizontalScrollBarVisibility="Auto"
                                          VerticalScrollBarVisibility="Disabled"/>
 
                                 <TextBox Grid.Column="1"
@@ -376,7 +369,6 @@
                                          ToolTip="Field value"
                                          Margin="2,0,6,0"
                                          TextWrapping="NoWrap"
-                                         HorizontalScrollBarVisibility="Auto"
                                          VerticalScrollBarVisibility="Disabled"/>
 
                                 <CheckBox Grid.Column="2"
