@@ -2,6 +2,7 @@ using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace PejPass.Wpf.Controls;
 
@@ -12,6 +13,10 @@ namespace PejPass.Wpf.Controls;
 /// </summary>
 public partial class TagChipStrip : UserControl
 {
+    private const double Epsilon = 1.0;
+    private const double PixelsPerNotch = 48.0;
+    private const double NotchUnit = 120.0;
+
     public static readonly DependencyProperty ItemsSourceProperty =
         DependencyProperty.Register(
             nameof(ItemsSource),
@@ -46,20 +51,82 @@ public partial class TagChipStrip : UserControl
 
     private void AttachWheel()
     {
-        Scroller.RemoveHandler(UIElement.PreviewMouseWheelEvent,
+        Scroller.RemoveHandler(
+            UIElement.PreviewMouseWheelEvent,
             (MouseWheelEventHandler)OnPreviewMouseWheel);
-        Scroller.AddHandler(UIElement.PreviewMouseWheelEvent,
+
+        Scroller.AddHandler(
+            UIElement.PreviewMouseWheelEvent,
             (MouseWheelEventHandler)OnPreviewMouseWheel,
             handledEventsToo: true);
     }
 
     private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
-        if (Scroller.ExtentWidth <= Scroller.ViewportWidth + 0.5)
+        var parent = FindAncestorScrollViewer(Scroller);
+
+        if (Scroller.ExtentWidth <= Scroller.ViewportWidth + Epsilon)
+        {
+            ScrollParent(parent, e.Delta);
+            e.Handled = parent is not null;
+            return;
+        }
+
+        var notches = e.Delta / NotchUnit;
+        var offsetDelta = -notches * PixelsPerNotch;
+        var atStart = Scroller.HorizontalOffset <= Epsilon;
+        var atEnd = Scroller.HorizontalOffset >= Scroller.ScrollableWidth - Epsilon;
+
+        if (offsetDelta < 0 && atEnd)
+        {
+            ScrollParent(parent, e.Delta);
+            e.Handled = parent is not null;
+            return;
+        }
+
+        if (offsetDelta > 0 && atStart)
+        {
+            ScrollParent(parent, e.Delta);
+            e.Handled = parent is not null;
+            return;
+        }
+
+        Scroller.ScrollToHorizontalOffset(
+            Math.Clamp(
+                Scroller.HorizontalOffset + offsetDelta,
+                0,
+                Scroller.ScrollableWidth));
+
+        e.Handled = true;
+    }
+
+    private static void ScrollParent(ScrollViewer? parent, int delta)
+    {
+        if (parent is null || parent.ScrollableHeight <= Epsilon)
             return;
 
-        var notches = e.Delta / 120.0;
-        Scroller.ScrollToHorizontalOffset(Scroller.HorizontalOffset - notches * 48.0);
-        e.Handled = true;
+        var notches = delta / NotchUnit;
+        var offsetDelta = -notches * PixelsPerNotch;
+        var target = Math.Clamp(
+            parent.VerticalOffset + offsetDelta,
+            0,
+            parent.ScrollableHeight);
+
+        parent.ScrollToVerticalOffset(target);
+    }
+
+    private static ScrollViewer? FindAncestorScrollViewer(DependencyObject child)
+    {
+        var current = VisualTreeHelper.GetParent(child);
+
+        while (current is not null)
+        {
+            if (current is ScrollViewer scrollViewer)
+                return scrollViewer;
+
+            current = VisualTreeHelper.GetParent(current);
+        }
+
+        return null;
     }
 }
