@@ -338,6 +338,7 @@
                          MaxHeight="160"
                          TextWrapping="Wrap"
                          AcceptsReturn="True"
+                         VerticalContentAlignment="Top"
                          VerticalScrollBarVisibility="Auto"
                          HorizontalScrollBarVisibility="Disabled"/>
 
