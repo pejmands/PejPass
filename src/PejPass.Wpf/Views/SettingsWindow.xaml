@@ -319,6 +319,5 @@
                     Command="{Binding SaveCommand}"
                     IsDefault="True"/>
         </StackPanel>
-            </Grid>
-    </ScrollViewer>
+    </Grid>
 </Window>
