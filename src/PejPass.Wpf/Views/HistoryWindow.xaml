@@ -67,6 +67,12 @@
                            Margin="12,0,0,0"/>
             </Grid>
 
+            <controls:SearchBox Grid.Row="0"
+                                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                Placeholder="Search history..."
+                                ToolTip="Search history by title, username, or URL"
+                                Margin="0,0,0,12"/>
+
             <!-- Main content -->
             <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
@@ -76,7 +82,7 @@
 
                 <!-- History list -->
                 <ListBox Grid.Column="0"
-                         ItemsSource="{Binding Items}"
+                         ItemsSource="{Binding FilteredItems}"
                          SelectedItem="{Binding SelectedItem}"
                          Background="Transparent"
                          BorderThickness="0"
