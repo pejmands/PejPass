@@ -21,6 +21,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly int _savedAutoLock;
     private readonly int _savedClipboard;
     private readonly bool _savedWindowsHello;
+    private readonly FontSizeMode _savedFontSize;
 
     private bool _suppressThemePreview;
 
@@ -42,7 +43,12 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool WindowsHelloEnabled { get; set; }
 
+    [ObservableProperty]
+    public partial int SelectedFontSizeIndex { get; set; }
+
     public string[] ThemeOptions { get; } = ["System", "Dark", "Light"];
+
+    public string[] FontSizeOptions { get; } = ["Small", "Medium", "Large"];
 
     public event EventHandler? RequestClose;
     public event EventHandler? ValidationFailed;
@@ -62,12 +68,14 @@ public partial class SettingsViewModel : ObservableObject
         _savedAutoLock = settings.AutoLockMinutes;
         _savedClipboard = settings.ClipboardClearSeconds;
         _savedWindowsHello = settings.WindowsHelloEnabled;
+        _savedFontSize = settings.FontSize;
 
         _suppressThemePreview = true;
         AutoLockMinutes = settings.AutoLockMinutes;
         ClipboardClearSeconds = settings.ClipboardClearSeconds;
         SelectedThemeIndex = (int)settings.Theme;
         WindowsHelloEnabled = settings.WindowsHelloEnabled;
+        SelectedFontSizeIndex = (int)settings.FontSize;
         _suppressThemePreview = false;
     }
 
@@ -90,6 +98,12 @@ public partial class SettingsViewModel : ObservableObject
             > 300 => "Clipboard timeout cannot exceed 300 seconds.",
             _ => null
         };
+    }
+
+    partial void OnSelectedFontSizeIndexChanged(int value)
+    {
+        if (value < 0 || value > 2) return;
+        App.ApplyFontSize((FontSizeMode)value);
     }
 
     partial void OnSelectedThemeIndexChanged(int value)
@@ -130,6 +144,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.ClipboardClearSeconds = ClipboardClearSeconds;
         _settings.Theme = (ThemeMode)SelectedThemeIndex;
         _settings.WindowsHelloEnabled = WindowsHelloEnabled;
+        _settings.FontSize = (FontSizeMode)SelectedFontSizeIndex;
 
         if (!SettingsStore.TrySave(_settings))
         {
@@ -163,6 +178,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.AutoLockMinutes = _savedAutoLock;
         _settings.ClipboardClearSeconds = _savedClipboard;
         _settings.WindowsHelloEnabled = _savedWindowsHello;
+        _settings.FontSize = _savedFontSize;
 
         _suppressThemePreview = true;
         try
@@ -171,6 +187,7 @@ public partial class SettingsViewModel : ObservableObject
             ClipboardClearSeconds = _savedClipboard;
             SelectedThemeIndex = (int)_savedTheme;
             WindowsHelloEnabled = _savedWindowsHello;
+            SelectedFontSizeIndex = (int)_savedFontSize;
         }
         finally
         {
