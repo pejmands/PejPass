@@ -25,12 +25,13 @@
               Margin="16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- Header & Instruction (Perfect Horizontal Alignment) -->
-            <Grid Grid.Row="0"
+            <Grid Grid.Row="1"
                   Margin="0,0,0,16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="2*"/>
@@ -74,7 +75,7 @@
                                 Margin="0,0,0,12"/>
 
             <!-- Main content -->
-            <Grid Grid.Row="1">
+            <Grid Grid.Row="2">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="2*"/>
                     <ColumnDefinition Width="3*"/>
