@@ -33,80 +33,80 @@ public static class HorizontalSelectionScrollBehavior
 
     private static void OnIsEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is not TextBox textBox)
+        if (d is not Control control)
             return;
 
         if ((bool)e.NewValue)
         {
-            textBox.Loaded += OnLoaded;
-            textBox.Unloaded += OnUnloaded;
+            control.Loaded += OnLoaded;
+            control.Unloaded += OnUnloaded;
 
-            if (textBox.IsLoaded)
-                Attach(textBox);
+            if (control.IsLoaded)
+                Attach(control);
         }
         else
         {
-            textBox.Loaded -= OnLoaded;
-            textBox.Unloaded -= OnUnloaded;
-            Detach(textBox);
+            control.Loaded -= OnLoaded;
+            control.Unloaded -= OnUnloaded;
+            Detach(control);
         }
     }
 
     private static void OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (sender is TextBox textBox)
-            Attach(textBox);
+        if (sender is Control control)
+            Attach(control);
     }
 
     private static void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        if (sender is TextBox textBox)
-            Detach(textBox);
+        if (sender is Control control)
+            Detach(control);
     }
 
-    private static void Attach(TextBox textBox)
+    private static void Attach(Control control)
     {
-        textBox.ApplyTemplate();
+        control.ApplyTemplate();
 
-        var scrollViewer = FindScrollViewer(textBox);
+        var scrollViewer = FindScrollViewer(control);
         if (scrollViewer is null)
         {
-            textBox.Dispatcher.BeginInvoke(
+            control.Dispatcher.BeginInvoke(
                 DispatcherPriority.Loaded,
-                () => Attach(textBox));
+                () => Attach(control));
             return;
         }
 
-        SetScrollViewer(textBox, scrollViewer);
-        textBox.PreviewMouseMove -= OnPreviewMouseMove;
-        textBox.PreviewMouseMove += OnPreviewMouseMove;
+        SetScrollViewer(control, scrollViewer);
+        control.PreviewMouseMove -= OnPreviewMouseMove;
+        control.PreviewMouseMove += OnPreviewMouseMove;
     }
 
-    private static void Detach(TextBox textBox)
+    private static void Detach(Control control)
     {
-        textBox.PreviewMouseMove -= OnPreviewMouseMove;
-        SetScrollViewer(textBox, null);
+        control.PreviewMouseMove -= OnPreviewMouseMove;
+        SetScrollViewer(control, null);
     }
 
     private static void OnPreviewMouseMove(object sender, MouseEventArgs e)
     {
-        if (sender is not TextBox textBox ||
+        if (sender is not Control control ||
             e.LeftButton != MouseButtonState.Pressed ||
-            !textBox.IsKeyboardFocusWithin)
+            !control.IsKeyboardFocusWithin)
             return;
 
-        var scrollViewer = GetScrollViewer(textBox);
+        var scrollViewer = GetScrollViewer(control);
         if (scrollViewer is null || scrollViewer.ScrollableWidth <= 0)
             return;
 
-        var point = e.GetPosition(textBox);
+        var point = e.GetPosition(control);
 
         if (point.X <= EdgeThreshold)
         {
             scrollViewer.ScrollToHorizontalOffset(
                 Math.Max(0, scrollViewer.HorizontalOffset - ScrollStep));
         }
-        else if (point.X >= textBox.ActualWidth - EdgeThreshold)
+        else if (point.X >= control.ActualWidth - EdgeThreshold)
         {
             scrollViewer.ScrollToHorizontalOffset(
                 Math.Min(
