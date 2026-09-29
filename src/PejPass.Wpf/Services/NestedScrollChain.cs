@@ -6,15 +6,10 @@ using System.Windows.Threading;
 
 namespace PejPass.Wpf.Services;
 
-/// <summary>
-/// Nested scroll chaining (standard desktop / web pattern):
-/// 1) Wheel scrolls the inner scroller while it has room.
-/// 2) At top/bottom (or if content fits), further wheel deltas scroll the parent ScrollViewer.
-/// </summary>
 public static class NestedScrollChain
 {
     private const double Epsilon = 1.0;
-    private const double PixelsPerNotch = 48.0; // ~3 lines — matches typical WPF wheel feel
+    private const double PixelsPerNotch = 48.0;
     private const double NotchUnit = 120.0;
 
     private static readonly DependencyProperty ParentOverrideProperty =
@@ -27,6 +22,13 @@ public static class NestedScrollChain
     private static readonly DependencyProperty IsAttachedProperty =
         DependencyProperty.RegisterAttached(
             "IsAttached",
+            typeof(bool),
+            typeof(NestedScrollChain),
+            new PropertyMetadata(false));
+
+    private static readonly DependencyProperty IsHorizontalAttachedProperty =
+        DependencyProperty.RegisterAttached(
+            "IsHorizontalAttached",
             typeof(bool),
             typeof(NestedScrollChain),
             new PropertyMetadata(false));
@@ -44,6 +46,25 @@ public static class NestedScrollChain
         inner.AddHandler(
             UIElement.PreviewMouseWheelEvent,
             new MouseWheelEventHandler(OnInnerPreviewMouseWheel),
+            handledEventsToo: true);
+
+        if (inner.Background is null)
+            inner.Background = Brushes.Transparent;
+    }
+
+    public static void AttachHorizontal(ScrollViewer inner, ScrollViewer? parentOverride = null)
+    {
+        if (inner is null) return;
+
+        inner.SetValue(ParentOverrideProperty, parentOverride);
+
+        if (inner.GetValue(IsHorizontalAttachedProperty) is true)
+            return;
+
+        inner.SetValue(IsHorizontalAttachedProperty, true);
+        inner.AddHandler(
+            UIElement.PreviewMouseWheelEvent,
+            new MouseWheelEventHandler(OnHorizontalPreviewMouseWheel),
             handledEventsToo: true);
 
         if (inner.Background is null)
@@ -115,10 +136,7 @@ public static class NestedScrollChain
 
         e.Handled = true;
 
-        // e.Delta > 0 → scroll up → decrease offset; e.Delta < 0 → scroll down → increase offset
-        var notches = e.Delta / NotchUnit;
-        var offsetDelta = -notches * PixelsPerNotch;
-
+        var offsetDelta = -(e.Delta / NotchUnit) * PixelsPerNotch;
         var parent = inner.GetValue(ParentOverrideProperty) as ScrollViewer
                      ?? FindAncestorScrollViewer(inner);
 
@@ -146,24 +164,78 @@ public static class NestedScrollChain
         ScrollBy(inner, offsetDelta);
     }
 
+    private static void OnHorizontalPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (sender is not ScrollViewer inner)
+            return;
+
+        var parent = inner.GetValue(ParentOverrideProperty) as ScrollViewer
+                     ?? FindAncestorScrollViewer(inner);
+
+        if (inner.ScrollableWidth <= Epsilon)
+        {
+            if (TryScrollParent(parent, e.Delta))
+                e.Handled = true;
+            return;
+        }
+
+        var offsetDelta = -(e.Delta / NotchUnit) * PixelsPerNotch;
+        var atStart = inner.HorizontalOffset <= Epsilon;
+        var atEnd = inner.HorizontalOffset >= inner.ScrollableWidth - Epsilon;
+
+        if (offsetDelta < 0 && atStart)
+        {
+            if (TryScrollParent(parent, e.Delta))
+                e.Handled = true;
+            return;
+        }
+
+        if (offsetDelta > 0 && atEnd)
+        {
+            if (TryScrollParent(parent, e.Delta))
+                e.Handled = true;
+            return;
+        }
+
+        inner.ScrollToHorizontalOffset(
+            Math.Clamp(
+                inner.HorizontalOffset + offsetDelta,
+                0,
+                inner.ScrollableWidth));
+
+        e.Handled = true;
+    }
+
+    private static bool TryScrollParent(ScrollViewer? parent, int delta)
+    {
+        if (parent is null || parent.ScrollableHeight <= Epsilon)
+            return false;
+
+        ScrollBy(parent, -(delta / NotchUnit) * PixelsPerNotch);
+        return true;
+    }
+
     private static void ScrollBy(ScrollViewer? sv, double offsetDelta)
     {
-        if (sv is null) return;
-        if (sv.ScrollableHeight <= Epsilon) return;
+        if (sv is null || sv.ScrollableHeight <= Epsilon)
+            return;
 
-        var target = sv.VerticalOffset + offsetDelta;
-        if (target < 0) target = 0;
-        if (target > sv.ScrollableHeight) target = sv.ScrollableHeight;
-        sv.ScrollToVerticalOffset(target);
+        sv.ScrollToVerticalOffset(
+            Math.Clamp(
+                sv.VerticalOffset + offsetDelta,
+                0,
+                sv.ScrollableHeight));
     }
 
     private static ScrollViewer? FindAncestorScrollViewer(DependencyObject child)
     {
         var current = VisualTreeHelper.GetParent(child);
+
         while (current is not null)
         {
             if (current is ScrollViewer sv)
                 return sv;
+
             current = VisualTreeHelper.GetParent(current);
         }
 
