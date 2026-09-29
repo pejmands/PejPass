@@ -1,6 +1,7 @@
 <Window x:Class="PejPass.Wpf.Views.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:PejPass.Wpf.Controls"
         Title="Settings"
         Height="680"
         Width="520"
@@ -11,7 +12,10 @@
         ShowInTaskbar="False"
         Background="{DynamicResource BgBrush}">
 
-    <Grid Margin="24">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+        <controls:ZoomHost>
+            <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -25,7 +29,7 @@
                    Margin="0,0,0,20"/>
 
         <ScrollViewer Grid.Row="1"
-                      VerticalScrollBarVisibility="Auto">
+                      VerticalScrollBarVisibility="Disabled">
             <StackPanel Margin="0,0,12,0">
 
                 <!-- Appearance -->
@@ -292,5 +296,7 @@
                     Command="{Binding SaveCommand}"
                     IsDefault="True"/>
         </StackPanel>
-    </Grid>
+            </Grid>
+        </controls:ZoomHost>
+    </ScrollViewer>
 </Window>
