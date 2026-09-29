@@ -97,6 +97,11 @@
                                 <MenuItem Header="Export CSV"
                                           Command="{Binding ExportCsvCommand}"
                                           Style="{StaticResource ToolbarMenuItem}"/>
+                                <Separator Margin="4,5"
+                                           Background="{DynamicResource BorderBrush}"/>
+                                <MenuItem Header="About PejPass"
+                                          Command="{Binding OpenAboutCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}"/>
                             </StackPanel>
                         </Border>
                     </Popup>
