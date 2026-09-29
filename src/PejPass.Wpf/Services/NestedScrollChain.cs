@@ -48,8 +48,7 @@ public static class NestedScrollChain
             new MouseWheelEventHandler(OnInnerPreviewMouseWheel),
             handledEventsToo: true);
 
-        if (inner.Background is null)
-            inner.Background = Brushes.Transparent;
+        inner.Background ??= Brushes.Transparent;
     }
 
     public static void AttachHorizontal(ScrollViewer inner, ScrollViewer? parentOverride = null)
@@ -67,8 +66,7 @@ public static class NestedScrollChain
             new MouseWheelEventHandler(OnHorizontalPreviewMouseWheel),
             handledEventsToo: true);
 
-        if (inner.Background is null)
-            inner.Background = Brushes.Transparent;
+        inner.Background ??= Brushes.Transparent;
     }
 
     public static void Attach(PasswordBox passwordBox, ScrollViewer? parentOverride = null)

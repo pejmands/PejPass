@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using PejPass.Wpf.ViewModels;
 using System.IO;
 using System.Windows;
-using System.Windows.Input;
 
 namespace PejPass.Wpf.Views;
 

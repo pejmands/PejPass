@@ -138,8 +138,7 @@ public static class ZoomBehavior
     private static void DetachWindow(FrameworkElement element)
     {
         var window = GetWindow(element);
-        if (window is not null)
-            window.PreviewKeyDown -= OnPreviewKeyDown;
+        window?.PreviewKeyDown -= OnPreviewKeyDown;
 
         SetWindow(element, null);
     }
@@ -160,7 +159,7 @@ public static class ZoomBehavior
 
     private static void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (sender is not Window window ||
+        if (sender is not Window ||
             !Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
             return;
 

@@ -8,7 +8,7 @@ namespace PejPass.Wpf.Services;
 /// Ensures only one PejPass process runs. A second launch signals the first
 /// instance to bring its window to the foreground (and optionally open a vault path).
 /// </summary>
-public static class SingleInstance
+public static partial class SingleInstance
 {
     private const string MutexName = @"Local\PejPass.SingleInstance.Mutex";
     private const string EventName = @"Local\PejPass.SingleInstance.Activate";
@@ -196,9 +196,11 @@ public static class SingleInstance
         _listenThread = null;
     }
 
-    [DllImport("user32.dll")]
-    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
-    [DllImport("user32.dll")]
-    private static extern bool SetForegroundWindow(IntPtr hWnd);
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetForegroundWindow(IntPtr hWnd);
 }

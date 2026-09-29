@@ -1,10 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using PejPass.Application.Interfaces;
 using PejPass.Application.Services;
+using PejPass.Domain.Settings;
 using PejPass.Infrastructure.Crypto;
 using PejPass.Infrastructure.Import;
 using PejPass.Infrastructure.Storage;
-using PejPass.Domain.Settings;
 using PejPass.Wpf.Controls;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
@@ -291,20 +291,20 @@ public partial class App : System.Windows.Application
             return;
 
         var style = GetWindowLongPtr(hwnd, GwlStyle).ToInt64();
-        SetWindowLongPtr(hwnd, GwlStyle, (IntPtr)(style & ~WsSysMenu));
+        SetWindowLongPtr(hwnd, GwlStyle, checked((IntPtr)(style & ~WsSysMenu)));
     }
 
-    [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
-    private static extern IntPtr GetWindowLongPtr32(IntPtr hWnd, int nIndex);
+    [LibraryImport("user32.dll", EntryPoint = "GetWindowLong")]
+    private static partial IntPtr GetWindowLongPtr32(IntPtr hWnd, int nIndex);
 
-    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
-    private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
+    [LibraryImport("user32.dll", EntryPoint = "GetWindowLongPtrA")]
+    private static partial IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
 
-    [DllImport("user32.dll", EntryPoint = "SetWindowLong")]
-    private static extern IntPtr SetWindowLongPtr32(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+    [LibraryImport("user32.dll", EntryPoint = "SetWindowLong")]
+    private static partial IntPtr SetWindowLongPtr32(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
-    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
-    private static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+    [LibraryImport("user32.dll", EntryPoint = "SetWindowLongPtrA")]
+    private static partial IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
     private static IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex) =>
         IntPtr.Size == 8 ? GetWindowLongPtr64(hWnd, nIndex) : GetWindowLongPtr32(hWnd, nIndex);
@@ -414,8 +414,7 @@ public partial class App : System.Windows.Application
         SingleInstance.Release();
         PendingVaultOpen.ReadAndClear();
 
-        if (Services is not null)
-            Services.GetRequiredService<IClipboardService>().ClearIfOwned();
+        Services?.GetRequiredService<IClipboardService>().ClearIfOwned();
 
         base.OnExit(e);
     }

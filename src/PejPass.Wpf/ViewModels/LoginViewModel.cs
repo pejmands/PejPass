@@ -446,7 +446,7 @@ public partial class LoginViewModel : ObservableObject
 
             MasterPassword = string.Empty;
             ConfirmMasterPassword = string.Empty;
-            
+
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)

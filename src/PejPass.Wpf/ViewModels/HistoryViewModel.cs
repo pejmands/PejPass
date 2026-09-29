@@ -162,7 +162,7 @@ public partial class HistoryViewModel : ObservableObject
         SelectedItem = null;
     }
 
-    private static IReadOnlyList<string> GetChangedFields(
+    private static List<string> GetChangedFields(
         EntryHistoryItem snapshot,
         EntryHistoryItem? newerSnapshot,
         VaultEntry? currentEntry)
