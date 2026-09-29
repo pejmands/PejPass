@@ -25,14 +25,14 @@
                         MaxWidth="440">
 
                 <TextBlock Text="PejPass"
-                           FontSize="28"
+                           FontSize="{DynamicResource AppFontSize28}"
                            FontWeight="Bold"
                            Foreground="{DynamicResource TextBrush}"
                            HorizontalAlignment="Center"
                            Margin="0,0,0,8"/>
 
                 <TextBlock Text="Local encrypted vault"
-                           FontSize="13"
+                           FontSize="{DynamicResource AppFontSize13}"
                            Foreground="{DynamicResource MutedBrush}"
                            HorizontalAlignment="Center"
                            Margin="0,0,0,28"/>
@@ -115,7 +115,7 @@
                            Visibility="{Binding IsCreateMode, Converter={StaticResource BoolToVis}}"
                            Foreground="{DynamicResource MutedBrush}"
                            TextWrapping="Wrap"
-                           FontSize="12"
+                           FontSize="{DynamicResource AppFontSize12}"
                            Margin="0,0,0,12"/>
 
                 <!-- Strength (create mode) -->
@@ -129,7 +129,7 @@
                 <TextBlock Text="Tip: Use a memorable combination of words and characters without spaces."
                            Visibility="{Binding IsCreateMode, Converter={StaticResource BoolToVis}}"
                            Foreground="{DynamicResource MutedBrush}"
-                           FontSize="12"
+                           FontSize="{DynamicResource AppFontSize12}"
                            TextWrapping="Wrap"
                            Margin="0,0,0,12"/>
 
