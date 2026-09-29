@@ -307,8 +307,7 @@
                                     </TextBox>
 
                                     <controls:PasswordRevealBox Password="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                Margin="2,0,6,0"
-                                                                Visibility="Collapsed">
+                                                                Margin="2,0,6,0">
                                         <controls:PasswordRevealBox.Style>
                                             <Style TargetType="controls:PasswordRevealBox">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
