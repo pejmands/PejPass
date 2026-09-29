@@ -268,7 +268,7 @@ public partial class MainWindow : Window
 
     private void FocusSearch()
     {
-        SearchBox.Focus();
+        SearchBox.FocusInput();
         SearchBox.SelectAll();
     }
 
