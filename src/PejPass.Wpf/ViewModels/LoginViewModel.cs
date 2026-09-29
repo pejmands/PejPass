@@ -225,7 +225,7 @@ public partial class LoginViewModel : ObservableObject
             };
 
             if (dlg.ShowDialog() == true)
-                VaultPath = dlg.FileName;
+                VaultPath = EnsureVaultExtension(dlg.FileName);
         }
         else
         {
@@ -238,6 +238,20 @@ public partial class LoginViewModel : ObservableObject
             if (dlg.ShowDialog() == true)
                 VaultPath = dlg.FileName;
         }
+    }
+
+    private static string EnsureVaultExtension(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) ||
+            string.Equals(
+                Path.GetExtension(path),
+                ".pejpass",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return path;
+        }
+
+        return path + ".pejpass";
     }
 
     [RelayCommand]
@@ -357,6 +371,8 @@ public partial class LoginViewModel : ObservableObject
 
         if (IsCreateMode)
         {
+            VaultPath = EnsureVaultExtension(VaultPath);
+
             var validation =
                 MasterPasswordPolicy.Validate(MasterPassword);
 
