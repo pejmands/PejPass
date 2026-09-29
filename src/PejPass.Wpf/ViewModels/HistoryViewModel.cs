@@ -15,10 +15,7 @@ public partial class HistoryViewModel : ObservableObject
 
     public ObservableCollection<HistoryRow> Items { get; } = [];
 
-    public IEnumerable<HistoryRow> FilteredItems =>
-        string.IsNullOrWhiteSpace(SearchText)
-            ? Items
-            : Items.Where(MatchesSearch);
+    public ObservableCollection<HistoryRow> FilteredItems { get; } = [];
 
     [ObservableProperty]
     public partial string SearchText { get; set; } = string.Empty;
@@ -54,7 +51,7 @@ public partial class HistoryViewModel : ObservableObject
 
     partial void OnSearchTextChanged(string value)
     {
-        OnPropertyChanged(nameof(FilteredItems));
+        RefreshFilteredItems();
     }
 
     private bool MatchesSearch(HistoryRow row)
@@ -62,6 +59,14 @@ public partial class HistoryViewModel : ObservableObject
         return row.Title.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
             || row.Username.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
             || row.Url.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void RefreshFilteredItems()
+    {
+        FilteredItems.Clear();
+
+        foreach (var item in Items.Where(MatchesSearch))
+            FilteredItems.Add(item);
     }
 
     public bool HasHistoryItems => Items.Count > 0;
@@ -88,7 +93,10 @@ public partial class HistoryViewModel : ObservableObject
         Items.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(HasHistoryItems));
+            RefreshFilteredItems();
         };
+
+        RefreshFilteredItems();
     }
 
     private void Load()
