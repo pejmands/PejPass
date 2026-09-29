@@ -384,7 +384,7 @@ public partial class MainViewModel : ObservableObject
 
     private void OnPreProcessInput(object sender, PreProcessInputEventArgs e)
     {
-        if (_settings.AutoLockMinutes <= 0)
+        if (!_vaultSession.IsActive || _settings.AutoLockMinutes <= 0)
             return;
 
         var input = e.StagingItem.Input;
@@ -424,6 +424,9 @@ public partial class MainViewModel : ObservableObject
 
     private void ResetAutoLockTimer()
     {
+        if (!_vaultSession.IsActive || _settings.AutoLockMinutes <= 0)
+            return;
+
         _lastAutoLockActivityUtc = DateTime.UtcNow;
         _autoLockTimer?.Stop();
 
