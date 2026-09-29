@@ -67,9 +67,19 @@ public partial class HistoryViewModel : ObservableObject
 
         foreach (var item in Items.Where(MatchesSearch))
             FilteredItems.Add(item);
+
+        OnPropertyChanged(nameof(HasFilteredItems));
+        OnPropertyChanged(nameof(HasNoSearchResults));
     }
 
     public bool HasHistoryItems => Items.Count > 0;
+
+    public bool HasFilteredItems => FilteredItems.Count > 0;
+
+    public bool HasNoSearchResults =>
+        Items.Count > 0 &&
+        FilteredItems.Count == 0 &&
+        !string.IsNullOrEmpty(SearchText);
 
     public EntryHistoryItem? SelectedSnapshot =>
         SelectedItem?.Snapshot;
