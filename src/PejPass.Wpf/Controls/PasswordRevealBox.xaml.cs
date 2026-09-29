@@ -62,7 +62,7 @@ public partial class PasswordRevealBox : UserControl
             nameof(ShowRevealButton),
             typeof(bool),
             typeof(PasswordRevealBox),
-            new PropertyMetadata(true, OnShowRevealButtonChanged));
+            new PropertyMetadata(true));
 
     public bool ShowRevealButton
     {
@@ -138,14 +138,6 @@ public partial class PasswordRevealBox : UserControl
         }
     }
 
-    private static void OnShowRevealButtonChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is PasswordRevealBox control)
-            control.VisibilityButton.Visibility = control.ShowRevealButton
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-    }
-
     private static void OnIsRevealedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is PasswordRevealBox control)
@@ -219,8 +211,12 @@ public partial class PasswordRevealBox : UserControl
         var start = TextRangeStartMethod.Invoke(selection, null);
         var end = TextRangeEndMethod.Invoke(selection, null);
 
-        var startOffset = (int?)(TextPointerOffsetProperty.GetValue(start) as int?) ?? 0;
-        var endOffset = (int?)(TextPointerOffsetProperty.GetValue(end) as int?) ?? startOffset;
+        var startOffset = TextPointerOffsetProperty.GetValue(start) is int startValue
+            ? startValue
+            : 0;
+        var endOffset = TextPointerOffsetProperty.GetValue(end) is int endValue
+            ? endValue
+            : startOffset;
 
         return new PasswordBoxSelection(
             startOffset,
