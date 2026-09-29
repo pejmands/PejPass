@@ -320,7 +320,19 @@ public partial class App : System.Windows.Application
 
         window.Content = null;
 
-        ZoomBehavior.SetIsEnabled(body, true);
+        if (body is Panel panel &&
+            panel.Children.OfType<AppTitleBar>().Any())
+        {
+            foreach (UIElement child in panel.Children)
+            {
+                if (child is not AppTitleBar)
+                    ZoomBehavior.SetIsEnabled(child, true);
+            }
+        }
+        else
+        {
+            ZoomBehavior.SetIsEnabled(body, true);
+        }
 
         UIElement content = body;
 
