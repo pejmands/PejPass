@@ -5,6 +5,7 @@
              MinHeight="40">
     <Grid>
         <TextBox x:Name="InputBox"
+                 PreviewKeyDown="InputBox_PreviewKeyDown"
                  Text="{Binding Text, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
                  VerticalContentAlignment="Center"
                  Padding="10,8,32,8"/>
