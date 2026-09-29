@@ -9,6 +9,7 @@ public partial class ChangeMasterPasswordWindow : Window
     public ChangeMasterPasswordWindow(ChangeMasterPasswordViewModel viewModel)
     {
         InitializeComponent();
+        App.PrepareCustomChrome(this);
         DataContext = viewModel;
 
         viewModel.RequestClose += (_, _) =>
