@@ -12,11 +12,21 @@ public partial class TrashWindow : Window
         App.PrepareCustomChrome(this);
 
         DataContext = viewModel;
+        KeyDown += OnKeyDown;
 
         FaviconService.FaviconsBatchReady += OnFaviconsReady;
         Loaded += (_, _) =>
             FaviconService.Prefetch(viewModel.Items.Select(i => (i.Url, i.Title)));
         Closed += (_, _) => FaviconService.FaviconsBatchReady -= OnFaviconsReady;
+    }
+
+    private void OnKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != System.Windows.Input.Key.Escape)
+            return;
+
+        Close();
+        e.Handled = true;
     }
 
     private void OnFaviconsReady()
