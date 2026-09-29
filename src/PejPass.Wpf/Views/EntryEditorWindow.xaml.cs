@@ -63,10 +63,10 @@ public partial class EntryEditorWindow : Window
         TotpSecretBox.Password = viewModel.TotpSecret;
 
         Loaded += (_, _) =>
-            Dispatcher.BeginInvoke(AttachNotesScrollChain, DispatcherPriority.Loaded);
+            Dispatcher.BeginInvoke(AttachNestedScrollChains, DispatcherPriority.Loaded);
     }
 
-    private void AttachNotesScrollChain()
+    private void AttachNestedScrollChains()
     {
         ScrollViewer? formScroll = null;
         foreach (var sv in FindVisualChildren<ScrollViewer>(this))
@@ -86,8 +86,11 @@ public partial class EntryEditorWindow : Window
                 continue;
 
             NestedScrollChain.Attach(tb, formScroll);
-            return;
+            break;
         }
+
+        foreach (var passwordBox in FindVisualChildren<PasswordBox>(this))
+            NestedScrollChain.Attach(passwordBox, formScroll);
     }
 
     private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
