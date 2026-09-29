@@ -450,10 +450,11 @@
                 </StackPanel>
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              Padding="32"
+                              Padding="24,32"
                               Visibility="{Binding HasSelection,
                                                    Converter={StaticResource BoolToVis}}">
-                    <StackPanel MaxWidth="560">
+                    <StackPanel MaxWidth="560"
+                                Margin="0,0,0,16">
 
                         <!-- Title -->
                         <Grid Margin="0,0,0,12">
