@@ -19,6 +19,8 @@ public sealed class AppSettings
 
     public ThemeMode Theme { get; set; } = ThemeMode.System;
 
+    public FontSizeMode FontSize { get; set; } = FontSizeMode.Medium;
+
     /// <summary>How the entry list is ordered. Favorites always float to the top.</summary>
     public EntrySortMode SortMode { get; set; } = EntrySortMode.TitleAsc;
 
