@@ -413,6 +413,10 @@ public partial class App : System.Windows.Application
         ZoomBehavior.GlobalZoomChanged -= OnGlobalZoomChanged;
         SingleInstance.Release();
         PendingVaultOpen.ReadAndClear();
+
+        if (Services is not null)
+            Services.GetRequiredService<IClipboardService>().ClearIfOwned();
+
         base.OnExit(e);
     }
 }
