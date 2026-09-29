@@ -283,13 +283,63 @@ public partial class EntryEditorViewModel : ObservableObject
             Value = string.Empty,
             IsSecret = false
         });
+
+        RefreshCustomFieldMoveCommands();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanMoveCustomFieldUp))]
+    private void MoveCustomFieldUp(CustomFieldItem? item)
+    {
+        if (item is null)
+            return;
+
+        var index = CustomFields.IndexOf(item);
+        if (index <= 0)
+            return;
+
+        CustomFields.Move(index, index - 1);
+        RefreshCustomFieldMoveCommands();
+    }
+
+    private bool CanMoveCustomFieldUp(CustomFieldItem? item)
+    {
+        return item is not null && CustomFields.IndexOf(item) > 0;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanMoveCustomFieldDown))]
+    private void MoveCustomFieldDown(CustomFieldItem? item)
+    {
+        if (item is null)
+            return;
+
+        var index = CustomFields.IndexOf(item);
+        if (index < 0 || index >= CustomFields.Count - 1)
+            return;
+
+        CustomFields.Move(index, index + 1);
+        RefreshCustomFieldMoveCommands();
+    }
+
+    private bool CanMoveCustomFieldDown(CustomFieldItem? item)
+    {
+        var index = item is null ? -1 : CustomFields.IndexOf(item);
+        return index >= 0 && index < CustomFields.Count - 1;
     }
 
     [RelayCommand]
     private void RemoveCustomField(CustomFieldItem? item)
     {
-        if (item is null) return;
+        if (item is null)
+            return;
+
         CustomFields.Remove(item);
+        RefreshCustomFieldMoveCommands();
+    }
+
+    private void RefreshCustomFieldMoveCommands()
+    {
+        MoveCustomFieldUpCommand.NotifyCanExecuteChanged();
+        MoveCustomFieldDownCommand.NotifyCanExecuteChanged();
     }
 
     public List<SensitiveChange> GetSensitiveChanges()
