@@ -51,11 +51,11 @@ public partial class TagChipStrip : UserControl
 
     private void AttachWheel()
     {
-        Scroller.RemoveHandler(
+        RemoveHandler(
             UIElement.PreviewMouseWheelEvent,
             (MouseWheelEventHandler)OnPreviewMouseWheel);
 
-        Scroller.AddHandler(
+        AddHandler(
             UIElement.PreviewMouseWheelEvent,
             (MouseWheelEventHandler)OnPreviewMouseWheel,
             handledEventsToo: true);
@@ -63,7 +63,7 @@ public partial class TagChipStrip : UserControl
 
     private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
-        var parent = FindAncestorScrollViewer(Scroller);
+        var parent = FindAncestorScrollViewer(this);
 
         if (Scroller.ExtentWidth <= Scroller.ViewportWidth + Epsilon)
         {
