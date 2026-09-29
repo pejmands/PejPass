@@ -150,11 +150,14 @@ public partial class EntryEditorWindow : Window
 
         if (TotpSecretBox.Visibility == Visibility.Visible)
         {
+            var selection = GetPasswordBoxSelection(TotpSecretBox);
+
             TotpSecretTextBox.Text = vm.TotpSecret;
             TotpSecretBox.Visibility = Visibility.Collapsed;
             TotpSecretTextBox.Visibility = Visibility.Visible;
+
             TotpSecretTextBox.Focus();
-            TotpSecretTextBox.SelectAll();
+            TotpSecretTextBox.Select(selection.Start, selection.Length);
             TotpSecretVisibilityButton.ToolTip = "Hide TOTP secret";
         }
         else
@@ -165,6 +168,7 @@ public partial class EntryEditorWindow : Window
             TotpSecretBox.Password = vm.TotpSecret;
             TotpSecretTextBox.Visibility = Visibility.Collapsed;
             TotpSecretBox.Visibility = Visibility.Visible;
+
             TotpSecretBox.Focus();
             SetPasswordBoxSelection(TotpSecretBox, selectionStart, selectionLength);
             TotpSecretVisibilityButton.ToolTip = "Show TOTP secret";
@@ -205,7 +209,12 @@ public partial class EntryEditorWindow : Window
 
     private PasswordBoxSelection GetPasswordBoxSelection()
     {
-        var selection = PasswordSelectionProperty.GetValue(PasswordBox);
+        return GetPasswordBoxSelection(PasswordBox);
+    }
+
+    private PasswordBoxSelection GetPasswordBoxSelection(PasswordBox passwordBox)
+    {
+        var selection = PasswordSelectionProperty.GetValue(passwordBox);
 
         if (selection is null)
             return new PasswordBoxSelection(0, 0);
