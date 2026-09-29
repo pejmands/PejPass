@@ -56,15 +56,10 @@ public partial class LoginWindow : Window
     private void ClearPasswordInputs()
     {
         MasterPasswordBox.Clear();
-        MasterPasswordTextBox.Clear();
         ConfirmMasterPasswordBox.Clear();
-        ConfirmMasterPasswordTextBox.Clear();
 
-        MasterPasswordBox.Visibility = Visibility.Visible;
-        MasterPasswordTextBox.Visibility = Visibility.Collapsed;
-
-        ConfirmMasterPasswordBox.Visibility = Visibility.Visible;
-        ConfirmMasterPasswordTextBox.Visibility = Visibility.Collapsed;
+        MasterPasswordBox.IsRevealed = false;
+        ConfirmMasterPasswordBox.IsRevealed = false;
     }
 
     private void VaultMode_Checked(object sender, RoutedEventArgs e)
@@ -78,74 +73,11 @@ public partial class LoginWindow : Window
             vm.MasterPassword = MasterPasswordBox.Password;
     }
 
-    private void MasterPasswordTextBox_TextChanged(object sender, TextChangedEventArgs e)
-    {
-        if (DataContext is LoginViewModel vm &&
-            vm.MasterPassword != MasterPasswordTextBox.Text)
-        {
-            vm.MasterPassword = MasterPasswordTextBox.Text;
-        }
-    }
-
-    private void MasterPasswordVisibilityButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (MasterPasswordBox.Visibility == Visibility.Visible)
-        {
-            MasterPasswordTextBox.Text = MasterPasswordBox.Password;
-            MasterPasswordBox.Visibility = Visibility.Collapsed;
-            MasterPasswordTextBox.Visibility = Visibility.Visible;
-            MasterPasswordTextBox.Focus();
-            MasterPasswordTextBox.CaretIndex = MasterPasswordTextBox.Text.Length;
-            MasterPasswordVisibilityButton.ToolTip = "Hide password";
-        }
-        else
-        {
-            MasterPasswordBox.Password = MasterPasswordTextBox.Text;
-            MasterPasswordTextBox.Visibility = Visibility.Collapsed;
-            MasterPasswordBox.Visibility = Visibility.Visible;
-            MasterPasswordBox.Focus();
-            MasterPasswordVisibilityButton.ToolTip = "Show password";
-        }
-    }
-
     private void ConfirmMasterPasswordBox_PasswordChanged(
         object sender,
         RoutedEventArgs e)
     {
         if (DataContext is LoginViewModel vm)
-        {
-            vm.ConfirmMasterPassword =
-                ConfirmMasterPasswordBox.Password;
-        }
-    }
-
-    private void ConfirmMasterPasswordTextBox_TextChanged(object sender, TextChangedEventArgs e)
-    {
-        if (DataContext is LoginViewModel vm &&
-            vm.ConfirmMasterPassword != ConfirmMasterPasswordTextBox.Text)
-        {
-            vm.ConfirmMasterPassword = ConfirmMasterPasswordTextBox.Text;
-        }
-    }
-
-    private void ConfirmMasterPasswordVisibilityButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (ConfirmMasterPasswordBox.Visibility == Visibility.Visible)
-        {
-            ConfirmMasterPasswordTextBox.Text = ConfirmMasterPasswordBox.Password;
-            ConfirmMasterPasswordBox.Visibility = Visibility.Collapsed;
-            ConfirmMasterPasswordTextBox.Visibility = Visibility.Visible;
-            ConfirmMasterPasswordTextBox.Focus();
-            ConfirmMasterPasswordTextBox.CaretIndex = ConfirmMasterPasswordTextBox.Text.Length;
-            ConfirmMasterPasswordVisibilityButton.ToolTip = "Hide password";
-        }
-        else
-        {
-            ConfirmMasterPasswordBox.Password = ConfirmMasterPasswordTextBox.Text;
-            ConfirmMasterPasswordTextBox.Visibility = Visibility.Collapsed;
-            ConfirmMasterPasswordBox.Visibility = Visibility.Visible;
-            ConfirmMasterPasswordBox.Focus();
-            ConfirmMasterPasswordVisibilityButton.ToolTip = "Show password";
-        }
+            vm.ConfirmMasterPassword = ConfirmMasterPasswordBox.Password;
     }
 }
