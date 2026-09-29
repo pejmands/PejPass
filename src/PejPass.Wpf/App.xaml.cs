@@ -4,6 +4,7 @@ using PejPass.Application.Services;
 using PejPass.Infrastructure.Crypto;
 using PejPass.Infrastructure.Import;
 using PejPass.Infrastructure.Storage;
+using PejPass.Domain.Settings;
 using PejPass.Wpf.Controls;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
@@ -48,6 +49,7 @@ public partial class App : System.Windows.Application
         var themeService = new ThemeService(settings);
 
         themeService.Apply();
+        ApplyFontSize(settings.FontSize);
 
         var services = new ServiceCollection();
 
@@ -179,6 +181,18 @@ public partial class App : System.Windows.Application
     /// <summary>
     /// Applies the custom window chrome before the window is shown.
     /// </summary>
+    public static void ApplyFontSize(FontSizeMode mode)
+    {
+        var size = mode switch
+        {
+            FontSizeMode.Small => 12d,
+            FontSizeMode.Large => 15d,
+            _ => 13d
+        };
+
+        Current.Resources["AppFontSize"] = size;
+    }
+
     public static void PrepareCustomChrome(Window window)
     {
         if (window.Content is Border { Tag: "ChromeRoot" })
