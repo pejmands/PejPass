@@ -185,8 +185,13 @@ public static class ZoomBehavior
         }
     }
 
-    private static double ClampZoom(double zoom) =>
-        Math.Clamp(zoom, ZoomLevels[0], ZoomLevels[^1]);
+    private static double ClampZoom(double zoom)
+    {
+        if (double.IsNaN(zoom) || double.IsInfinity(zoom))
+            return 1d;
+
+        return Math.Clamp(zoom, ZoomLevels[0], ZoomLevels[^1]);
+    }
 
     private static double GetNextZoom(double zoom)
     {
