@@ -80,12 +80,14 @@ public partial class SettingsViewModel : ObservableObject
         _savedZoom = settings.Zoom;
 
         _suppressThemePreview = true;
+        _suppressZoomPreview = true;
         AutoLockMinutes = settings.AutoLockMinutes;
         ClipboardClearSeconds = settings.ClipboardClearSeconds;
         SelectedThemeIndex = (int)settings.Theme;
         WindowsHelloEnabled = settings.WindowsHelloEnabled;
         SelectedFontSizeIndex = (int)settings.FontSize;
         SelectedZoomIndex = GetZoomIndex(settings.Zoom);
+        _suppressZoomPreview = false;
         _suppressThemePreview = false;
     }
 
