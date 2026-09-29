@@ -3,7 +3,6 @@ using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using System.ComponentModel;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -13,40 +12,6 @@ namespace PejPass.Wpf.Views;
 
 public partial class EntryEditorWindow : Window
 {
-    private static readonly PropertyInfo PasswordSelectionProperty =
-        typeof(PasswordBox).GetProperty(
-            "Selection",
-            BindingFlags.Instance | BindingFlags.NonPublic)
-        ?? throw new InvalidOperationException("PasswordBox.Selection was not found.");
-
-    private static readonly MethodInfo PasswordSelectMethod =
-        typeof(PasswordBox).GetMethod(
-            "Select",
-            BindingFlags.Instance | BindingFlags.NonPublic)
-        ?? throw new InvalidOperationException("PasswordBox.Select was not found.");
-
-    private static readonly Type TextRangeType =
-        typeof(PasswordBox).Assembly.GetType("System.Windows.Documents.ITextRange")
-        ?? throw new InvalidOperationException("ITextRange was not found.");
-
-    private static readonly MethodInfo TextRangeStartMethod =
-        TextRangeType.GetProperty("Start")?.GetGetMethod()
-        ?? throw new InvalidOperationException("ITextRange.Start was not found.");
-
-    private static readonly MethodInfo TextRangeEndMethod =
-        TextRangeType.GetProperty("End")?.GetGetMethod()
-        ?? throw new InvalidOperationException("ITextRange.End was not found.");
-
-    private static readonly Type PasswordTextPointerType =
-        typeof(PasswordBox).Assembly.GetType("System.Windows.Controls.PasswordTextPointer")
-        ?? throw new InvalidOperationException("PasswordTextPointer was not found.");
-
-    private static readonly PropertyInfo TextPointerOffsetProperty =
-        PasswordTextPointerType.GetProperty(
-            "Offset",
-            BindingFlags.Instance | BindingFlags.NonPublic)
-        ?? throw new InvalidOperationException("PasswordTextPointer.Offset was not found.");
-
     public VaultEntry? Result { get; private set; }
 
     public EntryEditorWindow(EntryEditorViewModel viewModel)
@@ -145,107 +110,6 @@ public partial class EntryEditorWindow : Window
             vm.TotpSecret = TotpSecretBox.Password;
         }
     }
-
-    private void TotpSecretVisibilityButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is not EntryEditorViewModel vm)
-            return;
-
-        if (TotpSecretBox.Visibility == Visibility.Visible)
-        {
-            var selection = GetPasswordBoxSelection(TotpSecretBox);
-
-            TotpSecretTextBox.Text = vm.TotpSecret;
-            TotpSecretBox.Visibility = Visibility.Collapsed;
-            TotpSecretTextBox.Visibility = Visibility.Visible;
-
-            TotpSecretTextBox.Focus();
-            TotpSecretTextBox.Select(selection.Start, selection.Length);
-            TotpSecretVisibilityButton.ToolTip = "Hide TOTP secret";
-        }
-        else
-        {
-            var selectionStart = TotpSecretTextBox.SelectionStart;
-            var selectionLength = TotpSecretTextBox.SelectionLength;
-
-            TotpSecretBox.Password = vm.TotpSecret;
-            TotpSecretTextBox.Visibility = Visibility.Collapsed;
-            TotpSecretBox.Visibility = Visibility.Visible;
-
-            TotpSecretBox.Focus();
-            SetPasswordBoxSelection(TotpSecretBox, selectionStart, selectionLength);
-            TotpSecretVisibilityButton.ToolTip = "Show TOTP secret";
-        }
-    }
-
-    private void PasswordVisibilityButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is not EntryEditorViewModel vm)
-            return;
-
-        if (PasswordBox.Visibility == Visibility.Visible)
-        {
-            var selection = GetPasswordBoxSelection();
-
-            PasswordTextBox.Text = vm.Password;
-            PasswordBox.Visibility = Visibility.Collapsed;
-            PasswordTextBox.Visibility = Visibility.Visible;
-
-            PasswordTextBox.Focus();
-            PasswordTextBox.Select(selection.Start, selection.Length);
-            PasswordVisibilityButton.ToolTip = "Hide password";
-        }
-        else
-        {
-            var selectionStart = PasswordTextBox.SelectionStart;
-            var selectionLength = PasswordTextBox.SelectionLength;
-
-            PasswordBox.Password = vm.Password;
-            PasswordTextBox.Visibility = Visibility.Collapsed;
-            PasswordBox.Visibility = Visibility.Visible;
-
-            PasswordBox.Focus();
-            SetPasswordBoxSelection(selectionStart, selectionLength);
-            PasswordVisibilityButton.ToolTip = "Show password";
-        }
-    }
-
-    private PasswordBoxSelection GetPasswordBoxSelection()
-    {
-        return GetPasswordBoxSelection(PasswordBox);
-    }
-
-    private PasswordBoxSelection GetPasswordBoxSelection(PasswordBox passwordBox)
-    {
-        var selection = PasswordSelectionProperty.GetValue(passwordBox);
-
-        if (selection is null)
-            return new PasswordBoxSelection(0, 0);
-
-        var start = TextRangeStartMethod.Invoke(selection, null);
-        var end = TextRangeEndMethod.Invoke(selection, null);
-
-        var startOffset = (int?)(TextPointerOffsetProperty.GetValue(start) as int?) ?? 0;
-        var endOffset = (int?)(TextPointerOffsetProperty.GetValue(end) as int?) ?? startOffset;
-
-        return new PasswordBoxSelection(
-            startOffset,
-            Math.Max(0, endOffset - startOffset));
-    }
-
-    private void SetPasswordBoxSelection(int start, int length)
-    {
-        SetPasswordBoxSelection(PasswordBox, start, length);
-    }
-
-    private void SetPasswordBoxSelection(PasswordBox passwordBox, int start, int length)
-    {
-        start = Math.Clamp(start, 0, passwordBox.Password.Length);
-        length = Math.Clamp(length, 0, passwordBox.Password.Length - start);
-        PasswordSelectMethod.Invoke(passwordBox, [start, length]);
-    }
-
-    private readonly record struct PasswordBoxSelection(int Start, int Length);
 
     protected override void OnClosed(EventArgs e)
     {
