@@ -422,7 +422,8 @@
                     Background="{DynamicResource BorderBrush}"/>
 
             <!-- Entry Details -->
-            <Grid Grid.Column="2">
+            <Grid Grid.Column="2"
+                  ClipToBounds="True">
 
                 <!-- Empty State -->
                 <StackPanel VerticalAlignment="Center"
