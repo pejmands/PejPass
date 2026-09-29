@@ -880,7 +880,31 @@ public partial class MainViewModel : ObservableObject
             Owner = GetOwnerWindow()
         };
 
-        win.ShowDialog();
+        vm.Changed += OnTrashChanged;
+
+        try
+        {
+            win.ShowDialog();
+        }
+        finally
+        {
+            vm.Changed -= OnTrashChanged;
+        }
+
+        RefreshEntriesFromVault();
+        ResetAutoLockTimer();
+    }
+
+    private void OnTrashChanged(object? sender, EventArgs e)
+    {
+        RefreshEntriesFromVault();
+    }
+
+    private void RefreshEntriesFromVault()
+    {
+        var vault = _vaultSession.Vault;
+        if (vault is null)
+            return;
 
         Entries.Clear();
 
@@ -890,7 +914,6 @@ public partial class MainViewModel : ObservableObject
         RebuildTagFilters();
         ApplyFilter(preserveSelectionId: SelectedEntry?.Id);
         UpdateEntryStatus();
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
