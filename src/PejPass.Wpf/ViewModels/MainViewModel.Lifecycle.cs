@@ -1,3 +1,5 @@
+using System.Windows.Input;
+
 namespace PejPass.Wpf.ViewModels;
 
 public partial class MainViewModel

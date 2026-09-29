@@ -7,7 +7,6 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Shell;
 
 namespace PejPass.Wpf.Controls;
 
@@ -177,7 +176,7 @@ public partial class AppTitleBar : UserControl
     private static void StripSystemMenu(IntPtr hwnd)
     {
         var style = GetWindowLongPtr(hwnd, GwlStyle).ToInt64();
-        SetWindowLongPtr(hwnd, GwlStyle, (IntPtr)(style & ~WsSysMenu));
+        SetWindowLongPtr(hwnd, GwlStyle, checked((IntPtr)(style & ~WsSysMenu)));
     }
 
     private void DetachCaptionMenuHook()
@@ -254,22 +253,22 @@ public partial class AppTitleBar : UserControl
     }
 
     private static IntPtr MakeLParam(int lo, int hi) =>
-        (IntPtr)((hi << 16) | (lo & 0xFFFF));
+        (hi << 16) | (lo & 0xFFFF);
 
-    [DllImport("user32.dll")]
-    private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+    [LibraryImport("user32.dll")]
+    private static partial IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
-    [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
-    private static extern IntPtr GetWindowLongPtr32(IntPtr hWnd, int nIndex);
+    [LibraryImport("user32.dll", EntryPoint = "GetWindowLong")]
+    private static partial IntPtr GetWindowLongPtr32(IntPtr hWnd, int nIndex);
 
-    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
-    private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
+    [LibraryImport("user32.dll", EntryPoint = "GetWindowLongPtrA")]
+    private static partial IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
 
-    [DllImport("user32.dll", EntryPoint = "SetWindowLong")]
-    private static extern IntPtr SetWindowLongPtr32(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+    [LibraryImport("user32.dll", EntryPoint = "SetWindowLong")]
+    private static partial IntPtr SetWindowLongPtr32(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
-    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
-    private static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+    [LibraryImport("user32.dll", EntryPoint = "SetWindowLongPtrA")]
+    private static partial IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
     private static IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex) =>
         IntPtr.Size == 8 ? GetWindowLongPtr64(hWnd, nIndex) : GetWindowLongPtr32(hWnd, nIndex);
@@ -327,8 +326,9 @@ public partial class AppTitleBar : UserControl
         return new Point(screenX, screenY);
     }
 
-    [DllImport("user32.dll")]
-    private static extern bool GetCursorPos(out PointNative lpPoint);
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetCursorPos(out PointNative lpPoint);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct PointNative
