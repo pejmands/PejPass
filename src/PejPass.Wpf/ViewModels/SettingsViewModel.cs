@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Application.Services;
 using PejPass.Domain.Settings;
+using PejPass.Wpf.Controls;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
@@ -22,8 +23,10 @@ public partial class SettingsViewModel : ObservableObject
     private readonly int _savedClipboard;
     private readonly bool _savedWindowsHello;
     private readonly FontSizeMode _savedFontSize;
+    private readonly double _savedZoom;
 
     private bool _suppressThemePreview;
+    private bool _suppressZoomPreview;
 
     [ObservableProperty]
     public partial int AutoLockMinutes { get; set; }
@@ -46,9 +49,14 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial int SelectedFontSizeIndex { get; set; }
 
+    [ObservableProperty]
+    public partial int SelectedZoomIndex { get; set; }
+
     public string[] ThemeOptions { get; } = ["System", "Dark", "Light"];
 
     public string[] FontSizeOptions { get; } = ["Small", "Medium", "Large"];
+
+    public string[] ZoomOptions { get; } = ["80%", "90%", "100%", "110%", "120%", "130%", "140%"];
 
     public event EventHandler? RequestClose;
     public event EventHandler? ValidationFailed;
@@ -69,6 +77,7 @@ public partial class SettingsViewModel : ObservableObject
         _savedClipboard = settings.ClipboardClearSeconds;
         _savedWindowsHello = settings.WindowsHelloEnabled;
         _savedFontSize = settings.FontSize;
+        _savedZoom = settings.Zoom;
 
         _suppressThemePreview = true;
         AutoLockMinutes = settings.AutoLockMinutes;
@@ -76,6 +85,7 @@ public partial class SettingsViewModel : ObservableObject
         SelectedThemeIndex = (int)settings.Theme;
         WindowsHelloEnabled = settings.WindowsHelloEnabled;
         SelectedFontSizeIndex = (int)settings.FontSize;
+        SelectedZoomIndex = GetZoomIndex(settings.Zoom);
         _suppressThemePreview = false;
     }
 
@@ -104,6 +114,13 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (value < 0 || value > 2) return;
         App.ApplyFontSize((FontSizeMode)value);
+    }
+
+    partial void OnSelectedZoomIndexChanged(int value)
+    {
+        if (_suppressZoomPreview) return;
+        if (value < 0 || value >= ZoomOptions.Length) return;
+        ZoomBehavior.SetGlobalZoom(ZoomBehavior.ZoomLevels[value]);
     }
 
     partial void OnSelectedThemeIndexChanged(int value)
@@ -145,6 +162,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.Theme = (ThemeMode)SelectedThemeIndex;
         _settings.WindowsHelloEnabled = WindowsHelloEnabled;
         _settings.FontSize = (FontSizeMode)SelectedFontSizeIndex;
+        _settings.Zoom = ZoomBehavior.ZoomLevels[SelectedZoomIndex];
 
         if (!SettingsStore.TrySave(_settings))
         {
@@ -179,6 +197,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.ClipboardClearSeconds = _savedClipboard;
         _settings.WindowsHelloEnabled = _savedWindowsHello;
         _settings.FontSize = _savedFontSize;
+        _settings.Zoom = _savedZoom;
 
         _suppressThemePreview = true;
         try
@@ -188,6 +207,16 @@ public partial class SettingsViewModel : ObservableObject
             SelectedThemeIndex = (int)_savedTheme;
             WindowsHelloEnabled = _savedWindowsHello;
             SelectedFontSizeIndex = (int)_savedFontSize;
+
+            _suppressZoomPreview = true;
+            try
+            {
+                SelectedZoomIndex = GetZoomIndex(_savedZoom);
+            }
+            finally
+            {
+                _suppressZoomPreview = false;
+            }
         }
         finally
         {
@@ -196,6 +225,29 @@ public partial class SettingsViewModel : ObservableObject
 
         _themeService.Apply();
         App.ApplyFontSize(_savedFontSize);
+        ZoomBehavior.SetGlobalZoom(_savedZoom);
+    }
+
+    public void UpdateZoomFromGlobal(double zoom)
+    {
+        _suppressZoomPreview = true;
+        try
+        {
+            SelectedZoomIndex = GetZoomIndex(zoom);
+        }
+        finally
+        {
+            _suppressZoomPreview = false;
+        }
+    }
+
+    private static int GetZoomIndex(double zoom)
+    {
+        var index = Array.FindIndex(
+            ZoomBehavior.ZoomLevels,
+            level => Math.Abs(level - zoom) < 0.001);
+
+        return index >= 0 ? index : 2;
     }
 
     [RelayCommand]
