@@ -50,6 +50,35 @@ public static class NestedScrollChain
             inner.Background = Brushes.Transparent;
     }
 
+    public static void Attach(PasswordBox passwordBox, ScrollViewer? parentOverride = null)
+    {
+        if (passwordBox is null) return;
+
+        void TryAttach()
+        {
+            passwordBox.ApplyTemplate();
+            var inner = FindDescendantScrollViewer(passwordBox);
+            if (inner is not null)
+            {
+                Attach(inner, parentOverride);
+                return;
+            }
+
+            passwordBox.Dispatcher.BeginInvoke(() =>
+            {
+                passwordBox.ApplyTemplate();
+                var sv = FindDescendantScrollViewer(passwordBox);
+                if (sv is not null)
+                    Attach(sv, parentOverride);
+            }, DispatcherPriority.Loaded);
+        }
+
+        if (passwordBox.IsLoaded)
+            TryAttach();
+        else
+            passwordBox.Loaded += (_, _) => TryAttach();
+    }
+
     public static void Attach(TextBox textBox, ScrollViewer? parentOverride = null)
     {
         if (textBox is null) return;
