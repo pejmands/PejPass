@@ -65,6 +65,10 @@ public partial class LoginWindow : Window
     private void VaultMode_Checked(object sender, RoutedEventArgs e)
     {
         ClearPasswordInputs();
+
+        Dispatcher.BeginInvoke(
+            () => Keyboard.Focus(MasterPasswordBox),
+            System.Windows.Threading.DispatcherPriority.Input);
     }
 
     private void MasterPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
