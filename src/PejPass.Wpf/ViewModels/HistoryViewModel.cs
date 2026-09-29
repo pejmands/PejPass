@@ -84,7 +84,15 @@ public partial class HistoryViewModel : ObservableObject
             return;
         }
 
-        var historiesByEntry = vault.History
+        var trashedEntryIds = vault.Trash
+            .Select(t => t.Entry.Id)
+            .ToHashSet();
+
+        var visibleHistory = vault.History
+            .Where(h => !trashedEntryIds.Contains(h.EntryId))
+            .ToList();
+
+        var historiesByEntry = visibleHistory
             .GroupBy(h => h.EntryId)
             .ToDictionary(
                 group => group.Key,
@@ -92,7 +100,7 @@ public partial class HistoryViewModel : ObservableObject
                     .OrderByDescending(h => h.ChangedAt)
                     .ToList());
 
-        foreach (var history in vault.History
+        foreach (var history in visibleHistory
                      .OrderByDescending(h => h.ChangedAt))
         {
             var entry = vault.Entries
