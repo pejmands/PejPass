@@ -539,7 +539,6 @@
                                     Padding="{TemplateBinding Padding}">
                                 <ScrollViewer x:Name="PART_ContentHost"
                                               HorizontalScrollBarVisibility="Hidden"
-                                              VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                             </Border>
                             <ControlTemplate.Triggers>
