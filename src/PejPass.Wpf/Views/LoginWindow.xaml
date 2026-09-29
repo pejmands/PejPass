@@ -97,8 +97,9 @@
 
                     <TextBox x:Name="MasterPasswordTextBox"
                              TextChanged="MasterPasswordTextBox_TextChanged"
-                             Padding="10,8,44,8"
+                             Padding="10,0,44,0"
                              TextWrapping="NoWrap"
+                             VerticalContentAlignment="Center"
                              Visibility="Collapsed"/>
 
                     <Button x:Name="MasterPasswordVisibilityButton"
