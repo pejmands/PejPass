@@ -481,6 +481,7 @@
             <!-- TextBox -->
             <Style TargetType="TextBox">
                 <Setter Property="Height" Value="40"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
                 <Setter Property="controls:HorizontalSelectionScrollBehavior.IsEnabled" Value="True"/>
                 <Setter Property="ContextMenu" Value="{StaticResource TextBoxContextMenu}"/>
                 <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
