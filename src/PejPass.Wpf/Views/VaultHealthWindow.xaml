@@ -17,7 +17,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
@@ -379,14 +379,5 @@
             </Grid>
         </Grid>
 
-        <!-- Footer -->
-        <Button Grid.Row="4"
-                Style="{StaticResource SecondaryButton}"
-                Content="Close"
-                HorizontalAlignment="Right"
-                Margin="0,16,0,0"
-                Background="{DynamicResource SurfaceAltBrush}"
-                Foreground="{DynamicResource TextBrush}"
-                Click="Close_Click"/>
     </Grid>
 </Window>
