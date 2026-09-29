@@ -46,7 +46,7 @@ public partial class LoginWindow : Window
         Loaded += async (_, _) =>
         {
             await Dispatcher.InvokeAsync(
-                () => Keyboard.Focus(MasterPasswordBox),
+                () => MasterPasswordBox.FocusInput(),
                 System.Windows.Threading.DispatcherPriority.Input);
 
             await viewModel.RefreshWindowsHelloVisibilityAsync();
