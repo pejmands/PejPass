@@ -60,6 +60,7 @@ public partial class EntryEditorWindow : Window
         DataContext = viewModel;
         viewModel.PropertyChanged += ViewModel_PropertyChanged;
         PasswordBox.Password = viewModel.Password;
+        TotpSecretBox.Password = viewModel.TotpSecret;
 
         Loaded += (_, _) =>
             Dispatcher.BeginInvoke(AttachNotesScrollChain, DispatcherPriority.Loaded);
@@ -108,10 +109,19 @@ public partial class EntryEditorWindow : Window
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (sender is not EntryEditorViewModel vm)
+            return;
+
         if (e.PropertyName == nameof(EntryEditorViewModel.Password) &&
-            PasswordBox.Password != (sender as EntryEditorViewModel)?.Password)
+            PasswordBox.Password != vm.Password)
         {
-            PasswordBox.Password = (sender as EntryEditorViewModel)?.Password ?? string.Empty;
+            PasswordBox.Password = vm.Password;
+        }
+
+        if (e.PropertyName == nameof(EntryEditorViewModel.TotpSecret) &&
+            TotpSecretBox.Password != vm.TotpSecret)
+        {
+            TotpSecretBox.Password = vm.TotpSecret;
         }
     }
 
@@ -121,6 +131,43 @@ public partial class EntryEditorWindow : Window
             vm.Password != PasswordBox.Password)
         {
             vm.Password = PasswordBox.Password;
+        }
+    }
+
+    private void TotpSecretBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is EntryEditorViewModel vm &&
+            vm.TotpSecret != TotpSecretBox.Password)
+        {
+            vm.TotpSecret = TotpSecretBox.Password;
+        }
+    }
+
+    private void TotpSecretVisibilityButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not EntryEditorViewModel vm)
+            return;
+
+        if (TotpSecretBox.Visibility == Visibility.Visible)
+        {
+            TotpSecretTextBox.Text = vm.TotpSecret;
+            TotpSecretBox.Visibility = Visibility.Collapsed;
+            TotpSecretTextBox.Visibility = Visibility.Visible;
+            TotpSecretTextBox.Focus();
+            TotpSecretTextBox.SelectAll();
+            TotpSecretVisibilityButton.ToolTip = "Hide TOTP secret";
+        }
+        else
+        {
+            var selectionStart = TotpSecretTextBox.SelectionStart;
+            var selectionLength = TotpSecretTextBox.SelectionLength;
+
+            TotpSecretBox.Password = vm.TotpSecret;
+            TotpSecretTextBox.Visibility = Visibility.Collapsed;
+            TotpSecretBox.Visibility = Visibility.Visible;
+            TotpSecretBox.Focus();
+            SetPasswordBoxSelection(TotpSecretBox, selectionStart, selectionLength);
+            TotpSecretVisibilityButton.ToolTip = "Show TOTP secret";
         }
     }
 
@@ -176,9 +223,14 @@ public partial class EntryEditorWindow : Window
 
     private void SetPasswordBoxSelection(int start, int length)
     {
-        start = Math.Clamp(start, 0, PasswordBox.Password.Length);
-        length = Math.Clamp(length, 0, PasswordBox.Password.Length - start);
-        PasswordSelectMethod.Invoke(PasswordBox, [start, length]);
+        SetPasswordBoxSelection(PasswordBox, start, length);
+    }
+
+    private void SetPasswordBoxSelection(PasswordBox passwordBox, int start, int length)
+    {
+        start = Math.Clamp(start, 0, passwordBox.Password.Length);
+        length = Math.Clamp(length, 0, passwordBox.Password.Length - start);
+        PasswordSelectMethod.Invoke(passwordBox, [start, length]);
     }
 
     private readonly record struct PasswordBoxSelection(int Start, int Length);
