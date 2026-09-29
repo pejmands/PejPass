@@ -56,6 +56,8 @@ public static class ZoomBehavior
 
     public static double GlobalZoom => _globalZoom;
 
+    public static event EventHandler<double>? GlobalZoomChanged;
+
     public static void SetGlobalZoom(double zoom)
     {
         var scale = ClampZoom(zoom);
@@ -63,6 +65,8 @@ public static class ZoomBehavior
 
         foreach (var target in Targets.ToArray())
             SetZoom(target, scale);
+
+        GlobalZoomChanged?.Invoke(null, scale);
     }
 
     private static Window? GetWindow(DependencyObject element) =>
