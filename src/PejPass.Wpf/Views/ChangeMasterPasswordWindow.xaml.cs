@@ -27,17 +27,6 @@ public partial class ChangeMasterPasswordWindow : Window
             vm.CurrentPassword = box.Password;
     }
 
-    private void CurrentPasswordBoxTextBox_TextChanged(object sender, TextChangedEventArgs e)
-    {
-        if (DataContext is ChangeMasterPasswordViewModel vm &&
-            vm.CurrentPassword != CurrentPasswordBoxTextBox.Text)
-            vm.CurrentPassword = CurrentPasswordBoxTextBox.Text;
-    }
-
-    private void CurrentPasswordVisibilityButton_Click(object sender, RoutedEventArgs e)
-    {
-        TogglePassword(CurrentPasswordBox, CurrentPasswordBoxTextBox, CurrentPasswordVisibilityButton);
-    }
 
     private void NewPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
