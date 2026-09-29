@@ -1,3 +1,4 @@
+using PejPass.Wpf.Controls;
 using PejPass.Wpf.ViewModels;
 using System.ComponentModel;
 using System.Windows;
@@ -18,6 +19,8 @@ public partial class SettingsWindow : Window
         _vm = viewModel;
 
         viewModel.ValidationFailed += (_, _) => FocusFirstInvalidField();
+        ZoomBehavior.GlobalZoomChanged += OnGlobalZoomChanged;
+        Closed += OnClosed;
 
         viewModel.RequestClose += (_, _) =>
         {
@@ -27,6 +30,14 @@ public partial class SettingsWindow : Window
         };
 
         Closing += OnClosing;
+    }
+
+    private void OnGlobalZoomChanged(object? sender, double zoom) =>
+        _vm.UpdateZoomFromGlobal(zoom);
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        ZoomBehavior.GlobalZoomChanged -= OnGlobalZoomChanged;
     }
 
     private void FocusFirstInvalidField()
