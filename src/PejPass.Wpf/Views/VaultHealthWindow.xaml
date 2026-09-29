@@ -23,7 +23,7 @@
         <!-- Header -->
         <Grid Margin="0,0,0,18">
             <TextBlock Text="Vault Health"
-                       FontSize="22"
+                       FontSize="{DynamicResource AppFontSize22}"
                        FontWeight="Bold"
                        Foreground="{DynamicResource TextBrush}"/>
 
@@ -82,7 +82,7 @@
                                 VerticalAlignment="Center"
                                 Margin="0,0,0,4">
                         <TextBlock Text="Vault health"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource AppFontSize11}"
                                    Foreground="{DynamicResource MutedBrush}"
                                    VerticalAlignment="Center"/>
                         <Border CornerRadius="4"
@@ -118,13 +118,13 @@
                                 </Style>
                             </Border.Style>
                             <TextBlock Text="{Binding HealthLabel}"
-                                       FontSize="10"
+                                       FontSize="{DynamicResource AppFontSize10}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource ButtonTextBrush}"/>
                         </Border>
                     </StackPanel>
                     <TextBlock Text="{Binding HealthScore, StringFormat={}{0}%}"
-                               FontSize="30"
+                               FontSize="{DynamicResource AppFontSize30}"
                                FontWeight="Bold"
                                Foreground="{DynamicResource TextBrush}"
                                HorizontalAlignment="Center"/>
@@ -134,11 +134,11 @@
                             VerticalAlignment="Center"
                             Margin="18,0,0,0">
                     <TextBlock Text="{Binding TotalIssues, StringFormat={}{0} issues found}"
-                               FontSize="14"
+                               FontSize="{DynamicResource AppFontSize14}"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}"/>
                     <TextBlock Text="Review the issues below to improve your vault security."
-                               FontSize="11"
+                               FontSize="{DynamicResource AppFontSize11}"
                                Foreground="{DynamicResource MutedBrush}"
                                TextWrapping="Wrap"
                                Margin="0,4,0,0"/>
@@ -159,55 +159,55 @@
 
             <StackPanel Grid.Column="0">
                 <TextBlock Text="{Binding WeakCount}"
-                           FontSize="20"
+                           FontSize="{DynamicResource AppFontSize20}"
                            FontWeight="Bold"
                            Foreground="{DynamicResource WarningBrush}"/>
                 <TextBlock Text="Weak passwords"
-                           FontSize="11"
+                           FontSize="{DynamicResource AppFontSize11}"
                            Foreground="{DynamicResource MutedBrush}"
                            Margin="0,2,0,0"/>
             </StackPanel>
 
             <StackPanel Grid.Column="1">
                 <TextBlock Text="{Binding DuplicateCount}"
-                           FontSize="20"
+                           FontSize="{DynamicResource AppFontSize20}"
                            FontWeight="Bold"
                            Foreground="{DynamicResource DangerBrush}"/>
                 <TextBlock Text="Duplicate passwords"
-                           FontSize="11"
+                           FontSize="{DynamicResource AppFontSize11}"
                            Foreground="{DynamicResource MutedBrush}"
                            Margin="0,2,0,0"/>
             </StackPanel>
 
             <StackPanel Grid.Column="2">
                 <TextBlock Text="{Binding MissingTotpCount}"
-                           FontSize="20"
+                           FontSize="{DynamicResource AppFontSize20}"
                            FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}"/>
                 <TextBlock Text="Missing TOTP"
-                           FontSize="11"
+                           FontSize="{DynamicResource AppFontSize11}"
                            Foreground="{DynamicResource MutedBrush}"
                            Margin="0,2,0,0"/>
             </StackPanel>
 
             <StackPanel Grid.Column="3">
                 <TextBlock Text="{Binding StaleCount}"
-                           FontSize="20"
+                           FontSize="{DynamicResource AppFontSize20}"
                            FontWeight="Bold"
                            Foreground="{DynamicResource MutedBrush}"/>
                 <TextBlock Text="Old passwords"
-                           FontSize="11"
+                           FontSize="{DynamicResource AppFontSize11}"
                            Foreground="{DynamicResource MutedBrush}"
                            Margin="0,2,0,0"/>
             </StackPanel>
 
             <StackPanel Grid.Column="4">
                 <TextBlock Text="{Binding UsernameEqualsPasswordCount}"
-                           FontSize="20"
+                           FontSize="{DynamicResource AppFontSize20}"
                            FontWeight="Bold"
                            Foreground="{DynamicResource WarningBrush}"/>
                 <TextBlock Text="Username = password"
-                           FontSize="11"
+                           FontSize="{DynamicResource AppFontSize11}"
                            Foreground="{DynamicResource MutedBrush}"
                            Margin="0,2,0,0"/>
             </StackPanel>
@@ -232,7 +232,7 @@
 
                 <StackPanel Margin="0,0,12,0">
                     <TextBlock Text="{Binding ScanStatus}"
-                               FontSize="12"
+                               FontSize="{DynamicResource AppFontSize12}"
                                Foreground="{DynamicResource MutedBrush}"
                                Margin="0,0,0,4"/>
 
@@ -296,7 +296,7 @@
                                     VerticalAlignment="Top"
                                     Margin="0,2,0,0">
                                 <TextBlock Text="{Binding KindLabel}"
-                                           FontSize="11"
+                                           FontSize="{DynamicResource AppFontSize11}"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}"/>
                             </Border>
@@ -309,7 +309,7 @@
                                            Foreground="{DynamicResource TextBrush}"
                                            TextTrimming="CharacterEllipsis"/>
                                 <TextBlock Text="{Binding Detail}"
-                                           FontSize="12"
+                                           FontSize="{DynamicResource AppFontSize12}"
                                            Margin="0,2,0,0"
                                            Foreground="{DynamicResource MutedBrush}"
                                            MaxHeight="48"
@@ -336,12 +336,12 @@
                             VerticalAlignment="Center"
                             Visibility="{Binding IsEmptyVault, Converter={StaticResource BoolToVis}}">
                     <TextBlock Text="No entries to scan"
-                               FontSize="16"
+                               FontSize="{DynamicResource AppFontSize16}"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}"
                                HorizontalAlignment="Center"/>
                     <TextBlock Text="Add entries to run a vault health check."
-                               FontSize="13"
+                               FontSize="{DynamicResource AppFontSize13}"
                                Margin="0,8,0,0"
                                Foreground="{DynamicResource MutedBrush}"
                                HorizontalAlignment="Center"/>
@@ -351,12 +351,12 @@
                             VerticalAlignment="Center"
                             Visibility="{Binding HasNoIssues, Converter={StaticResource BoolToVis}}">
                     <TextBlock Text="No issues found"
-                               FontSize="16"
+                               FontSize="{DynamicResource AppFontSize16}"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}"
                                HorizontalAlignment="Center"/>
                     <TextBlock Text="Your current entries passed all health checks."
-                               FontSize="13"
+                               FontSize="{DynamicResource AppFontSize13}"
                                Margin="0,8,0,0"
                                Foreground="{DynamicResource MutedBrush}"
                                HorizontalAlignment="Center"/>
@@ -366,12 +366,12 @@
                             VerticalAlignment="Center"
                             Visibility="{Binding HasNoMatchingIssues, Converter={StaticResource BoolToVis}}">
                     <TextBlock Text="No matching issues"
-                               FontSize="16"
+                               FontSize="{DynamicResource AppFontSize16}"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}"
                                HorizontalAlignment="Center"/>
                     <TextBlock Text="Try a different issue filter."
-                               FontSize="13"
+                               FontSize="{DynamicResource AppFontSize13}"
                                Margin="0,8,0,0"
                                Foreground="{DynamicResource MutedBrush}"
                                HorizontalAlignment="Center"/>
