@@ -51,7 +51,7 @@
                 <TextBlock Grid.Row="0"
                            Grid.Column="0"
                            Text="Entry History"
-                           FontSize="22"
+                           FontSize="{DynamicResource AppFontSize22}"
                            FontWeight="Bold"
                            Foreground="{DynamicResource TextBrush}"
                            Margin="0,0,0,4"/>
@@ -59,13 +59,13 @@
                 <TextBlock Grid.Row="1"
                            Grid.Column="0"
                            Text="Compare previous versions and restore selected fields"
-                           FontSize="12"
+                           FontSize="{DynamicResource AppFontSize12}"
                            Foreground="{DynamicResource MutedBrush}"/>
 
                 <TextBlock Grid.Row="1"
                            Grid.Column="1"
                            Text="Select the changed fields you want to restore. Fields without changes cannot be selected."
-                           FontSize="12"
+                           FontSize="{DynamicResource AppFontSize12}"
                            Foreground="{DynamicResource MutedBrush}"
                            TextWrapping="Wrap"
                            Margin="12,0,0,0"/>
@@ -128,7 +128,7 @@
                                                 </StackPanel.Style>
 
                                                 <TextBlock Text="No history snapshots"
-                                                           FontSize="16"
+                                                           FontSize="{DynamicResource AppFontSize16}"
                                                            FontWeight="SemiBold"
                                                            Foreground="{DynamicResource TextBrush}"
                                                            HorizontalAlignment="Center"/>
@@ -155,7 +155,7 @@
                                                 </StackPanel.Style>
 
                                                 <TextBlock Text="No matching history snapshots"
-                                                           FontSize="16"
+                                                           FontSize="{DynamicResource AppFontSize16}"
                                                            FontWeight="SemiBold"
                                                            Foreground="{DynamicResource TextBrush}"
                                                            HorizontalAlignment="Center"/>
@@ -247,18 +247,18 @@
                                                                Foreground="{DynamicResource TextBrush}"
                                                                TextTrimming="CharacterEllipsis"/>
                                                     <TextBlock Text="{Binding ChangedAtText}"
-                                                               FontSize="11"
+                                                               FontSize="{DynamicResource AppFontSize11}"
                                                                Foreground="{DynamicResource MutedBrush}"
                                                                Margin="0,3,0,0"/>
                                                     <TextBlock Text="{Binding ChangeSummary}"
-                                                               FontSize="12"
+                                                               FontSize="{DynamicResource AppFontSize12}"
                                                                Foreground="{DynamicResource MutedBrush}"
                                                                Margin="0,5,0,0"/>
                                                 </StackPanel>
 
                                                 <TextBlock Grid.Column="1"
                                                            Text="{Binding Username}"
-                                                           FontSize="11"
+                                                           FontSize="{DynamicResource AppFontSize11}"
                                                            Foreground="{DynamicResource MutedBrush}"
                                                            VerticalAlignment="Center"
                                                            Margin="12,0,0,0"
@@ -272,7 +272,7 @@
                                                 CornerRadius="6">
                                             <StackPanel>
                                                 <TextBlock Text="Changed fields"
-                                                           FontSize="11"
+                                                           FontSize="{DynamicResource AppFontSize11}"
                                                            FontWeight="SemiBold"
                                                            Foreground="{DynamicResource MutedBrush}"
                                                            Margin="0,0,0,8"/>
@@ -290,7 +290,7 @@
                                                                     Padding="8,4"
                                                                     Margin="0,0,6,6">
                                                                 <TextBlock Text="{Binding}"
-                                                                           FontSize="11"
+                                                                           FontSize="{DynamicResource AppFontSize11}"
                                                                            Foreground="{DynamicResource TextBrush}"/>
                                                             </Border>
                                                         </DataTemplate>
@@ -298,7 +298,7 @@
                                                 </ItemsControl>
 
                                                 <TextBlock Text="No field changes detected."
-                                                           FontSize="11"
+                                                           FontSize="{DynamicResource AppFontSize11}"
                                                            Foreground="{DynamicResource MutedBrush}"
                                                            Margin="0,0,0,8">
                                                     <TextBlock.Style>
@@ -342,12 +342,12 @@
                                 </Style>
                             </StackPanel.Style>
                             <TextBlock Text="No snapshot selected"
-                                       FontSize="18"
+                                       FontSize="{DynamicResource AppFontSize18}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Select a history snapshot from the left to compare it with the current entry."
-                                       FontSize="12"
+                                       FontSize="{DynamicResource AppFontSize12}"
                                        Foreground="{DynamicResource MutedBrush}"
                                        Margin="0,8,0,0"
                                        TextWrapping="Wrap"
@@ -434,7 +434,7 @@
                                                                 Height="32"
                                                                 Padding="0"
                                                                 FontFamily="Segoe MDL2 Assets"
-                                                                FontSize="13"
+                                                                FontSize="{DynamicResource AppFontSize13}"
                                                                 Foreground="{DynamicResource AccentBrush}"
                                                                 Background="Transparent"
                                                                 BorderThickness="0"
