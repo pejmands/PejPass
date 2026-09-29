@@ -9,5 +9,6 @@ public partial class MainViewModel
     {
         try { _autoLockTimer?.Stop(); } catch { /* ignore */ }
         try { _totpTimer?.Stop(); } catch { /* ignore */ }
+        try { InputManager.Current.PreProcessInput -= OnPreProcessInput; } catch { /* ignore */ }
     }
 }
