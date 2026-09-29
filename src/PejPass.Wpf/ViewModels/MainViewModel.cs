@@ -13,6 +13,7 @@ using PejPass.Wpf.Views;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace PejPass.Wpf.ViewModels;
@@ -29,6 +30,7 @@ public partial class MainViewModel : ObservableObject
     private System.Timers.Timer? _autoLockTimer;
     private DispatcherTimer? _totpTimer;
     private bool _isPasswordVisible;
+    private DateTime _lastAutoLockActivityUtc;
 
     public event EventHandler? RequestLock;
     public event EventHandler? RequestScrollToEntry;
@@ -131,6 +133,8 @@ public partial class MainViewModel : ObservableObject
         _settings = settings;
         _themeService = themeService;
         _vaultSession = vaultSession;
+        _lastAutoLockActivityUtc = DateTime.UtcNow;
+        InputManager.Current.PreProcessInput += OnPreProcessInput;
 
         SelectedSortIndex = (int)_settings.SortMode;
 
@@ -378,10 +382,37 @@ public partial class MainViewModel : ObservableObject
         };
     }
 
+    private void OnPreProcessInput(object sender, PreProcessInputEventArgs e)
+    {
+        if (_settings.AutoLockMinutes <= 0)
+            return;
+
+        var input = e.StagingItem.Input;
+        var isActivity = input switch
+        {
+            KeyboardEventArgs keyboard => keyboard.RoutedEvent == Keyboard.KeyDownEvent,
+            MouseButtonEventArgs => true,
+            MouseWheelEventArgs => true,
+            MouseEventArgs mouse => mouse.RoutedEvent == Mouse.MouseMoveEvent,
+            _ => false
+        };
+
+        if (!isActivity)
+            return;
+
+        var now = DateTime.UtcNow;
+        if (now - _lastAutoLockActivityUtc < TimeSpan.FromMilliseconds(250))
+            return;
+
+        _lastAutoLockActivityUtc = now;
+        ResetAutoLockTimer();
+    }
+
     private void StartAutoLockTimer()
     {
         if (_settings.AutoLockMinutes <= 0) return;
 
+        _lastAutoLockActivityUtc = DateTime.UtcNow;
         _autoLockTimer = new System.Timers.Timer(_settings.AutoLockMinutes * 60_000);
         _autoLockTimer.Elapsed += (_, _) =>
         {
@@ -393,6 +424,7 @@ public partial class MainViewModel : ObservableObject
 
     private void ResetAutoLockTimer()
     {
+        _lastAutoLockActivityUtc = DateTime.UtcNow;
         _autoLockTimer?.Stop();
 
         if (_settings.AutoLockMinutes > 0)
