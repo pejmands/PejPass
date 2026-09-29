@@ -57,6 +57,29 @@
                               Height="36"/>
                 </Grid>
 
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="180"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel VerticalAlignment="Top">
+                        <TextBlock Text="Font size"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextBrush}"/>
+                        <TextBlock Text="Adjust the default application text size."
+                                   FontSize="11"
+                                   Foreground="{DynamicResource MutedBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,4,12,0"/>
+                    </StackPanel>
+
+                    <ComboBox Grid.Column="1"
+                              ItemsSource="{Binding FontSizeOptions}"
+                              SelectedIndex="{Binding SelectedFontSizeIndex}"
+                              Height="36"/>
+                </Grid>
+
                 <!-- Security -->
                 <Border BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="0,0,0,1"
