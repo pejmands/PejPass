@@ -704,9 +704,7 @@ public partial class MainViewModel : ObservableObject
         if (vaultEntryIndex < 0)
             return;
 
-        var originalEntry = vault.Entries[vaultEntryIndex];
-        var originalHistory = vault.History.ToList();
-        var originalUpdatedAt = vault.UpdatedAt;
+        var snapshot = vault.CreateSnapshot();
 
         var dataChanged = vault.UpdateEntry(updated);
         var favoriteChanged = vault.SetFavorite(updated.Id, updated.IsFavorite);
@@ -735,22 +733,7 @@ public partial class MainViewModel : ObservableObject
 
         if (!await SaveVaultAsync())
         {
-            vault.Entries[vaultEntryIndex] = originalEntry;
-            vault.History.Clear();
-            vault.History.AddRange(originalHistory);
-            vault.UpdatedAt = originalUpdatedAt;
-
-            if (entryIndex >= 0)
-                Entries[entryIndex] = originalEntry;
-
-            SelectedEntry = originalEntry;
-            RebuildTagFilters();
-            ApplyFilter(preserveSelectionId: originalEntry.Id);
-            RebuildDisplayCustomFields();
-            UpdatePasswordDisplay();
-            RefreshTotp();
-            OnSelectedEntryChanged(SelectedEntry);
-
+            RestoreVaultSnapshot(snapshot, updated.Id);
             return;
         }
 
@@ -1029,7 +1012,7 @@ public partial class MainViewModel : ObservableObject
         SelectedEntry = null;
     }
 
-    private void RestoreVaultSnapshot(Vault snapshot)
+    private void RestoreVaultSnapshot(Vault snapshot, Guid? preserveSelectionId = null)
     {
         _vaultSession.Vault!.RestoreSnapshot(snapshot);
 
@@ -1037,9 +1020,23 @@ public partial class MainViewModel : ObservableObject
         foreach (var entry in _vaultSession.Vault.Entries)
             Entries.Add(entry);
 
-        SelectedEntry = null;
         RebuildTagFilters();
-        ApplyFilter(preserveSelectionId: null);
+
+        SelectedEntry = preserveSelectionId is { } id
+            ? Entries.FirstOrDefault(e => e.Id == id)
+            : null;
+
+        ApplyFilter(preserveSelectionId);
+
+        if (SelectedEntry is not null)
+            OnSelectedEntryChanged(SelectedEntry);
+        else
+        {
+            RebuildDisplayCustomFields();
+            UpdatePasswordDisplay();
+            RefreshTotp();
+        }
+
         UpdateEntryStatus();
     }
 
