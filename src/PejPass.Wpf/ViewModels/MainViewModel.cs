@@ -698,10 +698,9 @@ public partial class MainViewModel : ObservableObject
             return;
 
         var vault = _vaultSession.Vault!;
-        var vaultEntryIndex = vault.Entries.FindIndex(e => e.Id == updated.Id);
         var entryIndex = Entries.IndexOf(entry);
 
-        if (vaultEntryIndex < 0)
+        if (!vault.Entries.Any(e => e.Id == updated.Id))
             return;
 
         var snapshot = vault.CreateSnapshot();
