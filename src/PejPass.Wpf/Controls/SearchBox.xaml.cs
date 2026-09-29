@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace PejPass.Wpf.Controls;
 
@@ -52,5 +53,17 @@ public partial class SearchBox : UserControl
     {
         Text = string.Empty;
         InputBox.Focus();
+    }
+
+    private void InputBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape)
+            return;
+
+        if (!string.IsNullOrEmpty(Text))
+        {
+            Text = string.Empty;
+            e.Handled = true;
+        }
     }
 }
