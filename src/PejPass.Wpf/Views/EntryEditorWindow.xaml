@@ -211,13 +211,55 @@
                            Foreground="{DynamicResource MutedBrush}"
                            Margin="0,0,0,6"/>
 
-                <TextBox Text="{Binding TotpSecret, UpdateSourceTrigger=PropertyChanged}"
-                         Margin="0,0,0,6"
-                         FontFamily="Consolas"
-                         TextWrapping="NoWrap"
-                         HorizontalScrollBarVisibility="Auto"
-                         VerticalScrollBarVisibility="Disabled"
-                         ToolTip="Paste the authenticator secret key (Base32). Leave empty to disable TOTP."/>
+                <Grid Margin="0,0,0,6">
+                    <Border Background="{DynamicResource SurfaceBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6">
+                        <Grid>
+                            <PasswordBox x:Name="TotpSecretBox"
+                                         PasswordChanged="TotpSecretBox_PasswordChanged"
+                                         Padding="12,0,44,0"
+                                         FontFamily="Consolas"
+                                         FontSize="14"
+                                         Height="40"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         VerticalContentAlignment="Center"/>
+
+                            <TextBox x:Name="TotpSecretTextBox"
+                                     Text="{Binding TotpSecret, UpdateSourceTrigger=PropertyChanged}"
+                                     Padding="12,0,44,0"
+                                     FontFamily="Consolas"
+                                     FontSize="14"
+                                     Height="40"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     TextWrapping="NoWrap"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     VerticalScrollBarVisibility="Disabled"
+                                     Visibility="Collapsed"
+                                     ToolTip="Paste the authenticator secret key (Base32). Leave empty to disable TOTP."/>
+
+                            <Button x:Name="TotpSecretVisibilityButton"
+                                    Content="&#xE890;"
+                                    Click="TotpSecretVisibilityButton_Click"
+                                    Width="36"
+                                    Height="36"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,4,0"
+                                    Padding="0"
+                                    FontFamily="Segoe MDL2 Assets"
+                                    FontSize="15"
+                                    Foreground="{DynamicResource AccentBrush}"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Cursor="Hand"
+                                    ToolTip="Show TOTP secret"/>
+                        </Grid>
+                    </Border>
+                </Grid>
 
                 <TextBlock Text="Import QR code"
                            FontSize="12"
