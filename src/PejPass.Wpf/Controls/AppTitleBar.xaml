@@ -64,7 +64,7 @@
             <TextBlock x:Name="TitleText"
                        Text="{Binding Title, RelativeSource={RelativeSource AncestorType=UserControl}}"
                        VerticalAlignment="Center"
-                       FontSize="13"
+                       FontSize="{DynamicResource AppFontSize13}"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextBrush}"
                        TextTrimming="CharacterEllipsis"
