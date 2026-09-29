@@ -23,6 +23,8 @@ public partial class App : System.Windows.Application
 {
     public static IServiceProvider Services { get; private set; } = null!;
 
+    private static AppSettings? _settings;
+
     private const double WindowCornerRadius = 10;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -46,6 +48,9 @@ public partial class App : System.Windows.Application
         VaultFileAssociation.EnsureRegistered();
 
         var settings = SettingsStore.Load();
+        _settings = settings;
+        ZoomBehavior.GlobalZoomChanged += OnGlobalZoomChanged;
+
         var themeService = new ThemeService(settings);
 
         themeService.Apply();
@@ -93,6 +98,19 @@ public partial class App : System.Windows.Application
         }
 
         login.Show();
+    }
+
+    private static void OnGlobalZoomChanged(object? sender, double zoom)
+    {
+        if (_settings is null)
+            return;
+
+        if (Current.Windows.OfType<SettingsWindow>().Any())
+            return;
+
+        _settings.Zoom = zoom;
+        if (!SettingsStore.TrySave(_settings))
+            SnackbarService.Show("Failed to save zoom setting.");
     }
 
     private static void OnSecondInstanceActivated(string? vaultPath)
@@ -378,6 +396,7 @@ public partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         SingleInstance.Activated -= OnSecondInstanceActivated;
+        ZoomBehavior.GlobalZoomChanged -= OnGlobalZoomChanged;
         SingleInstance.Release();
         PendingVaultOpen.ReadAndClear();
         base.OnExit(e);
