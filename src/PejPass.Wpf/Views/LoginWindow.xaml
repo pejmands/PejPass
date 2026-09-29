@@ -91,6 +91,7 @@
 
                 <controls:PasswordRevealBox x:Name="MasterPasswordBox"
                                        PasswordChanged="MasterPasswordBox_PasswordChanged"
+                                       ShowRevealButton="{Binding IsCreateMode}"
                                        Margin="0,0,0,12"
                                        Visibility="Visible"/>
 
@@ -102,6 +103,7 @@
 
                 <controls:PasswordRevealBox x:Name="ConfirmMasterPasswordBox"
                                        PasswordChanged="ConfirmMasterPasswordBox_PasswordChanged"
+                                       ShowRevealButton="{Binding IsCreateMode}"
                                        Margin="0,0,0,12"
                                        Visibility="{Binding IsCreateMode, Converter={StaticResource BoolToVis}}"/>
 
