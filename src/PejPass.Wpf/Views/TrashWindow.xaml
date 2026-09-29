@@ -23,7 +23,7 @@
         <!-- Header -->
         <Grid Margin="0,0,0,12">
             <TextBlock Text="Trash"
-                       FontSize="22"
+                       FontSize="{DynamicResource AppFontSize22}"
                        FontWeight="Bold"
                        Foreground="{DynamicResource TextBrush}"/>
 
@@ -114,12 +114,12 @@
                                        TextTrimming="CharacterEllipsis"/>
 
                                 <TextBlock Text="{Binding Username, Mode=OneWay}"
-                                       FontSize="12"
+                                       FontSize="{DynamicResource AppFontSize12}"
                                        Foreground="{DynamicResource MutedBrush}"
                                        Margin="0,2,0,0"
                                        TextTrimming="CharacterEllipsis"/>
                             
-                                <TextBlock FontSize="11"
+                                <TextBlock FontSize="{DynamicResource AppFontSize11}"
                                        Foreground="{DynamicResource MutedBrush}"
                                        Margin="0,2,0,0"
                                        TextTrimming="CharacterEllipsis">
@@ -158,12 +158,12 @@
                         VerticalAlignment="Center"
                         Visibility="{Binding IsTrashEmpty, Converter={StaticResource BoolToVis}}">
                 <TextBlock Text="Trash is empty"
-                           FontSize="16"
+                           FontSize="{DynamicResource AppFontSize16}"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextBrush}"
                            HorizontalAlignment="Center"/>
                 <TextBlock Text="Deleted entries you remove will appear here."
-                           FontSize="13"
+                           FontSize="{DynamicResource AppFontSize13}"
                            Margin="0,8,0,0"
                            Foreground="{DynamicResource MutedBrush}"
                            HorizontalAlignment="Center"/>
@@ -173,12 +173,12 @@
                         VerticalAlignment="Center"
                         Visibility="{Binding HasNoSearchResults, Converter={StaticResource BoolToVis}}">
                 <TextBlock Text="No matching items"
-                           FontSize="16"
+                           FontSize="{DynamicResource AppFontSize16}"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextBrush}"
                            HorizontalAlignment="Center"/>
                 <TextBlock Text="Try a different search."
-                           FontSize="13"
+                           FontSize="{DynamicResource AppFontSize13}"
                            Margin="0,8,0,0"
                            Foreground="{DynamicResource MutedBrush}"
                            HorizontalAlignment="Center"/>
