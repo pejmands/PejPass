@@ -13,19 +13,8 @@
                    Foreground="{DynamicResource MutedBrush}"
                    IsHitTestVisible="False"
                    Margin="12,0,36,0"
-                   VerticalAlignment="Center">
-            <TextBlock.Style>
-                <Style TargetType="TextBlock">
-                    <Setter Property="Visibility" Value="Collapsed"/>
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                     Value="">
-                            <Setter Property="Visibility" Value="Visible"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </TextBlock.Style>
-        </TextBlock>
+                   VerticalAlignment="Center"
+                   Visibility="{Binding Text, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource EmptyStringToVis}}"/>
 
         <Button Content="✕"
                 Width="32"
@@ -40,25 +29,7 @@
                 BorderThickness="0"
                 Cursor="Hand"
                 ToolTip="Clear"
-                Click="ClearButton_Click">
-            <Button.Style>
-                <Style TargetType="Button">
-                    <Setter Property="Visibility" Value="Collapsed"/>
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                     Value="">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                        </DataTrigger>
-                        <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                     Value="{x:Null}">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                        </DataTrigger>
-                        <Trigger Property="IsVisible" Value="True">
-                            <Setter Property="Visibility" Value="Visible"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </Button.Style>
-        </Button>
+                Click="ClearButton_Click"
+                Visibility="{Binding Text, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource NullOrEmptyToVis}}"/>
     </Grid>
 </UserControl>
