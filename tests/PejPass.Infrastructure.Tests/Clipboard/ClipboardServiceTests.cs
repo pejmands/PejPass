@@ -22,6 +22,37 @@ public sealed class ClipboardServiceTests
     }
 
     [Fact]
+    public void ClearIfOwned_WhenClipboardStillContainsCopiedText_ClearsClipboard()
+    {
+        var clipboard = new FakeClipboardProvider();
+        var dispatcher = new FakeUiDispatcher();
+        var service = new ClipboardService(clipboard, dispatcher);
+
+        service.CopyWithTimeout("Secret123!", TimeSpan.FromMinutes(1));
+
+        service.ClearIfOwned();
+
+        Assert.True(clipboard.ClearCalled);
+        Assert.Null(clipboard.Text);
+    }
+
+    [Fact]
+    public void ClearIfOwned_WhenClipboardChangedByUser_DoesNotClearClipboard()
+    {
+        var clipboard = new FakeClipboardProvider();
+        var dispatcher = new FakeUiDispatcher();
+        var service = new ClipboardService(clipboard, dispatcher);
+
+        service.CopyWithTimeout("Secret123!", TimeSpan.FromMinutes(1));
+        clipboard.SetText("User copied text");
+
+        service.ClearIfOwned();
+
+        Assert.False(clipboard.ClearCalled);
+        Assert.Equal("User copied text", clipboard.Text);
+    }
+
+    [Fact]
     public async Task CopyWithTimeout_WhenClipboardChangedByUser_DoesNotClearClipboard()
     {
         var clipboard = new FakeClipboardProvider();
