@@ -195,6 +195,7 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         _themeService.Apply();
+        App.ApplyFontSize(_savedFontSize);
     }
 
     [RelayCommand]
