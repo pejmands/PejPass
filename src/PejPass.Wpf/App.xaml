@@ -519,6 +519,7 @@
             <!-- PasswordBox -->
             <Style TargetType="PasswordBox">
                 <Setter Property="Height" Value="40"/>
+                <Setter Property="controls:HorizontalSelectionScrollBehavior.IsEnabled" Value="True"/>
                 <Setter Property="VerticalContentAlignment" Value="Center"/>
                 <Setter Property="ContextMenu" Value="{StaticResource PasswordBoxContextMenu}"/>
                 <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
