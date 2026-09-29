@@ -23,7 +23,7 @@
 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="PejPass"
-                               FontSize="20"
+                               FontSize="{DynamicResource AppFontSize20}"
                                FontWeight="Bold"
                                Foreground="{DynamicResource TextBrush}"
                                VerticalAlignment="Center"/>
@@ -33,7 +33,7 @@
                             Margin="12,0,0,0"
                             VerticalAlignment="Center">
                         <TextBlock Text="{Binding VaultName}"
-                                   FontSize="12"
+                                   FontSize="{DynamicResource AppFontSize12}"
                                    Foreground="{DynamicResource MutedBrush}"/>
                     </Border>
                 </StackPanel>
@@ -141,7 +141,7 @@
                                 Command="{Binding AddEntryCommand}"
                                 Height="40"
                                 Padding="14,0"
-                                FontSize="12"
+                                FontSize="{DynamicResource AppFontSize12}"
                                 FontWeight="SemiBold"
                                 ToolTip="Add entry (Ctrl+N)"/>
                     </Grid>
@@ -171,7 +171,7 @@
                                         Margin="0,0,6,0"
                                         Padding="11,0"
                                         Height="30"
-                                        FontSize="12"
+                                        FontSize="{DynamicResource AppFontSize12}"
                                         FontWeight="SemiBold"
                                         Cursor="Hand"
                                         BorderThickness="1"
@@ -216,13 +216,13 @@
                     <TextBlock Text="{Binding FilteredEntries.Count,
                                               StringFormat={}{0} results}"
                                Foreground="{DynamicResource MutedBrush}"
-                               FontSize="12"
+                               FontSize="{DynamicResource AppFontSize12}"
                                VerticalAlignment="Center"/>
                     <ComboBox Grid.Column="1"
                               Width="110"
                               ItemsSource="{Binding SortOptions}"
                               SelectedIndex="{Binding SelectedSortIndex}"
-                              FontSize="12"
+                              FontSize="{DynamicResource AppFontSize12}"
                               Padding="6,4"
                               ToolTip="Sort order (favorites always on top)"/>
                 </Grid>
@@ -332,13 +332,13 @@
                                             VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Title}"
                                                FontWeight="SemiBold"
-                                               FontSize="14"
+                                               FontSize="{DynamicResource AppFontSize14}"
                                                Foreground="{DynamicResource TextBrush}"
                                                TextTrimming="CharacterEllipsis"
                                                ToolTip="{Binding Title}"/>
 
                                     <TextBlock Text="{Binding Username}"
-                                               FontSize="12"
+                                               FontSize="{DynamicResource AppFontSize12}"
                                                Margin="0,4,0,0"
                                                Foreground="{DynamicResource MutedBrush}"
                                                TextTrimming="CharacterEllipsis"
@@ -347,7 +347,7 @@
 
                                 <TextBlock Grid.Column="2"
                                            Text="★"
-                                           FontSize="14"
+                                           FontSize="{DynamicResource AppFontSize14}"
                                            Foreground="{DynamicResource WarningBrush}"
                                            VerticalAlignment="Center"
                                            Margin="8,0,0,0"
@@ -373,12 +373,12 @@
                                 </Style>
                             </StackPanel.Style>
                             <TextBlock Text="No entries yet"
-                                       FontSize="16"
+                                       FontSize="{DynamicResource AppFontSize16}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Add your first entry to get started."
-                                       FontSize="13"
+                                       FontSize="{DynamicResource AppFontSize13}"
                                        Margin="0,8,0,0"
                                        Foreground="{DynamicResource MutedBrush}"
                                        HorizontalAlignment="Center"/>
@@ -403,12 +403,12 @@
                                 </Style>
                             </StackPanel.Style>
                             <TextBlock Text="No matching entries"
-                                       FontSize="16"
+                                       FontSize="{DynamicResource AppFontSize16}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Try a different search or filter."
-                                       FontSize="13"
+                                       FontSize="{DynamicResource AppFontSize13}"
                                        Margin="0,8,0,0"
                                        Foreground="{DynamicResource MutedBrush}"
                                        HorizontalAlignment="Center"/>
@@ -431,13 +431,13 @@
                                                  Converter={StaticResource BoolToVis},
                                                  ConverterParameter=Invert}">
                     <TextBlock Text="Select an entry"
-                               FontSize="18"
+                               FontSize="{DynamicResource AppFontSize18}"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource MutedBrush}"
                                HorizontalAlignment="Center"/>
 
                     <TextBlock Text="or click + to add a new one"
-                               FontSize="13"
+                               FontSize="{DynamicResource AppFontSize13}"
                                Margin="0,8,0,0"
                                Foreground="{DynamicResource MutedBrush}"
                                HorizontalAlignment="Center"/>
@@ -457,7 +457,7 @@
                             </Grid.ColumnDefinitions>
 
                             <TextBlock Text="{Binding SelectedEntry.Title}"
-                                       FontSize="26"
+                                       FontSize="{DynamicResource AppFontSize26}"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource TextBrush}"
                                        TextTrimming="CharacterEllipsis"
@@ -470,7 +470,7 @@
                                     CommandParameter="{Binding SelectedEntry}"
                                     Background="{DynamicResource SurfaceAltBrush}"
                                     ToolTip="Toggle favorite">
-                                <TextBlock FontSize="16"
+                                <TextBlock FontSize="{DynamicResource AppFontSize16}"
                                            Foreground="{DynamicResource TextBrush}">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
@@ -492,7 +492,7 @@
                         </Grid>
 
                         <TextBlock Margin="0,0,0,20"
-                                   FontSize="12"
+                                   FontSize="{DynamicResource AppFontSize12}"
                                    Foreground="{DynamicResource MutedBrush}">
                             <Run Text="Created "/>
                             <Run Text="{Binding CreatedAtText, Mode=OneWay}"/>
@@ -505,7 +505,7 @@
                                                           Converter={StaticResource BoolToVis}}"
                                     Margin="0,0,0,20">
                             <TextBlock Text="URL"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource AppFontSize11}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource MutedBrush}"
                                        Margin="0,0,0,6"/>
@@ -522,7 +522,7 @@
                                         Padding="12,10">
                                     <TextBlock Text="{Binding SelectedEntry.Url}"
                                                Foreground="{DynamicResource AccentBrush}"
-                                               FontSize="13"
+                                               FontSize="{DynamicResource AppFontSize13}"
                                                VerticalAlignment="Center"
                                                TextWrapping="NoWrap"
                                                TextTrimming="CharacterEllipsis"                                               ToolTip="{Binding SelectedEntry.Url}"/>
@@ -546,7 +546,7 @@
 
                         <!-- Username -->
                         <TextBlock Text="USERNAME"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource AppFontSize11}"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource MutedBrush}"
                                    Margin="0,0,0,6"/>
@@ -562,7 +562,7 @@
                                     Padding="12,10">
                                 <TextBlock Text="{Binding SelectedEntry.Username}"
                                            Foreground="{DynamicResource TextBrush}"
-                                           FontSize="14"
+                                           FontSize="{DynamicResource AppFontSize14}"
                                            VerticalAlignment="Center"
                                            TextWrapping="NoWrap"
                                            TextTrimming="CharacterEllipsis"
@@ -580,7 +580,7 @@
 
                         <!-- Password -->
                         <TextBlock Text="PASSWORD"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource AppFontSize11}"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource MutedBrush}"
                                    Margin="0,0,0,6"/>
@@ -597,7 +597,7 @@
                                     Padding="12,10">
                                 <TextBlock Text="{Binding DisplayPassword}"
                                            Foreground="{DynamicResource TextBrush}"
-                                           FontSize="15"
+                                           FontSize="{DynamicResource AppFontSize15}"
                                            FontWeight="SemiBold"
                                            FontFamily="Consolas"
                                            VerticalAlignment="Center"
@@ -627,7 +627,7 @@
                                                           Converter={StaticResource BoolToVis}}"
                                     Margin="0,0,0,20">
                             <TextBlock Text="AUTHENTICATOR (TOTP)"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource AppFontSize11}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource AccentBrush}"
                                        Margin="0,0,0,6"/>
@@ -643,7 +643,7 @@
 
                                     <StackPanel>
                                         <TextBlock Text="{Binding TotpCodeFormatted}"
-                                                   FontSize="30"
+                                                   FontSize="{DynamicResource AppFontSize30}"
                                                    FontWeight="Bold"
                                                    FontFamily="Consolas"
                                                    Foreground="{DynamicResource TextBrush}"/>
@@ -655,7 +655,7 @@
                                                      Background="{DynamicResource SurfaceAltBrush}"/>
 
                                         <TextBlock Margin="0,6,0,0"
-                                                   FontSize="12"
+                                                   FontSize="{DynamicResource AppFontSize12}"
                                                    Foreground="{DynamicResource MutedBrush}">
                                             <Run Text="{Binding TotpRemainingSeconds, Mode=OneWay}"/>
                                             <Run Text="s remaining"/>
@@ -677,7 +677,7 @@
                                                           Converter={StaticResource BoolToVis}}"
                                     Margin="0,0,0,20">
                             <TextBlock Text="NOTES"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource AppFontSize11}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource MutedBrush}"
                                        Margin="0,0,0,6"/>
@@ -690,7 +690,7 @@
                                               HorizontalScrollBarVisibility="Disabled">
                                     <TextBlock Text="{Binding SelectedEntry.Notes}"
                                                Foreground="{DynamicResource TextBrush}"
-                                               FontSize="13"
+                                               FontSize="{DynamicResource AppFontSize13}"
                                                TextWrapping="Wrap"
                                                ToolTip="{Binding SelectedEntry.Notes}"/>
                                 </ScrollViewer>
@@ -702,7 +702,7 @@
                                                           Converter={StaticResource BoolToVis}}"
                                     Margin="0,0,0,20">
                             <TextBlock Text="CUSTOM FIELDS"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource AppFontSize11}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource MutedBrush}"
                                        Margin="0,0,0,6"/>
@@ -768,7 +768,7 @@
                                                           Converter={StaticResource BoolToVis}}"
                                     Margin="0,0,0,20">
                             <TextBlock Text="TAGS"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource AppFontSize11}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource MutedBrush}"
                                        Margin="0,0,0,6"/>
@@ -787,7 +787,7 @@
                                                 Margin="0,0,6,6">
                                             <TextBlock Text="{Binding}"
                                                        Foreground="{DynamicResource MutedBrush}"
-                                                       FontSize="11"/>
+                                                       FontSize="{DynamicResource AppFontSize11}"/>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -873,7 +873,7 @@
                     <TextBlock x:Name="SnackbarIcon"
                                Text="&#xE73E;"
                                FontFamily="Segoe MDL2 Assets"
-                               FontSize="13"
+                               FontSize="{DynamicResource AppFontSize13}"
                                Foreground="{DynamicResource SuccessBrush}"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"/>
@@ -881,7 +881,7 @@
                 <TextBlock x:Name="SnackbarText"
                            Grid.Column="2"
                            Margin="4,11,14,11"
-                           FontSize="13"
+                           FontSize="{DynamicResource AppFontSize13}"
                            Foreground="{DynamicResource TextBrush}"
                            TextWrapping="Wrap"
                            VerticalAlignment="Center"/>
