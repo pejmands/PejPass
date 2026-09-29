@@ -502,7 +502,8 @@
                                               HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"
                                               VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"
                                               HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsKeyboardFocused" Value="True">
