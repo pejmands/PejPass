@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
+using System.Windows.Documents;
 
 namespace PejPass.Wpf.Controls;
 
@@ -9,7 +9,7 @@ public partial class PasswordRevealBox : UserControl
 {
     private static readonly Type TextRangeType =
         typeof(PasswordBox).Assembly.GetType("System.Windows.Documents.ITextRange")
-        ?? throw new InvalidOperationException("TextRange was not found.");
+        ?? throw new InvalidOperationException("ITextRange was not found.");
 
     private static readonly PropertyInfo PasswordSelectionProperty =
         typeof(PasswordBox).GetProperty(
