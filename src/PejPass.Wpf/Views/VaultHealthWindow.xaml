@@ -11,7 +11,9 @@
         ShowInTaskbar="False"
         Background="{DynamicResource BgBrush}">
 
-    <Grid Margin="24">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -388,5 +390,6 @@
                 Background="{DynamicResource SurfaceAltBrush}"
                 Foreground="{DynamicResource TextBrush}"
                 Click="Close_Click"/>
-    </Grid>
+        </Grid>
+    </ScrollViewer>
 </Window>
