@@ -61,6 +61,9 @@ public static class ZoomBehavior
     public static void SetGlobalZoom(double zoom)
     {
         var scale = ClampZoom(zoom);
+        if (Math.Abs(scale - _globalZoom) < 0.001)
+            return;
+
         _globalZoom = scale;
 
         foreach (var target in Targets.ToArray())
