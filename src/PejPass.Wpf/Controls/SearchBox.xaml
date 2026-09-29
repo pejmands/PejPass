@@ -24,7 +24,7 @@
                 HorizontalAlignment="Right"
                 Margin="0,0,8,0"
                 Padding="0"
-                FontSize="11"
+                FontSize="{DynamicResource AppFontSize11}"
                 Background="{DynamicResource SurfaceAltBrush}"
                 Foreground="{DynamicResource TextBrush}"
                 BorderThickness="0"
