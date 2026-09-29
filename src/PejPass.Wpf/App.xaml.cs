@@ -50,6 +50,7 @@ public partial class App : System.Windows.Application
 
         themeService.Apply();
         ApplyFontSize(settings.FontSize);
+        ZoomBehavior.SetGlobalZoom(settings.Zoom);
 
         var services = new ServiceCollection();
 
@@ -300,6 +301,8 @@ public partial class App : System.Windows.Application
             return;
 
         window.Content = null;
+
+        ZoomBehavior.SetIsEnabled(body, true);
 
         UIElement content = body;
 
