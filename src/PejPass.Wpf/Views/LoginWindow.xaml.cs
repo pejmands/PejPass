@@ -62,11 +62,9 @@ public partial class LoginWindow : Window
 
         MasterPasswordBox.Visibility = Visibility.Visible;
         MasterPasswordTextBox.Visibility = Visibility.Collapsed;
-        MasterPasswordVisibilityButton.ToolTip = "Show password";
 
         ConfirmMasterPasswordBox.Visibility = Visibility.Visible;
         ConfirmMasterPasswordTextBox.Visibility = Visibility.Collapsed;
-        ConfirmMasterPasswordVisibilityButton.ToolTip = "Show password";
     }
 
     private void VaultMode_Checked(object sender, RoutedEventArgs e)
