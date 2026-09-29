@@ -68,7 +68,6 @@
                     <TextBox x:Name="VaultPathTextBox"
                              Text="{Binding VaultPath, UpdateSourceTrigger=PropertyChanged}"
                              TextWrapping="NoWrap"
-                             HorizontalScrollBarVisibility="Auto"
                              VerticalScrollBarVisibility="Disabled"/>
 
                     <Button Grid.Column="1"
