@@ -265,9 +265,9 @@ public partial class App : System.Windows.Application
         WindowChrome.SetWindowChrome(window, new WindowChrome
         {
             CaptionHeight = 40,
-            ResizeBorderThickness = window.ResizeMode == ResizeMode.NoResize
-                ? new Thickness(0)
-                : new Thickness(6),
+            ResizeBorderThickness = window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip
+                ? new Thickness(6)
+                : new Thickness(0),
             GlassFrameThickness = new Thickness(0),
             CornerRadius = new CornerRadius(radius),
             UseAeroCaptionButtons = false
