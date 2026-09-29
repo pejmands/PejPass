@@ -27,8 +27,8 @@
         </Grid.RowDefinitions>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <controls:ZoomHost>
-                <StackPanel Margin="0,0,12,0">
+            <StackPanel Margin="0,0,12,0"
+                             controls:ZoomBehavior.IsEnabled="True">
 
                 <!-- Identity -->
                 <Border BorderBrush="{DynamicResource BorderBrush}"
@@ -440,7 +440,6 @@
                          HorizontalScrollBarVisibility="Disabled"/>
 
                 </StackPanel>
-            </controls:ZoomHost>
         </ScrollViewer>
 
         <!-- Footer -->
