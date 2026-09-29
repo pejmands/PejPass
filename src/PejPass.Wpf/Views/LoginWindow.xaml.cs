@@ -18,7 +18,7 @@ public partial class LoginWindow : Window
             if (!string.IsNullOrEmpty(viewModel.VaultPathError))
                 VaultPathTextBox.Focus();
             else if (!string.IsNullOrEmpty(viewModel.PasswordError))
-                MasterPasswordBox.Focus();
+                MasterPasswordBox.FocusInput();
         };
 
         viewModel.RequestClose += (_, _) =>
@@ -67,7 +67,7 @@ public partial class LoginWindow : Window
         ClearPasswordInputs();
 
         Dispatcher.BeginInvoke(
-            () => Keyboard.Focus(MasterPasswordBox),
+            () => MasterPasswordBox.FocusInput(),
             System.Windows.Threading.DispatcherPriority.Input);
     }
 
