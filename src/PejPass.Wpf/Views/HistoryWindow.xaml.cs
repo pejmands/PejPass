@@ -13,6 +13,16 @@ public partial class HistoryWindow : Window
         App.PrepareCustomChrome(this);
 
         DataContext = viewModel;
+        KeyDown += OnKeyDown;
+    }
+
+    private void OnKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape)
+            return;
+
+        Close();
+        e.Handled = true;
     }
 
     private void HistoryListBoxItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
