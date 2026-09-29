@@ -692,8 +692,7 @@
                                     <TextBlock Text="{Binding SelectedEntry.Notes}"
                                                Foreground="{DynamicResource TextBrush}"
                                                FontSize="{DynamicResource AppFontSize13}"
-                                               TextWrapping="Wrap"
-                                               ToolTip="{Binding SelectedEntry.Notes}"/>
+                                               TextWrapping="Wrap"/>
                                 </ScrollViewer>
                             </Border>
                         </StackPanel>
