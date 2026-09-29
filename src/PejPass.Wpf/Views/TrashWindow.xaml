@@ -1,6 +1,7 @@
 <Window x:Class="PejPass.Wpf.Views.TrashWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:PejPass.Wpf.Controls"
         Title="Trash"
         Height="545"
         Width="700"
@@ -34,38 +35,12 @@
         </Grid>
 
         <!-- Search -->
-        <Grid Grid.Row="1"
-              Margin="0,0,0,12">
-
-            <TextBox x:Name="TrashSearchBox"
-                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                     VerticalContentAlignment="Center"
-                     Padding="10,8,32,8"
-                     ToolTip="Search trash by title, username, or URL"/>
-
-            <TextBlock Text="Search trash…"
-                       Foreground="{DynamicResource MutedBrush}"
-                       IsHitTestVisible="False"
-                       Margin="12,0,36,0"
-                       VerticalAlignment="Center"
-                       Visibility="{Binding Text, ElementName=TrashSearchBox, Converter={StaticResource EmptyStringToVis}}"/>
-
-            <Button Content="✕"
-                    Width="32"
-                    Height="32"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Right"
-                    Margin="0,0,8,0"
-                    Padding="0"
-                    FontSize="11"
-                    Background="{DynamicResource SurfaceAltBrush}"
-                    Foreground="{DynamicResource TextBrush}"
-                    BorderThickness="0"
-                    Cursor="Hand"
-                    ToolTip="Clear"
-                    Command="{Binding ClearSearchCommand}"
-                    Visibility="{Binding Text, ElementName=TrashSearchBox, Converter={StaticResource NullOrEmptyToVis}}"/>
-        </Grid>
+        <controls:SearchBox x:Name="TrashSearchBox"
+                          Grid.Row="1"
+                          Margin="0,0,0,12"
+                          Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                          Placeholder="Search trash..."
+                          ToolTip="Search trash by title, username, or URL"/>
 
         <!-- Trash items -->
         <Grid Grid.Row="2">
