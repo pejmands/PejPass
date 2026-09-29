@@ -8,7 +8,7 @@ namespace PejPass.Wpf.Controls;
 public partial class PasswordRevealBox : UserControl
 {
     private static readonly Type TextRangeType =
-        typeof(PasswordBox).Assembly.GetType("System.Windows.Documents.TextRange")
+        typeof(PasswordBox).Assembly.GetType("System.Windows.Documents.ITextRange")
         ?? throw new InvalidOperationException("TextRange was not found.");
 
     private static readonly PropertyInfo PasswordSelectionProperty =
