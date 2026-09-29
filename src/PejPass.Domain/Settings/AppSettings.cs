@@ -21,6 +21,8 @@ public sealed class AppSettings
 
     public FontSizeMode FontSize { get; set; } = FontSizeMode.Medium;
 
+    public double Zoom { get; set; } = 1.0;
+
     /// <summary>How the entry list is ordered. Favorites always float to the top.</summary>
     public EntrySortMode SortMode { get; set; } = EntrySortMode.TitleAsc;
 
