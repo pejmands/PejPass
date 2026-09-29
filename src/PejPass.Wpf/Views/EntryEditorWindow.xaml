@@ -128,55 +128,17 @@
                 </Border>
 
                 <!-- Password input -->
-                <Grid Margin="0,0,0,8">
-                    <Border Background="{DynamicResource SurfaceBrush}"
-                            BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="6">
-                        <Grid>
-                            <PasswordBox x:Name="PasswordBox"
-                                         PasswordChanged="PasswordBox_PasswordChanged"
-                                         Padding="12,0,44,0"
-                                         FontFamily="Consolas"
-                                         FontSize="{DynamicResource AppFontSize14}"
-                                         Height="40"
-                                         Background="Transparent"
-                                         BorderThickness="0"
-                                         VerticalContentAlignment="Center"
-                                         Visibility="Visible"/>
-
-                            <TextBox x:Name="PasswordTextBox"
-                                     Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"
-                                     Padding="12,0,44,0"
-                                     FontFamily="Consolas"
-                                     FontSize="{DynamicResource AppFontSize14}"
-                                     Height="40"
-                                     VerticalContentAlignment="Center"
-                                     Background="Transparent"
-                                     BorderThickness="0"
-                                     TextWrapping="NoWrap"
-                                     VerticalScrollBarVisibility="Disabled"
-                                     Visibility="Collapsed"/>
-
-                            <Button x:Name="PasswordVisibilityButton"
-                                    Content="&#xE890;"
-                                    Click="PasswordVisibilityButton_Click"
-                                    Width="36"
-                                    Height="36"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Center"
-                                    Margin="0,0,4,0"
-                                    Padding="0"
-                                    FontFamily="Segoe MDL2 Assets"
-                                    FontSize="{DynamicResource AppFontSize15}"
-                                    Foreground="{DynamicResource AccentBrush}"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Cursor="Hand"
-                                    ToolTip="Show password"/>
-                        </Grid>
-                    </Border>
-                </Grid>
+                <controls:PasswordRevealBox x:Name="PasswordBox"
+                                       PasswordChanged="PasswordBox_PasswordChanged"
+                                       FontFamily="Consolas"
+                                       FontSize="{DynamicResource AppFontSize14}"
+                                       Height="40"
+                                       Padding="12,0,44,0"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       Background="{DynamicResource SurfaceBrush}"
+                                       BorderBrush="{DynamicResource BorderBrush}"
+                                       BorderThickness="1"
+                                       Margin="0,0,0,8"/>
 
                 <Button Style="{StaticResource SecondaryButton}"
                         Content="Generate password"
@@ -208,55 +170,18 @@
                            Foreground="{DynamicResource MutedBrush}"
                            Margin="0,0,0,6"/>
 
-                <Grid Margin="0,0,0,6">
-                    <Border Background="{DynamicResource SurfaceBrush}"
-                            BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="6">
-                        <Grid>
-                            <PasswordBox x:Name="TotpSecretBox"
-                                         PasswordChanged="TotpSecretBox_PasswordChanged"
-                                         Padding="12,0,44,0"
-                                         FontFamily="Consolas"
-                                         FontSize="{DynamicResource AppFontSize14}"
-                                         Height="40"
-                                         Background="Transparent"
-                                         BorderThickness="0"
-                                         VerticalContentAlignment="Center"/>
-
-                            <TextBox x:Name="TotpSecretTextBox"
-                                     Text="{Binding TotpSecret, UpdateSourceTrigger=PropertyChanged}"
-                                     Padding="12,0,44,0"
-                                     FontFamily="Consolas"
-                                     FontSize="{DynamicResource AppFontSize14}"
-                                     Height="40"
-                                     VerticalContentAlignment="Center"
-                                     Background="Transparent"
-                                     BorderThickness="0"
-                                     TextWrapping="NoWrap"
-                                     VerticalScrollBarVisibility="Disabled"
-                                     Visibility="Collapsed"
-                                     ToolTip="Paste the authenticator secret key (Base32). Leave empty to disable TOTP."/>
-
-                            <Button x:Name="TotpSecretVisibilityButton"
-                                    Content="&#xE890;"
-                                    Click="TotpSecretVisibilityButton_Click"
-                                    Width="36"
-                                    Height="36"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Center"
-                                    Margin="0,0,4,0"
-                                    Padding="0"
-                                    FontFamily="Segoe MDL2 Assets"
-                                    FontSize="{DynamicResource AppFontSize15}"
-                                    Foreground="{DynamicResource AccentBrush}"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Cursor="Hand"
-                                    ToolTip="Show TOTP secret"/>
-                        </Grid>
-                    </Border>
-                </Grid>
+                <controls:PasswordRevealBox x:Name="TotpSecretBox"
+                                       PasswordChanged="TotpSecretBox_PasswordChanged"
+                                       FontFamily="Consolas"
+                                       FontSize="{DynamicResource AppFontSize14}"
+                                       Height="40"
+                                       Padding="12,0,44,0"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       Background="{DynamicResource SurfaceBrush}"
+                                       BorderBrush="{DynamicResource BorderBrush}"
+                                       BorderThickness="1"
+                                       Margin="0,0,0,6"
+                                       ToolTip="Paste the authenticator secret key (Base32). Leave empty to disable TOTP."/>
 
                 <TextBlock Text="Import QR code"
                            FontSize="{DynamicResource AppFontSize12}"
