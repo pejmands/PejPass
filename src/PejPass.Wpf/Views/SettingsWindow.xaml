@@ -14,8 +14,8 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
-        <controls:ZoomHost>
-            <Grid Margin="24">
+        <Grid Margin="24"
+          controls:ZoomBehavior.IsEnabled="True">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -297,6 +297,5 @@
                     IsDefault="True"/>
         </StackPanel>
             </Grid>
-        </controls:ZoomHost>
     </ScrollViewer>
 </Window>
