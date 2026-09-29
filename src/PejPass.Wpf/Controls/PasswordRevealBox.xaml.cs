@@ -57,6 +57,19 @@ public partial class PasswordRevealBox : UserControl
         set => SetValue(PasswordProperty, value ?? string.Empty);
     }
 
+    public static readonly DependencyProperty ShowRevealButtonProperty =
+        DependencyProperty.Register(
+            nameof(ShowRevealButton),
+            typeof(bool),
+            typeof(PasswordRevealBox),
+            new PropertyMetadata(true, OnShowRevealButtonChanged));
+
+    public bool ShowRevealButton
+    {
+        get => (bool)GetValue(ShowRevealButtonProperty);
+        set => SetValue(ShowRevealButtonProperty, value);
+    }
+
     public static readonly DependencyProperty IsRevealedProperty =
         DependencyProperty.Register(
             nameof(IsRevealed),
@@ -123,6 +136,14 @@ public partial class PasswordRevealBox : UserControl
         {
             control.TextBox.Text = password;
         }
+    }
+
+    private static void OnShowRevealButtonChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is PasswordRevealBox control)
+            control.VisibilityButton.Visibility = control.ShowRevealButton
+                ? Visibility.Visible
+                : Visibility.Collapsed;
     }
 
     private static void OnIsRevealedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
