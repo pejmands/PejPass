@@ -7,5 +7,8 @@ public interface IClipboardService
     /// </summary>
     void CopyWithTimeout(string text, TimeSpan timeout);
 
-    void Clear();
+    /// <summary>
+    /// Clears the clipboard only when it still contains text copied by PejPass.
+    /// </summary>
+    void ClearIfOwned();
 }
