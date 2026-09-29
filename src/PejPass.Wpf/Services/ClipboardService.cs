@@ -12,11 +12,13 @@ public sealed class ClipboardService(
     private readonly IClipboardProvider _clipboard = clipboard;
     private readonly IUiDispatcher _dispatcher = dispatcher;
     private CancellationTokenSource? _cts;
+    private string? _copiedText;
 
     public void CopyWithTimeout(string text, TimeSpan timeout)
     {
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
+        _copiedText = text;
 
         _clipboard.SetText(text);
 
@@ -26,17 +28,26 @@ public sealed class ClipboardService(
             _cts.Token);
     }
 
-    public void Clear()
+    public void ClearIfOwned()
     {
         _cts?.Cancel();
 
         try
         {
-            _clipboard.Clear();
+            if (_copiedText is not null &&
+                _clipboard.ContainsText() &&
+                _clipboard.GetText() == _copiedText)
+            {
+                _clipboard.Clear();
+            }
         }
         catch
         {
             // Clipboard may be locked by another process; ignore.
+        }
+        finally
+        {
+            _copiedText = null;
         }
     }
 
@@ -60,6 +71,9 @@ public sealed class ClipboardService(
                         {
                             _clipboard.Clear();
                         }
+
+                        if (string.Equals(_copiedText, copiedText, StringComparison.Ordinal))
+                            _copiedText = null;
                     }
                     catch
                     {
