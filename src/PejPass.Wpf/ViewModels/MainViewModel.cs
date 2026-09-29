@@ -489,6 +489,18 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void OpenAbout()
+    {
+        var window = new AboutWindow
+        {
+            Owner = GetOwnerWindow()
+        };
+
+        window.ShowDialog();
+        ResetAutoLockTimer();
+    }
+
+    [RelayCommand]
     private void OpenSettings()
     {
         var vm = new SettingsViewModel(
