@@ -120,6 +120,13 @@ public partial class PasswordRevealBox : UserControl
         PasswordBox.Clear();
     }
 
+    public bool FocusInput()
+    {
+        return IsRevealed
+            ? TextBox.Focus()
+            : PasswordBox.Focus();
+    }
+
     private static void OnPasswordChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not PasswordRevealBox control)
