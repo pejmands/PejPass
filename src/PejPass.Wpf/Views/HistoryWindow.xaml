@@ -30,7 +30,13 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Header & Instruction (Perfect Horizontal Alignment) -->
+            <controls:SearchBox Grid.Row="0"
+                                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                Placeholder="Search history..."
+                                ToolTip="Search history by title, username, or URL"
+                                Margin="0,0,0,12"/>
+
+            <!-- Header & Instruction -->
             <Grid Grid.Row="1"
                   Margin="0,0,0,16">
                 <Grid.ColumnDefinitions>
@@ -42,7 +48,6 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Title -->
                 <TextBlock Grid.Row="0"
                            Grid.Column="0"
                            Text="Entry History"
@@ -51,14 +56,12 @@
                            Foreground="{DynamicResource TextBrush}"
                            Margin="0,0,0,4"/>
 
-                <!-- Subtitle -->
                 <TextBlock Grid.Row="1"
                            Grid.Column="0"
                            Text="Compare previous versions and restore selected fields"
                            FontSize="12"
                            Foreground="{DynamicResource MutedBrush}"/>
 
-                <!-- Instruction (Horizontally aligned with the subtitle) -->
                 <TextBlock Grid.Row="1"
                            Grid.Column="1"
                            Text="Select the changed fields you want to restore. Fields without changes cannot be selected."
@@ -67,12 +70,6 @@
                            TextWrapping="Wrap"
                            Margin="12,0,0,0"/>
             </Grid>
-
-            <controls:SearchBox Grid.Row="0"
-                                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                Placeholder="Search history..."
-                                ToolTip="Search history by title, username, or URL"
-                                Margin="0,0,0,12"/>
 
             <!-- Main content -->
             <Grid Grid.Row="2">
@@ -94,13 +91,10 @@
                                x:Key="EmptyHistoryTextStyle">
                             <Setter Property="Foreground"
                                     Value="{DynamicResource MutedBrush}"/>
-
                             <Setter Property="FontSize"
                                     Value="13"/>
-
                             <Setter Property="HorizontalAlignment"
                                     Value="Center"/>
-
                             <Setter Property="TextAlignment"
                                     Value="Center"/>
                         </Style>
@@ -171,7 +165,6 @@
                                             <Trigger Property="IsSelected" Value="True">
                                                 <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
                                                 <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                                <Setter TargetName="ItemBorder" Property="BorderThickness" Value="1"/>
                                             </Trigger>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
@@ -193,7 +186,6 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <!-- Timeline -->
                                 <Grid Grid.Column="0">
                                     <Border Width="1"
                                             HorizontalAlignment="Center"
@@ -208,7 +200,6 @@
                                              Fill="{DynamicResource AccentBrush}"/>
                                 </Grid>
 
-                                <!-- Event card -->
                                 <Border Grid.Column="1"
                                         Background="{DynamicResource SurfaceBrush}"
                                         CornerRadius="8"
@@ -311,7 +302,6 @@
                         Margin="12,0,0,0"
                         Padding="16">
                     <Grid>
-                        <!-- Empty state -->
                         <StackPanel HorizontalAlignment="Center"
                                     VerticalAlignment="Center">
                             <StackPanel.Style>
@@ -338,7 +328,6 @@
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
 
-                        <!-- Comparison content -->
                         <Grid>
                             <Grid.Style>
                                 <Style TargetType="Grid">
@@ -355,7 +344,6 @@
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
 
-                            <!-- Column header -->
                             <Grid Grid.Row="0"
                                   Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
@@ -378,7 +366,6 @@
                                            Foreground="{DynamicResource MutedBrush}"/>
                             </Grid>
 
-                            <!-- Fields -->
                             <ScrollViewer Grid.Row="1"
                                           VerticalScrollBarVisibility="Auto"
                                           HorizontalScrollBarVisibility="Disabled">
@@ -396,13 +383,11 @@
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
 
-                                                    <!-- Select only changed fields -->
                                                     <CheckBox Grid.Column="0"
                                                               IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                                               Visibility="{Binding IsChanged, Converter={StaticResource BoolToVis}}"
                                                               VerticalAlignment="Center"/>
 
-                                                    <!-- Field name -->
                                                     <Grid Grid.Column="1"
                                                           VerticalAlignment="Center">
                                                         <Grid.ColumnDefinitions>
@@ -442,7 +427,6 @@
                                                         </Button>
                                                     </Grid>
 
-                                                    <!-- Current -->
                                                     <TextBlock Grid.Column="2"
                                                                Text="{Binding CurrentDisplayValue}"
                                                                Foreground="{DynamicResource TextBrush}"
@@ -452,7 +436,6 @@
                                                                MaxHeight="48"
                                                                Margin="0,0,8,0"/>
 
-                                                    <!-- Snapshot -->
                                                     <TextBlock Grid.Column="3"
                                                                Text="{Binding SnapshotDisplayValue}"
                                                                Foreground="{DynamicResource TextBrush}"
@@ -473,7 +456,7 @@
             </Grid>
 
             <!-- Footer -->
-            <Grid Grid.Row="2"
+            <Grid Grid.Row="3"
                   Margin="0,16,0,0">
                 <TextBlock Text="{Binding Items.Count, StringFormat={}{0} history snapshots}"
                            Foreground="{DynamicResource MutedBrush}"
@@ -489,7 +472,7 @@
                             Command="{Binding DeleteAllHistoryCommand}"
                             Margin="0,0,8,0"
                             IsEnabled="{Binding HasHistoryItems}"/>
-                    
+
                     <Button Content="Restore"
                             Command="{Binding RestoreCommand}"
                             IsEnabled="{Binding HasSelectedFields}"
