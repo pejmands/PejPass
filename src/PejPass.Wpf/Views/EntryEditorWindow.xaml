@@ -130,14 +130,6 @@
                 <!-- Password input -->
                 <controls:PasswordRevealBox x:Name="PasswordBox"
                                        PasswordChanged="PasswordBox_PasswordChanged"
-                                       FontFamily="Consolas"
-                                       FontSize="{DynamicResource AppFontSize14}"
-                                       Height="40"
-                                       Padding="12,0,44,0"
-                                       Foreground="{DynamicResource TextBrush}"
-                                       Background="{DynamicResource SurfaceBrush}"
-                                       BorderBrush="{DynamicResource BorderBrush}"
-                                       BorderThickness="1"
                                        Margin="0,0,0,8"/>
 
                 <Button Style="{StaticResource SecondaryButton}"
@@ -172,14 +164,6 @@
 
                 <controls:PasswordRevealBox x:Name="TotpSecretBox"
                                        PasswordChanged="TotpSecretBox_PasswordChanged"
-                                       FontFamily="Consolas"
-                                       FontSize="{DynamicResource AppFontSize14}"
-                                       Height="40"
-                                       Padding="12,0,44,0"
-                                       Foreground="{DynamicResource TextBrush}"
-                                       Background="{DynamicResource SurfaceBrush}"
-                                       BorderBrush="{DynamicResource BorderBrush}"
-                                       BorderThickness="1"
                                        Margin="0,0,0,6"
                                        ToolTip="Paste the authenticator secret key (Base32). Leave empty to disable TOTP."/>
 
