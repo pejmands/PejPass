@@ -20,7 +20,7 @@ public static class ZoomBehavior
             typeof(ZoomBehavior),
             new PropertyMetadata(1d, OnZoomChanged));
 
-    private static readonly double[] ZoomLevels =
+    public static readonly double[] ZoomLevels =
     [
         0.8,
         0.9,
@@ -38,6 +38,10 @@ public static class ZoomBehavior
             typeof(ZoomBehavior),
             new PropertyMetadata(null));
 
+    private static readonly HashSet<FrameworkElement> Targets = [];
+
+    private static double _globalZoom = 1d;
+
     public static bool GetIsEnabled(DependencyObject element) =>
         (bool)element.GetValue(IsEnabledProperty);
 
@@ -49,6 +53,17 @@ public static class ZoomBehavior
 
     public static void SetZoom(DependencyObject element, double value) =>
         element.SetValue(ZoomProperty, value);
+
+    public static double GlobalZoom => _globalZoom;
+
+    public static void SetGlobalZoom(double zoom)
+    {
+        var scale = ClampZoom(zoom);
+        _globalZoom = scale;
+
+        foreach (var target in Targets.ToArray())
+            SetZoom(target, scale);
+    }
 
     private static Window? GetWindow(DependencyObject element) =>
         (Window?)element.GetValue(WindowProperty);
@@ -65,12 +80,13 @@ public static class ZoomBehavior
         {
             element.Loaded += OnLoaded;
             element.Unloaded += OnUnloaded;
-            ApplyZoom(element, GetZoom(element));
+            RegisterTarget(element);
         }
         else
         {
             element.Loaded -= OnLoaded;
             element.Unloaded -= OnUnloaded;
+            UnregisterTarget(element);
             DetachWindow(element);
             element.LayoutTransform = null;
         }
@@ -81,18 +97,35 @@ public static class ZoomBehavior
         if (sender is not FrameworkElement element)
             return;
 
+        RegisterTarget(element);
+
         var window = Window.GetWindow(element);
         if (window is null)
             return;
 
         SetWindow(element, window);
+        window.PreviewKeyDown -= OnPreviewKeyDown;
         window.PreviewKeyDown += OnPreviewKeyDown;
     }
 
     private static void OnUnloaded(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement element)
+        {
+            UnregisterTarget(element);
             DetachWindow(element);
+        }
+    }
+
+    private static void RegisterTarget(FrameworkElement element)
+    {
+        Targets.Add(element);
+        SetZoom(element, _globalZoom);
+    }
+
+    private static void UnregisterTarget(FrameworkElement element)
+    {
+        Targets.Remove(element);
     }
 
     private static void DetachWindow(FrameworkElement element)
@@ -112,13 +145,7 @@ public static class ZoomBehavior
 
     private static void ApplyZoom(FrameworkElement element, double zoom)
     {
-        var scale = Math.Clamp(zoom, ZoomLevels[0], ZoomLevels[^1]);
-        if (Math.Abs(scale - zoom) > 0.001)
-        {
-            SetZoom(element, scale);
-            return;
-        }
-
+        var scale = ClampZoom(zoom);
         element.LayoutTransform = scale == 1d
             ? null
             : new ScaleTransform(scale, scale);
@@ -126,58 +153,33 @@ public static class ZoomBehavior
 
     private static void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (sender is not Window window || !Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
-            return;
-
-        var element = FindEnabledElement(window);
-        if (element is null)
+        if (sender is not Window window ||
+            !Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
             return;
 
         if (e.Key is Key.Add or Key.OemPlus)
         {
-            SetZoom(element, GetNextZoom(GetZoom(element)));
+            SetGlobalZoom(GetNextZoom(_globalZoom));
             e.Handled = true;
             return;
         }
 
         if (e.Key is Key.Subtract or Key.OemMinus)
         {
-            SetZoom(element, GetPreviousZoom(GetZoom(element)));
+            SetGlobalZoom(GetPreviousZoom(_globalZoom));
             e.Handled = true;
             return;
         }
 
         if (e.Key is Key.D0 or Key.NumPad0)
         {
-            SetZoom(element, 1d);
+            SetGlobalZoom(1d);
             e.Handled = true;
         }
     }
 
-    private static FrameworkElement? FindEnabledElement(Window window)
-    {
-        return FindEnabledElement(window.Content as DependencyObject);
-    }
-
-    private static FrameworkElement? FindEnabledElement(DependencyObject? element)
-    {
-        if (element is null)
-            return null;
-
-        if (element is FrameworkElement frameworkElement && GetIsEnabled(frameworkElement))
-            return frameworkElement;
-
-        var childCount = VisualTreeHelper.GetChildrenCount(element);
-        for (var i = 0; i < childCount; i++)
-        {
-            var child = VisualTreeHelper.GetChild(element, i);
-            var result = FindEnabledElement(child);
-            if (result is not null)
-                return result;
-        }
-
-        return null;
-    }
+    private static double ClampZoom(double zoom) =>
+        Math.Clamp(zoom, ZoomLevels[0], ZoomLevels[^1]);
 
     private static double GetNextZoom(double zoom)
     {
