@@ -255,7 +255,7 @@ public partial class AppTitleBar : UserControl
     private static IntPtr MakeLParam(int lo, int hi) =>
         (hi << 16) | (lo & 0xFFFF);
 
-    [LibraryImport("user32.dll")]
+    [LibraryImport("user32.dll", EntryPoint = "SendMessageW")]
     private static partial IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
     [LibraryImport("user32.dll", EntryPoint = "GetWindowLong")]
