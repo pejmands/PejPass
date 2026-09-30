@@ -59,9 +59,6 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial int SelectedRevealSecretIndex { get; set; }
 
-    [ObservableProperty]
-    public partial int SelectedRevealSecretIndex { get; set; }
-
     public string[] ThemeOptions { get; } = ["System", "Dark", "Light"];
 
     public string[] FontSizeOptions { get; } = ["Small", "Medium", "Large"];
@@ -104,7 +101,6 @@ public partial class SettingsViewModel : ObservableObject
         SelectedFontSizeIndex = (int)settings.FontSize;
         SelectedZoomIndex = GetZoomIndex(settings.Zoom);
         SelectedRevealSecretIndex = GetRevealSecretIndex(settings.RevealSecretSeconds);
-        SelectedRevealSecretIndex = GetRevealSecretIndex(settings.RevealSecretSeconds);
         _suppressZoomPreview = false;
         _suppressThemePreview = false;
     }
@@ -141,12 +137,6 @@ public partial class SettingsViewModel : ObservableObject
         if (_suppressZoomPreview) return;
         if (value < 0 || value >= ZoomOptions.Length) return;
         ZoomBehavior.SetGlobalZoom(ZoomBehavior.ZoomLevels[value]);
-    }
-
-    partial void OnSelectedRevealSecretIndexChanged(int value)
-    {
-        if (value < 0 || value >= RevealSecretValues.Length) return;
-        RevealSecretSeconds = RevealSecretValues[value];
     }
 
     partial void OnSelectedRevealSecretIndexChanged(int value)
