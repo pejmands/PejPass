@@ -7,7 +7,6 @@ using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
 using System.Windows;
-using Forms = System.Windows.Forms;
 using ThemeMode = PejPass.Domain.Settings.ThemeMode;
 
 namespace PejPass.Wpf.ViewModels;
@@ -160,21 +159,21 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void     [RelayCommand]
     private void BrowseDefaultVaultDirectory()
     {
-        using var dialog = new Forms.FolderBrowserDialog
+        var dialog = new Microsoft.Win32.OpenFolderDialog
         {
-            Description = "Select the default folder for new vaults.",
-            UseDescriptionForTitle = true,
-            SelectedPath = Directory.Exists(DefaultVaultDirectory)
+            Title = "Select the default folder for new vaults.",
+            InitialDirectory = Directory.Exists(DefaultVaultDirectory)
                 ? DefaultVaultDirectory
                 : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
         };
 
-        if (dialog.ShowDialog() == Forms.DialogResult.OK &&
-            !string.IsNullOrWhiteSpace(dialog.SelectedPath))
+        if (dialog.ShowDialog() == true &&
+            !string.IsNullOrWhiteSpace(dialog.FolderName))
         {
-            DefaultVaultDirectory = dialog.SelectedPath;
+            DefaultVaultDirectory = dialog.FolderName;
         }
     }
 
