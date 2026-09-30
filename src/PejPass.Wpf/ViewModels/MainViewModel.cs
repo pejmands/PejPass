@@ -30,6 +30,7 @@ public partial class MainViewModel : ObservableObject
     private System.Timers.Timer? _autoLockTimer;
     private DispatcherTimer? _totpTimer;
     private bool _isPasswordVisible;
+    private readonly SecretRevealTimer _passwordRevealTimer = new();
     private DateTime _lastAutoLockActivityUtc;
 
     public event EventHandler? RequestLock;
@@ -145,6 +146,7 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedEntryChanged(VaultEntry? value)
     {
+        _passwordRevealTimer.Stop();
         _isPasswordVisible = false;
         HasSelection = value is not null;
         HasUrl = !string.IsNullOrWhiteSpace(value?.Url);
@@ -181,6 +183,9 @@ public partial class MainViewModel : ObservableObject
 
     private void RebuildDisplayCustomFields()
     {
+        foreach (var item in DisplayCustomFields)
+            item.Dispose();
+
         DisplayCustomFields.Clear();
         if (SelectedEntry?.CustomFields is null) return;
 
@@ -521,6 +526,21 @@ public partial class MainViewModel : ObservableObject
     private void TogglePasswordVisibility()
     {
         _isPasswordVisible = !_isPasswordVisible;
+
+        if (_isPasswordVisible)
+        {
+            var seconds = _settings.RevealSecretSeconds;
+            _passwordRevealTimer.Start(seconds, () =>
+            {
+                _isPasswordVisible = false;
+                UpdatePasswordDisplay();
+            });
+        }
+        else
+        {
+            _passwordRevealTimer.Stop();
+        }
+
         UpdatePasswordDisplay();
         ResetAutoLockTimer();
     }
@@ -528,9 +548,14 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void ToggleCustomFieldVisibility(CustomFieldDisplayItem? item)
     {
-        if (item is null || !item.IsSecret) return;
+        if (item is null || !item.IsSecret)
+            return;
 
-        item.IsRevealed = !item.IsRevealed;
+        if (item.IsRevealed)
+            item.Hide();
+        else
+            item.Reveal(_settings.RevealSecretSeconds);
+
         ResetAutoLockTimer();
     }
 
@@ -1126,8 +1151,10 @@ public partial class MainViewModel : ObservableObject
     }
 }
 
-public partial class CustomFieldDisplayItem(CustomField field) : ObservableObject
+public partial class CustomFieldDisplayItem(CustomField field) : ObservableObject, IDisposable
 {
+    private readonly SecretRevealTimer _revealTimer = new();
+
     public string Name { get; } = field.Name;
     public string Value { get; } = field.Value;
     public bool IsSecret { get; } = field.IsSecret;
@@ -1141,6 +1168,23 @@ public partial class CustomFieldDisplayItem(CustomField field) : ObservableObjec
             : Value;
 
     public string RevealButtonText => IsRevealed ? "Hide" : "Show";
+
+    public void Reveal(int seconds)
+    {
+        IsRevealed = true;
+        _revealTimer.Start(seconds, Hide);
+    }
+
+    public void Hide()
+    {
+        _revealTimer.Stop();
+        IsRevealed = false;
+    }
+
+    public void Dispose()
+    {
+        _revealTimer.Dispose();
+    }
 
     partial void OnIsRevealedChanged(bool value)
     {
