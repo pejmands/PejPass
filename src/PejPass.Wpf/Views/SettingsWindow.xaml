@@ -161,6 +161,7 @@
                         <StackPanel Orientation="Horizontal"
                                     Height="36">
                             <TextBox x:Name="AutoLockTextBox"
+                                     MaxLength="4"
                                      Text="{Binding AutoLockMinutes, UpdateSourceTrigger=PropertyChanged}"
                                      Width="70"
                                      Height="36"
@@ -235,6 +236,7 @@
                         <StackPanel Orientation="Horizontal"
                                     Height="36">
                             <TextBox x:Name="ClipboardTextBox"
+                                     MaxLength="3"
                                      Text="{Binding ClipboardClearSeconds, UpdateSourceTrigger=PropertyChanged}"
                                      Width="70"
                                      Height="36"
