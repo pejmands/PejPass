@@ -21,6 +21,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ThemeMode _savedTheme;
     private readonly int _savedAutoLock;
     private readonly int _savedClipboard;
+    private readonly int _savedRevealSecret;
     private readonly bool _savedWindowsHello;
     private readonly FontSizeMode _savedFontSize;
     private readonly double _savedZoom;
@@ -33,6 +34,9 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     public partial int ClipboardClearSeconds { get; set; }
+
+    [ObservableProperty]
+    public partial int RevealSecretSeconds { get; set; }
 
     [ObservableProperty]
     public partial string? AutoLockError { get; set; }
@@ -55,11 +59,18 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial int SelectedRevealSecretIndex { get; set; }
 
+    [ObservableProperty]
+    public partial int SelectedRevealSecretIndex { get; set; }
+
     public string[] ThemeOptions { get; } = ["System", "Dark", "Light"];
 
     public string[] FontSizeOptions { get; } = ["Small", "Medium", "Large"];
 
     public string[] ZoomOptions { get; } = ["80%", "90%", "100%", "110%", "120%", "130%", "140%"];
+
+    public string[] RevealSecretOptions { get; } = ["Never", "5 seconds", "10 seconds", "30 seconds", "1 minute"];
+
+    public int[] RevealSecretValues { get; } = [0, 5, 10, 30, 60];
 
     public event EventHandler? RequestClose;
     public event EventHandler? ValidationFailed;
@@ -78,6 +89,7 @@ public partial class SettingsViewModel : ObservableObject
         _savedTheme = settings.Theme;
         _savedAutoLock = settings.AutoLockMinutes;
         _savedClipboard = settings.ClipboardClearSeconds;
+        _savedRevealSecret = settings.RevealSecretSeconds;
         _savedWindowsHello = settings.WindowsHelloEnabled;
         _savedFontSize = settings.FontSize;
         _savedZoom = settings.Zoom;
@@ -86,10 +98,12 @@ public partial class SettingsViewModel : ObservableObject
         _suppressZoomPreview = true;
         AutoLockMinutes = settings.AutoLockMinutes;
         ClipboardClearSeconds = settings.ClipboardClearSeconds;
+        RevealSecretSeconds = settings.RevealSecretSeconds;
         SelectedThemeIndex = (int)settings.Theme;
         WindowsHelloEnabled = settings.WindowsHelloEnabled;
         SelectedFontSizeIndex = (int)settings.FontSize;
         SelectedZoomIndex = GetZoomIndex(settings.Zoom);
+        SelectedRevealSecretIndex = GetRevealSecretIndex(settings.RevealSecretSeconds);
         SelectedRevealSecretIndex = GetRevealSecretIndex(settings.RevealSecretSeconds);
         _suppressZoomPreview = false;
         _suppressThemePreview = false;
@@ -135,6 +149,12 @@ public partial class SettingsViewModel : ObservableObject
         RevealSecretSeconds = RevealSecretValues[value];
     }
 
+    partial void OnSelectedRevealSecretIndexChanged(int value)
+    {
+        if (value < 0 || value >= RevealSecretValues.Length) return;
+        RevealSecretSeconds = RevealSecretValues[value];
+    }
+
     partial void OnSelectedThemeIndexChanged(int value)
     {
         if (_suppressThemePreview) return;
@@ -171,6 +191,7 @@ public partial class SettingsViewModel : ObservableObject
 
         _settings.AutoLockMinutes = AutoLockMinutes;
         _settings.ClipboardClearSeconds = ClipboardClearSeconds;
+        _settings.RevealSecretSeconds = RevealSecretSeconds;
         _settings.Theme = (ThemeMode)SelectedThemeIndex;
         _settings.WindowsHelloEnabled = WindowsHelloEnabled;
         _settings.FontSize = (FontSizeMode)SelectedFontSizeIndex;
@@ -207,6 +228,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.Theme = _savedTheme;
         _settings.AutoLockMinutes = _savedAutoLock;
         _settings.ClipboardClearSeconds = _savedClipboard;
+        _settings.RevealSecretSeconds = _savedRevealSecret;
         _settings.WindowsHelloEnabled = _savedWindowsHello;
         _settings.FontSize = _savedFontSize;
         _settings.Zoom = _savedZoom;
@@ -216,6 +238,8 @@ public partial class SettingsViewModel : ObservableObject
         {
             AutoLockMinutes = _savedAutoLock;
             ClipboardClearSeconds = _savedClipboard;
+            RevealSecretSeconds = _savedRevealSecret;
+            SelectedRevealSecretIndex = GetRevealSecretIndex(_savedRevealSecret);
             SelectedThemeIndex = (int)_savedTheme;
             WindowsHelloEnabled = _savedWindowsHello;
             SelectedFontSizeIndex = (int)_savedFontSize;
@@ -252,6 +276,12 @@ public partial class SettingsViewModel : ObservableObject
         {
             _suppressZoomPreview = false;
         }
+    }
+
+    private static int GetRevealSecretIndex(int seconds)
+    {
+        var index = Array.IndexOf([0, 5, 10, 30, 60], seconds);
+        return index >= 0 ? index : 2;
     }
 
     private static int GetRevealSecretIndex(int seconds)
