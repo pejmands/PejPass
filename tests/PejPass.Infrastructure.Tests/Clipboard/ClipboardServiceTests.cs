@@ -7,6 +7,7 @@ public sealed class ClipboardServiceTests
     [Fact]
     public async Task CopyWithTimeout_WhenClipboardStillContainsCopiedText_ClearsClipboard()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var clipboard = new FakeClipboardProvider();
         var dispatcher = new FakeUiDispatcher();
         var service = new ClipboardService(clipboard, dispatcher);
@@ -15,7 +16,7 @@ public sealed class ClipboardServiceTests
             "Secret123!",
             TimeSpan.FromMilliseconds(50));
 
-        await Task.Delay(150);
+        await Task.Delay(150, cancellationToken);
 
         Assert.True(clipboard.ClearCalled);
         Assert.Null(clipboard.Text);
@@ -55,6 +56,7 @@ public sealed class ClipboardServiceTests
     [Fact]
     public async Task CopyWithTimeout_WhenClipboardChangedByUser_DoesNotClearClipboard()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var clipboard = new FakeClipboardProvider();
         var dispatcher = new FakeUiDispatcher();
         var service = new ClipboardService(clipboard, dispatcher);
@@ -65,7 +67,7 @@ public sealed class ClipboardServiceTests
 
         clipboard.SetText("User copied text");
 
-        await Task.Delay(150);
+        await Task.Delay(150, cancellationToken);
 
         Assert.False(clipboard.ClearCalled);
         Assert.Equal("User copied text", clipboard.Text);
