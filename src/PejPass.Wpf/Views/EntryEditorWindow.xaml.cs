@@ -36,6 +36,7 @@ public partial class EntryEditorWindow : Window
                     AttachTagCaseWarningAdorner();
                     AttachNestedScrollChains();
                     RefreshTagCaseWarnings();
+                    FocusTitle();
                 });
         };
 
@@ -44,6 +45,12 @@ public partial class EntryEditorWindow : Window
     }
 
     private TagCaseWarningAdorner? _tagCaseWarningAdorner;
+
+    private void FocusTitle()
+    {
+        TitleTextBox.Focus();
+        TitleTextBox.CaretIndex = TitleTextBox.Text.Length;
+    }
 
     private void AttachTagCaseWarningAdorner()
     {
