@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Application.Services;
 using PejPass.Domain.Entities;
+using PejPass.Domain.Settings;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using System.Collections.ObjectModel;
@@ -12,6 +13,7 @@ public partial class HistoryViewModel : ObservableObject
 {
     private readonly VaultSession _vaultSession;
     private readonly VaultService _vaultService;
+    private readonly AppSettings _settings;
 
     public ObservableCollection<HistoryRow> Items { get; } = [];
 
@@ -93,10 +95,12 @@ public partial class HistoryViewModel : ObservableObject
 
     public HistoryViewModel(
         VaultSession vaultSession,
-        VaultService vaultService)
+        VaultService vaultService,
+        AppSettings settings)
     {
         _vaultSession = vaultSession;
         _vaultService = vaultService;
+        _settings = settings;
 
         Load();
 
@@ -313,7 +317,8 @@ public partial class HistoryViewModel : ObservableObject
             currentValue,
             snapshotValue,
             isChanged,
-            isSecret);
+            isSecret,
+            _settings.RevealSecretSeconds);
 
         row.PropertyChanged += OnFieldPropertyChanged;
 
@@ -331,7 +336,10 @@ public partial class HistoryViewModel : ObservableObject
     private void ClearFields()
     {
         foreach (var field in Fields)
+        {
             field.PropertyChanged -= OnFieldPropertyChanged;
+            field.Dispose();
+        }
 
         Fields.Clear();
     }
@@ -667,8 +675,11 @@ public partial class HistoryFieldRow(
     string currentValue,
     string snapshotValue,
     bool isChanged,
-    bool isSecret) : ObservableObject
+    bool isSecret,
+    int revealSecretSeconds) : ObservableObject
 {
+    private readonly SecretRevealTimer _revealTimer = new();
+
     public EntryHistoryField Field { get; } = field;
 
     public string Name { get; } = name;
@@ -707,8 +718,25 @@ public partial class HistoryFieldRow(
     [RelayCommand]
     private void ToggleSecretVisibility()
     {
-        if (IsSecret)
-            IsSecretVisible = !IsSecretVisible;
+        if (!IsSecret)
+            return;
+
+        if (IsSecretVisible)
+        {
+            _revealTimer.Stop();
+            IsSecretVisible = false;
+            return;
+        }
+
+        IsSecretVisible = true;
+        _revealTimer.Start(
+            revealSecretSeconds,
+            () => IsSecretVisible = false);
+    }
+
+    public void Dispose()
+    {
+        _revealTimer.Dispose();
     }
 
     private static string MaskSecret(string value)
