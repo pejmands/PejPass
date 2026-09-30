@@ -1,11 +1,11 @@
+using Microsoft.Extensions.DependencyInjection;
+using PejPass.Wpf.Services;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 
 namespace PejPass.Wpf.Controls;
-
-using PejPass.Wpf.Services;
 
 public partial class PasswordRevealBox : UserControl
 {

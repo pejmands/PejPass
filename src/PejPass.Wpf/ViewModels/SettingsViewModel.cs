@@ -6,6 +6,7 @@ using PejPass.Wpf.Controls;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
+using System.IO;
 using System.Windows;
 using ThemeMode = PejPass.Domain.Settings.ThemeMode;
 
