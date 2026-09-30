@@ -11,6 +11,7 @@ public sealed class VaultStoreAuthenticationTests
     [Fact]
     public async Task CreateAndOpenAsync_WithValidVault_Succeeds()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var path = Path.Combine(
             Path.GetTempPath(),
             $"{Guid.NewGuid():N}.pejp");
@@ -23,11 +24,13 @@ public sealed class VaultStoreAuthenticationTests
             await store.CreateAsync(
                 path,
                 "password",
-                vault);
+                vault,
+                cancellationToken);
 
             var opened = await store.OpenAsync(
                 path,
-                "password");
+                "password",
+                cancellationToken);
 
             Assert.NotNull(opened);
         }
@@ -41,6 +44,7 @@ public sealed class VaultStoreAuthenticationTests
     [Fact]
     public async Task OpenAsync_WhenSaltIsModified_ThrowsAuthenticationException()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var path = Path.Combine(
             Path.GetTempPath(),
             $"{Guid.NewGuid():N}.pejp");
@@ -53,19 +57,28 @@ public sealed class VaultStoreAuthenticationTests
             await store.CreateAsync(
                 path,
                 "password",
-                vault);
+                vault,
+                cancellationToken);
 
-            var data = await File.ReadAllBytesAsync(path);
+            var data = await File.ReadAllBytesAsync(
+                path,
+                cancellationToken);
 
             // PEJP (4) + version (1) + salt length (2)
             const int saltOffset = 7;
 
             data[saltOffset] ^= 0x01;
 
-            await File.WriteAllBytesAsync(path, data);
+            await File.WriteAllBytesAsync(
+                path,
+                data,
+                cancellationToken);
 
             await Assert.ThrowsAsync<AuthenticationTagMismatchException>(() =>
-                store.OpenAsync(path, "password"));
+                store.OpenAsync(
+                    path,
+                    "password",
+                    cancellationToken));
         }
         finally
         {
