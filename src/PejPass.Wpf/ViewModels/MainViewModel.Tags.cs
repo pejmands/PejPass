@@ -9,6 +9,8 @@ public partial class MainViewModel
     /// <summary>null / empty = show all entries.</summary>
     public string? SelectedTagFilter { get; private set; }
 
+    public bool IsNoTagsFilterSelected { get; private set; }
+
     public ObservableCollection<TagFilterItem> TagFilters { get; } = [];
 
     /// <summary>True when the vault uses at least one tag (strip is worth showing).</summary>
@@ -22,6 +24,7 @@ public partial class MainViewModel
     private void RebuildTagFilters()
     {
         var selected = SelectedTagFilter;
+        var noTagsSelected = IsNoTagsFilterSelected;
 
         var counts = new Dictionary<string, int>(StringComparer.Ordinal);
         var labels = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -45,14 +48,31 @@ public partial class MainViewModel
         if (!string.IsNullOrEmpty(selected) && !counts.ContainsKey(selected))
             SelectedTagFilter = selected = null;
 
+        var noTagsCount = Entries.Count(entry =>
+            !entry.Tags.Any(tag => !string.IsNullOrWhiteSpace(tag)));
+
+        if (noTagsCount == 0)
+            IsNoTagsFilterSelected = noTagsSelected = false;
+
         TagFilters.Clear();
         TagFilters.Add(new TagFilterItem
         {
             Name = "All",
             Count = Entries.Count,
             IsAll = true,
-            IsSelected = string.IsNullOrEmpty(selected)
+            IsSelected = string.IsNullOrEmpty(selected) && !noTagsSelected
         });
+
+        if (noTagsCount > 0)
+        {
+            TagFilters.Add(new TagFilterItem
+            {
+                Name = "No tags",
+                Count = noTagsCount,
+                IsNoTags = true,
+                IsSelected = noTagsSelected
+            });
+        }
 
         foreach (var kv in counts
                      .OrderByDescending(x => x.Value)
@@ -62,7 +82,7 @@ public partial class MainViewModel
             {
                 Name = labels[kv.Key],
                 Count = kv.Value,
-                IsSelected = selected is not null &&
+                IsSelected = !noTagsSelected && selected is not null &&
                              selected.Equals(kv.Key, StringComparison.Ordinal)
             });
         }
@@ -77,18 +97,35 @@ public partial class MainViewModel
         if (item is null) return;
 
         if (item.IsAll)
+        {
             SelectedTagFilter = null;
+            IsNoTagsFilterSelected = false;
+        }
+        else if (item.IsNoTags)
+        {
+            SelectedTagFilter = null;
+            IsNoTagsFilterSelected = !IsNoTagsFilterSelected;
+        }
         else if (SelectedTagFilter is not null &&
                  SelectedTagFilter.Equals(item.Name, StringComparison.Ordinal))
+        {
             SelectedTagFilter = null; // click again clears
+            IsNoTagsFilterSelected = false;
+        }
         else
+        {
             SelectedTagFilter = item.Name;
+            IsNoTagsFilterSelected = false;
+        }
 
         foreach (var chip in TagFilters)
             chip.IsSelected = chip.IsAll
-                ? string.IsNullOrEmpty(SelectedTagFilter)
-                : SelectedTagFilter is not null &&
-                  chip.Name.Equals(SelectedTagFilter, StringComparison.Ordinal);
+                ? string.IsNullOrEmpty(SelectedTagFilter) && !IsNoTagsFilterSelected
+                : chip.IsNoTags
+                    ? IsNoTagsFilterSelected
+                    : !IsNoTagsFilterSelected &&
+                      SelectedTagFilter is not null &&
+                      chip.Name.Equals(SelectedTagFilter, StringComparison.Ordinal);
 
         ApplyFilter();
         ResetAutoLockTimer();
@@ -100,9 +137,10 @@ public partial class TagFilterItem : ObservableObject
     public string Name { get; init; } = string.Empty;
     public int Count { get; init; }
     public bool IsAll { get; init; }
+    public bool IsNoTags { get; init; }
 
     [ObservableProperty]
     public partial bool IsSelected { get; set; }
 
-    public string DisplayLabel => IsAll ? $"All ({Count})" : $"{Name} ({Count})";
+    public string DisplayLabel => $"{Name} ({Count})";
 }
