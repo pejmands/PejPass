@@ -147,7 +147,7 @@
             <!-- Buttons -->
             <Style TargetType="Button">
                 <Setter Property="Height" Value="32"/>
-                <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+                <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                 <Setter Property="Padding" Value="14,8"/>
                 <Setter Property="BorderThickness" Value="0"/>
