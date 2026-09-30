@@ -118,7 +118,8 @@ public partial class MainViewModel : ObservableObject
     public bool IsEntryListEmpty => FilteredEntries.Count == 0;
     public bool HasActiveEntryFilter =>
         !string.IsNullOrWhiteSpace(SearchText) ||
-        !string.IsNullOrWhiteSpace(SelectedTagFilter);
+        !string.IsNullOrWhiteSpace(SelectedTagFilter) ||
+        IsNoTagsFilterSelected;
 
     public MainViewModel(
         VaultService vaultService,
@@ -327,7 +328,12 @@ public partial class MainViewModel : ObservableObject
 
         IEnumerable<VaultEntry> source = Entries;
 
-        if (!string.IsNullOrEmpty(SelectedTagFilter))
+        if (IsNoTagsFilterSelected)
+        {
+            source = source.Where(e =>
+                !e.Tags.Any(t => !string.IsNullOrWhiteSpace(t)));
+        }
+        else if (!string.IsNullOrEmpty(SelectedTagFilter))
         {
             var tag = SelectedTagFilter;
             source = source.Where(e =>
