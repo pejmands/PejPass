@@ -6,11 +6,6 @@ namespace PejPass.Domain.Settings;
 /// </summary>
 public sealed class AppSettings
 {
-    public string DefaultVaultDirectory { get; set; } =
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "PejPass");
-
     public string? LastVaultPath { get; set; }
 
     public int AutoLockMinutes { get; set; } = 10;
