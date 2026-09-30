@@ -454,8 +454,7 @@ public partial class MainViewModel : ObservableObject
         return Entries
             .SelectMany(e => e.Tags)
             .Where(t => !string.IsNullOrWhiteSpace(t))
-            .Select(t => t.Trim())
-            .Distinct(StringComparer.Ordinal);
+            .Select(t => t.Trim());
     }
 
     [RelayCommand]
