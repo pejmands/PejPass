@@ -74,6 +74,93 @@
 
             <StackPanel Grid.Column="1" Orientation="Horizontal">
 
+                <StackPanel x:Name="MainActionsPanel"
+                            Orientation="Horizontal"
+                            Visibility="Collapsed">
+                    <Button x:Name="LockButton"
+                            Style="{StaticResource ToolbarIconButton}"
+                            Content="&#xE72E;"
+                            Width="40"
+                            Height="40"
+                            Command="{Binding DataContext.LockCommand,
+                                              RelativeSource={RelativeSource AncestorType=Window}}"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            ToolTip="Lock vault (Ctrl+L)"/>
+
+                    <Button x:Name="MoreActionsButton"
+                            Style="{StaticResource ToolbarIconButton}"
+                            Content="&#xE712;"
+                            Width="40"
+                            Height="40"
+                            Click="MoreActionsButton_Click"
+                            PreviewMouseRightButtonDown="MoreActionsButton_OnPreviewMouseRightButtonDown"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            ToolTip="More actions"/>
+                    <Popup x:Name="MoreActionsPopup"
+                           PlacementTarget="{Binding ElementName=MoreActionsButton}"
+                           Placement="Bottom"
+                           HorizontalOffset="0"
+                           VerticalOffset="6"
+                           StaysOpen="False"
+                           AllowsTransparency="True"
+                           DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <Border Style="{StaticResource ToolbarOverflowBorder}">
+                            <StackPanel>
+                                <MenuItem Header="Vault Health"
+                                          InputGestureText="Ctrl+H"
+                                          Command="{Binding OpenHealthCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}"/>
+                                <MenuItem Header="History"
+                                          Command="{Binding OpenHistoryCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}"/>
+                                <MenuItem Header="Trash"
+                                          InputGestureText="Ctrl+Shift+T"
+                                          Command="{Binding OpenTrashCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}"/>
+                                <Separator Margin="4,5"
+                                           Background="{DynamicResource BorderBrush}"/>
+                                <MenuItem Header="Backup"
+                                          InputGestureText="Ctrl+B"
+                                          Command="{Binding ExportBackupCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}"/>
+                                <MenuItem Header="Restore"
+                                          Command="{Binding RestoreBackupCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}"/>
+                                <Separator Margin="4,5"
+                                           Background="{DynamicResource BorderBrush}"/>
+                                <MenuItem Header="Import CSV"
+                                          Command="{Binding ImportCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}"/>
+                                <MenuItem Header="Export CSV"
+                                          Command="{Binding ExportCsvCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}"/>
+                                <Separator Margin="4,5"
+                                           Background="{DynamicResource BorderBrush}"/>
+                                <MenuItem Header="About PejPass"
+                                          Command="{Binding OpenAboutCommand}"
+                                          Style="{StaticResource ToolbarMenuItem}"/>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+
+                    <Button x:Name="SettingsButton"
+                            Style="{StaticResource ToolbarIconButton}"
+                            Content="&#xE713;"
+                            Width="40"
+                            Height="40"
+                            Command="{Binding DataContext.OpenSettingsCommand,
+                                              RelativeSource={RelativeSource AncestorType=Window}}"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            ToolTip="Settings (Ctrl+S)"/>
+                </StackPanel>
+
+                <Border x:Name="MainActionsSeparator"
+                        Width="1"
+                        Height="20"
+                        Margin="6,0,4,0"
+                        Background="{DynamicResource BorderBrush}"
+                        Visibility="Collapsed"/>
+
                 <Button x:Name="MinButton"
                         IsTabStop="False"
                         Click="Minimize_Click"
