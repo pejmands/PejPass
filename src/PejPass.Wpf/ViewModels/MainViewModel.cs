@@ -331,7 +331,7 @@ public partial class MainViewModel : ObservableObject
         {
             var tag = SelectedTagFilter;
             source = source.Where(e =>
-                e.Tags.Any(t => string.Equals(t.Trim(), tag, StringComparison.OrdinalIgnoreCase)));
+                e.Tags.Any(t => string.Equals(t.Trim(), tag, StringComparison.Ordinal)));
         }
 
         if (!string.IsNullOrEmpty(q))
