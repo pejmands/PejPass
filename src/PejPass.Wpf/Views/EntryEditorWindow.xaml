@@ -268,7 +268,8 @@
                             FontSize="{DynamicResource AppFontSize12}"/>
                 </Grid>
 
-                <ItemsControl ItemsSource="{Binding CustomFields}"
+                <ItemsControl x:Name="CustomFieldsItemsControl"
+                              ItemsSource="{Binding CustomFields}"
                               Margin="0,0,0,20">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
