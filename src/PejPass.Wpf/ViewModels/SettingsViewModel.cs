@@ -7,6 +7,7 @@ using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
 using System.Windows;
+using Forms = System.Windows.Forms;
 using ThemeMode = PejPass.Domain.Settings.ThemeMode;
 
 namespace PejPass.Wpf.ViewModels;
@@ -25,6 +26,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly bool _savedWindowsHello;
     private readonly FontSizeMode _savedFontSize;
     private readonly double _savedZoom;
+    private readonly string _savedDefaultVaultDirectory;
 
     private bool _suppressThemePreview;
     private bool _suppressZoomPreview;
@@ -59,6 +61,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial int SelectedRevealSecretIndex { get; set; }
 
+    [ObservableProperty]
+    public partial string DefaultVaultDirectory { get; set; } = string.Empty;
+
     public string[] ThemeOptions { get; } = ["System", "Dark", "Light"];
 
     public string[] FontSizeOptions { get; } = ["Small", "Medium", "Large"];
@@ -90,6 +95,7 @@ public partial class SettingsViewModel : ObservableObject
         _savedWindowsHello = settings.WindowsHelloEnabled;
         _savedFontSize = settings.FontSize;
         _savedZoom = settings.Zoom;
+        _savedDefaultVaultDirectory = settings.DefaultVaultDirectory;
 
         _suppressThemePreview = true;
         _suppressZoomPreview = true;
@@ -101,6 +107,7 @@ public partial class SettingsViewModel : ObservableObject
         SelectedFontSizeIndex = (int)settings.FontSize;
         SelectedZoomIndex = GetZoomIndex(settings.Zoom);
         SelectedRevealSecretIndex = GetRevealSecretIndex(settings.RevealSecretSeconds);
+        DefaultVaultDirectory = settings.DefaultVaultDirectory;
         _suppressZoomPreview = false;
         _suppressThemePreview = false;
     }
@@ -153,6 +160,25 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void BrowseDefaultVaultDirectory()
+    {
+        using var dialog = new Forms.FolderBrowserDialog
+        {
+            Description = "Select the default folder for new vaults.",
+            UseDescriptionForTitle = true,
+            SelectedPath = Directory.Exists(DefaultVaultDirectory)
+                ? DefaultVaultDirectory
+                : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+        };
+
+        if (dialog.ShowDialog() == Forms.DialogResult.OK &&
+            !string.IsNullOrWhiteSpace(dialog.SelectedPath))
+        {
+            DefaultVaultDirectory = dialog.SelectedPath;
+        }
+    }
+
+    [RelayCommand]
     private void Save()
     {
         Validate();
@@ -186,6 +212,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.WindowsHelloEnabled = WindowsHelloEnabled;
         _settings.FontSize = (FontSizeMode)SelectedFontSizeIndex;
         _settings.Zoom = ZoomBehavior.ZoomLevels[SelectedZoomIndex];
+        _settings.DefaultVaultDirectory = DefaultVaultDirectory;
 
         if (!SettingsStore.TrySave(_settings))
         {
@@ -222,6 +249,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.WindowsHelloEnabled = _savedWindowsHello;
         _settings.FontSize = _savedFontSize;
         _settings.Zoom = _savedZoom;
+        _settings.DefaultVaultDirectory = _savedDefaultVaultDirectory;
 
         _suppressThemePreview = true;
         try
@@ -233,6 +261,7 @@ public partial class SettingsViewModel : ObservableObject
             WindowsHelloEnabled = _savedWindowsHello;
             SelectedFontSizeIndex = (int)_savedFontSize;
             SelectedRevealSecretIndex = GetRevealSecretIndex(_savedRevealSecret);
+            DefaultVaultDirectory = _savedDefaultVaultDirectory;
 
             _suppressZoomPreview = true;
             try
