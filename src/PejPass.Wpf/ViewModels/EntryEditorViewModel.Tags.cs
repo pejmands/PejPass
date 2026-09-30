@@ -91,13 +91,24 @@ public partial class EntryEditorViewModel
 
         if (existing >= 0)
         {
-            parts.RemoveAll(t => t.Equals(item.Name, StringComparison.OrdinalIgnoreCase));
-            item.IsSelected = false;
+            if (parts[existing].Equals(item.Name, StringComparison.Ordinal))
+            {
+                parts.RemoveAll(t => t.Equals(item.Name, StringComparison.OrdinalIgnoreCase));
+            }
+            else
+            {
+                parts[existing] = item.Name;
+
+                for (var i = parts.Count - 1; i > existing; i--)
+                {
+                    if (parts[i].Equals(item.Name, StringComparison.OrdinalIgnoreCase))
+                        parts.RemoveAt(i);
+                }
+            }
         }
         else
         {
             parts.Add(item.Name);
-            item.IsSelected = true;
         }
 
         TagsText = string.Join(", ", parts);
@@ -107,7 +118,7 @@ public partial class EntryEditorViewModel
     {
         return TagsText
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Any(t => t.Equals(tag, StringComparison.OrdinalIgnoreCase));
+            .Any(t => t.Equals(tag, StringComparison.Ordinal));
     }
 
     public static List<string> NormalizeTags(string? value)
