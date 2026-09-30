@@ -46,12 +46,25 @@ public partial class AppTitleBar : UserControl
         DependencyProperty.Register(nameof(ShowMaximize), typeof(bool), typeof(AppTitleBar),
             new PropertyMetadata(true, OnChromeFlagsChanged));
 
+    public static readonly DependencyProperty ShowMainActionsProperty =
+        DependencyProperty.Register(
+            nameof(ShowMainActions),
+            typeof(bool),
+            typeof(AppTitleBar),
+            new PropertyMetadata(false, OnChromeFlagsChanged));
+
     public static readonly DependencyProperty ShowFileActionsProperty =
         DependencyProperty.Register(
             nameof(ShowFileActions),
             typeof(bool),
             typeof(AppTitleBar),
             new PropertyMetadata(false));
+
+    public bool ShowMainActions
+    {
+        get => (bool)GetValue(ShowMainActionsProperty);
+        set => SetValue(ShowMainActionsProperty, value);
+    }
 
     public bool ShowFileActions
     {
@@ -341,6 +354,27 @@ public partial class AppTitleBar : UserControl
     {
         MinButton.Visibility = ShowMinimize ? Visibility.Visible : Visibility.Collapsed;
         MaxButton.Visibility = ShowMaximize ? Visibility.Visible : Visibility.Collapsed;
+
+        MainActionsPanel.Visibility = ShowMainActions
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        MainActionsSeparator.Visibility = ShowMainActions
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void MoreActionsButton_OnPreviewMouseRightButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+    }
+
+    private void MoreActionsButton_Click(object sender, RoutedEventArgs e)
+    {
+        MoreActionsPopup.IsOpen = true;
+        e.Handled = true;
     }
 
     private void UpdateMaxIcon()
