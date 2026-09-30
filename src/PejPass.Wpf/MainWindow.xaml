@@ -347,7 +347,17 @@
                                                Margin="0,4,0,0"
                                                Foreground="{DynamicResource MutedBrush}"
                                                TextTrimming="CharacterEllipsis"
-                                               ToolTip="{Binding Username}"/>
+                                               ToolTip="{Binding Username}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Username}" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </StackPanel>
 
                                 <TextBlock Grid.Column="2"
