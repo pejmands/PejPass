@@ -203,8 +203,7 @@ public partial class EntryEditorWindow : Window
         if (field is null)
             return;
 
-        var container = CustomFieldsItemsControl.ItemContainerGenerator.ContainerFromItem(field) as FrameworkElement;
-        if (container is null)
+        if (CustomFieldsItemsControl.ItemContainerGenerator.ContainerFromItem(field) is not FrameworkElement container)
         {
             Dispatcher.BeginInvoke(
                 DispatcherPriority.Loaded,
@@ -361,6 +360,7 @@ internal sealed class TagCaseWarningAdorner : Adorner
                 context.QuadraticBezierTo(
                     new Point(mid, baseline + (up ? -amplitude : amplitude)),
                     new Point(next, baseline),
+                    true,
                     true);
 
                 x = next;
