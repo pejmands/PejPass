@@ -23,8 +23,8 @@ public partial class MainViewModel
     {
         var selected = SelectedTagFilter;
 
-        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        var labels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        var labels = new Dictionary<string, string>(StringComparer.Ordinal);
 
         foreach (var entry in Entries)
         {
@@ -63,7 +63,7 @@ public partial class MainViewModel
                 Name = labels[kv.Key],
                 Count = kv.Value,
                 IsSelected = selected is not null &&
-                             selected.Equals(kv.Key, StringComparison.OrdinalIgnoreCase)
+                             selected.Equals(kv.Key, StringComparison.Ordinal)
             });
         }
 
@@ -79,7 +79,7 @@ public partial class MainViewModel
         if (item.IsAll)
             SelectedTagFilter = null;
         else if (SelectedTagFilter is not null &&
-                 SelectedTagFilter.Equals(item.Name, StringComparison.OrdinalIgnoreCase))
+                 SelectedTagFilter.Equals(item.Name, StringComparison.Ordinal))
             SelectedTagFilter = null; // click again clears
         else
             SelectedTagFilter = item.Name;
@@ -88,7 +88,7 @@ public partial class MainViewModel
             chip.IsSelected = chip.IsAll
                 ? string.IsNullOrEmpty(SelectedTagFilter)
                 : SelectedTagFilter is not null &&
-                  chip.Name.Equals(SelectedTagFilter, StringComparison.OrdinalIgnoreCase);
+                  chip.Name.Equals(SelectedTagFilter, StringComparison.Ordinal);
 
         ApplyFilter();
         ResetAutoLockTimer();
