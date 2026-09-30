@@ -226,7 +226,8 @@
                                Foreground="{DynamicResource TextBrush}"/>
                 </Border>
 
-                <TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}"
+                <TextBox x:Name="TagsTextBox"
+                         Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}"
                          Margin="0,0,0,6"
                          TextWrapping="NoWrap"
                          VerticalScrollBarVisibility="Disabled"/>
