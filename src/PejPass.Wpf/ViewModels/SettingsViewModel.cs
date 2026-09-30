@@ -52,6 +52,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial int SelectedZoomIndex { get; set; }
 
+    [ObservableProperty]
+    public partial int SelectedRevealSecretIndex { get; set; }
+
     public string[] ThemeOptions { get; } = ["System", "Dark", "Light"];
 
     public string[] FontSizeOptions { get; } = ["Small", "Medium", "Large"];
@@ -87,6 +90,7 @@ public partial class SettingsViewModel : ObservableObject
         WindowsHelloEnabled = settings.WindowsHelloEnabled;
         SelectedFontSizeIndex = (int)settings.FontSize;
         SelectedZoomIndex = GetZoomIndex(settings.Zoom);
+        SelectedRevealSecretIndex = GetRevealSecretIndex(settings.RevealSecretSeconds);
         _suppressZoomPreview = false;
         _suppressThemePreview = false;
     }
@@ -123,6 +127,12 @@ public partial class SettingsViewModel : ObservableObject
         if (_suppressZoomPreview) return;
         if (value < 0 || value >= ZoomOptions.Length) return;
         ZoomBehavior.SetGlobalZoom(ZoomBehavior.ZoomLevels[value]);
+    }
+
+    partial void OnSelectedRevealSecretIndexChanged(int value)
+    {
+        if (value < 0 || value >= RevealSecretValues.Length) return;
+        RevealSecretSeconds = RevealSecretValues[value];
     }
 
     partial void OnSelectedThemeIndexChanged(int value)
@@ -209,6 +219,7 @@ public partial class SettingsViewModel : ObservableObject
             SelectedThemeIndex = (int)_savedTheme;
             WindowsHelloEnabled = _savedWindowsHello;
             SelectedFontSizeIndex = (int)_savedFontSize;
+            SelectedRevealSecretIndex = GetRevealSecretIndex(_savedRevealSecret);
 
             _suppressZoomPreview = true;
             try
@@ -241,6 +252,12 @@ public partial class SettingsViewModel : ObservableObject
         {
             _suppressZoomPreview = false;
         }
+    }
+
+    private static int GetRevealSecretIndex(int seconds)
+    {
+        var index = Array.IndexOf([0, 5, 10, 30, 60], seconds);
+        return index >= 0 ? index : 2;
     }
 
     private static int GetZoomIndex(double zoom)
