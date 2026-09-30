@@ -1183,6 +1183,7 @@ public partial class CustomFieldDisplayItem(CustomField field) : ObservableObjec
     public void Dispose()
     {
         _revealTimer.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     partial void OnIsRevealedChanged(bool value)

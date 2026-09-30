@@ -41,5 +41,6 @@ public sealed class SecretRevealTimer : IDisposable
     {
         Stop();
         _timer.Tick -= OnTick;
+        GC.SuppressFinalize(this);
     }
 }

@@ -150,5 +150,6 @@ public sealed class ThemeService(AppSettings settings) : IDisposable
     public void Dispose()
     {
         StopWatch();
+        GC.SuppressFinalize(this);
     }
 }
