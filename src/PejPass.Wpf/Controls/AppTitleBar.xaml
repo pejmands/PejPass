@@ -82,6 +82,7 @@
                             Content="&#xE72E;"
                             Width="40"
                             Height="40"
+                            Margin="2,0"
                             Command="{Binding DataContext.LockCommand,
                                               RelativeSource={RelativeSource AncestorType=Window}}"
                             shell:WindowChrome.IsHitTestVisibleInChrome="True"
@@ -92,6 +93,7 @@
                             Content="&#xE712;"
                             Width="40"
                             Height="40"
+                            Margin="2,0"
                             Click="MoreActionsButton_Click"
                             PreviewMouseRightButtonDown="MoreActionsButton_OnPreviewMouseRightButtonDown"
                             shell:WindowChrome.IsHitTestVisibleInChrome="True"
@@ -148,6 +150,7 @@
                             Content="&#xE713;"
                             Width="40"
                             Height="40"
+                            Margin="2,0"
                             Command="{Binding DataContext.OpenSettingsCommand,
                                               RelativeSource={RelativeSource AncestorType=Window}}"
                             shell:WindowChrome.IsHitTestVisibleInChrome="True"
