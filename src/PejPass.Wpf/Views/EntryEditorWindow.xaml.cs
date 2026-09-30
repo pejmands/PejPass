@@ -133,7 +133,7 @@ public partial class EntryEditorWindow : Window
 
             if (!string.IsNullOrEmpty(vm.TotpErrorMessage))
             {
-                TotpSecretBox.Focus();
+                FocusTotpSecret();
                 return;
             }
 
@@ -144,6 +144,19 @@ public partial class EntryEditorWindow : Window
         Result = vm.ToEntry();
         DialogResult = true;
         Close();
+    }
+
+    private void FocusTotpSecret()
+    {
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Loaded,
+            () =>
+            {
+                TotpSecretBox.BringIntoView();
+
+                var passwordBox = FindVisualChildren<PasswordBox>(TotpSecretBox).FirstOrDefault();
+                passwordBox?.Focus();
+            });
     }
 
     private void FocusFirstInvalidCustomField(EntryEditorViewModel vm)
