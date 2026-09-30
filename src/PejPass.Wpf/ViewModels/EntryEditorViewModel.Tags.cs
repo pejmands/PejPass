@@ -34,11 +34,33 @@ public partial class EntryEditorViewModel
         "Work"
     ];
 
+    private readonly List<string> _otherEntryTags = [];
+
     public ObservableCollection<EntryEditorTagItem> SuggestedTags { get; } = [];
 
     public EntryEditorViewModel(VaultEntry? existing, IEnumerable<string>? usedTags)
         : this(existing)
     {
+        if (usedTags is not null)
+        {
+            _otherEntryTags.AddRange(
+                usedTags
+                    .Where(t => !string.IsNullOrWhiteSpace(t))
+                    .Select(t => t.Trim()));
+
+            if (existing is not null)
+            {
+                foreach (var tag in existing.Tags)
+                {
+                    var index = _otherEntryTags.FindIndex(
+                        t => t.Equals(tag.Trim(), StringComparison.Ordinal));
+
+                    if (index >= 0)
+                        _otherEntryTags.RemoveAt(index);
+                }
+            }
+        }
+
         BuildSuggestedTags(usedTags);
     }
 
@@ -74,6 +96,13 @@ public partial class EntryEditorViewModel
                 IsSelected = IsTagSelected(tag)
             });
         }
+    }
+
+    public bool HasCaseVariantInOtherEntries(string tag)
+    {
+        return _otherEntryTags.Any(
+            existing => existing.Equals(tag, StringComparison.OrdinalIgnoreCase) &&
+                        !existing.Equals(tag, StringComparison.Ordinal));
     }
 
     [RelayCommand]
