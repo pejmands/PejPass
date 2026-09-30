@@ -203,6 +203,33 @@
                               ToolTip="Unlock with Windows Hello after first password unlock"/>
                 </Grid>
 
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="180"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel VerticalAlignment="Top">
+                        <TextBlock Text="Master password"
+                                   FontSize="{DynamicResource AppFontSize12}"
+                                   Foreground="{DynamicResource TextBrush}"/>
+                        <TextBlock Text="Change the password used to encrypt and unlock your vault."
+                                   FontSize="{DynamicResource AppFontSize11}"
+                                   Foreground="{DynamicResource MutedBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,4,12,0"/>
+                    </StackPanel>
+
+                    <Button Grid.Column="1"
+                            Style="{StaticResource SecondaryButton}"
+                            Content="Change password"
+                            Command="{Binding ChangeMasterPasswordCommand}"
+                            Height="36"
+                            Padding="12,6"
+                            HorizontalAlignment="Left"
+                            ToolTip="Change the master password used to protect the vault"/>
+                </Grid>
+
                 <!-- Clipboard -->
                 <Border BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="0,0,0,1"
