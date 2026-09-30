@@ -255,17 +255,6 @@ public partial class MainWindow : Window
         SnackbarBorder.Visibility = Visibility.Collapsed;
     }
 
-    private void MoreActionsButton_OnPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        e.Handled = true;
-    }
-
-    private void MoreActionsButton_Click(object sender, RoutedEventArgs e)
-    {
-        MoreActionsPopup.IsOpen = true;
-        e.Handled = true;
-    }
-
     private void FocusSearch()
     {
         SearchBox.FocusInput();
