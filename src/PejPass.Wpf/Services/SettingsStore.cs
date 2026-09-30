@@ -6,6 +6,8 @@ namespace PejPass.Wpf.Services;
 
 public static class SettingsStore
 {
+    private const int MaxAutoLockMinutes = 1440;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -56,19 +58,24 @@ public static class SettingsStore
             needsSave = true;
         }
 
-        if (!TryGetInt32(root, "autoLockMinutes", out var autoLockMinutes) || autoLockMinutes < 0)
+        if (!TryGetInt32(root, "autoLockMinutes", out var autoLockMinutes) ||
+            autoLockMinutes < 0 ||
+            autoLockMinutes > MaxAutoLockMinutes)
         {
             autoLockMinutes = defaults.AutoLockMinutes;
             needsSave = true;
         }
+
         settings.AutoLockMinutes = autoLockMinutes;
 
         if (!TryGetInt32(root, "clipboardClearSeconds", out var clipboardClearSeconds) ||
-            clipboardClearSeconds < 5 || clipboardClearSeconds > 300)
+            clipboardClearSeconds < 5 ||
+            clipboardClearSeconds > 300)
         {
             clipboardClearSeconds = defaults.ClipboardClearSeconds;
             needsSave = true;
         }
+
         settings.ClipboardClearSeconds = clipboardClearSeconds;
 
         if (!TryGetInt32(root, "revealSecretSeconds", out var revealSecretSeconds) ||
@@ -77,6 +84,7 @@ public static class SettingsStore
             revealSecretSeconds = defaults.RevealSecretSeconds;
             needsSave = true;
         }
+
         settings.RevealSecretSeconds = revealSecretSeconds;
 
         if (!TryGetEnumValue<ThemeMode>(root, "theme", out var theme))
@@ -84,6 +92,7 @@ public static class SettingsStore
             theme = defaults.Theme;
             needsSave = true;
         }
+
         settings.Theme = theme;
 
         if (!TryGetEnumValue<FontSizeMode>(root, "fontSize", out var fontSize))
@@ -91,6 +100,7 @@ public static class SettingsStore
             fontSize = defaults.FontSize;
             needsSave = true;
         }
+
         settings.FontSize = fontSize;
 
         if (!TryGetDouble(root, "zoom", out var zoom) ||
@@ -99,6 +109,7 @@ public static class SettingsStore
             zoom = defaults.Zoom;
             needsSave = true;
         }
+
         settings.Zoom = zoom;
 
         if (!TryGetEnumValue<EntrySortMode>(root, "sortMode", out var sortMode))
@@ -106,6 +117,7 @@ public static class SettingsStore
             sortMode = defaults.SortMode;
             needsSave = true;
         }
+
         settings.SortMode = sortMode;
 
         if (!TryGetBool(root, "windowsHelloEnabled", out var windowsHelloEnabled))
@@ -113,6 +125,7 @@ public static class SettingsStore
             windowsHelloEnabled = defaults.WindowsHelloEnabled;
             needsSave = true;
         }
+
         settings.WindowsHelloEnabled = windowsHelloEnabled;
 
         return needsSave;
