@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Threading;
 
 namespace PejPass.Wpf.Controls;
 
@@ -147,8 +148,13 @@ public partial class PasswordRevealBox : UserControl
 
     private static void OnIsRevealedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is PasswordRevealBox control)
-            control.UpdateVisibility();
+        if (d is not PasswordRevealBox control)
+            return;
+
+        if (!control.IsRevealed)
+            control.StopRevealTimer();
+
+        control.UpdateVisibility();
     }
 
     private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
