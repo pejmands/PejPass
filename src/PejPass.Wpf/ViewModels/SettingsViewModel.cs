@@ -14,6 +14,8 @@ namespace PejPass.Wpf.ViewModels;
 
 public partial class SettingsViewModel : ObservableObject
 {
+    private const int MaxAutoLockMinutes = 1440;
+
     private readonly AppSettings _settings;
     private readonly ThemeService _themeService;
     private readonly VaultService _vaultService;
@@ -112,9 +114,12 @@ public partial class SettingsViewModel : ObservableObject
 
     private void ValidateAutoLock()
     {
-        AutoLockError = AutoLockMinutes < 0
-            ? "Auto-lock cannot be negative."
-            : null;
+        AutoLockError = AutoLockMinutes switch
+        {
+            < 0 => "Auto-lock cannot be negative.",
+            > MaxAutoLockMinutes => "Auto-lock cannot exceed 24 hours.",
+            _ => null
+        };
     }
 
     private void ValidateClipboard()
