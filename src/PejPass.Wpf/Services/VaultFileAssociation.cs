@@ -20,21 +20,49 @@ public static partial class VaultFileAssociation
             if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe))
                 return;
 
-            // While debugging under `dotnet run`, ProcessPath can be the apphost — still fine.
             var command = $"\"{exe}\" \"%1\"";
             var icon = $"\"{exe}\",0";
+            var classesPath = @"Software\Classes";
 
-            using var classes = Registry.CurrentUser.CreateSubKey(@"Software\Classes");
-            if (classes is null) return;
+            using var classes = Registry.CurrentUser.OpenSubKey(classesPath);
+            var needsRegistration = false;
 
-            using (var ext = classes.CreateSubKey(Extension))
+            if (classes is null)
+            {
+                needsRegistration = true;
+            }
+            else
+            {
+                using var ext = classes.OpenSubKey(Extension);
+                var registeredProgId = ext?.GetValue(null) as string;
+
+                using var prog = classes.OpenSubKey(ProgId);
+                var registeredIcon = prog?.OpenSubKey("DefaultIcon")?.GetValue(null) as string;
+                var registeredCommand = prog?.OpenSubKey(@"shell\open\command")?.GetValue(null) as string;
+
+                needsRegistration =
+                    !string.Equals(registeredProgId, ProgId, StringComparison.Ordinal) ||
+                    !string.Equals(registeredIcon, icon, StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(registeredCommand, command, StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (!needsRegistration)
+                return;
+
+            using var writableClasses = Registry.CurrentUser.CreateSubKey(classesPath);
+            if (writableClasses is null)
+                return;
+
+            using (var ext = writableClasses.CreateSubKey(Extension))
             {
                 ext?.SetValue(null, ProgId);
             }
 
-            using (var prog = classes.CreateSubKey(ProgId))
+            using (var prog = writableClasses.CreateSubKey(ProgId))
             {
-                if (prog is null) return;
+                if (prog is null)
+                    return;
+
                 prog.SetValue(null, "PejPass Vault");
 
                 using (var defaultIcon = prog.CreateSubKey("DefaultIcon"))
@@ -44,10 +72,10 @@ public static partial class VaultFileAssociation
                 commandKey?.SetValue(null, command);
             }
 
-            // Notify the shell that associations changed (best-effort)
+            // Notify the shell only when the association was changed.
             try
             {
-                SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero); // SHCNE_ASSOCCHANGED
+                SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero);
             }
             catch
             {
