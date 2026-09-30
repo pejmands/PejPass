@@ -725,6 +725,7 @@
 
                                             <TextBlock Text="{Binding Name}"
                                                        Foreground="{DynamicResource MutedBrush}"
+                                                       TextTrimming="CharacterEllipsis"
                                                        VerticalAlignment="Center"/>
 
                                             <Border Grid.Column="1"
