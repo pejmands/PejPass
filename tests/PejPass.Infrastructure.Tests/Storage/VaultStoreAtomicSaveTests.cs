@@ -28,6 +28,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
     [Fact]
     public async Task SaveAsync_WhenEncryptionFails_KeepsPreviousVaultIntact()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var originalPassword = "OriginalPassword1!";
         var originalVault = CreateVault("Original");
 
@@ -37,7 +38,8 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         await store.CreateAsync(
             _vaultPath,
             originalPassword,
-            originalVault);
+            originalVault,
+            cancellationToken);
 
         crypto.FailEncryption = true;
 
@@ -47,13 +49,15 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
             store.SaveAsync(
                 _vaultPath,
                 originalPassword,
-                updatedVault));
+                updatedVault,
+                cancellationToken));
 
         crypto.FailEncryption = false;
 
         var restoredVault = await store.OpenAsync(
             _vaultPath,
-            originalPassword);
+            originalPassword,
+            cancellationToken);
 
         Assert.Equal("Original", restoredVault.Name);
         Assert.Single(restoredVault.Entries);
@@ -65,6 +69,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
     [Fact]
     public async Task SaveAsync_WhenFileMoveFails_KeepsPreviousVaultIntact()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var originalPassword = "OriginalPassword1!";
         var originalVault = CreateVault("Original");
 
@@ -75,7 +80,8 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         await store.CreateAsync(
             _vaultPath,
             originalPassword,
-            originalVault);
+            originalVault,
+            cancellationToken);
 
         var updatedVault = CreateVault("Updated");
 
@@ -83,11 +89,13 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
             store.SaveAsync(
                 _vaultPath,
                 originalPassword,
-                updatedVault));
+                updatedVault,
+                cancellationToken));
 
         var restoredVault = await store.OpenAsync(
             _vaultPath,
-            originalPassword);
+            originalPassword,
+            cancellationToken);
 
         Assert.Equal("Original", restoredVault.Name);
         Assert.Single(restoredVault.Entries);
@@ -99,6 +107,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
     [Fact]
     public async Task ChangeMasterPassword_WhenEncryptionFails_KeepsPreviousVaultAndPasswordIntact()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var originalPassword = "OriginalPassword1!";
         var newPassword = "NewPassword2@";
         var originalVault = CreateVault("Original");
@@ -110,7 +119,8 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         await store.CreateAsync(
             _vaultPath,
             originalPassword,
-            originalVault);
+            originalVault,
+            cancellationToken);
 
         crypto.FailEncryption = true;
 
@@ -121,13 +131,15 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
                 _vaultPath,
                 originalPassword,
                 newPassword,
-                updatedVault));
+                updatedVault,
+                cancellationToken));
 
         crypto.FailEncryption = false;
 
         var restoredVault = await store.OpenAsync(
             _vaultPath,
-            originalPassword);
+            originalPassword,
+            cancellationToken);
 
         Assert.Equal("Original", restoredVault.Name);
         Assert.Single(restoredVault.Entries);
@@ -138,12 +150,14 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         await Assert.ThrowsAsync<AuthenticationTagMismatchException>(() =>
             store.OpenAsync(
                 _vaultPath,
-                newPassword));
+                newPassword,
+                cancellationToken));
     }
 
     [Fact]
     public async Task ChangeMasterPassword_WhenFileMoveFails_KeepsPreviousVaultAndPasswordIntact()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var originalPassword = "OriginalPassword1!";
         var newPassword = "NewPassword2@";
         var originalVault = CreateVault("Original");
@@ -156,7 +170,8 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         await store.CreateAsync(
             _vaultPath,
             originalPassword,
-            originalVault);
+            originalVault,
+            cancellationToken);
 
         var updatedVault = CreateVault("Updated");
 
@@ -165,11 +180,13 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
                 _vaultPath,
                 originalPassword,
                 newPassword,
-                updatedVault));
+                updatedVault,
+                cancellationToken));
 
         var restoredVault = await store.OpenAsync(
             _vaultPath,
-            originalPassword);
+            originalPassword,
+            cancellationToken);
 
         Assert.Equal("Original", restoredVault.Name);
         Assert.Single(restoredVault.Entries);
@@ -180,7 +197,8 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         await Assert.ThrowsAsync<AuthenticationTagMismatchException>(() =>
             store.OpenAsync(
                 _vaultPath,
-                newPassword));
+                newPassword,
+                cancellationToken));
     }
 
     private static Vault CreateVault(string name)
