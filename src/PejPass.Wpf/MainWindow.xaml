@@ -38,6 +38,7 @@
                                       ToolTip="Search (Ctrl+K)"/>
 
                         <Button Grid.Column="1"
+                                Margin="8,0,0,0"
                                 Style="{StaticResource PrimaryButton}"
                                 Content="Add Entry"
                                 Command="{Binding AddEntryCommand}"
@@ -51,7 +52,7 @@
 
                 <!-- Tag Filters: single-row horizontal strip (does not grow with tag count) -->
                 <ScrollViewer DockPanel.Dock="Top"
-                              Margin="16,0,16,12"
+                              Margin="16,0,16,16"
                               Height="44"
                               HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Disabled"
