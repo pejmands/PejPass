@@ -131,12 +131,61 @@ public partial class EntryEditorWindow : Window
                 return;
             }
 
+            if (!string.IsNullOrEmpty(vm.TotpErrorMessage))
+            {
+                TotpSecretBox.Focus();
+                return;
+            }
+
+            FocusFirstInvalidCustomField(vm);
             return;
         }
 
         Result = vm.ToEntry();
         DialogResult = true;
         Close();
+    }
+
+    private void FocusFirstInvalidCustomField(EntryEditorViewModel vm)
+    {
+        var field = vm.CustomFields.FirstOrDefault(f => !string.IsNullOrEmpty(f.ErrorMessage));
+        if (field is null)
+            return;
+
+        var container = CustomFieldsItemsControl.ItemContainerGenerator.ContainerFromItem(field) as FrameworkElement;
+        if (container is null)
+        {
+            Dispatcher.BeginInvoke(
+                DispatcherPriority.Loaded,
+                () => FocusFirstInvalidCustomField(vm));
+            return;
+        }
+
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Loaded,
+            () =>
+            {
+                var target = FindCustomFieldInput(container, field);
+                if (target is null)
+                    return;
+
+                target.BringIntoView();
+                target.Focus();
+            });
+    }
+
+    private static Control? FindCustomFieldInput(FrameworkElement container, CustomFieldItem field)
+    {
+        if (string.IsNullOrWhiteSpace(field.Name))
+            return FindVisualChildren<TextBox>(container).FirstOrDefault();
+
+        if (field.IsSecret)
+            return FindVisualChildren<PasswordBox>(container)
+                .FirstOrDefault(passwordBox => passwordBox.Visibility == Visibility.Visible);
+
+        return FindVisualChildren<TextBox>(container)
+            .Where(textBox => textBox.Visibility == Visibility.Visible)
+            .LastOrDefault();
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e)
