@@ -10,6 +10,7 @@ public sealed class VaultStoreMigrationTests
     [Fact]
     public async Task OpenAsync_WhenVaultIsV1_MigratesItToV2()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var path = Path.Combine(
             Path.GetTempPath(),
             $"{Guid.NewGuid():N}.pejp");
@@ -25,15 +26,19 @@ public sealed class VaultStoreMigrationTests
             await CreateLegacyV1VaultAsync(
                 path,
                 "password",
-                vault);
+                vault,
+                cancellationToken);
 
             var opened = await store.OpenAsync(
                 path,
-                "password");
+                "password",
+                cancellationToken);
 
             Assert.NotNull(opened);
 
-            var data = await File.ReadAllBytesAsync(path);
+            var data = await File.ReadAllBytesAsync(
+                path,
+                cancellationToken);
 
             Assert.Equal(
                 2,
@@ -49,6 +54,7 @@ public sealed class VaultStoreMigrationTests
     [Fact]
     public async Task OpenAsync_WhenVaultIsV2_DoesNotNeedMigration()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var path = Path.Combine(
             Path.GetTempPath(),
             $"{Guid.NewGuid():N}.pejp");
@@ -62,9 +68,12 @@ public sealed class VaultStoreMigrationTests
             await store.CreateAsync(
                 path,
                 "password",
-                new Vault());
+                new Vault(),
+                cancellationToken);
 
-            var data = await File.ReadAllBytesAsync(path);
+            var data = await File.ReadAllBytesAsync(
+                path,
+                cancellationToken);
 
             Assert.Equal(
                 2,
@@ -72,11 +81,14 @@ public sealed class VaultStoreMigrationTests
 
             var opened = await store.OpenAsync(
                 path,
-                "password");
+                "password",
+                cancellationToken);
 
             Assert.NotNull(opened);
 
-            var migratedData = await File.ReadAllBytesAsync(path);
+            var migratedData = await File.ReadAllBytesAsync(
+                path,
+                cancellationToken);
 
             Assert.Equal(
                 2,
@@ -92,7 +104,8 @@ public sealed class VaultStoreMigrationTests
     private static async Task CreateLegacyV1VaultAsync(
         string path,
         string password,
-        Vault vault)
+        Vault vault,
+        CancellationToken cancellationToken)
     {
         const int saltLength = 16;
 
@@ -117,19 +130,22 @@ public sealed class VaultStoreMigrationTests
                 FileShare.None);
 
             await fs.WriteAsync(
-                "PEJP"u8.ToArray());
+                "PEJP"u8.ToArray(),
+                cancellationToken);
 
             await fs.WriteAsync(
-                new byte[] { 1 });
+                new byte[] { 1 },
+                cancellationToken);
 
             await fs.WriteAsync(
                 BitConverter.GetBytes(
-                    (ushort)salt.Length));
+                    (ushort)salt.Length),
+                cancellationToken);
 
-            await fs.WriteAsync(salt);
-            await fs.WriteAsync(nonce);
-            await fs.WriteAsync(tag);
-            await fs.WriteAsync(ciphertext);
+            await fs.WriteAsync(salt, cancellationToken);
+            await fs.WriteAsync(nonce, cancellationToken);
+            await fs.WriteAsync(tag, cancellationToken);
+            await fs.WriteAsync(ciphertext, cancellationToken);
         }
         finally
         {
