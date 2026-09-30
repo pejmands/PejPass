@@ -11,6 +11,13 @@ public partial class MainViewModel
     {
         try { _autoLockTimer?.Stop(); } catch { /* ignore */ }
         try { _totpTimer?.Stop(); } catch { /* ignore */ }
+        try { _passwordRevealTimer.Dispose(); } catch { /* ignore */ }
+        try
+        {
+            foreach (var item in DisplayCustomFields)
+                item.Dispose();
+        }
+        catch { /* ignore */ }
         try { InputManager.Current.PreProcessInput -= OnPreProcessInput; } catch { /* ignore */ }
     }
 }
