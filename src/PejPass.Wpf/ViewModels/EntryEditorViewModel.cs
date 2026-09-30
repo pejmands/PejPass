@@ -403,9 +403,7 @@ public partial class EntryEditorViewModel : ObservableObject
 
     public VaultEntry ToEntry()
     {
-        var tags = TagsText
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .ToList();
+        var tags = EntryEditorViewModel.NormalizeTags(TagsText);
 
         var customFields = CustomFields
             .Where(f => !string.IsNullOrWhiteSpace(f.Name) &&
