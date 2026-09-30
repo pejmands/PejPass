@@ -76,9 +76,8 @@ public partial class LoginViewModel : ObservableObject
         _settings = settings;
         _vaultSession = vaultSession;
 
-        Directory.CreateDirectory(_settings.DefaultVaultDirectory);
         VaultPath = Path.Combine(
-            _settings.DefaultVaultDirectory,
+            GetInitialVaultDirectory(),
             "vault.pejpass");
 
         if (!string.IsNullOrEmpty(_settings.LastVaultPath) &&
@@ -210,6 +209,34 @@ public partial class LoginViewModel : ObservableObject
         StatusMessage = string.Empty;
     }
 
+    private string GetInitialVaultDirectory()
+    {
+        if (!string.IsNullOrWhiteSpace(_settings.LastVaultPath))
+        {
+            try
+            {
+                var lastDirectory = Path.GetDirectoryName(_settings.LastVaultPath);
+
+                if (!string.IsNullOrWhiteSpace(lastDirectory) &&
+                    Directory.Exists(lastDirectory))
+                {
+                    return lastDirectory;
+                }
+            }
+            catch
+            {
+                // Fall back to the application data directory.
+            }
+        }
+
+        var directory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "PejPass");
+
+        Directory.CreateDirectory(directory);
+        return directory;
+    }
+
     [RelayCommand]
     private void Browse()
     {
@@ -220,7 +247,7 @@ public partial class LoginViewModel : ObservableObject
                 Filter = "PejPass Vault (*.pejpass)|*.pejpass",
                 DefaultExt = ".pejpass",
                 FileName = "vault.pejpass",
-                InitialDirectory = _settings.DefaultVaultDirectory,
+                InitialDirectory = GetInitialVaultDirectory(),
                 OverwritePrompt = true
             };
 
@@ -232,7 +259,7 @@ public partial class LoginViewModel : ObservableObject
             var dlg = new OpenFileDialog
             {
                 Filter = "PejPass Vault (*.pejpass)|*.pejpass",
-                InitialDirectory = _settings.DefaultVaultDirectory
+                InitialDirectory = GetInitialVaultDirectory()
             };
 
             if (dlg.ShowDialog() == true)
