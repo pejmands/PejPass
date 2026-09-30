@@ -263,65 +263,6 @@
                                Foreground="{DynamicResource TextBrush}"/>
                 </Border>
 
-                <Grid Margin="0,0,0,20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="180"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel VerticalAlignment="Top">
-                        <TextBlock Text="Default vault location"
-                                   FontSize="{DynamicResource AppFontSize12}"
-                                   Foreground="{DynamicResource TextBrush}"/>
-                        <TextBlock Text="New vaults use this folder by default. You can choose a different location when creating a vault."
-                                   FontSize="{DynamicResource AppFontSize11}"
-                                   Foreground="{DynamicResource MutedBrush}"
-                                   TextWrapping="Wrap"
-                                   Margin="0,4,12,0"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="1"
-                                VerticalAlignment="Top">
-                        <TextBox Text="{Binding DefaultVaultDirectory, UpdateSourceTrigger=PropertyChanged}"
-                                 IsReadOnly="True"
-                                 Height="36"
-                                 VerticalContentAlignment="Center"
-                                 ToolTip="{Binding DefaultVaultDirectory}"/>
-                        <Button Style="{StaticResource SecondaryButton}"
-                                Content="Browse…"
-                                Command="{Binding BrowseDefaultVaultDirectoryCommand}"
-                                HorizontalAlignment="Left"
-                                Margin="0,8,0,0"
-                                Padding="12,7"/>
-                    </StackPanel>
-                </Grid>
-
-                <Grid Margin="0,0,0,20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="180"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="Master password"
-                                   FontSize="{DynamicResource AppFontSize12}"
-                                   Foreground="{DynamicResource TextBrush}"/>
-                        <TextBlock Text="Re-encrypt this vault with a new master password."
-                                   FontSize="{DynamicResource AppFontSize11}"
-                                   Foreground="{DynamicResource MutedBrush}"
-                                   TextWrapping="Wrap"
-                                   Margin="0,4,12,0"/>
-                    </StackPanel>
-
-                    <Button Grid.Column="1"
-                            Style="{StaticResource SecondaryButton}"
-                            Content="Change password…"
-                            Command="{Binding ChangeMasterPasswordCommand}"
-                            HorizontalAlignment="Left"
-                            Padding="12,7"
-                            ToolTip="Verify current password and set a new one"/>
-                </Grid>
-
                 <!-- Keyboard Shortcuts -->
                 <Border BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="0,0,0,1"
