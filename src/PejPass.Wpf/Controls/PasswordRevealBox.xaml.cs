@@ -112,7 +112,6 @@ public partial class PasswordRevealBox : UserControl
     public PasswordRevealBox()
     {
         InitializeComponent();
-        _revealTimer.Tick += RevealTimer_Tick;
         PasswordBox.Password = Password;
         UpdateVisibility();
     }
