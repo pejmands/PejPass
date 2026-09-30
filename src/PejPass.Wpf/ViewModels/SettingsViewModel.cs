@@ -229,7 +229,6 @@ public partial class SettingsViewModel : ObservableObject
             AutoLockMinutes = _savedAutoLock;
             ClipboardClearSeconds = _savedClipboard;
             RevealSecretSeconds = _savedRevealSecret;
-            SelectedRevealSecretIndex = GetRevealSecretIndex(_savedRevealSecret);
             SelectedThemeIndex = (int)_savedTheme;
             WindowsHelloEnabled = _savedWindowsHello;
             SelectedFontSizeIndex = (int)_savedFontSize;
@@ -266,12 +265,6 @@ public partial class SettingsViewModel : ObservableObject
         {
             _suppressZoomPreview = false;
         }
-    }
-
-    private static int GetRevealSecretIndex(int seconds)
-    {
-        var index = Array.IndexOf([0, 5, 10, 30, 60], seconds);
-        return index >= 0 ? index : 2;
     }
 
     private static int GetRevealSecretIndex(int seconds)
