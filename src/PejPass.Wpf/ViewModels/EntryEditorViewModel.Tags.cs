@@ -35,6 +35,7 @@ public partial class EntryEditorViewModel
     ];
 
     private readonly List<string> _otherEntryTags = [];
+    private readonly HashSet<string> _knownTags = new(StringComparer.Ordinal);
     private readonly HashSet<string> _originalTags = new(StringComparer.Ordinal);
 
     public ObservableCollection<EntryEditorTagItem> SuggestedTags { get; } = [];
@@ -68,6 +69,21 @@ public partial class EntryEditorViewModel
                     if (index >= 0)
                         _otherEntryTags.RemoveAt(index);
                 }
+            }
+        }
+
+        foreach (var tag in DefaultTags)
+        {
+            if (!string.IsNullOrWhiteSpace(tag))
+                _knownTags.Add(tag.Trim());
+        }
+
+        if (usedTags is not null)
+        {
+            foreach (var tag in usedTags)
+            {
+                if (!string.IsNullOrWhiteSpace(tag))
+                    _knownTags.Add(tag.Trim());
             }
         }
 
@@ -119,7 +135,7 @@ public partial class EntryEditorViewModel
             return false;
         }
 
-        return _otherEntryTags.Any(
+        return _knownTags.Any(
             existing => existing.Equals(tag, StringComparison.OrdinalIgnoreCase) &&
                         !existing.Equals(tag, StringComparison.Ordinal));
     }
