@@ -343,6 +343,7 @@ public partial class App : System.Windows.Application
             var bar = new AppTitleBar
             {
                 Title = window.Title,
+                ShowMainActions = window is MainWindow,
                 ShowMinimize = window is MainWindow && window.ResizeMode is not ResizeMode.NoResize,
                 ShowMaximize = window.ResizeMode is ResizeMode.CanResize
                     or ResizeMode.CanResizeWithGrip
