@@ -159,7 +159,6 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void     [RelayCommand]
     private void BrowseDefaultVaultDirectory()
     {
         var dialog = new Microsoft.Win32.OpenFolderDialog
