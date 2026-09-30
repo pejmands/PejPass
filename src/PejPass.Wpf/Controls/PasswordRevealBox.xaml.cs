@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Threading;
-using System.Windows.Threading;
 
 namespace PejPass.Wpf.Controls;
 
