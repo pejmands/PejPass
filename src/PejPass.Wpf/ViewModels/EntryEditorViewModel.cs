@@ -123,8 +123,36 @@ public partial class EntryEditorViewModel : ObservableObject
     {
         OnTitleChanged(Title);
         ValidateTotpSecret();
+
+        var customFieldsValid = ValidateCustomFields();
+
         return string.IsNullOrEmpty(TitleErrorMessage) &&
-               string.IsNullOrEmpty(TotpErrorMessage);
+               string.IsNullOrEmpty(TotpErrorMessage) &&
+               customFieldsValid;
+    }
+
+    private bool ValidateCustomFields()
+    {
+        var isValid = true;
+
+        foreach (var field in CustomFields)
+        {
+            var hasName = !string.IsNullOrWhiteSpace(field.Name);
+            var hasValue = !string.IsNullOrWhiteSpace(field.Value);
+
+            field.ErrorMessage = (hasName, hasValue) switch
+            {
+                (false, false) => null,
+                (false, true) => "Field name is required.",
+                (true, false) => "Field value is required.",
+                _ => null
+            };
+
+            if (field.ErrorMessage is not null)
+                isValid = false;
+        }
+
+        return isValid;
     }
 
     private static string NormalizeTotpSecret(string? raw)
@@ -181,7 +209,8 @@ public partial class EntryEditorViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            DialogService.Warning($"Could not read image:\n{ex.Message}", "TOTP import");
+            DialogService.Warning($"Could not read image:
+{ex.Message}", "TOTP import");
         }
     }
 
@@ -193,7 +222,9 @@ public partial class EntryEditorViewModel : ObservableObject
             if (!Clipboard.ContainsImage())
             {
                 DialogService.Info(
-                    "Clipboard has no image.\n\nCopy a QR code screenshot first, then try again.",
+                    "Clipboard has no image.
+
+Copy a QR code screenshot first, then try again.",
                     "TOTP import");
                 return;
             }
@@ -209,7 +240,8 @@ public partial class EntryEditorViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            DialogService.Warning($"Clipboard import failed:\n{ex.Message}", "TOTP import");
+            DialogService.Warning($"Clipboard import failed:
+{ex.Message}", "TOTP import");
         }
     }
 
@@ -236,7 +268,8 @@ public partial class EntryEditorViewModel : ObservableObject
         if (!string.IsNullOrEmpty(TotpErrorMessage))
         {
             DialogService.Warning(
-                $"QR was read, but the secret is not valid Base32:\n{TotpErrorMessage}",
+                $"QR was read, but the secret is not valid Base32:
+{TotpErrorMessage}",
                 "TOTP import");
             return;
         }
@@ -244,7 +277,8 @@ public partial class EntryEditorViewModel : ObservableObject
         var who = string.Join(" · ", new[] { result.Issuer, result.Account }.Where(s => !string.IsNullOrWhiteSpace(s)));
         SnackbarService.Show(string.IsNullOrEmpty(who)
                 ? "TOTP secret imported from QR code."
-                : $"TOTP secret imported.\n{who}");
+                : $"TOTP secret imported.
+{who}");
     }
 
     [RelayCommand]
@@ -365,9 +399,9 @@ public partial class EntryEditorViewModel : ObservableObject
         foreach (var old in Original.CustomFields.Where(f => f.IsSecret))
         {
             if (!newFields.TryGetValue(old.Name, out var neu))
-                changes.Add(new SensitiveChange($"Custom field \"{old.Name}\" (removed)", old.Value, string.Empty));
+                changes.Add(new SensitiveChange($"Custom field "{old.Name}" (removed)", old.Value, string.Empty));
             else if (!string.Equals(old.Value, neu.Value ?? string.Empty, StringComparison.Ordinal))
-                changes.Add(new SensitiveChange($"Custom field \"{old.Name}\"", old.Value, neu.Value ?? string.Empty));
+                changes.Add(new SensitiveChange($"Custom field "{old.Name}"", old.Value, neu.Value ?? string.Empty));
         }
 
         return changes;
@@ -380,7 +414,8 @@ public partial class EntryEditorViewModel : ObservableObject
             .ToList();
 
         var customFields = CustomFields
-            .Where(f => !string.IsNullOrWhiteSpace(f.Name))
+            .Where(f => !string.IsNullOrWhiteSpace(f.Name) &&
+                        !string.IsNullOrWhiteSpace(f.Value))
             .Select(f => new CustomField
             {
                 Name = f.Name.Trim(),
@@ -438,4 +473,7 @@ public partial class CustomFieldItem : ObservableObject
 
     [ObservableProperty]
     public partial bool IsSecret { get; set; }
+
+    [ObservableProperty]
+    public partial string? ErrorMessage { get; set; }
 }
