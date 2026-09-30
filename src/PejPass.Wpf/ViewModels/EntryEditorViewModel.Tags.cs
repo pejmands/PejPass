@@ -35,12 +35,22 @@ public partial class EntryEditorViewModel
     ];
 
     private readonly List<string> _otherEntryTags = [];
+    private readonly HashSet<string> _originalTags = new(StringComparer.Ordinal);
 
     public ObservableCollection<EntryEditorTagItem> SuggestedTags { get; } = [];
 
     public EntryEditorViewModel(VaultEntry? existing, IEnumerable<string>? usedTags)
         : this(existing)
     {
+        if (existing is not null)
+        {
+            foreach (var tag in existing.Tags)
+            {
+                if (!string.IsNullOrWhiteSpace(tag))
+                    _originalTags.Add(tag.Trim());
+            }
+        }
+
         if (usedTags is not null)
         {
             _otherEntryTags.AddRange(
@@ -100,6 +110,15 @@ public partial class EntryEditorViewModel
 
     public bool HasCaseVariantInOtherEntries(string tag)
     {
+        if (_originalTags.Contains(tag))
+            return false;
+
+        if (_otherEntryTags.Any(
+            existing => existing.Equals(tag, StringComparison.Ordinal)))
+        {
+            return false;
+        }
+
         return _otherEntryTags.Any(
             existing => existing.Equals(tag, StringComparison.OrdinalIgnoreCase) &&
                         !existing.Equals(tag, StringComparison.Ordinal));
