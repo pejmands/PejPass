@@ -9,6 +9,7 @@ public sealed class VaultStoreValidationTests
     [Fact]
     public async Task OpenAsync_WhenSaltLengthIsTooSmall_ThrowsInvalidDataException()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var path = CreateVaultFile(
             version: 2,
             saltLength: 15);
@@ -18,7 +19,10 @@ public sealed class VaultStoreValidationTests
             var store = CreateStore();
 
             await Assert.ThrowsAsync<InvalidDataException>(() =>
-                store.OpenAsync(path, "password"));
+                store.OpenAsync(
+                    path,
+                    "password",
+                    cancellationToken));
         }
         finally
         {
@@ -29,6 +33,7 @@ public sealed class VaultStoreValidationTests
     [Fact]
     public async Task OpenAsync_WhenSaltLengthIsTooLarge_ThrowsInvalidDataException()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var path = CreateVaultFile(
             version: 2,
             saltLength: 65);
@@ -38,7 +43,10 @@ public sealed class VaultStoreValidationTests
             var store = CreateStore();
 
             await Assert.ThrowsAsync<InvalidDataException>(() =>
-                store.OpenAsync(path, "password"));
+                store.OpenAsync(
+                    path,
+                    "password",
+                    cancellationToken));
         }
         finally
         {
@@ -49,6 +57,7 @@ public sealed class VaultStoreValidationTests
     [Fact]
     public async Task OpenAsync_WhenFileIsTooShort_ThrowsInvalidDataException()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var path = CreateVaultFile(
             version: 2,
             saltLength: 16,
@@ -59,7 +68,10 @@ public sealed class VaultStoreValidationTests
             var store = CreateStore();
 
             await Assert.ThrowsAsync<InvalidDataException>(() =>
-                store.OpenAsync(path, "password"));
+                store.OpenAsync(
+                    path,
+                    "password",
+                    cancellationToken));
         }
         finally
         {
@@ -70,6 +82,7 @@ public sealed class VaultStoreValidationTests
     [Fact]
     public async Task OpenAsync_WhenCiphertextIsEmpty_ThrowsInvalidDataException()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var path = CreateVaultFile(
             version: 2,
             saltLength: 16,
@@ -80,7 +93,10 @@ public sealed class VaultStoreValidationTests
             var store = CreateStore();
 
             await Assert.ThrowsAsync<InvalidDataException>(() =>
-                store.OpenAsync(path, "password"));
+                store.OpenAsync(
+                    path,
+                    "password",
+                    cancellationToken));
         }
         finally
         {
@@ -91,6 +107,7 @@ public sealed class VaultStoreValidationTests
     [Fact]
     public async Task OpenAsync_WhenVersionIsUnsupported_ThrowsNotSupportedException()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var path = CreateVaultFile(
             version: 3,
             saltLength: 16);
@@ -100,7 +117,10 @@ public sealed class VaultStoreValidationTests
             var store = CreateStore();
 
             await Assert.ThrowsAsync<NotSupportedException>(() =>
-                store.OpenAsync(path, "password"));
+                store.OpenAsync(
+                    path,
+                    "password",
+                    cancellationToken));
         }
         finally
         {
