@@ -27,7 +27,38 @@ public partial class EntryEditorWindow : Window
         TotpSecretBox.Password = viewModel.TotpSecret;
 
         Loaded += (_, _) =>
-            Dispatcher.BeginInvoke(AttachNestedScrollChains, DispatcherPriority.Loaded);
+        {
+            Dispatcher.BeginInvoke(
+                DispatcherPriority.Loaded,
+                () =>
+                {
+                    AttachTagCaseWarningAdorner();
+                    AttachNestedScrollChains();
+                    RefreshTagCaseWarnings();
+                });
+        };
+
+        TagsTextBox.TextChanged += (_, _) => RefreshTagCaseWarnings();
+        TagsTextBox.SelectionChanged += (_, _) => RefreshTagCaseWarnings();
+    }
+
+    private TagCaseWarningAdorner? _tagCaseWarningAdorner;
+
+    private void AttachTagCaseWarningAdorner()
+    {
+        var layer = AdornerLayer.GetAdornerLayer(TagsTextBox);
+        if (layer is null || _tagCaseWarningAdorner is not null)
+            return;
+
+        _tagCaseWarningAdorner = new TagCaseWarningAdorner(TagsTextBox, () =>
+            DataContext is EntryEditorViewModel vm ? vm : null);
+
+        layer.Add(_tagCaseWarningAdorner);
+    }
+
+    private void RefreshTagCaseWarnings()
+    {
+        _tagCaseWarningAdorner?.InvalidateVisual();
     }
 
     private void AttachNestedScrollChains()
@@ -114,6 +145,12 @@ public partial class EntryEditorWindow : Window
     {
         if (DataContext is EntryEditorViewModel vm)
             vm.PropertyChanged -= ViewModel_PropertyChanged;
+
+        if (_tagCaseWarningAdorner is not null)
+        {
+            AdornerLayer.GetAdornerLayer(TagsTextBox)?.Remove(_tagCaseWarningAdorner);
+            _tagCaseWarningAdorner = null;
+        }
 
         base.OnClosed(e);
     }
@@ -205,5 +242,134 @@ public partial class EntryEditorWindow : Window
     {
         DialogResult = false;
         Close();
+    }
+}
+
+
+internal sealed class TagCaseWarningAdorner : Adorner
+{
+    private readonly TextBox _textBox;
+    private readonly Func<EntryEditorViewModel?> _getViewModel;
+
+    public TagCaseWarningAdorner(
+        TextBox textBox,
+        Func<EntryEditorViewModel?> getViewModel)
+        : base(textBox)
+    {
+        _textBox = textBox;
+        _getViewModel = getViewModel;
+        IsHitTestVisible = false;
+    }
+
+    protected override void OnRender(DrawingContext drawingContext)
+    {
+        var vm = _getViewModel();
+        if (vm is null || string.IsNullOrEmpty(_textBox.Text))
+            return;
+
+        var warningBrush = _textBox.TryFindResource("WarningBrush") as Brush
+                           ?? Brushes.Orange;
+
+        var pen = new Pen(warningBrush, 1.25);
+        if (pen.CanFreeze)
+            pen.Freeze();
+
+        var text = _textBox.Text;
+        var segmentStart = 0;
+
+        while (segmentStart <= text.Length)
+        {
+            var comma = text.IndexOf(',', segmentStart);
+            var segmentEnd = comma >= 0 ? comma : text.Length;
+
+            var rawLength = segmentEnd - segmentStart;
+            var leadingWhitespace = 0;
+
+            while (leadingWhitespace < rawLength &&
+                   char.IsWhiteSpace(text[segmentStart + leadingWhitespace]))
+            {
+                leadingWhitespace++;
+            }
+
+            var trailingWhitespace = 0;
+            while (trailingWhitespace < rawLength - leadingWhitespace &&
+                   char.IsWhiteSpace(text[segmentEnd - 1 - trailingWhitespace]))
+            {
+                trailingWhitespace++;
+            }
+
+            var tokenStart = segmentStart + leadingWhitespace;
+            var tokenLength = rawLength - leadingWhitespace - trailingWhitespace;
+
+            if (tokenLength > 0)
+            {
+                var token = text.Substring(tokenStart, tokenLength);
+
+                if (vm.HasCaseVariantInOtherEntries(token))
+                    DrawSquiggle(drawingContext, pen, tokenStart, tokenLength);
+            }
+
+            if (comma < 0)
+                break;
+
+            segmentStart = comma + 1;
+        }
+    }
+
+    private void DrawSquiggle(
+        DrawingContext drawingContext,
+        Pen pen,
+        int startIndex,
+        int length)
+    {
+        var start = _textBox.GetRectFromCharacterIndex(startIndex);
+        var end = _textBox.GetRectFromCharacterIndex(startIndex + length - 1, true);
+
+        if (start == Rect.Empty || end == Rect.Empty ||
+            double.IsInfinity(start.X) || double.IsInfinity(start.Y) ||
+            double.IsInfinity(end.X) || double.IsInfinity(end.Y))
+            return;
+
+        var left = Math.Max(0, start.Left);
+        var right = Math.Min(_textBox.ActualWidth, end.Right);
+
+        if (right <= left)
+            return;
+
+        var baseline = Math.Min(
+            Math.Max(start.Bottom - 1, 0),
+            Math.Max(_textBox.ActualHeight - 1, 0));
+
+        var geometry = new StreamGeometry();
+
+        using (var context = geometry.Open())
+        {
+            const double amplitude = 1.2;
+            const double wavelength = 5;
+
+            context.BeginFigure(new Point(left, baseline), false, false);
+
+            var x = left;
+            var up = true;
+
+            while (x < right)
+            {
+                var next = Math.Min(x + wavelength / 2, right);
+                var mid = (x + next) / 2;
+
+                context.QuadraticBezierTo(
+                    new Point(mid, baseline + (up ? -amplitude : amplitude)),
+                    new Point(next, baseline),
+                    true);
+
+                x = next;
+                up = !up;
+            }
+        }
+
+        if (geometry.CanFreeze)
+            geometry.Freeze();
+
+        drawingContext.DrawGeometry(null, pen, geometry);
     }
 }
