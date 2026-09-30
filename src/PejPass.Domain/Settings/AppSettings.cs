@@ -17,6 +17,8 @@ public sealed class AppSettings
 
     public int ClipboardClearSeconds { get; set; } = 30;
 
+    public int RevealSecretSeconds { get; set; } = 10;
+
     public ThemeMode Theme { get; set; } = ThemeMode.System;
 
     public FontSizeMode FontSize { get; set; } = FontSizeMode.Medium;
