@@ -87,7 +87,7 @@ public partial class EntryEditorViewModel
             .ToList();
 
         var existing = parts.FindIndex(
-            t => t.Equals(item.Name, StringComparison.OrdinalIgnoreCase));
+            t => t.Equals(item.Name, StringComparison.Ordinal));
 
         if (existing >= 0)
         {
@@ -107,7 +107,7 @@ public partial class EntryEditorViewModel
     {
         return TagsText
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Any(t => t.Equals(tag, StringComparison.OrdinalIgnoreCase));
+            .Any(t => t.Equals(tag, StringComparison.Ordinal));
     }
 
     public static List<string> NormalizeTags(string? value)
