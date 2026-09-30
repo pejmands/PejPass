@@ -252,17 +252,6 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- Vault -->
-                <Border BorderBrush="{DynamicResource BorderBrush}"
-                        BorderThickness="0,0,0,1"
-                        Margin="0,0,0,12"
-                        Padding="0,0,0,8">
-                    <TextBlock Text="Vault"
-                               FontSize="{DynamicResource AppFontSize13}"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextBrush}"/>
-                </Border>
-
                 <!-- Keyboard Shortcuts -->
                 <Border BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="0,0,0,1"
