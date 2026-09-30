@@ -117,7 +117,17 @@
                                        FontSize="{DynamicResource AppFontSize12}"
                                        Foreground="{DynamicResource MutedBrush}"
                                        Margin="0,2,0,0"
-                                       TextTrimming="CharacterEllipsis"/>
+                                       TextTrimming="CharacterEllipsis">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Username}" Value="">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             
                                 <TextBlock FontSize="{DynamicResource AppFontSize11}"
                                        Foreground="{DynamicResource MutedBrush}"
