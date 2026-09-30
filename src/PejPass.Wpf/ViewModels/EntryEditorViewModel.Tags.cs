@@ -44,7 +44,7 @@ public partial class EntryEditorViewModel
 
     private void BuildSuggestedTags(IEnumerable<string>? usedTags)
     {
-        var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var tags = new Dictionary<string, string>(StringComparer.Ordinal);
 
         foreach (var tag in DefaultTags)
         {
@@ -91,7 +91,7 @@ public partial class EntryEditorViewModel
 
         if (existing >= 0)
         {
-            parts.RemoveAt(existing);
+            parts.RemoveAll(t => t.Equals(item.Name, StringComparison.OrdinalIgnoreCase));
             item.IsSelected = false;
         }
         else
@@ -108,6 +108,22 @@ public partial class EntryEditorViewModel
         return TagsText
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Any(t => t.Equals(tag, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public static List<string> NormalizeTags(string? value)
+    {
+        var tags = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var tag in (value ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (seen.Add(tag))
+                tags.Add(tag);
+        }
+
+        tags.Sort(StringComparer.OrdinalIgnoreCase);
+        return tags;
     }
 
     partial void OnTagsTextChanged(string value)
