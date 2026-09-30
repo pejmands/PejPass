@@ -1,15 +1,15 @@
-using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
-using System.Windows.Threading;
 
 namespace PejPass.Wpf.Controls;
 
+using PejPass.Wpf.Services;
+
 public partial class PasswordRevealBox : UserControl
 {
-    private readonly DispatcherTimer _revealTimer = new();
+    private readonly SecretRevealTimer _revealTimer = new();
     private static readonly Type TextRangeType =
         typeof(PasswordBox).Assembly.GetType("System.Windows.Documents.ITextRange")
         ?? throw new InvalidOperationException("ITextRange was not found.");
@@ -201,26 +201,13 @@ public partial class PasswordRevealBox : UserControl
 
     private void StartRevealTimer()
     {
-        StopRevealTimer();
-
         var seconds = App.Services.GetService<PejPass.Domain.Settings.AppSettings>()?.RevealSecretSeconds ?? 10;
-        if (seconds <= 0)
-            return;
-
-        _revealTimer.Interval = TimeSpan.FromSeconds(seconds);
-        _revealTimer.Start();
+        _revealTimer.Start(seconds, () => IsRevealed = false);
     }
 
     private void StopRevealTimer()
     {
         _revealTimer.Stop();
-    }
-
-    private void RevealTimer_Tick(object? sender, EventArgs e)
-    {
-        StopRevealTimer();
-        if (IsRevealed)
-            IsRevealed = false;
     }
 
     private void UpdateVisibility()
