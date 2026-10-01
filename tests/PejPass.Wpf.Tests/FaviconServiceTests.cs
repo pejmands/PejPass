@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Net;
 using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -27,9 +28,43 @@ public sealed class FaviconServiceTests
     private static readonly MethodInfo CachePathMethod =
         typeof(FaviconService).GetMethod("CachePath", BindingFlags.NonPublic | BindingFlags.Static)!;
 
+    private static readonly MethodInfo ReadContentBytesMethod =
+        typeof(FaviconService).GetMethod("ReadContentBytesAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
+
     private static readonly byte[] TinyPng =
         Convert.FromBase64String(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+
+    [Fact]
+    public async Task FaviconResponse_SmallContent_IsAccepted()
+    {
+        using var content = new ByteArrayContent(new byte[32]);
+
+        var bytes = await ReadContentBytesAsync(content);
+
+        Assert.NotNull(bytes);
+        Assert.Equal(32, bytes.Length);
+    }
+
+    [Fact]
+    public async Task FaviconResponse_KnownOversizedContent_IsRejected()
+    {
+        using var content = new ByteArrayContent(new byte[(256 * 1024) + 1]);
+
+        var bytes = await ReadContentBytesAsync(content);
+
+        Assert.Null(bytes);
+    }
+
+    [Fact]
+    public async Task FaviconResponse_UnknownLengthOversizedContent_IsRejected()
+    {
+        using var content = new ChunkedTestContent((256 * 1024) + 1);
+
+        var bytes = await ReadContentBytesAsync(content);
+
+        Assert.Null(bytes);
+    }
 
     [Fact]
     public async Task DisabledOnlineFetching_DoesNotQueueNetworkDownload()
@@ -104,6 +139,41 @@ public sealed class FaviconServiceTests
         RunOnSta(() => image = FaviconService.GetImage("https://example.com", "Example"));
 
         Assert.IsType<RenderTargetBitmap>(image);
+    }
+
+    private static async Task<byte[]?> ReadContentBytesAsync(HttpContent content)
+    {
+        var task = (Task<byte[]?>)ReadContentBytesMethod.Invoke(null, [content])!;
+        return await task;
+    }
+
+    private sealed class ChunkedTestContent : HttpContent
+    {
+        private readonly int _length;
+
+        public ChunkedTestContent(int length) => _length = length;
+
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) =>
+            SerializeAsync(stream);
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
+
+        private async Task SerializeAsync(Stream stream)
+        {
+            var buffer = new byte[8192];
+            var remaining = _length;
+
+            while (remaining > 0)
+            {
+                var count = Math.Min(buffer.Length, remaining);
+                await stream.WriteAsync(buffer.AsMemory(0, count));
+                remaining -= count;
+            }
+        }
     }
 
     private static void RunOnSta(Action action)
