@@ -8,6 +8,8 @@ namespace PejPass.Wpf.Services;
 public static class SettingsStore
 {
     private const int MaxAutoLockMinutes = 1440;
+    private const int MaxCorruptSettingsFiles = 5;
+    private static readonly TimeSpan CorruptSettingsRetention = TimeSpan.FromDays(90);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -15,9 +17,15 @@ public static class SettingsStore
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
+    internal static string SettingsPath { get; set; }
+    = AppSettings.SettingsFilePath;
+
     public static AppSettings Load()
     {
-        var path = AppSettings.SettingsFilePath;
+        var path = SettingsPath;
+
+        CleanupTempFile(path);
+        CleanupCorruptedSettings(Path.GetDirectoryName(path)!);
 
         if (!File.Exists(path))
             return new AppSettings();
@@ -35,9 +43,51 @@ public static class SettingsStore
         }
         catch
         {
+            BackupCorruptedSettings(path);
+
             var settings = new AppSettings();
             TrySave(settings);
+
             return settings;
+        }
+    }
+
+    private static void CleanupTempFile(string path)
+    {
+        try
+        {
+            var tempPath = path + ".tmp";
+
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
+        catch
+        {
+            // Best effort cleanup.
+        }
+    }
+
+    private static void BackupCorruptedSettings(string path)
+    {
+        try
+        {
+            if (!File.Exists(path))
+                return;
+
+            var directory = Path.GetDirectoryName(path)!;
+            var fileName = Path.GetFileNameWithoutExtension(path);
+            var extension = Path.GetExtension(path);
+
+            var backupPath = Path.Combine(
+                directory,
+                $"{fileName}.corrupt-{DateTime.Now:yyyyMMdd-HHmmss}{extension}");
+
+            File.Move(path, backupPath);
+        }
+        catch
+        {
+            // Best effort only.
+            // If backup fails, recovery should still continue.
         }
     }
 
@@ -194,9 +244,87 @@ public static class SettingsStore
         return false;
     }
 
+    private static void CleanupCorruptedSettings(string directory)
+    {
+        try
+        {
+            if (!Directory.Exists(directory))
+                return;
+            
+            var files = Directory.GetFiles(
+                    directory,
+                    "settings.corrupt-*.json")
+                .Select(path => new FileInfo(path))
+                .ToList();
+
+            var now = DateTime.UtcNow;
+
+            foreach (var file in files)
+            {
+                if (!TryGetCorruptFileDate(file.Name, out var createdAt))
+                    continue;
+
+                if (now - createdAt > CorruptSettingsRetention)
+                {
+                    file.Delete();
+                }
+            }
+
+            files = [.. Directory.GetFiles(
+                    directory,
+                    "settings.corrupt-*.json")
+                .Select(path => new FileInfo(path))];
+
+            var remaining = files
+                .Where(file => TryGetCorruptFileDate(file.Name, out _))
+                .OrderByDescending(file =>
+                {
+                    TryGetCorruptFileDate(file.Name, out var date);
+                    return date;
+                })
+                .ToList();
+
+            foreach (var file in remaining.Skip(MaxCorruptSettingsFiles))
+            {
+                file.Delete();
+            }
+        }
+        catch
+        {
+            // Best effort cleanup.
+        }
+    }
+
+    private static bool TryGetCorruptFileDate(
+    string fileName,
+    out DateTime date)
+    {
+        date = default;
+
+        const string prefix = "settings.corrupt-";
+        const string suffix = ".json";
+
+        if (!fileName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+            !fileName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var timestamp = fileName[
+            prefix.Length..^suffix.Length];
+
+        return DateTime.TryParseExact(
+            timestamp,
+            "yyyyMMdd-HHmmss",
+            null,
+            System.Globalization.DateTimeStyles.AssumeUniversal |
+            System.Globalization.DateTimeStyles.AdjustToUniversal,
+            out date);
+    }
+
     public static void EnsureWritable()
     {
-        var path = AppSettings.SettingsFilePath;
+        var path = SettingsPath;
         var dir = Path.GetDirectoryName(path)!;
 
         Directory.CreateDirectory(dir);
@@ -226,11 +354,30 @@ public static class SettingsStore
     {
         try
         {
-            var path = AppSettings.SettingsFilePath;
+            var path = SettingsPath;
             var dir = Path.GetDirectoryName(path)!;
+
             Directory.CreateDirectory(dir);
+
+            var tempPath = path + ".tmp";
             var json = JsonSerializer.Serialize(settings, JsonOptions);
-            File.WriteAllText(path, json);
+
+            using (var stream = new FileStream(
+                       tempPath,
+                       FileMode.Create,
+                       FileAccess.Write,
+                       FileShare.None,
+                       4096,
+                       FileOptions.WriteThrough))
+            using (var writer = new StreamWriter(stream))
+            {
+                writer.Write(json);
+                writer.Flush();
+                stream.Flush(true);
+            }
+
+            File.Move(tempPath, path, true);
+
             return true;
         }
         catch
