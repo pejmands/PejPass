@@ -20,7 +20,7 @@ public static class FaviconService
     private static readonly HttpClient Http = CreateClient();
     private static readonly ConcurrentDictionary<string, ImageSource> Memory = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentQueue<KeyValuePair<string, ImageSource>> MemoryEvictionQueue = new();
-    private static readonly object MemoryCacheLock = new();
+    private static readonly Lock MemoryCacheLock = new();
     private static readonly ConcurrentDictionary<string, ImageSource> LetterCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, byte> InFlight = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, DateTimeOffset> Failed = new(StringComparer.OrdinalIgnoreCase);
@@ -40,8 +40,8 @@ public static class FaviconService
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "PejPass", "favicons");
 
-    private static readonly object ExpirationCleanupLock = new();
-    private static readonly object StartupCleanupLock = new();
+    private static readonly Lock ExpirationCleanupLock = new();
+    private static readonly Lock StartupCleanupLock = new();
     private static Task _startupCleanupTask = Task.CompletedTask;
     private static bool _startupCleanupStarted;
 
