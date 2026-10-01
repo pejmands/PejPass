@@ -39,12 +39,72 @@ public sealed class FaviconServiceTests
     private static readonly MethodInfo CachePathMethod =
         typeof(FaviconService).GetMethod("CachePath", BindingFlags.NonPublic | BindingFlags.Static)!;
 
+    private static readonly MethodInfo PruneDiskCacheMethod =
+        typeof(FaviconService).GetMethod("PruneDiskCache", BindingFlags.NonPublic | BindingFlags.Static)!;
+
     private static readonly MethodInfo ReadContentBytesMethod =
         typeof(FaviconService).GetMethod("ReadContentBytesAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
 
     private static readonly byte[] TinyPng =
         Convert.FromBase64String(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+
+    [Fact]
+    public void DiskCache_PrunesOldestFilesWhenFileCountExceedsLimit()
+    {
+        var directory = CreateTempDirectory();
+
+        try
+        {
+            for (var i = 0; i < 130; i++)
+            {
+                var path = Path.Combine(directory, $"{i:D3}.bin");
+                File.WriteAllBytes(path, [1]);
+                File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddMinutes(i));
+            }
+
+            PruneDiskCache(directory);
+
+            var files = Directory.GetFiles(directory, "*.bin");
+            Assert.Equal(128, files.Length);
+            Assert.False(File.Exists(Path.Combine(directory, "000.bin")));
+            Assert.False(File.Exists(Path.Combine(directory, "001.bin")));
+            Assert.True(File.Exists(Path.Combine(directory, "002.bin")));
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
+    public void DiskCache_PrunesOldestFilesWhenSizeExceedsLimit()
+    {
+        var directory = CreateTempDirectory();
+
+        try
+        {
+            for (var i = 0; i < 4; i++)
+            {
+                var path = Path.Combine(directory, $"{i:D3}.bin");
+                File.WriteAllBytes(path, new byte[5 * 1024 * 1024]);
+                File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddMinutes(i));
+            }
+
+            PruneDiskCache(directory);
+
+            var files = Directory.GetFiles(directory, "*.bin");
+            var totalBytes = files.Sum(path => new FileInfo(path).Length);
+
+            Assert.Equal(3, files.Length);
+            Assert.True(totalBytes <= 16L * 1024 * 1024);
+            Assert.False(File.Exists(Path.Combine(directory, "000.bin")));
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
 
     [Fact]
     public void MemoryCache_EvictsOldestEntryAtCapacity()
@@ -272,6 +332,16 @@ public sealed class FaviconServiceTests
 
         if (exception is not null)
             throw new InvalidOperationException("STA test failed.", exception);
+    }
+
+    private static void PruneDiskCache(string directory) =>
+        PruneDiskCacheMethod.Invoke(null, [directory]);
+
+    private static string CreateTempDirectory()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "PejPass-FaviconTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        return directory;
     }
 
     private static ConcurrentDictionary<string, ImageSource> GetMemory() =>
