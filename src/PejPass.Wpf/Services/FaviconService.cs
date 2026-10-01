@@ -19,6 +19,8 @@ public static class FaviconService
 {
     private static readonly HttpClient Http = CreateClient();
     private static readonly ConcurrentDictionary<string, ImageSource> Memory = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentQueue<KeyValuePair<string, ImageSource>> MemoryEvictionQueue = new();
+    private static readonly object MemoryCacheGate = new();
     private static readonly ConcurrentDictionary<string, ImageSource> LetterCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, byte> InFlight = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, DateTimeOffset> Failed = new(StringComparer.OrdinalIgnoreCase);
@@ -26,7 +28,10 @@ public static class FaviconService
     private static readonly ConcurrentQueue<string> DownloadQueue = new();
     private static readonly SemaphoreSlim DownloadGate = new(1, 1);
     private static readonly SemaphoreSlim DownloadSlots = new(3, 3);
-
+    private const int MaxFaviconResponseBytes = 256 * 1024;
+    private const int MaxMemoryCacheEntries = 256;
+    private const int MaxDiskCacheFiles = 128;
+    private const long MaxDiskCacheBytes = 16L * 1024 * 1024;
     private const int FailedLookupTtlHours = 24;
 
     private static readonly string CacheDir = Path.Combine(
@@ -119,6 +124,7 @@ public static class FaviconService
         {
             if (runDisk)
             {
+                PruneDiskCache(CacheDir);
                 await Parallel.ForEachAsync(
                     hosts,
                     new ParallelOptions { MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount * 2, 4, 16) },
@@ -130,7 +136,7 @@ public static class FaviconService
                         var fromDisk = TryLoadFromDisk(host);
                         if (fromDisk is not null)
                         {
-                            Memory[host] = fromDisk;
+                            SetMemory(host, fromDisk);
                             ScheduleBatchNotify();
                         }
 
@@ -218,7 +224,7 @@ public static class FaviconService
             var fromDisk = TryLoadFromDisk(host);
             if (fromDisk is not null)
             {
-                Memory[host] = fromDisk;
+                SetMemory(host, fromDisk);
                 Failed.TryRemove(host, out _);
                 ScheduleBatchNotify();
                 return;
@@ -238,6 +244,7 @@ public static class FaviconService
             {
                 Directory.CreateDirectory(CacheDir);
                 await File.WriteAllBytesAsync(CachePath(host), bytes).ConfigureAwait(false);
+                PruneDiskCache(CacheDir);
             }
             catch
             {
@@ -250,13 +257,31 @@ public static class FaviconService
                 return;
             }
 
-            Memory[host] = image;
+            SetMemory(host, image);
             Failed.TryRemove(host, out _);
             ScheduleBatchNotify();
         }
         catch
         {
             MarkFailed(host);
+        }
+    }
+
+    private static void SetMemory(string host, ImageSource image)
+    {
+        lock (MemoryCacheGate)
+        {
+            if (Memory.ContainsKey(host))
+            {
+                Memory[host] = image;
+                return;
+            }
+
+            Memory[host] = image;
+            MemoryEvictionQueue.Enqueue(new KeyValuePair<string, ImageSource>(host, image));
+
+            while (Memory.Count > MaxMemoryCacheEntries && MemoryEvictionQueue.TryDequeue(out var candidate))
+                Memory.TryRemove(candidate);
         }
     }
 
@@ -305,16 +330,85 @@ public static class FaviconService
     {
         try
         {
-            using var response = await Http.GetAsync(requestUrl).ConfigureAwait(false);
+            using var response = await Http.GetAsync(requestUrl, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return null;
 
-            var bytes = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
-            return bytes.Length > 0 ? bytes : null;
+            var contentLength = response.Content.Headers.ContentLength;
+            if (contentLength is > MaxFaviconResponseBytes)
+                return null;
+
+            return await ReadContentBytesAsync(response.Content).ConfigureAwait(false);
         }
         catch
         {
             return null;
+        }
+    }
+
+    private static async Task<byte[]?> ReadContentBytesAsync(HttpContent content)
+    {
+        try
+        {
+            await using var stream = await content.ReadAsStreamAsync().ConfigureAwait(false);
+            using var ms = new MemoryStream();
+            var buffer = new byte[81920];
+            var total = 0;
+
+            while (true)
+            {
+                var read = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length)).ConfigureAwait(false);
+                if (read == 0)
+                    break;
+
+                if (total > MaxFaviconResponseBytes - read)
+                    return null;
+
+                ms.Write(buffer, 0, read);
+                total += read;
+            }
+
+            return total > 0 ? ms.ToArray() : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static void PruneDiskCache(string directory)
+    {
+        try
+        {
+            if (!Directory.Exists(directory))
+                return;
+
+            var files = new DirectoryInfo(directory).GetFiles("*.bin");
+            var totalBytes = files.Sum(file => file.Length);
+            if (files.Length <= MaxDiskCacheFiles && totalBytes <= MaxDiskCacheBytes)
+                return;
+
+            var fileCount = files.Length;
+
+            foreach (var file in files.OrderBy(file => file.LastWriteTimeUtc))
+            {
+                if (fileCount <= MaxDiskCacheFiles && totalBytes <= MaxDiskCacheBytes)
+                    break;
+
+                try
+                {
+                    var length = file.Length;
+                    file.Delete();
+                    fileCount--;
+                    totalBytes -= length;
+                }
+                catch
+                {
+                }
+            }
+        }
+        catch
+        {
         }
     }
 
