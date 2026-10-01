@@ -1,8 +1,11 @@
+using PejPass.Wpf.Services;
 using System.Collections.Concurrent;
+using System.IO;
+using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using PejPass.Wpf.Services;
 
 namespace PejPass.Wpf.Tests;
 
@@ -18,8 +21,14 @@ public sealed class FaviconServiceTests
     private static readonly FieldInfo MemoryField =
         typeof(FaviconService).GetField("Memory", BindingFlags.NonPublic | BindingFlags.Static)!;
 
-    private static readonly FieldInfo FailedField =
-        typeof(FaviconService).GetField("Failed", BindingFlags.NonPublic | BindingFlags.Static)!;
+    private static readonly FieldInfo MemoryEvictionQueueField =
+        typeof(FaviconService).GetField("MemoryEvictionQueue", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly MethodInfo SetMemoryMethod =
+        typeof(FaviconService).GetMethod("SetMemory", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly MethodInfo CreateBitmapMethod =
+        typeof(FaviconService).GetMethod("CreateBitmap", BindingFlags.NonPublic | BindingFlags.Static)!;
 
     private static readonly FieldInfo CacheDirField =
         typeof(FaviconService).GetField("CacheDir", BindingFlags.NonPublic | BindingFlags.Static)!;
@@ -30,6 +39,9 @@ public sealed class FaviconServiceTests
     private static readonly MethodInfo CachePathMethod =
         typeof(FaviconService).GetMethod("CachePath", BindingFlags.NonPublic | BindingFlags.Static)!;
 
+    private static readonly FieldInfo FailedField =
+        typeof(FaviconService).GetField("Failed", BindingFlags.NonPublic | BindingFlags.Static)!;
+
     private static readonly MethodInfo IsFailedRecentlyMethod =
         typeof(FaviconService).GetMethod("IsFailedRecently", BindingFlags.NonPublic | BindingFlags.Static)!;
 
@@ -39,9 +51,171 @@ public sealed class FaviconServiceTests
     private static readonly MethodInfo DownloadOneMethod =
         typeof(FaviconService).GetMethod("DownloadOneAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
 
+    private static readonly MethodInfo PruneDiskCacheMethod =
+        typeof(FaviconService).GetMethod("PruneDiskCache", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly MethodInfo ReadContentBytesMethod =
+        typeof(FaviconService).GetMethod("ReadContentBytesAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
+
     private static readonly byte[] TinyPng =
         Convert.FromBase64String(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+
+    [Fact]
+    public void DiskCache_PrunesOldestFilesWhenFileCountExceedsLimit()
+    {
+        var directory = CreateTempDirectory();
+
+        try
+        {
+            for (var i = 0; i < 130; i++)
+            {
+                var path = Path.Combine(directory, $"{i:D3}.bin");
+                File.WriteAllBytes(path, [1]);
+                File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddMinutes(i));
+            }
+
+            PruneDiskCache(directory);
+
+            var files = Directory.GetFiles(directory, "*.bin");
+            Assert.Equal(128, files.Length);
+            Assert.False(File.Exists(Path.Combine(directory, "000.bin")));
+            Assert.False(File.Exists(Path.Combine(directory, "001.bin")));
+            Assert.True(File.Exists(Path.Combine(directory, "002.bin")));
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
+    public void DiskCache_PrunesOldestFilesWhenSizeExceedsLimit()
+    {
+        var directory = CreateTempDirectory();
+
+        try
+        {
+            for (var i = 0; i < 4; i++)
+            {
+                var path = Path.Combine(directory, $"{i:D3}.bin");
+                File.WriteAllBytes(path, new byte[5 * 1024 * 1024]);
+                File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddMinutes(i));
+            }
+
+            PruneDiskCache(directory);
+
+            var files = Directory.GetFiles(directory, "*.bin");
+            var totalBytes = files.Sum(path => new FileInfo(path).Length);
+
+            Assert.Equal(3, files.Length);
+            Assert.True(totalBytes <= 16L * 1024 * 1024);
+            Assert.False(File.Exists(Path.Combine(directory, "000.bin")));
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
+    public void MemoryCache_EvictsOldestEntryAtCapacity()
+    {
+        var memory = GetMemory();
+        var evictionQueue = GetMemoryEvictionQueue();
+        memory.Clear();
+        while (evictionQueue.TryDequeue(out _))
+        {
+        }
+
+        var image = CreateTestImage();
+
+        try
+        {
+            for (var i = 0; i < 256; i++)
+                SetMemory($"host-{i}.example", image);
+
+            SetMemory("host-256.example", image);
+
+            Assert.Equal(256, memory.Count);
+            Assert.False(memory.ContainsKey("host-0.example"));
+            Assert.True(memory.ContainsKey("host-1.example"));
+            Assert.True(memory.ContainsKey("host-256.example"));
+        }
+        finally
+        {
+            memory.Clear();
+            while (evictionQueue.TryDequeue(out _))
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void MemoryCache_UpdatedEntryIsNotRemovedByStaleEvictionRecord()
+    {
+        var memory = GetMemory();
+        var evictionQueue = GetMemoryEvictionQueue();
+        memory.Clear();
+        while (evictionQueue.TryDequeue(out _))
+        {
+        }
+
+        var firstImage = CreateTestImage();
+        var updatedImage = CreateTestImage();
+
+        try
+        {
+            for (var i = 0; i < 256; i++)
+                SetMemory($"host-{i}.example", firstImage);
+
+            SetMemory("host-0.example", updatedImage);
+            SetMemory("host-256.example", firstImage);
+
+            Assert.Equal(256, memory.Count);
+            Assert.Same(updatedImage, memory["host-0.example"]);
+            Assert.False(memory.ContainsKey("host-1.example"));
+            Assert.True(memory.ContainsKey("host-256.example"));
+        }
+        finally
+        {
+            memory.Clear();
+            while (evictionQueue.TryDequeue(out _))
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task FaviconResponse_SmallContent_IsAccepted()
+    {
+        using var content = new ByteArrayContent(new byte[32]);
+
+        var bytes = await ReadContentBytesAsync(content);
+
+        Assert.NotNull(bytes);
+        Assert.Equal(32, bytes.Length);
+    }
+
+    [Fact]
+    public async Task FaviconResponse_KnownOversizedContent_IsRejected()
+    {
+        using var content = new ByteArrayContent(new byte[(256 * 1024) + 1]);
+
+        var bytes = await ReadContentBytesAsync(content);
+
+        Assert.Null(bytes);
+    }
+
+    [Fact]
+    public async Task FaviconResponse_UnknownLengthOversizedContent_IsRejected()
+    {
+        using var content = new ChunkedTestContent((256 * 1024) + 1);
+
+        var bytes = await ReadContentBytesAsync(content);
+
+        Assert.Null(bytes);
+    }
 
     [Fact]
     public async Task DisabledOnlineFetching_DoesNotQueueNetworkDownload()
@@ -62,7 +236,7 @@ public sealed class FaviconServiceTests
             ("https://example.org", "Example Org")
         ]);
 
-        await Task.Delay(150);
+        await Task.Delay(150, TestContext.Current.CancellationToken);
 
         Assert.Empty(GetDownloadQueue());
         Assert.Empty(GetInFlight());
@@ -82,7 +256,7 @@ public sealed class FaviconServiceTests
         var cachePath = (string)CachePathMethod.Invoke(null, [host])!;
 
         Directory.CreateDirectory(cacheDir);
-        await File.WriteAllBytesAsync(cachePath, TinyPng);
+        await File.WriteAllBytesAsync(cachePath, TinyPng, TestContext.Current.CancellationToken);
 
         try
         {
@@ -91,7 +265,7 @@ public sealed class FaviconServiceTests
             FaviconService.Prefetch([("https://example.com", "Example")]);
 
             for (var i = 0; i < 20 && !memory.ContainsKey(host); i++)
-                await Task.Delay(25);
+                await Task.Delay(25, TestContext.Current.CancellationToken);
 
             Assert.True(memory.ContainsKey(host));
             Assert.IsType<BitmapImage>(FaviconService.GetImage("https://example.com", "Example"));
@@ -116,6 +290,37 @@ public sealed class FaviconServiceTests
         RunOnSta(() => image = FaviconService.GetImage("https://example.com", "Example"));
 
         Assert.IsType<RenderTargetBitmap>(image);
+    }
+
+    private static async Task<byte[]?> ReadContentBytesAsync(HttpContent content)
+    {
+        var task = (Task<byte[]?>)ReadContentBytesMethod.Invoke(null, [content])!;
+        return await task;
+    }
+
+    private sealed class ChunkedTestContent(int length) : HttpContent
+    {
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) =>
+            SerializeAsync(stream);
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
+
+        private async Task SerializeAsync(Stream stream)
+        {
+            var buffer = new byte[8192];
+            var remaining = length;
+
+            while (remaining > 0)
+            {
+                var count = Math.Min(buffer.Length, remaining);
+                await stream.WriteAsync(buffer.AsMemory(0, count));
+                remaining -= count;
+            }
+        }
     }
 
     [Fact]
@@ -164,11 +369,11 @@ public sealed class FaviconServiceTests
 
         var cacheDir = (string)CacheDirField.GetValue(null)!;
         var pathCache = (ConcurrentDictionary<string, string>)PathCacheField.GetValue(null)!;
-        var memory = (ConcurrentDictionary<string, System.Windows.Media.ImageSource>)MemoryField.GetValue(null)!;
+        var memory = (ConcurrentDictionary<string, ImageSource>)MemoryField.GetValue(null)!;
         var cachePath = (string)CachePathMethod.Invoke(null, [host])!;
 
         Directory.CreateDirectory(cacheDir);
-        await File.WriteAllBytesAsync(cachePath, TinyPng);
+        await File.WriteAllBytesAsync(cachePath, TinyPng, TestContext.Current.CancellationToken);
         MarkFailedMethod.Invoke(null, [host]);
 
         try
@@ -213,6 +418,28 @@ public sealed class FaviconServiceTests
         if (exception is not null)
             throw new InvalidOperationException("STA test failed.", exception);
     }
+
+    private static void PruneDiskCache(string directory) =>
+        PruneDiskCacheMethod.Invoke(null, [directory]);
+
+    private static string CreateTempDirectory()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "PejPass-FaviconTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        return directory;
+    }
+
+    private static ConcurrentDictionary<string, ImageSource> GetMemory() =>
+        (ConcurrentDictionary<string, ImageSource>)MemoryField.GetValue(null)!;
+
+    private static ConcurrentQueue<KeyValuePair<string, ImageSource>> GetMemoryEvictionQueue() =>
+        (ConcurrentQueue<KeyValuePair<string, ImageSource>>)MemoryEvictionQueueField.GetValue(null)!;
+
+    private static void SetMemory(string host, ImageSource image) =>
+        SetMemoryMethod.Invoke(null, [host, image]);
+
+    private static ImageSource CreateTestImage() =>
+        (ImageSource)CreateBitmapMethod.Invoke(null, [TinyPng])!;
 
     private static ConcurrentQueue<string> GetDownloadQueue() =>
         (ConcurrentQueue<string>)DownloadQueueField.GetValue(null)!;
