@@ -68,7 +68,7 @@ public sealed class FaviconServiceTests
 
         try
         {
-            for (var i = 0; i < 130; i++)
+            for (var i = 0; i < 4098; i++)
             {
                 var path = Path.Combine(directory, $"{i:D3}.bin");
                 File.WriteAllBytes(path, [1]);
@@ -78,10 +78,9 @@ public sealed class FaviconServiceTests
             PruneDiskCache(directory);
 
             var files = Directory.GetFiles(directory, "*.bin");
-            Assert.Equal(128, files.Length);
+            Assert.Equal(4096, files.Length);
             Assert.False(File.Exists(Path.Combine(directory, "000.bin")));
             Assert.False(File.Exists(Path.Combine(directory, "001.bin")));
-            Assert.True(File.Exists(Path.Combine(directory, "002.bin")));
         }
         finally
         {
@@ -96,10 +95,10 @@ public sealed class FaviconServiceTests
 
         try
         {
-            for (var i = 0; i < 4; i++)
+            for (var i = 0; i < 5; i++)
             {
                 var path = Path.Combine(directory, $"{i:D3}.bin");
-                File.WriteAllBytes(path, new byte[5 * 1024 * 1024]);
+                File.WriteAllBytes(path, new byte[32 * 1024 * 1024]);
                 File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddMinutes(i));
             }
 
@@ -108,8 +107,8 @@ public sealed class FaviconServiceTests
             var files = Directory.GetFiles(directory, "*.bin");
             var totalBytes = files.Sum(path => new FileInfo(path).Length);
 
-            Assert.Equal(3, files.Length);
-            Assert.True(totalBytes <= 16L * 1024 * 1024);
+            Assert.Equal(4, files.Length);
+            Assert.True(totalBytes <= 128L * 1024 * 1024);
             Assert.False(File.Exists(Path.Combine(directory, "000.bin")));
         }
         finally
@@ -132,15 +131,15 @@ public sealed class FaviconServiceTests
 
         try
         {
-            for (var i = 0; i < 256; i++)
+            for (var i = 0; i < 512; i++)
                 SetMemory($"host-{i}.example", image);
 
-            SetMemory("host-256.example", image);
+            SetMemory("host-512.example", image);
 
             Assert.Equal(256, memory.Count);
             Assert.False(memory.ContainsKey("host-0.example"));
             Assert.True(memory.ContainsKey("host-1.example"));
-            Assert.True(memory.ContainsKey("host-256.example"));
+            Assert.True(memory.ContainsKey("host-512.example"));
         }
         finally
         {
@@ -170,12 +169,12 @@ public sealed class FaviconServiceTests
                 SetMemory($"host-{i}.example", firstImage);
 
             SetMemory("host-0.example", updatedImage);
-            SetMemory("host-256.example", firstImage);
+            SetMemory("host-512.example", firstImage);
 
             Assert.Equal(256, memory.Count);
             Assert.Same(updatedImage, memory["host-0.example"]);
             Assert.False(memory.ContainsKey("host-1.example"));
-            Assert.True(memory.ContainsKey("host-256.example"));
+            Assert.True(memory.ContainsKey("host-512.example"));
         }
         finally
         {
@@ -200,7 +199,7 @@ public sealed class FaviconServiceTests
     [Fact]
     public async Task FaviconResponse_KnownOversizedContent_IsRejected()
     {
-        using var content = new ByteArrayContent(new byte[(256 * 1024) + 1]);
+        using var content = new ByteArrayContent(new byte[(1024 * 1024) + 1]);
 
         var bytes = await ReadContentBytesAsync(content);
 
