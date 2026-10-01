@@ -1,10 +1,12 @@
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using PejPass.Wpf.Services;
 
 namespace PejPass.Wpf.Tests;
 
+[TestClass(DisableParallelization = true)]
 public sealed class FaviconServiceTests
 {
     private static readonly FieldInfo DownloadQueueField =
@@ -35,7 +37,8 @@ public sealed class FaviconServiceTests
         FaviconService.ConfigureOnlineFetching(false);
         ClearPendingDownloads();
 
-        var image = FaviconService.GetImage("https://example.com", "Example");
+        ImageSource? image = null;
+        RunOnSta(() => image = FaviconService.GetImage("https://example.com", "Example"));
 
         Assert.IsType<RenderTargetBitmap>(image);
         Assert.Empty(GetDownloadQueue());
@@ -97,9 +100,33 @@ public sealed class FaviconServiceTests
         FaviconService.ConfigureOnlineFetching(false);
         ClearPendingDownloads();
 
-        var image = FaviconService.GetImage("https://example.com", "Example");
+        ImageSource? image = null;
+        RunOnSta(() => image = FaviconService.GetImage("https://example.com", "Example"));
 
         Assert.IsType<RenderTargetBitmap>(image);
+    }
+
+    private static void RunOnSta(Action action)
+    {
+        Exception? exception = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception ex)
+            {
+                exception = ex;
+            }
+        });
+
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        if (exception is not null)
+            throw new Xunit.Sdk.XunitException(exception.ToString());
     }
 
     private static ConcurrentQueue<string> GetDownloadQueue() =>
