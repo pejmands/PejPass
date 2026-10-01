@@ -87,14 +87,10 @@ public sealed class ThemeService(AppSettings settings) : IDisposable
             dictionaries.Remove(existingTheme);
 
         var themeSource = dark ? "Themes/DarkTheme.xaml" : "Themes/LightTheme.xaml";
-
         dictionaries.Insert(0, new System.Windows.ResourceDictionary
         {
             Source = new Uri(themeSource, UriKind.Relative)
         });
-
-        // Soft per-window pulse so Dark↔Light doesn't feel like a hard cut
-        UiPolish.OnThemeApplied();
     }
 
     public static bool IsSystemDark()
