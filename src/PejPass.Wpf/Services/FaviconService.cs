@@ -30,6 +30,8 @@ public static class FaviconService
     private static readonly SemaphoreSlim DownloadSlots = new(3, 3);
     private const int MaxFaviconResponseBytes = 256 * 1024;
     private const int MaxMemoryCacheEntries = 256;
+    private const int MaxDiskCacheFiles = 128;
+    private const long MaxDiskCacheBytes = 16L * 1024 * 1024;
 
     private static readonly string CacheDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -121,6 +123,7 @@ public static class FaviconService
         {
             if (runDisk)
             {
+                PruneDiskCache(CacheDir);
                 await Parallel.ForEachAsync(
                     hosts,
                     new ParallelOptions { MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount * 2, 4, 16) },
@@ -239,6 +242,7 @@ public static class FaviconService
             {
                 Directory.CreateDirectory(CacheDir);
                 await File.WriteAllBytesAsync(CachePath(host), bytes).ConfigureAwait(false);
+                PruneDiskCache(CacheDir);
             }
             catch
             {
@@ -351,6 +355,39 @@ public static class FaviconService
         catch
         {
             return null;
+        }
+    }
+
+    private static void PruneDiskCache(string directory)
+    {
+        try
+        {
+            if (!Directory.Exists(directory))
+                return;
+
+            var files = new DirectoryInfo(directory).GetFiles("*.bin");
+            var totalBytes = files.Sum(file => file.Length);
+            if (files.Length <= MaxDiskCacheFiles && totalBytes <= MaxDiskCacheBytes)
+                return;
+
+            foreach (var file in files.OrderBy(file => file.LastWriteTimeUtc))
+            {
+                if (files.Length <= MaxDiskCacheFiles && totalBytes <= MaxDiskCacheBytes)
+                    break;
+
+                try
+                {
+                    var length = file.Length;
+                    file.Delete();
+                    totalBytes -= length;
+                }
+                catch
+                {
+                }
+            }
+        }
+        catch
+        {
         }
     }
 
