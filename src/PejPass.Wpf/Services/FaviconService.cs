@@ -40,9 +40,6 @@ public static class FaviconService
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "PejPass", "favicons");
 
-    private static readonly string LastExpirationCleanupPath = Path.Combine(
-        CacheDir, ".last-expiration-cleanup-date");
-
     private static readonly object ExpirationCleanupGate = new();
 
     private static DispatcherTimer? _batchTimer;
@@ -418,6 +415,60 @@ public static class FaviconService
         }
         catch
         {
+        }
+    }
+
+    private static void PruneExpiredDiskCacheOncePerDay(
+        string directory,
+        DateTime utcNow,
+        DateOnly localDate)
+    {
+        lock (ExpirationCleanupGate)
+        {
+            try
+            {
+                if (!Directory.Exists(directory))
+                    return;
+
+                var markerPath = Path.Combine(directory, ".last-expiration-cleanup-date");
+                if (File.Exists(markerPath) &&
+                    DateOnly.TryParseExact(
+                        File.ReadAllText(markerPath).Trim(),
+                        "yyyy-MM-dd",
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None,
+                        out var lastCleanupDate) &&
+                    lastCleanupDate == localDate)
+                {
+                    return;
+                }
+
+                foreach (var file in Directory.GetFiles(directory, "*.bin"))
+                {
+                    try
+                    {
+                        var age = utcNow - File.GetLastWriteTimeUtc(file);
+                        var thresholdDays = Random.Shared.Next(
+                            MinDiskCacheAgeDays,
+                            MaxDiskCacheAgeDays + 1);
+
+                        if (age.TotalDays >= thresholdDays)
+                            File.Delete(file);
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                File.WriteAllText(
+                    markerPath,
+                    localDate.ToString(
+                        "yyyy-MM-dd",
+                        System.Globalization.CultureInfo.InvariantCulture));
+            }
+            catch
+            {
+            }
         }
     }
 
