@@ -126,7 +126,7 @@ public sealed class FaviconServiceTests
         thread.Join();
 
         if (exception is not null)
-            throw new Xunit.Sdk.XunitException(exception.ToString());
+            throw new InvalidOperationException("STA test failed.", exception);
     }
 
     private static ConcurrentQueue<string> GetDownloadQueue() =>
