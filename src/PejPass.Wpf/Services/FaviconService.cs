@@ -114,19 +114,6 @@ public static class FaviconService
             hosts.Add(host);
         }
 
-        if (hosts.Count == 0)
-        {
-            _ = Task.Run(() =>
-            {
-                PruneExpiredDiskCacheOncePerDay(
-                    CacheDir,
-                    DateTime.UtcNow,
-                    DateOnly.FromDateTime(DateTime.Today));
-                PruneDiskCache(CacheDir);
-            });
-            return;
-        }
-
         _ = Task.Run(() => WarmDiskThenDownloadAsync(hosts));
     }
 
