@@ -143,7 +143,10 @@ public static class FaviconService
                         return ValueTask.CompletedTask;
                     }).ConfigureAwait(false);
 
-                PruneExpiredDiskCacheOncePerDay(CacheDir, DateTime.Today);
+                PruneExpiredDiskCacheOncePerDay(
+                    CacheDir,
+                    DateTime.UtcNow,
+                    DateOnly.FromDateTime(DateTime.Today));
                 PruneDiskCache(CacheDir);
             }
 
