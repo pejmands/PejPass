@@ -370,15 +370,18 @@ public static class FaviconService
             if (files.Length <= MaxDiskCacheFiles && totalBytes <= MaxDiskCacheBytes)
                 return;
 
+            var fileCount = files.Length;
+
             foreach (var file in files.OrderBy(file => file.LastWriteTimeUtc))
             {
-                if (files.Length <= MaxDiskCacheFiles && totalBytes <= MaxDiskCacheBytes)
+                if (fileCount <= MaxDiskCacheFiles && totalBytes <= MaxDiskCacheBytes)
                     break;
 
                 try
                 {
                     var length = file.Length;
                     file.Delete();
+                    fileCount--;
                     totalBytes -= length;
                 }
                 catch
