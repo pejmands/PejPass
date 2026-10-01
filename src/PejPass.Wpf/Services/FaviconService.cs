@@ -91,8 +91,6 @@ public static class FaviconService
     /// </summary>
     public static void Prefetch(IEnumerable<(string Url, string Title)> items)
     {
-        if (!_onlineFetchingEnabled)
-            return;
         var hosts = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -138,6 +136,9 @@ public static class FaviconService
                     }).ConfigureAwait(false);
             }
 
+            if (!_onlineFetchingEnabled)
+                return;
+
             foreach (var host in hosts)
             {
                 if (Memory.ContainsKey(host) || Failed.ContainsKey(host))
@@ -173,7 +174,7 @@ public static class FaviconService
         {
             while (DownloadQueue.TryDequeue(out var host))
             {
-                if (Memory.ContainsKey(host) || Failed.ContainsKey(host))
+                if (!_onlineFetchingEnabled || Memory.ContainsKey(host) || Failed.ContainsKey(host))
                 {
                     InFlight.TryRemove(host, out _);
                     continue;
@@ -209,6 +210,9 @@ public static class FaviconService
     {
         try
         {
+            if (!_onlineFetchingEnabled)
+                return;
+
             var fromDisk = TryLoadFromDisk(host);
             if (fromDisk is not null)
             {
