@@ -54,6 +54,9 @@ public sealed class FaviconServiceTests
     private static readonly MethodInfo PruneDiskCacheMethod =
         typeof(FaviconService).GetMethod("PruneDiskCache", BindingFlags.NonPublic | BindingFlags.Static)!;
 
+    private static readonly MethodInfo PruneExpiredDiskCacheOncePerDayMethod =
+        typeof(FaviconService).GetMethod("PruneExpiredDiskCacheOncePerDay", BindingFlags.NonPublic | BindingFlags.Static)!;
+
     private static readonly MethodInfo ReadContentBytesMethod =
         typeof(FaviconService).GetMethod("ReadContentBytesAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
 
@@ -110,6 +113,85 @@ public sealed class FaviconServiceTests
             Assert.Equal(4, files.Length);
             Assert.True(totalBytes <= 128L * 1024 * 1024);
             Assert.False(File.Exists(Path.Combine(directory, "000.bin")));
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
+    public void DiskCacheExpiration_PreservesFilesYoungerThanThirtyDays()
+    {
+        var directory = CreateTempDirectory();
+        var now = DateTime.UtcNow;
+        var recentPath = Path.Combine(directory, "recent.bin");
+        var twentyNineDaysPath = Path.Combine(directory, "twenty-nine-days.bin");
+
+        try
+        {
+            File.WriteAllBytes(recentPath, [1]);
+            File.WriteAllBytes(twentyNineDaysPath, [1]);
+            File.SetLastWriteTimeUtc(recentPath, now.AddDays(-2));
+            File.SetLastWriteTimeUtc(twentyNineDaysPath, now.AddDays(-29));
+
+            PruneExpiredDiskCacheOncePerDay(directory, now, DateOnly.FromDateTime(now));
+
+            Assert.True(File.Exists(recentPath));
+            Assert.True(File.Exists(twentyNineDaysPath));
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
+    public void DiskCacheExpiration_DeletesFilesOlderThanFortyDays()
+    {
+        var directory = CreateTempDirectory();
+        var now = DateTime.UtcNow;
+        var expiredPath = Path.Combine(directory, "expired.bin");
+
+        try
+        {
+            File.WriteAllBytes(expiredPath, [1]);
+            File.SetLastWriteTimeUtc(expiredPath, now.AddDays(-41));
+
+            PruneExpiredDiskCacheOncePerDay(directory, now, DateOnly.FromDateTime(now));
+
+            Assert.False(File.Exists(expiredPath));
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
+    public void DiskCacheExpiration_RunsOnlyOncePerDate()
+    {
+        var directory = CreateTempDirectory();
+        var now = DateTime.UtcNow;
+        var localDate = DateOnly.FromDateTime(now);
+        var firstPath = Path.Combine(directory, "first.bin");
+        var secondPath = Path.Combine(directory, "second.bin");
+
+        try
+        {
+            File.WriteAllBytes(firstPath, [1]);
+            File.SetLastWriteTimeUtc(firstPath, now.AddDays(-41));
+
+            PruneExpiredDiskCacheOncePerDay(directory, now, localDate);
+
+            Assert.False(File.Exists(firstPath));
+
+            File.WriteAllBytes(secondPath, [1]);
+            File.SetLastWriteTimeUtc(secondPath, now.AddDays(-41));
+
+            PruneExpiredDiskCacheOncePerDay(directory, now, localDate);
+
+            Assert.True(File.Exists(secondPath));
         }
         finally
         {
@@ -420,6 +502,12 @@ public sealed class FaviconServiceTests
 
     private static void PruneDiskCache(string directory) =>
         PruneDiskCacheMethod.Invoke(null, [directory]);
+
+    private static void PruneExpiredDiskCacheOncePerDay(
+        string directory,
+        DateTime utcNow,
+        DateOnly localDate) =>
+        PruneExpiredDiskCacheOncePerDayMethod.Invoke(null, [directory, utcNow, localDate]);
 
     private static string CreateTempDirectory()
     {
