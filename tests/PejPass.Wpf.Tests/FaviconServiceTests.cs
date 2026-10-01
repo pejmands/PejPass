@@ -1,9 +1,11 @@
+using PejPass.Wpf.Services;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using PejPass.Wpf.Services;
 
 namespace PejPass.Wpf.Tests;
 
@@ -85,7 +87,7 @@ public sealed class FaviconServiceTests
             ("https://example.org", "Example Org")
         ]);
 
-        await Task.Delay(150);
+        await Task.Delay(150, TestContext.Current.CancellationToken);
 
         Assert.Empty(GetDownloadQueue());
         Assert.Empty(GetInFlight());
@@ -105,16 +107,16 @@ public sealed class FaviconServiceTests
         var cachePath = (string)CachePathMethod.Invoke(null, [host])!;
 
         Directory.CreateDirectory(cacheDir);
-        await File.WriteAllBytesAsync(cachePath, TinyPng);
+        await File.WriteAllBytesAsync(cachePath, TinyPng, TestContext.Current.CancellationToken);
 
         try
         {
             memory.TryRemove(host, out _);
 
-            FaviconService.Prefetch([( "https://example.com", "Example" )]);
+            FaviconService.Prefetch([("https://example.com", "Example")]);
 
             for (var i = 0; i < 20 && !memory.ContainsKey(host); i++)
-                await Task.Delay(25);
+                await Task.Delay(25, TestContext.Current.CancellationToken);
 
             Assert.True(memory.ContainsKey(host));
             Assert.IsType<BitmapImage>(FaviconService.GetImage("https://example.com", "Example"));
@@ -147,12 +149,8 @@ public sealed class FaviconServiceTests
         return await task;
     }
 
-    private sealed class ChunkedTestContent : HttpContent
+    private sealed class ChunkedTestContent(int length) : HttpContent
     {
-        private readonly int _length;
-
-        public ChunkedTestContent(int length) => _length = length;
-
         protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) =>
             SerializeAsync(stream);
 
@@ -165,7 +163,7 @@ public sealed class FaviconServiceTests
         private async Task SerializeAsync(Stream stream)
         {
             var buffer = new byte[8192];
-            var remaining = _length;
+            var remaining = length;
 
             while (remaining > 0)
             {
