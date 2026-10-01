@@ -91,6 +91,7 @@ public partial class App : System.Windows.Application
         MainWindow = login;
 
         PrepareCustomChrome(login);
+        FaviconService.StartDiskCacheCleanup();
 
         if (!string.IsNullOrWhiteSpace(launchVaultPath) &&
             login.DataContext is LoginViewModel loginVm)
