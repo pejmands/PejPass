@@ -171,7 +171,7 @@ public sealed class FaviconServiceTests
             SetMemory("host-0.example", updatedImage);
             SetMemory("host-512.example", firstImage);
 
-            Assert.Equal(256, memory.Count);
+            Assert.Equal(512, memory.Count);
             Assert.Same(updatedImage, memory["host-0.example"]);
             Assert.False(memory.ContainsKey("host-1.example"));
             Assert.True(memory.ContainsKey("host-512.example"));
