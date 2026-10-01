@@ -78,6 +78,33 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel VerticalAlignment="Top">
+                        <TextBlock Text="Favicon cache"
+                                   FontSize="{DynamicResource AppFontSize12}"
+                                   Foreground="{DynamicResource TextBrush}"/>
+                        <TextBlock Text="Stored website icons are removed automatically over time."
+                                   FontSize="{DynamicResource AppFontSize11}"
+                                   Foreground="{DynamicResource MutedBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,4,12,0"/>
+                    </StackPanel>
+
+                    <Button Grid.Column="1"
+                            Style="{StaticResource SecondaryButton}"
+                            Content="Clear cache"
+                            Command="{Binding ClearFaviconCacheCommand}"
+                            Height="36"
+                            Padding="12,6"
+                            HorizontalAlignment="Left"
+                            ToolTip="Remove all stored website icons"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="180"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel VerticalAlignment="Top">
                         <TextBlock Text="Font size"
                                    FontSize="{DynamicResource AppFontSize12}"
                                    Foreground="{DynamicResource TextBrush}"/>
