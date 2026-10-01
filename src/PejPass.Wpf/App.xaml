@@ -6,36 +6,10 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/DarkTheme.xaml"/>
                 <ResourceDictionary Source="Themes/ComboBoxStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
-            <SolidColorBrush x:Key="BgBrush" Color="#1E1E2E"/>
-            <SolidColorBrush x:Key="SurfaceBrush" Color="#313244"/>
-            <SolidColorBrush x:Key="SurfaceAltBrush" Color="#45475A"/>
-            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#585B70"/>
-            <SolidColorBrush x:Key="SurfacePressedBrush" Color="#6C7086"/>
-            <SolidColorBrush x:Key="TextBrush" Color="#CDD6F4"/>
-            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#A6ADC8"/>
-            <SolidColorBrush x:Key="TextDisabledBrush" Color="#6C7086"/>
-            <SolidColorBrush x:Key="MutedBrush" Color="#A6ADC8"/>
-            <SolidColorBrush x:Key="AccentBrush" Color="#89B4FA"/>
-            <SolidColorBrush x:Key="AccentHoverBrush" Color="#A6C8FF"/>
-            <SolidColorBrush x:Key="AccentPressedBrush" Color="#74A8F8"/>
-            <SolidColorBrush x:Key="DangerBrush" Color="#F38BA8"/>
-            <SolidColorBrush x:Key="DangerHoverBrush" Color="#F5A6BC"/>
-            <SolidColorBrush x:Key="DangerPressedBrush" Color="#E77898"/>
-            <SolidColorBrush x:Key="DangerSurfaceBrush" Color="#4A2632"/>
-            <SolidColorBrush x:Key="SuccessBrush" Color="#A6E3A1"/>
-            <SolidColorBrush x:Key="WarningBrush" Color="#F9E2AF"/>
-            <SolidColorBrush x:Key="ButtonTextBrush" Color="#1E1E2E"/>
-            <SolidColorBrush x:Key="BorderBrush" Color="#45475A"/>
-            <SolidColorBrush x:Key="BorderSubtleBrush" Color="#3A3B4D"/>
-            <SolidColorBrush x:Key="BorderFocusBrush" Color="#89B4FA"/>
-            <SolidColorBrush x:Key="OverlayBrush" Color="#CC1E1E2E"/>
-            <SolidColorBrush x:Key="ScrollThumbBrush" Color="#585B70"/>
-            <SolidColorBrush x:Key="ScrollTrackBrush" Color="#313244"/>
-            <SolidColorBrush x:Key="ComboItemHoverBrush" Color="#45475A"/>
-            <SolidColorBrush x:Key="ValidationErrorBrush" Color="#F38BA8"/>
             <Style x:Key="ValidationErrorText" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="11"/>
                 <Setter Property="Foreground" Value="{DynamicResource ValidationErrorBrush}"/>

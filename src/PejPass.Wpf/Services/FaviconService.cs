@@ -34,6 +34,9 @@ public static class FaviconService
     private static DispatcherTimer? _batchTimer;
     private static int _batchPending;
     private static int _diskWarmRunning;
+    private static volatile bool _onlineFetchingEnabled;
+
+    public static void ConfigureOnlineFetching(bool enabled) => _onlineFetchingEnabled = enabled;
 
     /// <summary>Raised on UI thread after one or more favicons finished (debounced).</summary>
     public static event Action? FaviconsBatchReady;
@@ -76,7 +79,7 @@ public static class FaviconService
         if (host is not null && Memory.TryGetValue(host, out var mem))
             return mem;
 
-        if (host is not null && !Failed.ContainsKey(host) && !Memory.ContainsKey(host))
+        if (_onlineFetchingEnabled && host is not null && !Failed.ContainsKey(host) && !Memory.ContainsKey(host))
             EnqueueDownload(host);
 
         var letterSource = !string.IsNullOrWhiteSpace(title) ? title : host ?? "?";
@@ -88,6 +91,8 @@ public static class FaviconService
     /// </summary>
     public static void Prefetch(IEnumerable<(string Url, string Title)> items)
     {
+        if (!_onlineFetchingEnabled)
+            return;
         var hosts = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 

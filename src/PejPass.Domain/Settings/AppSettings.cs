@@ -29,6 +29,8 @@ public sealed class AppSettings
     /// </summary>
     public bool WindowsHelloEnabled { get; set; } = true;
 
+    public bool OnlineFaviconFetchingEnabled { get; set; }
+
     public static string SettingsFilePath =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
