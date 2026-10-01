@@ -42,6 +42,7 @@ public static class FaviconService
 
     private static readonly Lock ExpirationCleanupLock = new();
     private static readonly Lock StartupCleanupLock = new();
+    private static long _cacheGeneration;
     private static Task _startupCleanupTask = Task.CompletedTask;
     private static bool _startupCleanupStarted;
 
@@ -51,6 +52,48 @@ public static class FaviconService
     private static volatile bool _onlineFetchingEnabled;
 
     public static void ConfigureOnlineFetching(bool enabled) => _onlineFetchingEnabled = enabled;
+
+    /// <summary>
+    /// Clears all persisted and in-memory favicon cache state.
+    /// A generation change prevents in-flight warm/download work from repopulating a cache that was just cleared.
+    /// </summary>
+    public static void ClearCache()
+    {
+        lock (ExpirationCleanupLock)
+        {
+            Interlocked.Increment(ref _cacheGeneration);
+
+            try
+            {
+                if (Directory.Exists(CacheDir))
+                {
+                    foreach (var file in Directory.GetFiles(CacheDir, "*.bin"))
+                    {
+                        try { File.Delete(file); } catch { }
+                    }
+
+                    try
+                    {
+                        File.Delete(Path.Combine(CacheDir, ".last-expiration-cleanup-date"));
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            lock (MemoryCacheLock)
+            {
+                Memory.Clear();
+                MemoryEvictionQueue.Clear();
+            }
+
+            Failed.Clear();
+        }
+    }
 
     /// <summary>
     /// Starts disk-cache cleanup in the background without delaying the login window.
@@ -167,8 +210,9 @@ public static class FaviconService
                         if (Memory.ContainsKey(host) || IsFailedRecently(host))
                             return ValueTask.CompletedTask;
 
+                        var generation = Volatile.Read(ref _cacheGeneration);
                         var fromDisk = TryLoadFromDisk(host);
-                        if (fromDisk is not null)
+                        if (fromDisk is not null && generation == Volatile.Read(ref _cacheGeneration))
                         {
                             SetMemory(host, fromDisk);
                             ScheduleBatchNotify();
@@ -258,10 +302,14 @@ public static class FaviconService
                 return;
 
             await WaitForStartupCleanupAsync().ConfigureAwait(false);
+            var generation = Volatile.Read(ref _cacheGeneration);
 
             var fromDisk = TryLoadFromDisk(host);
             if (fromDisk is not null)
             {
+                if (generation != Volatile.Read(ref _cacheGeneration))
+                    return;
+
                 SetMemory(host, fromDisk);
                 Failed.TryRemove(host, out _);
                 ScheduleBatchNotify();
@@ -277,6 +325,9 @@ public static class FaviconService
                 MarkFailed(host);
                 return;
             }
+
+            if (generation != Volatile.Read(ref _cacheGeneration))
+                return;
 
             try
             {
@@ -294,6 +345,9 @@ public static class FaviconService
                 MarkFailed(host);
                 return;
             }
+
+            if (generation != Volatile.Read(ref _cacheGeneration))
+                return;
 
             SetMemory(host, image);
             Failed.TryRemove(host, out _);
