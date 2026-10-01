@@ -39,6 +39,18 @@ public sealed class FaviconServiceTests
     private static readonly MethodInfo CachePathMethod =
         typeof(FaviconService).GetMethod("CachePath", BindingFlags.NonPublic | BindingFlags.Static)!;
 
+    private static readonly FieldInfo FailedField =
+        typeof(FaviconService).GetField("Failed", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly MethodInfo IsFailedRecentlyMethod =
+        typeof(FaviconService).GetMethod("IsFailedRecently", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly MethodInfo MarkFailedMethod =
+        typeof(FaviconService).GetMethod("MarkFailed", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly MethodInfo DownloadOneMethod =
+        typeof(FaviconService).GetMethod("DownloadOneAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
+
     private static readonly MethodInfo PruneDiskCacheMethod =
         typeof(FaviconService).GetMethod("PruneDiskCache", BindingFlags.NonPublic | BindingFlags.Static)!;
 
@@ -311,6 +323,79 @@ public sealed class FaviconServiceTests
         }
     }
 
+    [Fact]
+    public void RecentFailure_BlocksRetry()
+    {
+        const string host = "recent-failure.example";
+
+        MarkFailedMethod.Invoke(null, [host]);
+
+        try
+        {
+            var isFailed = (bool)IsFailedRecentlyMethod.Invoke(null, [host])!;
+            Assert.True(isFailed);
+        }
+        finally
+        {
+            GetFailed().TryRemove(host, out _);
+        }
+    }
+
+    [Fact]
+    public void ExpiredFailure_AllowsRetry()
+    {
+        const string host = "expired-failure.example";
+        GetFailed()[host] = DateTimeOffset.UtcNow.AddHours(-25);
+
+        try
+        {
+            var isFailed = (bool)IsFailedRecentlyMethod.Invoke(null, [host])!;
+            Assert.False(isFailed);
+            Assert.False(GetFailed().ContainsKey(host));
+        }
+        finally
+        {
+            GetFailed().TryRemove(host, out _);
+        }
+    }
+
+    [Fact]
+    public async Task SuccessfulDiskLoad_ClearsPreviousFailure()
+    {
+        const string host = "disk-success.example";
+
+        FaviconService.ConfigureOnlineFetching(true);
+        ClearPendingDownloads();
+
+        var cacheDir = (string)CacheDirField.GetValue(null)!;
+        var pathCache = (ConcurrentDictionary<string, string>)PathCacheField.GetValue(null)!;
+        var memory = (ConcurrentDictionary<string, ImageSource>)MemoryField.GetValue(null)!;
+        var cachePath = (string)CachePathMethod.Invoke(null, [host])!;
+
+        Directory.CreateDirectory(cacheDir);
+        await File.WriteAllBytesAsync(cachePath, TinyPng, TestContext.Current.CancellationToken);
+        MarkFailedMethod.Invoke(null, [host]);
+
+        try
+        {
+            memory.TryRemove(host, out _);
+
+            var task = (Task)DownloadOneMethod.Invoke(null, [host])!;
+            await task;
+
+            Assert.False(GetFailed().ContainsKey(host));
+            Assert.IsType<BitmapImage>(FaviconService.GetImage("https://disk-success.example", "Example"));
+        }
+        finally
+        {
+            memory.TryRemove(host, out _);
+            GetFailed().TryRemove(host, out _);
+            pathCache.TryRemove(host, out _);
+            File.Delete(cachePath);
+            FaviconService.ConfigureOnlineFetching(false);
+        }
+    }
+
     private static void RunOnSta(Action action)
     {
         Exception? exception = null;
@@ -361,6 +446,9 @@ public sealed class FaviconServiceTests
 
     private static ConcurrentDictionary<string, byte> GetInFlight() =>
         (ConcurrentDictionary<string, byte>)InFlightField.GetValue(null)!;
+
+    private static ConcurrentDictionary<string, DateTimeOffset> GetFailed() =>
+        (ConcurrentDictionary<string, DateTimeOffset>)FailedField.GetValue(null)!;
 
     private static void ClearPendingDownloads()
     {
