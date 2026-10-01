@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IO;
 using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -62,7 +63,7 @@ public sealed class FaviconServiceTests
             ("https://example.org", "Example Org")
         ]);
 
-        await Task.Delay(150);
+        await Task.Delay(150, TestContext.Current.CancellationToken);
 
         Assert.Empty(GetDownloadQueue());
         Assert.Empty(GetInFlight());
@@ -82,7 +83,7 @@ public sealed class FaviconServiceTests
         var cachePath = (string)CachePathMethod.Invoke(null, [host])!;
 
         Directory.CreateDirectory(cacheDir);
-        await File.WriteAllBytesAsync(cachePath, TinyPng);
+        await File.WriteAllBytesAsync(cachePath, TinyPng, TestContext.Current.CancellationToken);
 
         try
         {
@@ -91,7 +92,7 @@ public sealed class FaviconServiceTests
             FaviconService.Prefetch([("https://example.com", "Example")]);
 
             for (var i = 0; i < 20 && !memory.ContainsKey(host); i++)
-                await Task.Delay(25);
+                await Task.Delay(25, TestContext.Current.CancellationToken);
 
             Assert.True(memory.ContainsKey(host));
             Assert.IsType<BitmapImage>(FaviconService.GetImage("https://example.com", "Example"));
@@ -168,7 +169,7 @@ public sealed class FaviconServiceTests
         var cachePath = (string)CachePathMethod.Invoke(null, [host])!;
 
         Directory.CreateDirectory(cacheDir);
-        await File.WriteAllBytesAsync(cachePath, TinyPng);
+        await File.WriteAllBytesAsync(cachePath, TinyPng, TestContext.Current.CancellationToken);
         MarkFailedMethod.Invoke(null, [host]);
 
         try
