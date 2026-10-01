@@ -464,7 +464,7 @@ public sealed class FaviconServiceTests
 
         try
         {
-            var task = (Task)WarmDiskThenDownloadMethod.Invoke(null, [[host]])!;
+            var task = (Task)WarmDiskThenDownloadMethod.Invoke(null, [new List<string> { host }])!;
 
             await Task.Delay(100, TestContext.Current.CancellationToken);
             Assert.False(memory.ContainsKey(host));
