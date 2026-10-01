@@ -26,6 +26,7 @@ public static class FaviconService
     private static readonly ConcurrentQueue<string> DownloadQueue = new();
     private static readonly SemaphoreSlim DownloadGate = new(1, 1);
     private static readonly SemaphoreSlim DownloadSlots = new(3, 3);
+    private const int MaxFaviconResponseBytes = 256 * 1024;
 
     private static readonly string CacheDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -286,12 +287,45 @@ public static class FaviconService
     {
         try
         {
-            using var response = await Http.GetAsync(requestUrl).ConfigureAwait(false);
+            using var response = await Http.GetAsync(requestUrl, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return null;
 
-            var bytes = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
-            return bytes.Length > 0 ? bytes : null;
+            var contentLength = response.Content.Headers.ContentLength;
+            if (contentLength is > MaxFaviconResponseBytes)
+                return null;
+
+            return await ReadContentBytesAsync(response.Content).ConfigureAwait(false);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static async Task<byte[]?> ReadContentBytesAsync(HttpContent content)
+    {
+        try
+        {
+            await using var stream = await content.ReadAsStreamAsync().ConfigureAwait(false);
+            using var ms = new MemoryStream();
+            var buffer = new byte[81920];
+            var total = 0;
+
+            while (true)
+            {
+                var read = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length)).ConfigureAwait(false);
+                if (read == 0)
+                    break;
+
+                if (total > MaxFaviconResponseBytes - read)
+                    return null;
+
+                ms.Write(buffer, 0, read);
+                total += read;
+            }
+
+            return total > 0 ? ms.ToArray() : null;
         }
         catch
         {
