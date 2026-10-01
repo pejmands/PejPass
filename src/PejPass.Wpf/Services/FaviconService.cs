@@ -20,7 +20,7 @@ public static class FaviconService
     private static readonly HttpClient Http = CreateClient();
     private static readonly ConcurrentDictionary<string, ImageSource> Memory = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentQueue<KeyValuePair<string, ImageSource>> MemoryEvictionQueue = new();
-    private static readonly object MemoryCacheGate = new();
+    private static readonly object MemoryCacheLock = new();
     private static readonly ConcurrentDictionary<string, ImageSource> LetterCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, byte> InFlight = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, DateTimeOffset> Failed = new(StringComparer.OrdinalIgnoreCase);
@@ -40,8 +40,8 @@ public static class FaviconService
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "PejPass", "favicons");
 
-    private static readonly object ExpirationCleanupGate = new();
-    private static readonly object StartupCleanupGate = new();
+    private static readonly object ExpirationCleanupLock = new();
+    private static readonly object StartupCleanupLock = new();
     private static Task _startupCleanupTask = Task.CompletedTask;
     private static bool _startupCleanupStarted;
 
@@ -58,7 +58,7 @@ public static class FaviconService
     /// </summary>
     public static void StartDiskCacheCleanup()
     {
-        lock (StartupCleanupGate)
+        lock (StartupCleanupLock)
         {
             if (_startupCleanupStarted)
                 return;
@@ -77,7 +77,7 @@ public static class FaviconService
 
     private static Task WaitForStartupCleanupAsync()
     {
-        lock (StartupCleanupGate)
+        lock (StartupCleanupLock)
             return _startupCleanupTask;
     }
 
@@ -307,7 +307,7 @@ public static class FaviconService
 
     private static void SetMemory(string host, ImageSource image)
     {
-        lock (MemoryCacheGate)
+        lock (MemoryCacheLock)
         {
             if (Memory.ContainsKey(host))
             {
@@ -455,7 +455,7 @@ public static class FaviconService
         DateTime utcNow,
         DateOnly localDate)
     {
-        lock (ExpirationCleanupGate)
+        lock (ExpirationCleanupLock)
         {
             try
             {
