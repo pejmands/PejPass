@@ -32,11 +32,18 @@ public static class FaviconService
     private const int MaxMemoryCacheEntries = 512;
     private const int MaxDiskCacheFiles = 4096;
     private const long MaxDiskCacheBytes = 128L * 1024 * 1024;
+    private const int MinDiskCacheAgeDays = 30;
+    private const int MaxDiskCacheAgeDays = 40;
     private const int FailedLookupTtlHours = 24;
 
     private static readonly string CacheDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "PejPass", "favicons");
+
+    private static readonly string LastExpirationCleanupPath = Path.Combine(
+        CacheDir, ".last-expiration-cleanup-date");
+
+    private static readonly object ExpirationCleanupGate = new();
 
     private static DispatcherTimer? _batchTimer;
     private static int _batchPending;
@@ -124,7 +131,6 @@ public static class FaviconService
         {
             if (runDisk)
             {
-                PruneDiskCache(CacheDir);
                 await Parallel.ForEachAsync(
                     hosts,
                     new ParallelOptions { MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount * 2, 4, 16) },
@@ -142,6 +148,9 @@ public static class FaviconService
 
                         return ValueTask.CompletedTask;
                     }).ConfigureAwait(false);
+
+                PruneExpiredDiskCacheOncePerDay(CacheDir, DateTime.Today);
+                PruneDiskCache(CacheDir);
             }
 
             if (!_onlineFetchingEnabled)
