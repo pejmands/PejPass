@@ -41,6 +41,9 @@ public static class FaviconService
         "PejPass", "favicons");
 
     private static readonly object ExpirationCleanupGate = new();
+    private static readonly object StartupCleanupGate = new();
+    private static Task _startupCleanupTask = Task.CompletedTask;
+    private static bool _startupCleanupStarted;
 
     private static DispatcherTimer? _batchTimer;
     private static int _batchPending;
@@ -48,6 +51,31 @@ public static class FaviconService
     private static volatile bool _onlineFetchingEnabled;
 
     public static void ConfigureOnlineFetching(bool enabled) => _onlineFetchingEnabled = enabled;
+
+    /// <summary>
+    /// Starts disk-cache cleanup in the background without delaying the login window.
+    /// Cache reads and downloads wait for this task before accessing disk.
+    /// </summary>
+    public static void StartDiskCacheCleanup()
+    {
+        lock (StartupCleanupGate)
+        {
+            if (_startupCleanupStarted)
+                return;
+
+            _startupCleanupStarted = true;
+            _startupCleanupTask = Task.Run(() =>
+            {
+                PruneDiskCache(CacheDir);
+            });
+        }
+    }
+
+    private static Task WaitForStartupCleanupAsync()
+    {
+        lock (StartupCleanupGate)
+            return _startupCleanupTask;
+    }
 
     /// <summary>Raised on UI thread after one or more favicons finished (debounced).</summary>
     public static event Action? FaviconsBatchReady;
@@ -119,6 +147,8 @@ public static class FaviconService
 
     private static async Task WarmDiskThenDownloadAsync(List<string> hosts)
     {
+        await WaitForStartupCleanupAsync().ConfigureAwait(false);
+
         var runDisk = Interlocked.CompareExchange(ref _diskWarmRunning, 1, 0) == 0;
 
         try
@@ -226,6 +256,8 @@ public static class FaviconService
         {
             if (!_onlineFetchingEnabled)
                 return;
+
+            await WaitForStartupCleanupAsync().ConfigureAwait(false);
 
             var fromDisk = TryLoadFromDisk(host);
             if (fromDisk is not null)
