@@ -51,6 +51,12 @@ public sealed class FaviconServiceTests
     private static readonly MethodInfo DownloadOneMethod =
         typeof(FaviconService).GetMethod("DownloadOneAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
 
+    private static readonly MethodInfo WarmDiskThenDownloadMethod =
+        typeof(FaviconService).GetMethod("WarmDiskThenDownloadAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly FieldInfo StartupCleanupTaskField =
+        typeof(FaviconService).GetField("_startupCleanupTask", BindingFlags.NonPublic | BindingFlags.Static)!;
+
     private static readonly MethodInfo PruneDiskCacheMethod =
         typeof(FaviconService).GetMethod("PruneDiskCache", BindingFlags.NonPublic | BindingFlags.Static)!;
 
@@ -437,6 +443,84 @@ public sealed class FaviconServiceTests
         finally
         {
             GetFailed().TryRemove(host, out _);
+        }
+    }
+
+    [Fact]
+    public async Task DiskWarm_WaitsForStartupCleanupBeforeReadingDisk()
+    {
+        const string host = "startup-cleanup-warm.example";
+        var cleanupReleased = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var memory = (ConcurrentDictionary<string, ImageSource>)MemoryField.GetValue(null)!;
+        var pathCache = (ConcurrentDictionary<string, string>)PathCacheField.GetValue(null)!;
+        var cacheDir = (string)CacheDirField.GetValue(null)!;
+        var cachePath = (string)CachePathMethod.Invoke(null, [host])!;
+        var originalCleanupTask = (Task)StartupCleanupTaskField.GetValue(null)!;
+
+        Directory.CreateDirectory(cacheDir);
+        await File.WriteAllBytesAsync(cachePath, TinyPng, TestContext.Current.CancellationToken);
+        memory.TryRemove(host, out _);
+        StartupCleanupTaskField.SetValue(null, cleanupReleased.Task);
+
+        try
+        {
+            var task = (Task)WarmDiskThenDownloadMethod.Invoke(null, [[host]])!;
+
+            await Task.Delay(100, TestContext.Current.CancellationToken);
+            Assert.False(memory.ContainsKey(host));
+            Assert.False(task.IsCompleted);
+
+            cleanupReleased.SetResult();
+            await task;
+
+            Assert.True(memory.ContainsKey(host));
+        }
+        finally
+        {
+            StartupCleanupTaskField.SetValue(null, originalCleanupTask);
+            memory.TryRemove(host, out _);
+            pathCache.TryRemove(host, out _);
+            File.Delete(cachePath);
+        }
+    }
+
+    [Fact]
+    public async Task Download_WaitsForStartupCleanupBeforeReadingDisk()
+    {
+        const string host = "startup-cleanup-download.example";
+        var cleanupReleased = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var memory = (ConcurrentDictionary<string, ImageSource>)MemoryField.GetValue(null)!;
+        var pathCache = (ConcurrentDictionary<string, string>)PathCacheField.GetValue(null)!;
+        var cacheDir = (string)CacheDirField.GetValue(null)!;
+        var cachePath = (string)CachePathMethod.Invoke(null, [host])!;
+        var originalCleanupTask = (Task)StartupCleanupTaskField.GetValue(null)!;
+
+        Directory.CreateDirectory(cacheDir);
+        await File.WriteAllBytesAsync(cachePath, TinyPng, TestContext.Current.CancellationToken);
+        memory.TryRemove(host, out _);
+        FaviconService.ConfigureOnlineFetching(true);
+        StartupCleanupTaskField.SetValue(null, cleanupReleased.Task);
+
+        try
+        {
+            var task = (Task)DownloadOneMethod.Invoke(null, [host])!;
+
+            await Task.Delay(100, TestContext.Current.CancellationToken);
+            Assert.False(memory.ContainsKey(host));
+            Assert.False(task.IsCompleted);
+
+            cleanupReleased.SetResult();
+            await task;
+
+            Assert.True(memory.ContainsKey(host));
+        }
+        finally
+        {
+            StartupCleanupTaskField.SetValue(null, originalCleanupTask);
+            memory.TryRemove(host, out _);
+            pathCache.TryRemove(host, out _);
+            File.Delete(cachePath);
+            FaviconService.ConfigureOnlineFetching(false);
         }
     }
 
