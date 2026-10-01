@@ -1,5 +1,8 @@
+using CsvHelper;
+using CsvHelper.Configuration;
 using PejPass.Application.Interfaces;
 using PejPass.Domain.Entities;
+using System.Globalization;
 using System.Text;
 
 namespace PejPass.Infrastructure.Import;
@@ -10,16 +13,28 @@ namespace PejPass.Infrastructure.Import;
 /// </summary>
 public sealed class BrowserImportService : IBrowserImportService
 {
-    public async Task<IReadOnlyList<VaultEntry>> ImportFromCsvAsync(string filePath, CancellationToken ct = default)
+    public async Task<IReadOnlyList<VaultEntry>> ImportFromCsvAsync(
+    string filePath,
+    CancellationToken ct = default)
     {
         if (!File.Exists(filePath))
             throw new FileNotFoundException("Import file not found.", filePath);
 
-        var lines = await File.ReadAllLinesAsync(filePath, Encoding.UTF8, ct);
-        if (lines.Length < 2)
-            return [];
+        await using var stream = File.OpenRead(filePath);
+        using var reader = new StreamReader(stream, Encoding.UTF8);
 
-        var header = ParseCsvLine(lines[0]);
+        using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            HasHeaderRecord = true,
+            IgnoreBlankLines = true,
+            BadDataFound = null
+        });
+
+        await csv.ReadAsync();
+        csv.ReadHeader();
+
+        var header = csv.HeaderRecord?.ToList() ?? [];
+
         var map = BuildColumnMap(header);
 
         if (map.PasswordIndex < 0)
@@ -27,28 +42,25 @@ public sealed class BrowserImportService : IBrowserImportService
 
         var entries = new List<VaultEntry>();
 
-        for (int i = 1; i < lines.Length; i++)
+        while (await csv.ReadAsync())
         {
             ct.ThrowIfCancellationRequested();
 
-            var line = lines[i].Trim();
-            if (string.IsNullOrWhiteSpace(line))
-                continue;
+            var cols = csv.Parser.Record?.ToList() ?? [];
 
-            var cols = ParseCsvLine(line);
             if (cols.Count == 0)
                 continue;
 
             var password = GetCol(cols, map.PasswordIndex);
+
             if (string.IsNullOrEmpty(password))
-                continue; // skip empty passwords
+                continue;
 
             var title = GetCol(cols, map.TitleIndex);
             var username = GetCol(cols, map.UsernameIndex);
             var url = GetCol(cols, map.UrlIndex);
             var notes = GetCol(cols, map.NotesIndex);
 
-            // Fallback title from URL if missing
             if (string.IsNullOrWhiteSpace(title) && !string.IsNullOrWhiteSpace(url))
             {
                 try
@@ -119,46 +131,6 @@ public sealed class BrowserImportService : IBrowserImportService
         if (index < 0 || index >= cols.Count)
             return null;
         return cols[index];
-    }
-
-    /// <summary>
-    /// Minimal CSV line parser that respects quoted fields.
-    /// </summary>
-    private static List<string> ParseCsvLine(string line)
-    {
-        var result = new List<string>();
-        var sb = new StringBuilder();
-        bool inQuotes = false;
-
-        for (int i = 0; i < line.Length; i++)
-        {
-            char c = line[i];
-
-            if (c == '"')
-            {
-                if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
-                {
-                    sb.Append('"');
-                    i++; // skip escaped quote
-                }
-                else
-                {
-                    inQuotes = !inQuotes;
-                }
-            }
-            else if (c == ',' && !inQuotes)
-            {
-                result.Add(sb.ToString());
-                sb.Clear();
-            }
-            else
-            {
-                sb.Append(c);
-            }
-        }
-
-        result.Add(sb.ToString());
-        return result;
     }
 
     private sealed class ColumnMap
