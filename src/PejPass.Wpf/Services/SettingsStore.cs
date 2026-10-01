@@ -129,6 +129,14 @@ public static class SettingsStore
 
         settings.WindowsHelloEnabled = windowsHelloEnabled;
 
+        if (!TryGetBool(root, "onlineFaviconFetchingEnabled", out var onlineFaviconFetchingEnabled))
+        {
+            onlineFaviconFetchingEnabled = false;
+            needsSave = true;
+        }
+
+        settings.OnlineFaviconFetchingEnabled = onlineFaviconFetchingEnabled;
+
         return needsSave;
     }
 

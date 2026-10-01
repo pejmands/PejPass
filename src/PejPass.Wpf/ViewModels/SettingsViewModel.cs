@@ -28,6 +28,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly bool _savedWindowsHello;
     private readonly FontSizeMode _savedFontSize;
     private readonly double _savedZoom;
+    private readonly bool _savedOnlineFaviconFetching;
 
     private bool _suppressThemePreview;
     private bool _suppressZoomPreview;
@@ -52,6 +53,9 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool WindowsHelloEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool OnlineFaviconFetchingEnabled { get; set; }
 
     [ObservableProperty]
     public partial int SelectedFontSizeIndex { get; set; }
@@ -93,6 +97,7 @@ public partial class SettingsViewModel : ObservableObject
         _savedWindowsHello = settings.WindowsHelloEnabled;
         _savedFontSize = settings.FontSize;
         _savedZoom = settings.Zoom;
+        _savedOnlineFaviconFetching = settings.OnlineFaviconFetchingEnabled;
 
         _suppressThemePreview = true;
         _suppressZoomPreview = true;
@@ -101,6 +106,7 @@ public partial class SettingsViewModel : ObservableObject
         RevealSecretSeconds = settings.RevealSecretSeconds;
         SelectedThemeIndex = (int)settings.Theme;
         WindowsHelloEnabled = settings.WindowsHelloEnabled;
+        OnlineFaviconFetchingEnabled = settings.OnlineFaviconFetchingEnabled;
         SelectedFontSizeIndex = (int)settings.FontSize;
         SelectedZoomIndex = GetZoomIndex(settings.Zoom);
         SelectedRevealSecretIndex = GetRevealSecretIndex(settings.RevealSecretSeconds);
@@ -190,6 +196,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.RevealSecretSeconds = RevealSecretSeconds;
         _settings.Theme = (ThemeMode)SelectedThemeIndex;
         _settings.WindowsHelloEnabled = WindowsHelloEnabled;
+        _settings.OnlineFaviconFetchingEnabled = OnlineFaviconFetchingEnabled;
         _settings.FontSize = (FontSizeMode)SelectedFontSizeIndex;
         _settings.Zoom = ZoomBehavior.ZoomLevels[SelectedZoomIndex];
 
@@ -208,6 +215,7 @@ public partial class SettingsViewModel : ObservableObject
             SessionPasswordCache.Clear();
 
         _themeService.Apply();
+        FaviconService.ConfigureOnlineFetching(OnlineFaviconFetchingEnabled);
 
         RequestClose?.Invoke(this, EventArgs.Empty);
         SnackbarService.Show("Settings saved.");
@@ -228,6 +236,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.WindowsHelloEnabled = _savedWindowsHello;
         _settings.FontSize = _savedFontSize;
         _settings.Zoom = _savedZoom;
+        _settings.OnlineFaviconFetchingEnabled = _savedOnlineFaviconFetching;
 
         _suppressThemePreview = true;
         try
@@ -237,6 +246,7 @@ public partial class SettingsViewModel : ObservableObject
             RevealSecretSeconds = _savedRevealSecret;
             SelectedThemeIndex = (int)_savedTheme;
             WindowsHelloEnabled = _savedWindowsHello;
+            OnlineFaviconFetchingEnabled = _savedOnlineFaviconFetching;
             SelectedFontSizeIndex = (int)_savedFontSize;
             SelectedRevealSecretIndex = GetRevealSecretIndex(_savedRevealSecret);
 

@@ -49,6 +49,7 @@ public partial class App : System.Windows.Application
 
         var settings = SettingsStore.Load();
         _settings = settings;
+        FaviconService.ConfigureOnlineFetching(settings.OnlineFaviconFetchingEnabled);
         ZoomBehavior.GlobalZoomChanged += OnGlobalZoomChanged;
 
         var themeService = new ThemeService(settings);
