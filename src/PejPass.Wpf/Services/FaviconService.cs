@@ -19,6 +19,8 @@ public static class FaviconService
 {
     private static readonly HttpClient Http = CreateClient();
     private static readonly ConcurrentDictionary<string, ImageSource> Memory = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentQueue<KeyValuePair<string, ImageSource>> MemoryEvictionQueue = new();
+    private static readonly object MemoryCacheGate = new();
     private static readonly ConcurrentDictionary<string, ImageSource> LetterCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, byte> InFlight = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, byte> Failed = new(StringComparer.OrdinalIgnoreCase);
@@ -27,6 +29,7 @@ public static class FaviconService
     private static readonly SemaphoreSlim DownloadGate = new(1, 1);
     private static readonly SemaphoreSlim DownloadSlots = new(3, 3);
     private const int MaxFaviconResponseBytes = 256 * 1024;
+    private const int MaxMemoryCacheEntries = 256;
 
     private static readonly string CacheDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -129,7 +132,7 @@ public static class FaviconService
                         var fromDisk = TryLoadFromDisk(host);
                         if (fromDisk is not null)
                         {
-                            Memory[host] = fromDisk;
+                            SetMemory(host, fromDisk);
                             ScheduleBatchNotify();
                         }
 
@@ -217,7 +220,7 @@ public static class FaviconService
             var fromDisk = TryLoadFromDisk(host);
             if (fromDisk is not null)
             {
-                Memory[host] = fromDisk;
+                SetMemory(host, fromDisk);
                 ScheduleBatchNotify();
                 return;
             }
@@ -248,12 +251,30 @@ public static class FaviconService
                 return;
             }
 
-            Memory[host] = image;
+            SetMemory(host, image);
             ScheduleBatchNotify();
         }
         catch
         {
             Failed[host] = 0;
+        }
+    }
+
+    private static void SetMemory(string host, ImageSource image)
+    {
+        lock (MemoryCacheGate)
+        {
+            if (Memory.ContainsKey(host))
+            {
+                Memory[host] = image;
+                return;
+            }
+
+            Memory[host] = image;
+            MemoryEvictionQueue.Enqueue(new KeyValuePair<string, ImageSource>(host, image));
+
+            while (Memory.Count > MaxMemoryCacheEntries && MemoryEvictionQueue.TryDequeue(out var candidate))
+                Memory.TryRemove(candidate);
         }
     }
 

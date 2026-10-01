@@ -21,6 +21,15 @@ public sealed class FaviconServiceTests
     private static readonly FieldInfo MemoryField =
         typeof(FaviconService).GetField("Memory", BindingFlags.NonPublic | BindingFlags.Static)!;
 
+    private static readonly FieldInfo MemoryEvictionQueueField =
+        typeof(FaviconService).GetField("MemoryEvictionQueue", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly MethodInfo SetMemoryMethod =
+        typeof(FaviconService).GetMethod("SetMemory", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly MethodInfo CreateBitmapMethod =
+        typeof(FaviconService).GetMethod("CreateBitmap", BindingFlags.NonPublic | BindingFlags.Static)!;
+
     private static readonly FieldInfo CacheDirField =
         typeof(FaviconService).GetField("CacheDir", BindingFlags.NonPublic | BindingFlags.Static)!;
 
@@ -36,6 +45,74 @@ public sealed class FaviconServiceTests
     private static readonly byte[] TinyPng =
         Convert.FromBase64String(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+
+    [Fact]
+    public void MemoryCache_EvictsOldestEntryAtCapacity()
+    {
+        var memory = GetMemory();
+        var evictionQueue = GetMemoryEvictionQueue();
+        memory.Clear();
+        while (evictionQueue.TryDequeue(out _))
+        {
+        }
+
+        var image = CreateTestImage();
+
+        try
+        {
+            for (var i = 0; i < 256; i++)
+                SetMemory($"host-{i}.example", image);
+
+            SetMemory("host-256.example", image);
+
+            Assert.Equal(256, memory.Count);
+            Assert.False(memory.ContainsKey("host-0.example"));
+            Assert.True(memory.ContainsKey("host-1.example"));
+            Assert.True(memory.ContainsKey("host-256.example"));
+        }
+        finally
+        {
+            memory.Clear();
+            while (evictionQueue.TryDequeue(out _))
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void MemoryCache_UpdatedEntryIsNotRemovedByStaleEvictionRecord()
+    {
+        var memory = GetMemory();
+        var evictionQueue = GetMemoryEvictionQueue();
+        memory.Clear();
+        while (evictionQueue.TryDequeue(out _))
+        {
+        }
+
+        var firstImage = CreateTestImage();
+        var updatedImage = CreateTestImage();
+
+        try
+        {
+            for (var i = 0; i < 256; i++)
+                SetMemory($"host-{i}.example", firstImage);
+
+            SetMemory("host-0.example", updatedImage);
+            SetMemory("host-256.example", firstImage);
+
+            Assert.Equal(256, memory.Count);
+            Assert.Same(updatedImage, memory["host-0.example"]);
+            Assert.False(memory.ContainsKey("host-1.example"));
+            Assert.True(memory.ContainsKey("host-256.example"));
+        }
+        finally
+        {
+            memory.Clear();
+            while (evictionQueue.TryDequeue(out _))
+            {
+            }
+        }
+    }
 
     [Fact]
     public async Task FaviconResponse_SmallContent_IsAccepted()
@@ -196,6 +273,18 @@ public sealed class FaviconServiceTests
         if (exception is not null)
             throw new InvalidOperationException("STA test failed.", exception);
     }
+
+    private static ConcurrentDictionary<string, ImageSource> GetMemory() =>
+        (ConcurrentDictionary<string, ImageSource>)MemoryField.GetValue(null)!;
+
+    private static ConcurrentQueue<KeyValuePair<string, ImageSource>> GetMemoryEvictionQueue() =>
+        (ConcurrentQueue<KeyValuePair<string, ImageSource>>)MemoryEvictionQueueField.GetValue(null)!;
+
+    private static void SetMemory(string host, ImageSource image) =>
+        SetMemoryMethod.Invoke(null, [host, image]);
+
+    private static ImageSource CreateTestImage() =>
+        (ImageSource)CreateBitmapMethod.Invoke(null, [TinyPng])!;
 
     private static ConcurrentQueue<string> GetDownloadQueue() =>
         (ConcurrentQueue<string>)DownloadQueueField.GetValue(null)!;
