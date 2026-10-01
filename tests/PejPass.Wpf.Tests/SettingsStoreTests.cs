@@ -6,6 +6,12 @@ namespace PejPass.Wpf.Tests;
 
 public sealed class SettingsStoreTests
 {
+    [Fact]
+    public void OnlineFaviconFetching_IsDisabledByDefault()
+    {
+        Assert.False(new AppSettings().OnlineFaviconFetchingEnabled);
+    }
+
     private static readonly SemaphoreSlim SettingsFileLock = new(1, 1);
 
     [Fact]
