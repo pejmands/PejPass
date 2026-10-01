@@ -66,6 +66,10 @@ public static class FaviconService
             _startupCleanupStarted = true;
             _startupCleanupTask = Task.Run(() =>
             {
+                PruneExpiredDiskCacheOncePerDay(
+                    CacheDir,
+                    DateTime.UtcNow,
+                    DateOnly.FromDateTime(DateTime.Today));
                 PruneDiskCache(CacheDir);
             });
         }
@@ -173,10 +177,6 @@ public static class FaviconService
                         return ValueTask.CompletedTask;
                     }).ConfigureAwait(false);
 
-                PruneExpiredDiskCacheOncePerDay(
-                    CacheDir,
-                    DateTime.UtcNow,
-                    DateOnly.FromDateTime(DateTime.Today));
                 PruneDiskCache(CacheDir);
             }
 
