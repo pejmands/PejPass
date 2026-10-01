@@ -28,10 +28,10 @@ public static class FaviconService
     private static readonly ConcurrentQueue<string> DownloadQueue = new();
     private static readonly SemaphoreSlim DownloadGate = new(1, 1);
     private static readonly SemaphoreSlim DownloadSlots = new(3, 3);
-    private const int MaxFaviconResponseBytes = 256 * 1024;
-    private const int MaxMemoryCacheEntries = 256;
-    private const int MaxDiskCacheFiles = 128;
-    private const long MaxDiskCacheBytes = 16L * 1024 * 1024;
+    private const int MaxFaviconResponseBytes = 1024 * 1024;
+    private const int MaxMemoryCacheEntries = 512;
+    private const int MaxDiskCacheFiles = 4096;
+    private const long MaxDiskCacheBytes = 128L * 1024 * 1024;
     private const int FailedLookupTtlHours = 24;
 
     private static readonly string CacheDir = Path.Combine(
