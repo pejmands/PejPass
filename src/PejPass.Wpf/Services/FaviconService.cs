@@ -225,6 +225,7 @@ public static class FaviconService
             if (fromDisk is not null)
             {
                 SetMemory(host, fromDisk);
+                Failed.TryRemove(host, out _);
                 ScheduleBatchNotify();
                 return;
             }
@@ -257,6 +258,7 @@ public static class FaviconService
             }
 
             SetMemory(host, image);
+            Failed.TryRemove(host, out _);
             ScheduleBatchNotify();
         }
         catch
