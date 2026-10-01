@@ -1,6 +1,5 @@
 using Microsoft.Win32;
 using PejPass.Domain.Settings;
-using System.Windows.Media;
 using ThemeMode = PejPass.Domain.Settings.ThemeMode;
 
 namespace PejPass.Wpf.Services;
@@ -35,7 +34,7 @@ public sealed class ThemeService(AppSettings settings) : IDisposable
             _ => IsSystemDark()
         };
 
-        ApplyColors(useDark);
+        ApplyThemeDictionary(useDark);
     }
 
     private void UpdateSystemWatch()
@@ -75,7 +74,7 @@ public sealed class ThemeService(AppSettings settings) : IDisposable
         app.Dispatcher.Invoke(() => ApplyMode(ThemeMode.System));
     }
 
-    private static void ApplyColors(bool dark)
+    private static void ApplyThemeDictionary(bool dark)
     {
         var app = System.Windows.Application.Current;
         if (app is null) return;
@@ -144,10 +143,8 @@ public sealed class ThemeService(AppSettings settings) : IDisposable
 
         foreach (var (key, color) in colors)
         {
-            var brush = new SolidColorBrush(color);
-            brush.Freeze();
-            app.Resources[key] = brush;
-        }
+            Source = new Uri(themeSource, UriKind.Relative)
+        });
 
         // Soft per-window pulse so Dark↔Light doesn't feel like a hard cut
         UiPolish.OnThemeApplied();
