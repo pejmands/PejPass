@@ -4,17 +4,29 @@
     <SolidColorBrush x:Key="BgBrush" Color="#EFF1F5"/>
     <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="SurfaceAltBrush" Color="#E6E9EF"/>
+    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#DCE0E8"/>
+    <SolidColorBrush x:Key="SurfacePressedBrush" Color="#CCD0DA"/>
     <SolidColorBrush x:Key="TextBrush" Color="#4C4F69"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#6C6F85"/>
+    <SolidColorBrush x:Key="TextDisabledBrush" Color="#9CA0B0"/>
     <SolidColorBrush x:Key="MutedBrush" Color="#6C6F85"/>
     <SolidColorBrush x:Key="AccentBrush" Color="#1E66F5"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#1A5CDB"/>
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#174FBE"/>
     <SolidColorBrush x:Key="DangerBrush" Color="#D20F39"/>
+    <SolidColorBrush x:Key="DangerHoverBrush" Color="#B80D32"/>
+    <SolidColorBrush x:Key="DangerPressedBrush" Color="#9F0B2B"/>
+    <SolidColorBrush x:Key="DangerSurfaceBrush" Color="#FCE9ED"/>
     <SolidColorBrush x:Key="SuccessBrush" Color="#40A02B"/>
     <SolidColorBrush x:Key="WarningBrush" Color="#DF8E1D"/>
     <SolidColorBrush x:Key="ButtonTextBrush" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="BorderBrush" Color="#CCD0DA"/>
+    <SolidColorBrush x:Key="BorderSubtleBrush" Color="#DCE0E8"/>
+    <SolidColorBrush x:Key="BorderFocusBrush" Color="#1E66F5"/>
     <SolidColorBrush x:Key="OverlayBrush" Color="#AAEFF1F5"/>
     <SolidColorBrush x:Key="ScrollThumbBrush" Color="#9CA0B0"/>
     <SolidColorBrush x:Key="ScrollTrackBrush" Color="#E6E9EF"/>
     <SolidColorBrush x:Key="ComboItemHoverBrush" Color="#DCE0E8"/>
+    <SolidColorBrush x:Key="ValidationErrorBrush" Color="#D20F39"/>
 
 </ResourceDictionary>
