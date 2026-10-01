@@ -1,3 +1,4 @@
+using System.IO;
 using System.Text;
 using PejPass.Domain.Settings;
 using PejPass.Wpf.Services;
@@ -17,13 +18,15 @@ public sealed class SettingsStoreTests
     [Fact]
     public async Task OlderSettingsWithoutOnlineFaviconProperty_LoadAsDisabled()
     {
-        await SettingsFileLock.WaitAsync();
+        await SettingsFileLock.WaitAsync(TestContext.Current.CancellationToken);
 
         var path = AppSettings.SettingsFilePath;
         var directory = Path.GetDirectoryName(path)!;
         Directory.CreateDirectory(directory);
 
-        byte[]? original = File.Exists(path) ? await File.ReadAllBytesAsync(path) : null;
+        byte[]? original = File.Exists(path)
+            ? await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken)
+            : null;
 
         try
         {
@@ -41,7 +44,11 @@ public sealed class SettingsStoreTests
                 }
                 """;
 
-            await File.WriteAllTextAsync(path, json, Encoding.UTF8);
+            await File.WriteAllTextAsync(
+                path,
+                json,
+                Encoding.UTF8,
+                TestContext.Current.CancellationToken);
 
             var settings = SettingsStore.Load();
 
@@ -52,7 +59,10 @@ public sealed class SettingsStoreTests
             if (original is null)
                 File.Delete(path);
             else
-                await File.WriteAllBytesAsync(path, original);
+                await File.WriteAllBytesAsync(
+                    path,
+                    original,
+                    TestContext.Current.CancellationToken);
 
             SettingsFileLock.Release();
         }
