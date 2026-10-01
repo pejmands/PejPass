@@ -1,7 +1,6 @@
 using PejPass.Domain.Settings;
 using System.IO;
 using PejPass.Wpf.Services;
-using System.IO;
 using System.Text;
 
 namespace PejPass.Wpf.Tests;
