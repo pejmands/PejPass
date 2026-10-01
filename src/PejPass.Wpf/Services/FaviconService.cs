@@ -21,11 +21,13 @@ public static class FaviconService
     private static readonly ConcurrentDictionary<string, ImageSource> Memory = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, ImageSource> LetterCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, byte> InFlight = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly ConcurrentDictionary<string, byte> Failed = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, DateTimeOffset> Failed = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, string> PathCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentQueue<string> DownloadQueue = new();
     private static readonly SemaphoreSlim DownloadGate = new(1, 1);
     private static readonly SemaphoreSlim DownloadSlots = new(3, 3);
+
+    private const int FailedLookupTtlHours = 24;
 
     private static readonly string CacheDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -79,7 +81,7 @@ public static class FaviconService
         if (host is not null && Memory.TryGetValue(host, out var mem))
             return mem;
 
-        if (_onlineFetchingEnabled && host is not null && !Failed.ContainsKey(host) && !Memory.ContainsKey(host))
+        if (_onlineFetchingEnabled && host is not null && !IsFailedRecently(host) && !Memory.ContainsKey(host))
             EnqueueDownload(host);
 
         var letterSource = !string.IsNullOrWhiteSpace(title) ? title : host ?? "?";
@@ -98,7 +100,7 @@ public static class FaviconService
         {
             var host = TryGetHost(url);
             if (host is null) continue;
-            if (Memory.ContainsKey(host) || Failed.ContainsKey(host)) continue;
+            if (Memory.ContainsKey(host) || IsFailedRecently(host)) continue;
             if (!seen.Add(host)) continue;
             hosts.Add(host);
         }
@@ -122,7 +124,7 @@ public static class FaviconService
                     new ParallelOptions { MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount * 2, 4, 16) },
                     (host, _) =>
                     {
-                        if (Memory.ContainsKey(host) || Failed.ContainsKey(host))
+                        if (Memory.ContainsKey(host) || IsFailedRecently(host))
                             return ValueTask.CompletedTask;
 
                         var fromDisk = TryLoadFromDisk(host);
@@ -141,7 +143,7 @@ public static class FaviconService
 
             foreach (var host in hosts)
             {
-                if (Memory.ContainsKey(host) || Failed.ContainsKey(host))
+                if (Memory.ContainsKey(host) || IsFailedRecently(host))
                     continue;
                 EnqueueDownload(host);
             }
@@ -155,7 +157,7 @@ public static class FaviconService
 
     private static void EnqueueDownload(string host)
     {
-        if (Memory.ContainsKey(host) || Failed.ContainsKey(host))
+        if (Memory.ContainsKey(host) || IsFailedRecently(host))
             return;
 
         if (!InFlight.TryAdd(host, 0))
@@ -174,7 +176,7 @@ public static class FaviconService
         {
             while (DownloadQueue.TryDequeue(out var host))
             {
-                if (!_onlineFetchingEnabled || Memory.ContainsKey(host) || Failed.ContainsKey(host))
+                if (!_onlineFetchingEnabled || Memory.ContainsKey(host) || IsFailedRecently(host))
                 {
                     InFlight.TryRemove(host, out _);
                     continue;
@@ -217,6 +219,7 @@ public static class FaviconService
             if (fromDisk is not null)
             {
                 Memory[host] = fromDisk;
+                Failed.TryRemove(host, out _);
                 ScheduleBatchNotify();
                 return;
             }
@@ -227,7 +230,7 @@ public static class FaviconService
 
             if (bytes is null || bytes.Length < 16)
             {
-                Failed[host] = 0;
+                MarkFailed(host);
                 return;
             }
 
@@ -243,18 +246,34 @@ public static class FaviconService
             var image = CreateBitmap(bytes);
             if (image is null)
             {
-                Failed[host] = 0;
+                MarkFailed(host);
                 return;
             }
 
             Memory[host] = image;
+            Failed.TryRemove(host, out _);
             ScheduleBatchNotify();
         }
         catch
         {
-            Failed[host] = 0;
+            MarkFailed(host);
         }
     }
+
+    private static bool IsFailedRecently(string host)
+    {
+        if (!Failed.TryGetValue(host, out var failedAt))
+            return false;
+
+        if (DateTimeOffset.UtcNow - failedAt < TimeSpan.FromHours(FailedLookupTtlHours))
+            return true;
+
+        Failed.TryRemove(new KeyValuePair<string, DateTimeOffset>(host, failedAt));
+        return false;
+    }
+
+    private static void MarkFailed(string host) =>
+        Failed[host] = DateTimeOffset.UtcNow;
 
     private static void ScheduleBatchNotify()
     {
