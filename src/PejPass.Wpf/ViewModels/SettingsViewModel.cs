@@ -299,6 +299,13 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ClearFaviconCache()
+    {
+        FaviconService.ClearCache();
+        SnackbarService.Show("Favicon cache cleared.");
+    }
+
+    [RelayCommand]
     private void ChangeMasterPassword()
     {
         if (!_vaultSession.IsActive)
