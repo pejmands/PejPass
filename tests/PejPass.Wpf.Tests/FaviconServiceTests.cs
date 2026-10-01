@@ -136,7 +136,7 @@ public sealed class FaviconServiceTests
 
             SetMemory("host-512.example", image);
 
-            Assert.Equal(256, memory.Count);
+            Assert.Equal(512, memory.Count);
             Assert.False(memory.ContainsKey("host-0.example"));
             Assert.True(memory.ContainsKey("host-1.example"));
             Assert.True(memory.ContainsKey("host-512.example"));
@@ -165,7 +165,7 @@ public sealed class FaviconServiceTests
 
         try
         {
-            for (var i = 0; i < 256; i++)
+            for (var i = 0; i < 512; i++)
                 SetMemory($"host-{i}.example", firstImage);
 
             SetMemory("host-0.example", updatedImage);
@@ -209,7 +209,7 @@ public sealed class FaviconServiceTests
     [Fact]
     public async Task FaviconResponse_UnknownLengthOversizedContent_IsRejected()
     {
-        using var content = new ChunkedTestContent((256 * 1024) + 1);
+        using var content = new ChunkedTestContent((1024 * 1024) + 1);
 
         var bytes = await ReadContentBytesAsync(content);
 
