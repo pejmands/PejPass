@@ -16,7 +16,7 @@
                 <ColumnDefinition Width="340"
                                   MinWidth="280"
                                   MaxWidth="420"/>
-                <ColumnDefinition Width="1"/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -452,9 +452,17 @@
                 </Grid>
             </DockPanel>
 
-            <!-- Divider -->
-            <Border Grid.Column="1"
-                    Background="{DynamicResource BorderBrush}"/>
+            <!-- Resizable divider -->
+            <GridSplitter Grid.Column="1"
+                          Width="5"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Background="Transparent"
+                          Cursor="SizeWE"
+                          ResizeDirection="Columns"
+                          ResizeBehavior="PreviousAndNext"
+                          ShowsPreview="False"
+                          ToolTip="Resize entry list"/>
 
             <!-- Entry Details -->
             <Grid Grid.Column="2"
