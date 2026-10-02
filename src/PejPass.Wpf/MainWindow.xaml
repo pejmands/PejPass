@@ -134,6 +134,7 @@
                 <Grid>
                     <ListBox x:Name="EntryList"
                          ItemsSource="{Binding FilteredEntries}"
+                         SelectionMode="Extended"
                          SelectedItem="{Binding SelectedEntry}"
                          IsSynchronizedWithCurrentItem="False"
                          Background="Transparent"
