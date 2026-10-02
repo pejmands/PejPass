@@ -12,6 +12,7 @@ public partial class TrashViewModel : ObservableObject
     private readonly List<TrashRow> _all = [];
     private readonly Func<Task<bool>> _ensureWritable;
     private readonly Func<Task<bool>> _saveVault;
+    private readonly Func<VaultEntry, bool> _isDuplicate;
 
     public ObservableCollection<TrashRow> Items { get; } = [];
 
@@ -32,11 +33,13 @@ public partial class TrashViewModel : ObservableObject
     public TrashViewModel(
         Vault vault,
         Func<Task<bool>> ensureWritable,
-        Func<Task<bool>> saveVault)
+        Func<Task<bool>> saveVault,
+        Func<VaultEntry, bool> isDuplicate)
     {
         _vault = vault;
         _ensureWritable = ensureWritable;
         _saveVault = saveVault;
+        _isDuplicate = isDuplicate;
         Reload();
     }
 
@@ -86,6 +89,20 @@ public partial class TrashViewModel : ObservableObject
     private async Task RestoreAsync(TrashRow? row)
     {
         if (row is null || !await _ensureWritable()) return;
+
+        var trashedEntry = _vault.Trash
+            .FirstOrDefault(t => t.Entry.Id == row.EntryId)?.Entry;
+
+        if (trashedEntry is null)
+            return;
+
+        if (_isDuplicate(trashedEntry))
+        {
+            DialogService.Warning(
+                "An identical entry already exists in your list. The item will remain in Trash.",
+                "Duplicate entry");
+            return;
+        }
 
         var snapshot = _vault.CreateSnapshot();
 
