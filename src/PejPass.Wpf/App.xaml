@@ -352,10 +352,57 @@
                         <ControlTemplate TargetType="MenuItem">
                             <Border x:Name="MenuItemBorder"
                                     Background="{TemplateBinding Background}"
-                                    CornerRadius="5">
-                                <ContentPresenter ContentSource="Header"
-                                                  Margin="{TemplateBinding Padding}"
-                                                  VerticalAlignment="Center"/>
+                                    CornerRadius="5"
+                                    SnapsToDevicePixels="True">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <ContentPresenter x:Name="HeaderHost"
+                                                      ContentSource="Header"
+                                                      Margin="{TemplateBinding Padding}"
+                                                      VerticalAlignment="Center"
+                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      RecognizesAccessKey="True"/>
+
+                                    <TextBlock x:Name="GestureText"
+                                               Grid.Column="1"
+                                               Text="{TemplateBinding InputGestureText}"
+                                               Margin="16,0,4,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="12"
+                                               Opacity="0.55"
+                                               Foreground="{TemplateBinding Foreground}"/>
+
+                                    <Path x:Name="SubmenuArrow"
+                                          Grid.Column="2"
+                                          Margin="6,0,6,0"
+                                          VerticalAlignment="Center"
+                                          Data="M0,0 L4,3.5 L0,7 Z"
+                                          Fill="{TemplateBinding Foreground}"
+                                          Visibility="Collapsed"/>
+
+                                    <Popup x:Name="PART_Popup"
+                                           AllowsTransparency="True"
+                                           Focusable="False"
+                                           IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                           Placement="Right"
+                                           HorizontalOffset="0"
+                                           VerticalOffset="-6"
+                                           PopupAnimation="{DynamicResource {x:Static SystemParameters.MenuPopupAnimationKey}}">
+                                        <Border Background="{DynamicResource SurfaceBrush}"
+                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="6,5"
+                                                SnapsToDevicePixels="True">
+                                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                        </Border>
+                                    </Popup>
+                                </Grid>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsHighlighted" Value="True">
@@ -367,6 +414,15 @@
                                     <Setter Property="Foreground"
                                             Value="{DynamicResource TextDisabledBrush}"/>
                                     <Setter Property="Opacity" Value="0.5"/>
+                                </Trigger>
+                                <Trigger Property="HasItems" Value="True">
+                                    <Setter TargetName="SubmenuArrow" Property="Visibility" Value="Visible"/>
+                                </Trigger>
+                                <Trigger Property="InputGestureText" Value="">
+                                    <Setter TargetName="GestureText" Property="Visibility" Value="Collapsed"/>
+                                </Trigger>
+                                <Trigger Property="InputGestureText" Value="{x:Null}">
+                                    <Setter TargetName="GestureText" Property="Visibility" Value="Collapsed"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>

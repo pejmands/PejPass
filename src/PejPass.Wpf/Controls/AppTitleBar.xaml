@@ -97,7 +97,67 @@
                             Click="MoreActionsButton_Click"
                             PreviewMouseRightButtonDown="MoreActionsButton_OnPreviewMouseRightButtonDown"
                             shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                            ToolTip="More actions"/>
+                            ToolTip="More actions">
+                        <Button.ContextMenu>
+                            <ContextMenu x:Name="MoreActionsMenu"
+                                         Style="{StaticResource PejPassContextMenu}"
+                                         Placement="Bottom"
+                                         VerticalOffset="6"
+                                         DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+
+                                <MenuItem Header="Vault Health"
+                                          InputGestureText="Ctrl+H"
+                                          Command="{Binding OpenHealthCommand}"
+                                          Style="{StaticResource PejPassContextMenuItem}"/>
+                                <MenuItem Header="History"
+                                          Command="{Binding OpenHistoryCommand}"
+                                          Style="{StaticResource PejPassContextMenuItem}"/>
+                                <MenuItem Header="Trash"
+                                          InputGestureText="Ctrl+Shift+T"
+                                          Command="{Binding OpenTrashCommand}"
+                                          Style="{StaticResource PejPassContextMenuItem}"/>
+
+                                <Separator Style="{StaticResource PejPassContextMenuSeparator}"/>
+
+                                <MenuItem Header="Backup"
+                                          InputGestureText="Ctrl+B"
+                                          Command="{Binding ExportBackupCommand}"
+                                          Style="{StaticResource PejPassContextMenuItem}"/>
+                                <MenuItem Header="Restore"
+                                          Command="{Binding RestoreBackupCommand}"
+                                          Style="{StaticResource PejPassContextMenuItem}"/>
+
+                                <Separator Style="{StaticResource PejPassContextMenuSeparator}"/>
+
+                                <MenuItem Header="Import"
+                                          Style="{StaticResource PejPassContextMenuItem}">
+                                    <MenuItem Header="Browser CSV"
+                                              Command="{Binding ImportCommand}"
+                                              Style="{StaticResource PejPassContextMenuItem}"/>
+                                    <MenuItem Header="PejPass CSV"
+                                              Command="{Binding ImportPejPassCsvCommand}"
+                                              Style="{StaticResource PejPassContextMenuItem}"/>
+                                </MenuItem>
+
+                                <MenuItem Header="Export"
+                                          Style="{StaticResource PejPassContextMenuItem}">
+                                    <MenuItem Header="Browser CSV"
+                                              Command="{Binding ExportCsvCommand}"
+                                              Style="{StaticResource PejPassContextMenuItem}"/>
+                                    <MenuItem Header="PejPass CSV"
+                                              Command="{Binding ExportPejPassCsvCommand}"
+                                              Style="{StaticResource PejPassContextMenuItem}"/>
+                                </MenuItem>
+
+                                <Separator Style="{StaticResource PejPassContextMenuSeparator}"/>
+
+                                <MenuItem Header="About PejPass"
+                                          Command="{Binding OpenAboutCommand}"
+                                          Style="{StaticResource PejPassContextMenuItem}"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                    
                     <Popup x:Name="MoreActionsPopup"
                            PlacementTarget="{Binding ElementName=MoreActionsButton}"
                            Placement="Bottom"

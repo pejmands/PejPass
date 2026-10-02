@@ -374,7 +374,13 @@ public partial class AppTitleBar : UserControl
 
     private void MoreActionsButton_Click(object sender, RoutedEventArgs e)
     {
-        MoreActionsPopup.IsOpen = true;
+        if (MoreActionsButton.ContextMenu is { } menu)
+        {
+            menu.PlacementTarget = MoreActionsButton;
+            menu.Placement = PlacementMode.Bottom;
+            menu.VerticalOffset = 6;
+            menu.IsOpen = true;
+        }
         e.Handled = true;
     }
 
