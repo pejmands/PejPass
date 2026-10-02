@@ -116,6 +116,7 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<CustomFieldDisplayItem> DisplayCustomFields { get; } = [];
 
     public bool IsEntryListEmpty => FilteredEntries.Count == 0;
+    public bool HasEntries => Entries.Count > 0;
     public bool HasActiveEntryFilter =>
         !string.IsNullOrWhiteSpace(SearchText) ||
         !string.IsNullOrWhiteSpace(SelectedTagFilter) ||
@@ -359,6 +360,7 @@ public partial class MainViewModel : ObservableObject
 
         OnPropertyChanged(nameof(IsEntryListEmpty));
         OnPropertyChanged(nameof(HasActiveEntryFilter));
+        OnPropertyChanged(nameof(HasEntries));
 
         if (keepId is { } id)
             SelectedEntry = FilteredEntries.FirstOrDefault(e => e.Id == id);
@@ -782,6 +784,50 @@ public partial class MainViewModel : ObservableObject
         }
 
         SnackbarService.Show("Entry updated.");
+        ResetAutoLockTimer();
+    }
+
+    [RelayCommand]
+    private async Task DeleteAllEntriesAsync()
+    {
+        var vault = _vaultSession.Vault;
+        if (vault is null || Entries.Count == 0)
+            return;
+
+        var count = Entries.Count;
+
+        if (!DialogService.Confirm(
+                $"Move all {count} entries to Trash?\n\nYou can restore them within 30 days.",
+                "Delete All Entries",
+                yesText: "Move all to Trash",
+                noText: "Cancel"))
+            return;
+
+        if (!await EnsureVaultWritableAsync())
+            return;
+
+        var snapshot = vault.CreateSnapshot();
+        var entryIds = Entries.Select(e => e.Id).ToArray();
+
+        foreach (var entryId in entryIds)
+            vault.SoftDelete(entryId);
+
+        Entries.Clear();
+        SelectedEntry = null;
+
+        RebuildTagFilters();
+        ApplyFilter(preserveSelectionId: null);
+
+        if (!await SaveVaultAsync())
+        {
+            RestoreVaultSnapshot(snapshot);
+            return;
+        }
+
+        UpdateEntryStatus();
+        DialogService.Success(
+            $"Moved {count} entries to Trash.\n\nYou can restore them within 30 days.",
+            "Delete All Entries");
         ResetAutoLockTimer();
     }
 
