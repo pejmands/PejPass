@@ -123,23 +123,7 @@
                                    Foreground="{DynamicResource MutedBrush}"
                                    FontSize="{DynamicResource AppFontSize12}"
                                    VerticalAlignment="Center"/>
-                        <TextBlock x:Name="SelectedEntriesCountText"
-                                   Margin="10,0,0,0"
-                                   Foreground="{DynamicResource AccentBrush}"
-                                   FontSize="{DynamicResource AppFontSize12}"
-                                   VerticalAlignment="Center"
-                                   Visibility="Collapsed"/>
                     </StackPanel>
-                    <Button x:Name="DeleteSelectedButton"
-                            Grid.Column="1"
-                            Style="{StaticResource DestructiveButton}"
-                            Content="Delete selected"
-                            Margin="0,0,8,0"
-                            Padding="10,5"
-                            Background="{DynamicResource DangerBrush}"
-                            IsEnabled="False"
-                            Visibility="Collapsed"
-                            Click="DeleteSelected_Click"/>
                     <ComboBox Grid.Column="2"
                               Width="110"
                               ItemsSource="{Binding SortOptions}"
@@ -377,7 +361,33 @@
                                HorizontalAlignment="Center"/>
                 </StackPanel>
 
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                <!-- Multi-selection state -->
+                <StackPanel x:Name="MultiSelectionPanel"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Visibility="Collapsed">
+                    <TextBlock x:Name="SelectedEntriesCountText"
+                               Text="2 items selected"
+                               FontSize="{DynamicResource AppFontSize18}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Choose an action for the selected entries."
+                               Margin="0,8,0,20"
+                               FontSize="{DynamicResource AppFontSize13}"
+                               Foreground="{DynamicResource MutedBrush}"
+                               HorizontalAlignment="Center"/>
+                    <Button x:Name="DeleteSelectedButton"
+                            Style="{StaticResource DestructiveButton}"
+                            Content="Delete selected"
+                            Padding="16,8"
+                            Background="{DynamicResource DangerBrush}"
+                            Click="DeleteSelected_Click"
+                            HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <ScrollViewer x:Name="EntryDetailsScrollViewer"
+                              VerticalScrollBarVisibility="Auto"
                               Visibility="{Binding HasSelection,
                                                    Converter={StaticResource BoolToVis}}">
                     <StackPanel MaxWidth="560"
