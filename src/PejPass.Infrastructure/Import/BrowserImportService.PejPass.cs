@@ -43,8 +43,12 @@ public sealed partial class BrowserImportService
                 if (cols.Count == 0)
                     continue;
 
-                if (!string.Equals(GetCol(cols, header["pejpass_format"]), "1", StringComparison.Ordinal))
+                var format = GetCol(cols, header["pejpass_format"]);
+                if (format is not ("1" or "2"))
                     throw new InvalidDataException("Unsupported or invalid PejPass CSV format version.");
+
+                var isFavorite = format == "2" &&
+                    string.Equals(GetCol(cols, header.GetValueOrDefault("favorite")), "1", StringComparison.Ordinal);
 
                 List<string> tags;
                 List<CustomField> customFields;
@@ -76,7 +80,8 @@ public sealed partial class BrowserImportService
                     Notes = GetCol(cols, header["note"]) ?? string.Empty,
                     TotpSecret = GetCol(cols, header["totp_secret"]) ?? string.Empty,
                     Tags = tags,
-                    CustomFields = customFields
+                    CustomFields = customFields,
+                    IsFavorite = isFavorite
                 });
             }
 
