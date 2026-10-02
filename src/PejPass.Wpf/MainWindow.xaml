@@ -78,7 +78,7 @@
                                         FontWeight="SemiBold"
                                         Cursor="Hand"
                                         BorderThickness="1"
-                                        ToolTip="Filter entries (click again to clear)">
+                                        >
                                     <Button.Style>
                                         <Style TargetType="Button"
                                                BasedOn="{StaticResource {x:Type Button}}">
