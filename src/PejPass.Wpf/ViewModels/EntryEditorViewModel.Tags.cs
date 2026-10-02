@@ -36,7 +36,7 @@ public partial class EntryEditorViewModel
 
     private readonly List<string> _otherEntryTags = [];
     private readonly HashSet<string> _knownTags = new(StringComparer.Ordinal);
-    private readonly HashSet<string> _originalTags = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _originalTags = new(StringComparer.Ordinal);
 
     public ObservableCollection<EntryEditorTagItem> SuggestedTags { get; } = [];
 
@@ -126,6 +126,12 @@ public partial class EntryEditorViewModel
 
     public bool HasCaseVariantInOtherEntries(string tag)
     {
+        if (DefaultTags.Any(
+            defaultTag => defaultTag.Equals(tag, StringComparison.Ordinal)))
+        {
+            return false;
+        }
+
         if (_originalTags.Contains(tag))
             return false;
 
