@@ -105,10 +105,15 @@ public partial class MainWindow : Window
     private void UpdateSelectedEntriesToolbar()
     {
         var count = EntryList.SelectedItems.Count;
-        SelectedEntriesCountText.Text = count == 1 ? "1 selected" : $"{count} selected";
-        SelectedEntriesCountText.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        DeleteSelectedButton.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        DeleteSelectedButton.IsEnabled = count > 0;
+        var isMultiSelection = count > 1;
+
+        SelectedEntriesCountText.Text = $"{count} items selected";
+        MultiSelectionPanel.Visibility = isMultiSelection
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        EntryDetailsScrollViewer.Visibility = count == 1
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     private void DeleteSelected_Click(object sender, RoutedEventArgs e)
