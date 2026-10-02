@@ -68,7 +68,6 @@
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextBrush}"
                        TextTrimming="CharacterEllipsis"
-                       IsHitTestVisible="False"
                        ToolTip="{Binding FilePath, RelativeSource={RelativeSource AncestorType=UserControl}}"
                        Margin="0,0,8,0"/>
 
