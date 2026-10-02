@@ -13,6 +13,7 @@ public partial class TrashWindow : Window
 
         DataContext = viewModel;
         KeyDown += OnKeyDown;
+        TrashList.SelectionChanged += (_, _) => UpdateSelectedTrashToolbar();
 
         FaviconService.FaviconsBatchReady += OnFaviconsReady;
         Loaded += (_, _) =>
@@ -33,6 +34,35 @@ public partial class TrashWindow : Window
     {
         try { TrashList.Items.Refresh(); }
         catch { /* disposing */ }
+    }
+
+    private void UpdateSelectedTrashToolbar()
+    {
+        var count = TrashList.SelectedItems.Count;
+        SelectedTrashCountText.Text = count == 1 ? "1 selected" : $"{count} selected";
+        SelectedTrashCountText.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        RestoreSelectedButton.IsEnabled = count > 0;
+        PurgeSelectedButton.IsEnabled = count > 0;
+    }
+
+    private void RestoreSelected_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not TrashViewModel vm)
+            return;
+
+        var selected = TrashList.SelectedItems.Cast<TrashRow>().ToArray();
+        if (vm.RestoreSelectedCommand.CanExecute(selected))
+            vm.RestoreSelectedCommand.Execute(selected);
+    }
+
+    private void PurgeSelected_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not TrashViewModel vm)
+            return;
+
+        var selected = TrashList.SelectedItems.Cast<TrashRow>().ToArray();
+        if (vm.PurgeSelectedCommand.CanExecute(selected))
+            vm.PurgeSelectedCommand.Execute(selected);
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
