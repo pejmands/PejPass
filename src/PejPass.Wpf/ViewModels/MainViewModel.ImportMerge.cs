@@ -4,7 +4,7 @@ namespace PejPass.Wpf.ViewModels;
 
 public partial class MainViewModel
 {
-    private ImportMergeResult MergeImportedEntries(
+    private static ImportMergeResult MergeImportedEntries(
         Vault vault,
         IReadOnlyList<VaultEntry> imported,
         bool includeTags = true)

@@ -1,4 +1,5 @@
 using PejPass.Domain.Entities;
+using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using System.ComponentModel;
