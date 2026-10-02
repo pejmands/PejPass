@@ -36,7 +36,7 @@ public partial class EntryEditorViewModel
 
     private readonly List<string> _otherEntryTags = [];
     private readonly HashSet<string> _knownTags = new(StringComparer.Ordinal);
-    private readonly HashSet<string> _originalTags = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _originalTags = new(StringComparer.OrdinalIgnoreCase);
 
     public ObservableCollection<EntryEditorTagItem> SuggestedTags { get; } = [];
 
