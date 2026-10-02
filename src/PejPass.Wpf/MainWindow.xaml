@@ -30,14 +30,88 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
                         <controls:SearchBox x:Name="SearchBox"
-                                      Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                      Placeholder="Search entries..."
-                                      ToolTip="Search (Ctrl+K)"/>
+                                            Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                            Placeholder="Search entries..."
+                                            ToolTip="Search (Ctrl+K)"/>
 
-                        <Button Grid.Column="1"
+                        <ToggleButton x:Name="ContentFilterButton"
+                                      Grid.Column="1"
+                                      Width="40"
+                                      Height="40"
+                                      Margin="8,0,0,0"
+                                      Padding="0"
+                                      Cursor="Hand"
+                                      ToolTip="Filter entries"
+                                      IsChecked="{Binding ElementName=ContentFilterPopup, Path=IsOpen, Mode=TwoWay}">
+                            <ToggleButton.Style>
+                                <Style TargetType="ToggleButton"
+                                       BasedOn="{StaticResource {x:Type ToggleButton}}">
+                                    <Setter Property="Background"
+                                            Value="{DynamicResource SurfaceBrush}"/>
+                                    <Setter Property="Foreground"
+                                            Value="{DynamicResource MutedBrush}"/>
+                                    <Setter Property="BorderBrush"
+                                            Value="{DynamicResource BorderBrush}"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasContentFilter}" Value="True">
+                                            <Setter Property="Foreground"
+                                                    Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="BorderBrush"
+                                                    Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ToggleButton.Style>
+                            <TextBlock FontFamily="Segoe MDL2 Assets"
+                                       Text="&#xE71C;"
+                                       FontSize="16"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </ToggleButton>
+
+                        <Popup x:Name="ContentFilterPopup"
+                               PlacementTarget="{Binding ElementName=ContentFilterButton}"
+                               Placement="Bottom"
+                               StaysOpen="False"
+                               AllowsTransparency="True"
+                               PopupAnimation="Fade"
+                               IsOpen="False">
+                            <Border Background="{DynamicResource SurfaceBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="14"
+                                    MinWidth="190">
+                                <StackPanel>
+                                    <TextBlock Text="Filter entries"
+                                               FontSize="{DynamicResource AppFontSize13}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               Margin="0,0,0,10"/>
+                                    <CheckBox Content="Has TOTP"
+                                              IsChecked="{Binding HasTotpFilter, Mode=TwoWay}"
+                                              Margin="0,0,0,10"
+                                              Foreground="{DynamicResource TextBrush}"/>
+                                    <CheckBox Content="Has Note"
+                                              IsChecked="{Binding HasNotesFilter, Mode=TwoWay}"
+                                              Margin="0,0,0,12"
+                                              Foreground="{DynamicResource TextBrush}"/>
+                                    <Button Content="Clear filters"
+                                            Command="{Binding ClearContentFiltersCommand}"
+                                            HorizontalAlignment="Right"
+                                            Padding="10,5"
+                                            FontSize="{DynamicResource AppFontSize12}"
+                                            IsEnabled="{Binding HasContentFilter}"/>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+
+                        <Button Grid.Column="2"
                                 Margin="8,0,0,0"
                                 Style="{StaticResource PrimaryButton}"
                                 Content="Add Entry"
