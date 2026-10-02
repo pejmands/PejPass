@@ -86,6 +86,69 @@ public partial class TrashViewModel : ObservableObject
     private void ClearSearch() => SearchText = string.Empty;
 
     [RelayCommand]
+    private async Task RestoreSelectedAsync(IReadOnlyList<TrashRow>? selectedRows)
+    {
+        var selected = selectedRows?
+            .Where(row => _all.Any(item => item.EntryId == row.EntryId))
+            .DistinctBy(row => row.EntryId)
+            .ToList();
+
+        if (selected is not { Count: > 0 } || !await _ensureWritable())
+            return;
+
+        var snapshot = _vault.CreateSnapshot();
+        var restoredIds = new HashSet<Guid>();
+        var duplicates = 0;
+
+        foreach (var row in selected)
+        {
+            var entry = _vault.Trash.FirstOrDefault(t => t.Entry.Id == row.EntryId)?.Entry;
+            if (entry is null)
+                continue;
+
+            if (_isDuplicate(entry))
+            {
+                duplicates++;
+                continue;
+            }
+
+            if (_vault.RestoreFromTrash(row.EntryId))
+                restoredIds.Add(row.EntryId);
+        }
+
+        if (restoredIds.Count == 0)
+        {
+            StatusMessage = duplicates > 0
+                ? $"Skipped {duplicates} duplicate item(s); they remain in Trash."
+                : "No selected items could be restored.";
+
+            if (duplicates > 0)
+                DialogService.Warning(
+                    $"All {duplicates} selected item(s) duplicate entries already in your list. They remain in Trash.",
+                    "Nothing restored");
+            return;
+        }
+
+        if (!await SaveAndRollbackAsync(snapshot))
+            return;
+
+        _all.RemoveAll(row => restoredIds.Contains(row.EntryId));
+        ApplyFilter();
+        Changed?.Invoke(this, EventArgs.Empty);
+
+        StatusMessage = duplicates > 0
+            ? $"Restored {restoredIds.Count}; skipped {duplicates} duplicate item(s)."
+            : $"Restored {restoredIds.Count} item(s).";
+
+        if (duplicates > 0)
+            DialogService.Warning(
+                $"Restored {restoredIds.Count} item(s).\n\nSkipped {duplicates} duplicate item(s); they remain in Trash.",
+                "Restore selected items");
+        else
+            DialogService.Success($"Restored {restoredIds.Count} item(s).", "Restore selected items");
+    }
+
+    [RelayCommand]
     private async Task RestoreAsync(TrashRow? row)
     {
         if (row is null || !await _ensureWritable()) return;
@@ -148,6 +211,50 @@ public partial class TrashViewModel : ObservableObject
         Changed?.Invoke(this, EventArgs.Empty);
         if (_all.Count == 0)
             StatusMessage = "Trash is empty.";
+    }
+
+    [RelayCommand]
+    private async Task PurgeSelectedAsync(IReadOnlyList<TrashRow>? selectedRows)
+    {
+        var selected = selectedRows?
+            .Where(row => _all.Any(item => item.EntryId == row.EntryId))
+            .DistinctBy(row => row.EntryId)
+            .ToList();
+
+        if (selected is not { Count: > 0 })
+            return;
+
+        if (!DialogService.Confirm(
+                $"Permanently delete {selected.Count} selected item(s)? This cannot be undone.",
+                "Delete selected items permanently",
+                yesText: "Delete permanently",
+                noText: "Cancel"))
+            return;
+
+        if (!await _ensureWritable())
+            return;
+
+        var snapshot = _vault.CreateSnapshot();
+        var purgedIds = new HashSet<Guid>();
+
+        foreach (var row in selected)
+        {
+            if (_vault.PurgeFromTrash(row.EntryId))
+                purgedIds.Add(row.EntryId);
+        }
+
+        if (!await SaveAndRollbackAsync(snapshot))
+            return;
+
+        _all.RemoveAll(row => purgedIds.Contains(row.EntryId));
+        ApplyFilter();
+        Changed?.Invoke(this, EventArgs.Empty);
+        StatusMessage = _all.Count == 0
+            ? "Trash is empty."
+            : $"Permanently deleted {purgedIds.Count} item(s).";
+        DialogService.Success(
+            $"Permanently deleted {purgedIds.Count} item(s).",
+            "Items permanently deleted");
     }
 
     [RelayCommand]
