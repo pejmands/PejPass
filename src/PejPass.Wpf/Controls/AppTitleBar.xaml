@@ -68,6 +68,7 @@
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextBrush}"
                        TextTrimming="CharacterEllipsis"
+                       PreviewMouseLeftButtonDown="TitleText_PreviewMouseLeftButtonDown"
                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
                        ToolTipService.ToolTip="{Binding FilePath, RelativeSource={RelativeSource AncestorType=UserControl}}"
                        ToolTipService.InitialShowDelay="300"
