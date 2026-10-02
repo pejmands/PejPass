@@ -54,36 +54,6 @@ public partial class MainViewModel
             skippedAlreadyInList);
     }
 
-    private static string EntryContentFingerprint(VaultEntry entry)
-    {
-        static string S(string? value) => value ?? string.Empty;
-
-        var tags = string.Join(
-            '\u001e',
-            entry.Tags
-                .Select(S)
-                .OrderBy(value => value, StringComparer.Ordinal));
-
-        var customFields = string.Join(
-            '\u001e',
-            entry.CustomFields
-                .Select(field =>
-                    $"{S(field.Name)}\u001d{S(field.Value)}\u001d{(field.IsSecret ? '1' : '0')}")
-                .OrderBy(value => value, StringComparer.Ordinal));
-
-        return string.Join(
-            '\u001f',
-            S(entry.Title),
-            S(entry.Username),
-            S(entry.Password),
-            S(entry.Url),
-            S(entry.TotpSecret),
-            S(entry.Notes),
-            tags,
-            customFields,
-            entry.IsFavorite ? "1" : "0");
-    }
-
     private static VaultEntry CloneImportedEntry(VaultEntry source)
     {
         return new VaultEntry
