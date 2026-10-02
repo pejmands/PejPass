@@ -365,6 +365,42 @@ public partial class AppTitleBar : UserControl
             : Visibility.Collapsed;
     }
 
+    private void TitleText_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (Host is not { } window)
+            return;
+
+        if (e.ClickCount == 2)
+        {
+            if (window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip)
+            {
+                if (window.WindowState == WindowState.Maximized)
+                    SystemCommands.RestoreWindow(window);
+                else
+                    SystemCommands.MaximizeWindow(window);
+
+                UpdateMaxIcon();
+            }
+
+            e.Handled = true;
+            return;
+        }
+
+        if (e.ClickCount == 1)
+        {
+            try
+            {
+                window.DragMove();
+            }
+            catch (InvalidOperationException)
+            {
+                // The drag can be canceled if the mouse button is released before DragMove starts.
+            }
+
+            e.Handled = true;
+        }
+    }
+
     private void MoreActionsButton_OnPreviewMouseRightButtonDown(
         object sender,
         MouseButtonEventArgs e)
