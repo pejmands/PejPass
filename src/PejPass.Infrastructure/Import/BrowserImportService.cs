@@ -11,7 +11,7 @@ namespace PejPass.Infrastructure.Import;
 /// Imports passwords from common browser CSV exports (Chrome, Edge, Firefox, etc.).
 /// No external CSV library — simple and robust enough for these formats.
 /// </summary>
-public sealed class BrowserImportService : IBrowserImportService
+public sealed partial class BrowserImportService : IBrowserImportService
 {
     public async Task<IReadOnlyList<VaultEntry>> ImportFromCsvAsync(
     string filePath,
