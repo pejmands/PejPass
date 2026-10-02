@@ -76,9 +76,9 @@ public partial class MainViewModel
         }
 
         if (!DialogService.Confirm(
-                "WARNING: PejPass CSV is NOT encrypted.\\n\\n" +
-                "It contains passwords, TOTP secrets, tags and custom field values in plain text.\\n\\n" +
-                "Store it securely and delete it after use.\\n\\nContinue?",
+                "WARNING: PejPass CSV is NOT encrypted.\n\n" +
+                "It contains passwords, TOTP secrets, tags and custom field values in plain text.\n\n" +
+                "Store it securely and delete it after use.\n\nContinue?",
                 "Security warning — unencrypted export",
                 yesText: "Export PejPass CSV",
                 noText: "Cancel"))
@@ -102,14 +102,14 @@ public partial class MainViewModel
             await csvExport.ExportPejPassCsvAsync(dlg.FileName, Entries);
             SnackbarService.Show($"Exported {Entries.Count} entries to PejPass CSV.");
             DialogService.Warning(
-                $"Saved {Entries.Count} entries to:\\n{dlg.FileName}\\n\\n" +
+                $"Saved {Entries.Count} entries to:\n{dlg.FileName}\n\n" +
                 "This file contains sensitive data in plain text. Delete it when you no longer need it.",
                 "PejPass CSV exported");
             ResetAutoLockTimer();
         }
         catch (Exception ex)
         {
-            DialogService.Error($"PejPass CSV export failed:\\n{ex.Message}", "Export PejPass CSV");
+            DialogService.Error($"PejPass CSV export failed:\n{ex.Message}", "Export PejPass CSV");
             StatusMessage = "PejPass CSV export failed.";
         }
     }
