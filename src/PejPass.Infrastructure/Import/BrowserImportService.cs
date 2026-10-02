@@ -83,8 +83,7 @@ public sealed partial class BrowserImportService : IBrowserImportService
                 Username = username?.Trim() ?? string.Empty,
                 Password = password,
                 Url = url?.Trim() ?? string.Empty,
-                Notes = notes?.Trim() ?? string.Empty,
-                Tags = ["imported"]
+                Notes = notes?.Trim() ?? string.Empty
             });
         }
 
