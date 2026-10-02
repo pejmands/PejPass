@@ -286,11 +286,9 @@ public partial class MainViewModel
                     lines.Add("Note: trash affected this merge (see counts above).");
                 }
 
-                SnackbarService.Show(
-                    totalChanged > 0
-                        ? $"Merge finished · +{totalChanged} changed · {totalSkipped} skipped."
-                        : "Merge finished — nothing new to add.",
-                    totalChanged > 0 ? SnackbarKind.Success : SnackbarKind.Info);
+                DialogService.Success(
+                    string.Join('\n', lines),
+                    "Restore complete");
             }
 
             ResetAutoLockTimer();
