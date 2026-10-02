@@ -92,7 +92,7 @@
                                                 <Condition Property="IsEnabled" Value="True"/>
                                             </MultiTrigger.Conditions>
                                             <Setter Property="Background"
-                                                    Value="{DynamicResource SurfaceHoverBrush}"/>
+                                                    Value="{DynamicResource BorderBrush}"/>
                                         </MultiTrigger>
                                         <Trigger Property="IsPressed" Value="True">
                                             <Setter Property="Background"
