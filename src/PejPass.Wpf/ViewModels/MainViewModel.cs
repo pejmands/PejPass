@@ -862,7 +862,7 @@ public partial class MainViewModel : ObservableObject
 
             var vault = _vaultSession.Vault!;
             var snapshot = vault.CreateSnapshot();
-            var result = MergeImportedEntries(vault, imported);
+            var result = MergeImportedEntries(vault, imported, includeTags: false);
 
             Entries.Clear();
             foreach (var entry in vault.Entries)
