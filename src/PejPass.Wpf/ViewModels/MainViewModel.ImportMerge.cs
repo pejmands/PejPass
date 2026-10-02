@@ -6,15 +6,16 @@ public partial class MainViewModel
 {
     private ImportMergeResult MergeImportedEntries(
         Vault vault,
-        IReadOnlyList<VaultEntry> imported)
+        IReadOnlyList<VaultEntry> imported,
+        bool includeTags = true)
     {
         var activeByFp = new Dictionary<string, VaultEntry>(StringComparer.Ordinal);
         foreach (var entry in vault.Entries)
-            activeByFp[EntryContentFingerprint(entry)] = entry;
+            activeByFp[EntryContentFingerprint(entry, includeTags)] = entry;
 
         var trashByFp = new Dictionary<string, TrashedEntry>(StringComparer.Ordinal);
         foreach (var trashed in vault.Trash)
-            trashByFp[EntryContentFingerprint(trashed.Entry)] = trashed;
+            trashByFp[EntryContentFingerprint(trashed.Entry, includeTags)] = trashed;
 
         var addedToList = 0;
         var restoredFromTrash = 0;
@@ -22,7 +23,7 @@ public partial class MainViewModel
 
         foreach (var importedEntry in imported)
         {
-            var fp = EntryContentFingerprint(importedEntry);
+            var fp = EntryContentFingerprint(importedEntry, includeTags);
 
             if (activeByFp.ContainsKey(fp))
             {
