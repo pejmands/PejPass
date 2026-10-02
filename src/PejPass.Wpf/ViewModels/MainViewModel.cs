@@ -849,6 +849,55 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task DeleteSelectedEntriesAsync(IReadOnlyList<VaultEntry>? selectedEntries)
+    {
+        var selected = selectedEntries?
+            .Where(e => Entries.Any(active => active.Id == e.Id))
+            .DistinctBy(e => e.Id)
+            .ToList();
+
+        if (selected is not { Count: > 0 })
+            return;
+
+        if (!DialogService.Confirm(
+                $"Move {selected.Count} selected entries to Trash?\n\nYou can restore them within 30 days.",
+                "Move selected entries to Trash",
+                yesText: "Move to Trash",
+                noText: "Cancel"))
+            return;
+
+        if (!await EnsureVaultWritableAsync())
+            return;
+
+        var vault = _vaultSession.Vault!;
+        var snapshot = vault.CreateSnapshot();
+
+        foreach (var entry in selected)
+        {
+            vault.SoftDelete(entry.Id);
+            Entries.Remove(entry);
+        }
+
+        if (SelectedEntry is not null && selected.Any(e => e.Id == SelectedEntry.Id))
+            SelectedEntry = null;
+
+        RebuildTagFilters();
+        ApplyFilter(preserveSelectionId: null);
+
+        if (!await SaveVaultAsync())
+        {
+            RestoreVaultSnapshot(snapshot);
+            return;
+        }
+
+        UpdateEntryStatus($"moved {selected.Count} to trash");
+        DialogService.Success(
+            $"Moved {selected.Count} entries to Trash.\n\nYou can restore them within 30 days.",
+            "Entries moved to Trash");
+        ResetAutoLockTimer();
+    }
+
+    [RelayCommand]
     private async Task DeleteEntryAsync(VaultEntry? entry)
     {
         entry ??= SelectedEntry;
