@@ -223,7 +223,7 @@ public partial class TrashViewModel : ObservableObject
             return;
 
         if (!DialogService.Confirm(
-                $"Permanently delete {selected.Count} selected item(s)? This cannot be undone.",
+                $"Permanently delete {selected.Count} selected item(s)?\n\nThis cannot be undone.",
                 "Delete selected items permanently",
                 yesText: "Delete permanently",
                 noText: "Cancel"))
