@@ -679,25 +679,18 @@ public partial class MainViewModel : ObservableObject
     private async Task AddEntryAsync()
     {
         var editor = new EntryEditorWindow(
-            new EntryEditorViewModel(null, GetUsedTags()))
+            new EntryEditorViewModel(null, GetUsedTags()),
+            candidate => Entries.Any(e =>
+                string.Equals(
+                    EntryContentFingerprint(e),
+                    EntryContentFingerprint(candidate),
+                    StringComparison.Ordinal)))
         {
             Owner = GetOwnerWindow()
         };
 
         if (editor.ShowDialog() == true && editor.Result is { } newEntry)
         {
-            if (Entries.Any(e =>
-                    string.Equals(
-                        EntryContentFingerprint(e),
-                        EntryContentFingerprint(newEntry),
-                        StringComparison.Ordinal)))
-            {
-                DialogService.Warning(
-                    "An identical entry already exists in your list.",
-                    "Duplicate entry");
-                return;
-            }
-
             if (!await EnsureVaultWritableAsync())
                 return;
 
@@ -729,26 +722,20 @@ public partial class MainViewModel : ObservableObject
             return;
 
         var editorVm = new EntryEditorViewModel(entry, GetUsedTags());
-        var editor = new EntryEditorWindow(editorVm)
+        var editor = new EntryEditorWindow(
+            editorVm,
+            candidate => Entries.Any(e =>
+                e.Id != candidate.Id &&
+                string.Equals(
+                    EntryContentFingerprint(e),
+                    EntryContentFingerprint(candidate),
+                    StringComparison.Ordinal)))
         {
             Owner = GetOwnerWindow()
         };
 
         if (editor.ShowDialog() != true || editor.Result is not { } updated)
             return;
-
-        if (Entries.Any(e =>
-                e.Id != updated.Id &&
-                string.Equals(
-                    EntryContentFingerprint(e),
-                    EntryContentFingerprint(updated),
-                    StringComparison.Ordinal)))
-        {
-            DialogService.Warning(
-                "An identical entry already exists in your list.",
-                "Duplicate entry");
-            return;
-        }
 
         var sensitive = editorVm.GetSensitiveChanges();
 
