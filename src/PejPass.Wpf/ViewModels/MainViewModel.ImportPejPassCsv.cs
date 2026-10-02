@@ -36,7 +36,7 @@ public partial class MainViewModel
             }
 
             if (!DialogService.Confirm(
-                    $"Found {imported.Count} entries.\n\nImport them into the current vault?\n\nExisting entries will not be overwritten; imported entries will be added.",
+                    $"Found {imported.Count} entries.\n\nMerge them into the current vault?\n\nIdentical entries are skipped. Entries matching the current Trash are restored to the list.",
                     "Confirm PejPass CSV Import",
                     yesText: "Import",
                     noText: "Cancel"))
@@ -50,11 +50,11 @@ public partial class MainViewModel
 
             var vault = _vaultSession.Vault!;
             var snapshot = vault.CreateSnapshot();
-            foreach (var entry in imported)
-            {
-                vault.AddEntry(entry);
+            var result = MergeImportedEntries(vault, imported);
+
+            Entries.Clear();
+            foreach (var entry in vault.Entries)
                 Entries.Add(entry);
-            }
 
             RebuildTagFilters();
             ApplyFilter();
@@ -65,7 +65,8 @@ public partial class MainViewModel
                 return;
             }
 
-            SnackbarService.Show($"Imported {imported.Count} entries from PejPass CSV.");
+            SnackbarService.Show(
+                $"Import merged · +{result.AddedToList} added · {result.RestoredFromTrash} restored · {result.SkippedAlreadyInList} skipped.");
             ResetAutoLockTimer();
         }
         catch (Exception ex)
