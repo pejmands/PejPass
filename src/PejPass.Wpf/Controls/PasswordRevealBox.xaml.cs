@@ -2,14 +2,18 @@ using Microsoft.Extensions.DependencyInjection;
 using PejPass.Wpf.Services;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Input;
 
 namespace PejPass.Wpf.Controls;
 
 public partial class PasswordRevealBox : UserControl
 {
     private readonly SecretRevealTimer _revealTimer = new();
+    private bool _keyboardActivation;
+
     private static readonly Type TextRangeType =
         typeof(PasswordBox).Assembly.GetType("System.Windows.Documents.ITextRange")
         ?? throw new InvalidOperationException("ITextRange was not found.");
@@ -179,6 +183,9 @@ public partial class PasswordRevealBox : UserControl
 
     private void VisibilityButton_Click(object sender, RoutedEventArgs e)
     {
+        var keepKeyboardFocus = _keyboardActivation;
+        _keyboardActivation = false;
+
         var selection = IsRevealed
             ? new PasswordBoxSelection(TextBox.SelectionStart, TextBox.SelectionLength)
             : GetPasswordBoxSelection();
@@ -188,14 +195,30 @@ public partial class PasswordRevealBox : UserControl
         if (IsRevealed)
         {
             StartRevealTimer();
-            TextBox.Focus();
+
+            if (!keepKeyboardFocus)
+                TextBox.Focus();
+
             TextBox.Select(selection.Start, selection.Length);
         }
         else
         {
-            PasswordBox.Focus();
+            if (!keepKeyboardFocus)
+                PasswordBox.Focus();
+
             SetPasswordBoxSelection(selection.Start, selection.Length);
         }
+    }
+
+    private void VisibilityButton_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.Enter or Key.Space)
+            _keyboardActivation = true;
+    }
+
+    private void VisibilityButton_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _keyboardActivation = false;
     }
 
     private void StartRevealTimer()
@@ -220,6 +243,7 @@ public partial class PasswordRevealBox : UserControl
             PasswordBox.Visibility = Visibility.Collapsed;
             TextBox.Visibility = Visibility.Visible;
             VisibilityButton.ToolTip = "Hide password";
+            AutomationProperties.SetName(VisibilityButton, "Hide password");
         }
         else
         {
@@ -227,7 +251,12 @@ public partial class PasswordRevealBox : UserControl
             TextBox.Visibility = Visibility.Collapsed;
             PasswordBox.Visibility = Visibility.Visible;
             VisibilityButton.ToolTip = "Show password";
+            AutomationProperties.SetName(VisibilityButton, "Show password");
         }
+
+        AutomationProperties.SetHelpText(
+            VisibilityButton,
+            IsRevealed ? "Password is visible." : "Password is hidden.");
     }
 
     private PasswordBoxSelection GetPasswordBoxSelection()
