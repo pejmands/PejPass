@@ -95,7 +95,6 @@ public partial class MainViewModel
             Url = source.Url,
             TotpSecret = source.TotpSecret,
             Notes = source.Notes,
-            TotpSecret = source.TotpSecret,
             Tags = [.. source.Tags],
             CustomFields = [.. source.CustomFields.Select(field => new CustomField
             {
