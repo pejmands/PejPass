@@ -926,6 +926,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         UpdateEntryStatus("moved to trash");
+        SnackbarService.Show("Moved entry to Trash.");
         ResetAutoLockTimer();
     }
 
