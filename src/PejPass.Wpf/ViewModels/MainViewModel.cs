@@ -795,9 +795,11 @@ public partial class MainViewModel : ObservableObject
             return;
 
         var count = Entries.Count;
+        var entryLabel = count == 1 ? "entry" : "entries";
+        var restoreLabel = count == 1 ? "it" : "them";
 
         if (!DialogService.Confirm(
-                $"Move all {count} entries to Trash?\n\nYou can restore them within 30 days.",
+                $"Move all {count} {entryLabel} to Trash?\n\nYou can restore {restoreLabel} within 30 days.",
                 "Delete All Entries",
                 yesText: "Move all to Trash",
                 noText: "Cancel"))
@@ -826,7 +828,7 @@ public partial class MainViewModel : ObservableObject
 
         UpdateEntryStatus();
         DialogService.Success(
-            $"Moved {count} entries to Trash.\n\nYou can restore them within 30 days.",
+            $"Moved {count} {entryLabel} to Trash.\n\nYou can restore {restoreLabel} within 30 days.",
             "Delete All Entries");
         ResetAutoLockTimer();
     }
