@@ -686,6 +686,18 @@ public partial class MainViewModel : ObservableObject
 
         if (editor.ShowDialog() == true && editor.Result is { } newEntry)
         {
+            if (Entries.Any(e =>
+                    string.Equals(
+                        EntryContentFingerprint(e),
+                        EntryContentFingerprint(newEntry),
+                        StringComparison.Ordinal)))
+            {
+                DialogService.Warning(
+                    "An identical entry already exists in your list.",
+                    "Duplicate entry");
+                return;
+            }
+
             if (!await EnsureVaultWritableAsync())
                 return;
 
@@ -724,6 +736,19 @@ public partial class MainViewModel : ObservableObject
 
         if (editor.ShowDialog() != true || editor.Result is not { } updated)
             return;
+
+        if (Entries.Any(e =>
+                e.Id != updated.Id &&
+                string.Equals(
+                    EntryContentFingerprint(e),
+                    EntryContentFingerprint(updated),
+                    StringComparison.Ordinal)))
+        {
+            DialogService.Warning(
+                "An identical entry already exists in your list.",
+                "Duplicate entry");
+            return;
+        }
 
         var sensitive = editorVm.GetSensitiveChanges();
 
