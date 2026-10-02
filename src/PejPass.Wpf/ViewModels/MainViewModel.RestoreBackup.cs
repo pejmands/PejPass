@@ -312,12 +312,14 @@ public partial class MainViewModel
     /// Full content fingerprint. Match only when every content field is exactly equal
     /// (Ordinal, case-sensitive). Id / dates / history / sort order are ignored.
     /// </summary>
-    private static string EntryContentFingerprint(VaultEntry e)
+    private static string EntryContentFingerprint(VaultEntry e, bool includeTags = true)
     {
         static string S(string? s) => s ?? string.Empty;
 
-        var tags = string.Join('\u001e',
-            e.Tags.Select(t => S(t)).OrderBy(t => t, StringComparer.Ordinal));
+        var tags = includeTags
+            ? string.Join('\u001e',
+                e.Tags.Select(t => S(t)).OrderBy(t => t, StringComparer.Ordinal))
+            : string.Empty;
 
         var customs = string.Join('\u001e',
             e.CustomFields
