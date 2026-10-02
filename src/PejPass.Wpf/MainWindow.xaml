@@ -48,8 +48,7 @@
                                       ToolTip="Filter entries"
                                       IsChecked="{Binding ElementName=ContentFilterPopup, Path=IsOpen, Mode=TwoWay}">
                             <ToggleButton.Style>
-                                <Style TargetType="ToggleButton"
-                                       BasedOn="{StaticResource {x:Type ToggleButton}}">
+                                <Style TargetType="ToggleButton">
                                     <Setter Property="Background"
                                             Value="{DynamicResource SurfaceBrush}"/>
                                     <Setter Property="Foreground"
@@ -57,11 +56,56 @@
                                     <Setter Property="BorderBrush"
                                             Value="{DynamicResource BorderBrush}"/>
                                     <Setter Property="BorderThickness" Value="1"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ToggleButton">
+                                                <Grid>
+                                                    <Border x:Name="ButtonBorder"
+                                                            Background="{TemplateBinding Background}"
+                                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                                            CornerRadius="6">
+                                                        <ContentPresenter HorizontalAlignment="Center"
+                                                                          VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <Border x:Name="FocusRing"
+                                                            BorderBrush="{DynamicResource BorderFocusBrush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="6"
+                                                            Visibility="Collapsed"
+                                                            IsHitTestVisible="False"/>
+                                                </Grid>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsKeyboardFocused" Value="True">
+                                                        <Setter TargetName="FocusRing"
+                                                                Property="Visibility"
+                                                                Value="Visible"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
                                     <Style.Triggers>
+                                        <MultiTrigger>
+                                            <MultiTrigger.Conditions>
+                                                <Condition Property="IsMouseOver" Value="True"/>
+                                                <Condition Property="IsEnabled" Value="True"/>
+                                            </MultiTrigger.Conditions>
+                                            <Setter Property="Background"
+                                                    Value="{DynamicResource SurfaceHoverBrush}"/>
+                                        </MultiTrigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter Property="Background"
+                                                    Value="{DynamicResource SurfacePressedBrush}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Foreground"
+                                                    Value="{DynamicResource TextDisabledBrush}"/>
+                                            <Setter Property="Opacity" Value="0.4"/>
+                                            <Setter Property="Cursor" Value="Arrow"/>
+                                        </Trigger>
                                         <DataTrigger Binding="{Binding HasContentFilter}" Value="True">
                                             <Setter Property="Foreground"
-                                                    Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="BorderBrush"
                                                     Value="{DynamicResource AccentBrush}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
