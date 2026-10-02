@@ -428,7 +428,7 @@ public partial class EntryEditorViewModel : ObservableObject
                 Password = Password,
                 Url = Url.Trim(),
                 TotpSecret = NormalizeTotpSecret(TotpSecret),
-                Notes = Notes,
+                Notes = Notes.Trim(),
                 Tags = tags,
                 CustomFields = customFields,
                 IsFavorite = IsFavorite,
