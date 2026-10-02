@@ -175,6 +175,8 @@ public partial class TrashViewModel : ObservableObject
         StatusMessage = $"Restored \"{row.Title}\".";
         if (_all.Count == 0)
             StatusMessage = "Trash is empty.";
+
+        SnackbarService.Show("Entry restored.");
     }
 
     [RelayCommand]
