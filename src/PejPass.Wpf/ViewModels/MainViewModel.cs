@@ -52,6 +52,12 @@ public partial class MainViewModel : ObservableObject
     public partial string SearchText { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial bool HasTotpFilter { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasNotesFilter { get; set; }
+
+    [ObservableProperty]
     public partial VaultEntry? SelectedEntry { get; set; }
 
     [ObservableProperty]
@@ -117,10 +123,12 @@ public partial class MainViewModel : ObservableObject
 
     public bool IsEntryListEmpty => FilteredEntries.Count == 0;
     public bool HasEntries => Entries.Count > 0;
+    public bool HasContentFilter => HasTotpFilter || HasNotesFilter;
     public bool HasActiveEntryFilter =>
         !string.IsNullOrWhiteSpace(SearchText) ||
         !string.IsNullOrWhiteSpace(SelectedTagFilter) ||
-        IsNoTagsFilterSelected;
+        IsNoTagsFilterSelected ||
+        HasContentFilter;
 
     public MainViewModel(
         VaultService vaultService,
@@ -320,6 +328,17 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
+    partial void OnHasTotpFilterChanged(bool value) => ApplyFilter();
+
+    partial void OnHasNotesFilterChanged(bool value) => ApplyFilter();
+
+    [RelayCommand]
+    private void ClearContentFilters()
+    {
+        HasTotpFilter = false;
+        HasNotesFilter = false;
+    }
+
     private void ApplyFilter(Guid? preserveSelectionId = null)
     {
         var keepId = preserveSelectionId ?? SelectedEntry?.Id;
@@ -340,6 +359,12 @@ public partial class MainViewModel : ObservableObject
             source = source.Where(e =>
                 e.Tags.Any(t => string.Equals(t.Trim(), tag, StringComparison.Ordinal)));
         }
+
+        if (HasTotpFilter)
+            source = source.Where(e => !string.IsNullOrWhiteSpace(e.TotpSecret));
+
+        if (HasNotesFilter)
+            source = source.Where(e => !string.IsNullOrWhiteSpace(e.Notes));
 
         if (!string.IsNullOrEmpty(q))
         {
