@@ -1001,7 +1001,12 @@ public partial class MainViewModel : ObservableObject
         var vm = new TrashViewModel(
             vault,
             EnsureVaultWritableAsync,
-            SaveVaultAsync);
+            SaveVaultAsync,
+            candidate => Entries.Any(e =>
+                string.Equals(
+                    EntryContentFingerprint(e),
+                    EntryContentFingerprint(candidate),
+                    StringComparison.Ordinal)));
 
         var win = new TrashWindow(vm)
         {
