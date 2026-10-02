@@ -153,8 +153,12 @@ public partial class MainViewModel
                     return;
                 }
 
-                SnackbarService.Show(
-                    $"Vault restored from backup · {currentVault.Entries.Count} entries · {currentVault.Trash.Count} in trash.");
+                DialogService.Success(
+                    $"Vault replaced from backup.\n\n" +
+                    $"Entries: {currentVault.Entries.Count}\n" +
+                    $"In trash: {currentVault.Trash.Count}\n\n" +
+                    $"Saved to:\n{currentPath}",
+                    "Restore complete");
             }
             else
             {
