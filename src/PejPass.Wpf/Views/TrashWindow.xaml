@@ -207,14 +207,46 @@
         <!-- Footer -->
         <Grid Grid.Row="3"
               Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-            <TextBlock Text="{Binding StatusMessage}"
-                       Foreground="{DynamicResource MutedBrush}"
-                       VerticalAlignment="Center"/>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="{Binding StatusMessage}"
+                           Foreground="{DynamicResource MutedBrush}"
+                           VerticalAlignment="Center"/>
+                <TextBlock x:Name="SelectedTrashCountText"
+                           Margin="0,4,0,0"
+                           Foreground="{DynamicResource AccentBrush}"
+                           FontSize="{DynamicResource AppFontSize12}"
+                           Visibility="Collapsed"/>
+            </StackPanel>
 
-            <Button Style="{StaticResource SecondaryButton}"
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Margin="8,0,8,0">
+                <Button x:Name="RestoreSelectedButton"
+                        Style="{StaticResource SecondaryButton}"
+                        Content="Restore selected"
+                        IsEnabled="False"
+                        Margin="0,0,6,0"
+                        Click="RestoreSelected_Click"/>
+                <Button x:Name="PurgeSelectedButton"
+                        Style="{StaticResource DestructiveButton}"
+                        Content="Delete selected"
+                        Background="{DynamicResource DangerBrush}"
+                        IsEnabled="False"
+                        Click="PurgeSelected_Click"
+                        ToolTip="Permanently delete selected items."/>
+            </StackPanel>
+
+            <Button Grid.Column="2"
+                    Style="{StaticResource SecondaryButton}"
                     Content="Close"
-                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
                     Click="Close_Click"
                     Background="{DynamicResource SurfaceAltBrush}"
                     Foreground="{DynamicResource TextBrush}"/>
