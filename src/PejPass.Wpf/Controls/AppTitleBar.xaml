@@ -151,6 +151,13 @@
 
                                 <Separator Style="{StaticResource PejPassContextMenuSeparator}"/>
 
+                                <MenuItem Header="Delete All Entries"
+                                          Command="{Binding DeleteAllEntriesCommand}"
+                                          IsEnabled="{Binding HasEntries}"
+                                          Style="{StaticResource PejPassContextMenuItem}"/>
+
+                                <Separator Style="{StaticResource PejPassContextMenuSeparator}"/>
+
                                 <MenuItem Header="About PejPass"
                                           Command="{Binding OpenAboutCommand}"
                                           Style="{StaticResource PejPassContextMenuItem}"/>
