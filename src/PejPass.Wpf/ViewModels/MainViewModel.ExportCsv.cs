@@ -65,4 +65,52 @@ public partial class MainViewModel
             StatusMessage = "CSV export failed.";
         }
     }
+
+    [RelayCommand]
+    private async Task ExportPejPassCsvAsync()
+    {
+        if (Entries.Count == 0)
+        {
+            DialogService.Info("There are no entries to export.", "Export PejPass CSV");
+            return;
+        }
+
+        if (!DialogService.Confirm(
+                "WARNING: PejPass CSV is NOT encrypted.\\n\\n" +
+                "It contains passwords, TOTP secrets, tags and custom field values in plain text.\\n\\n" +
+                "Store it securely and delete it after use.\\n\\nContinue?",
+                "Security warning — unencrypted export",
+                yesText: "Export PejPass CSV",
+                noText: "Cancel"))
+            return;
+
+        var dlg = new SaveFileDialog
+        {
+            Title = "Export full PejPass CSV (UNENCRYPTED)",
+            Filter = "PejPass CSV (*.pejpass.csv)|*.pejpass.csv|CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+            DefaultExt = ".pejpass.csv",
+            FileName = $"PejPass-full-export-{DateTime.Now:yyyyMMdd-HHmm}.pejpass.csv",
+            AddExtension = true
+        };
+
+        if (dlg.ShowDialog() != true)
+            return;
+
+        try
+        {
+            var csvExport = global::PejPass.Wpf.App.Services.GetRequiredService<ICsvExportService>();
+            await csvExport.ExportPejPassCsvAsync(dlg.FileName, Entries);
+            SnackbarService.Show($"Exported {Entries.Count} entries to PejPass CSV.");
+            DialogService.Warning(
+                $"Saved {Entries.Count} entries to:\\n{dlg.FileName}\\n\\n" +
+                "This file contains sensitive data in plain text. Delete it when you no longer need it.",
+                "PejPass CSV exported");
+            ResetAutoLockTimer();
+        }
+        catch (Exception ex)
+        {
+            DialogService.Error($"PejPass CSV export failed:\\n{ex.Message}", "Export PejPass CSV");
+            StatusMessage = "PejPass CSV export failed.";
+        }
+    }
 }
