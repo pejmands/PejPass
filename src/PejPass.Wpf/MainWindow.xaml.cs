@@ -318,8 +318,6 @@ public partial class MainWindow : Window
             (MouseWheelEventHandler)TagFilterScroll_OnPreviewMouseWheel,
             handledEventsToo: true);
 
-        foreach (var btn in FindVisualChildren<Button>(target))
-            btn.ToolTip = null;
     }
 
     private void TagFilterScroll_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
