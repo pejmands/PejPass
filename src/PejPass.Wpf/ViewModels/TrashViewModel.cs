@@ -204,6 +204,8 @@ public partial class TrashViewModel : ObservableObject
         Changed?.Invoke(this, EventArgs.Empty);
         if (_all.Count == 0)
             StatusMessage = "Trash is empty.";
+
+        SnackbarService.Show("Permanently deleted entry.");
     }
 
     [RelayCommand]
@@ -274,6 +276,7 @@ public partial class TrashViewModel : ObservableObject
         ApplyFilter();
         Changed?.Invoke(this, EventArgs.Empty);
         StatusMessage = "Trash is empty.";
+        SnackbarService.Show("Trash emptied.");
     }
 
     private async Task<bool> SaveAndRollbackAsync(Vault snapshot)
