@@ -840,11 +840,9 @@ public partial class MainViewModel : ObservableObject
         }
 
         UpdateEntryStatus();
-        DialogService.Success(
-            count == 1
-                ? "Moved 1 entry to Trash.\n\nYou can restore it within 30 days."
-                : $"Moved {count} entries to Trash.\n\nYou can restore them within 30 days.",
-            "Delete All Entries");
+        SnackbarService.Show(count == 1
+            ? "Moved 1 entry to Trash."
+            : $"Moved {count} entries to Trash.");
         ResetAutoLockTimer();
     }
 
@@ -891,9 +889,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         UpdateEntryStatus($"moved {selected.Count} to trash");
-        DialogService.Success(
-            $"Moved {selected.Count} entries to Trash.\n\nYou can restore them within 30 days.",
-            "Entries moved to Trash");
+        SnackbarService.Show($"Moved {selected.Count} entries to Trash.");
         ResetAutoLockTimer();
     }
 
