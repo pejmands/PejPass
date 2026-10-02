@@ -18,6 +18,7 @@ public sealed class PejPassCsvRoundTripTests
             Notes = "line one\nline two",
             TotpSecret = "JBSWY3DPEHPK3PXP",
             Tags = ["Personal", "Social", "Music"],
+            IsFavorite = true,
             CustomFields =
             [
                 new CustomField { Name = "Recovery code", Value = "123,456", IsSecret = true },
@@ -37,6 +38,7 @@ public sealed class PejPassCsvRoundTripTests
             Assert.Equal(source.Password, imported.Password);
             Assert.Equal(source.Notes, imported.Notes);
             Assert.Equal(source.TotpSecret, imported.TotpSecret);
+            Assert.Equal(source.IsFavorite, imported.IsFavorite);
             Assert.Equal(source.Tags, imported.Tags);
             Assert.Equal(source.CustomFields.Count, imported.CustomFields.Count);
 
