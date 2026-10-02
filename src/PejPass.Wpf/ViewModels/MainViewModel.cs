@@ -328,9 +328,17 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
-    partial void OnHasTotpFilterChanged(bool value) => ApplyFilter();
+    partial void OnHasTotpFilterChanged(bool value)
+    {
+        OnPropertyChanged(nameof(HasContentFilter));
+        ApplyFilter();
+    }
 
-    partial void OnHasNotesFilterChanged(bool value) => ApplyFilter();
+    partial void OnHasNotesFilterChanged(bool value)
+    {
+        OnPropertyChanged(nameof(HasContentFilter));
+        ApplyFilter();
+    }
 
     [RelayCommand]
     private void ClearContentFilters()
