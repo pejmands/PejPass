@@ -51,8 +51,6 @@ public partial class MainViewModel
             var csvExport = global::PejPass.Wpf.App.Services.GetRequiredService<ICsvExportService>();
             await csvExport.ExportToCsvAsync(dlg.FileName, Entries);
 
-            SnackbarService.Show($"Exported {Entries.Count} entries to CSV.");
-
             DialogService.Warning(
                 $"Saved {Entries.Count} entries to:\n{dlg.FileName}\n\n" +
                 "This file is unencrypted. Delete it when you no longer need it.",
@@ -100,7 +98,6 @@ public partial class MainViewModel
         {
             var csvExport = global::PejPass.Wpf.App.Services.GetRequiredService<ICsvExportService>();
             await csvExport.ExportPejPassCsvAsync(dlg.FileName, Entries);
-            SnackbarService.Show($"Exported {Entries.Count} entries to PejPass CSV.");
             DialogService.Warning(
                 $"Saved {Entries.Count} entries to:\n{dlg.FileName}\n\n" +
                 "This file contains sensitive data in plain text. Delete it when you no longer need it.",
