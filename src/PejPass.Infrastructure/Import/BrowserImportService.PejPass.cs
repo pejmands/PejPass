@@ -1,4 +1,8 @@
+using CsvHelper;
+using CsvHelper.Configuration;
 using PejPass.Domain.Entities;
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 
 namespace PejPass.Infrastructure.Import;
@@ -77,6 +81,38 @@ public sealed partial class BrowserImportService
             }
 
             return entries;
+        }
+    }
+
+    private static async Task<(CsvReader Csv, StreamReader Reader, FileStream Stream)> OpenCsvAsync(
+        string filePath)
+    {
+        if (!File.Exists(filePath))
+            throw new FileNotFoundException("Import file not found.", filePath);
+
+        var stream = File.OpenRead(filePath);
+        var reader = new StreamReader(stream, Encoding.UTF8);
+        var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            HasHeaderRecord = true,
+            IgnoreBlankLines = true,
+            BadDataFound = null
+        });
+
+        try
+        {
+            if (!await csv.ReadAsync())
+                throw new InvalidDataException("The CSV file is empty.");
+
+            csv.ReadHeader();
+            return (csv, reader, stream);
+        }
+        catch
+        {
+            csv.Dispose();
+            reader.Dispose();
+            await stream.DisposeAsync();
+            throw;
         }
     }
 }
