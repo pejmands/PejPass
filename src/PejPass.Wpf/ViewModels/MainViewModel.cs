@@ -848,7 +848,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             if (!DialogService.Confirm(
-                    $"Found {imported.Count} entries.\n\nImport them into the current vault?",
+                    $"Found {imported.Count} entries.\n\nMerge them into the current vault?\n\nIdentical entries are skipped. Entries matching the current Trash are restored to the list.",
                     "Confirm Import",
                     yesText: "Import",
                     noText: "Cancel"))
@@ -862,12 +862,11 @@ public partial class MainViewModel : ObservableObject
 
             var vault = _vaultSession.Vault!;
             var snapshot = vault.CreateSnapshot();
+            var result = MergeImportedEntries(vault, imported);
 
-            foreach (var e in imported)
-            {
-                vault.AddEntry(e);
-                Entries.Add(e);
-            }
+            Entries.Clear();
+            foreach (var entry in vault.Entries)
+                Entries.Add(entry);
 
             RebuildTagFilters();
             ApplyFilter();
@@ -878,7 +877,8 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            SnackbarService.Show($"Imported {imported.Count} entries.");
+            SnackbarService.Show(
+                $"Import merged · +{result.AddedToList} added · {result.RestoredFromTrash} restored · {result.SkippedAlreadyInList} skipped.");
             ResetAutoLockTimer();
         }
         catch (Exception ex)
