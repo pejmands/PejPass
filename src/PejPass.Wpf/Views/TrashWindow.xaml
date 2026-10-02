@@ -46,6 +46,7 @@
         <Grid Grid.Row="2">
             <ListBox x:Name="TrashList"
                  ItemsSource="{Binding Items}"
+                 SelectionMode="Extended"
                  Background="Transparent"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  BorderThickness="0">
@@ -71,6 +72,14 @@
                                     <ContentPresenter/>
                                 </Border>
                                 <ControlTemplate.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="ItemBorder"
+                                                Property="Background"
+                                                Value="{DynamicResource SurfaceAltBrush}"/>
+                                        <Setter TargetName="ItemBorder"
+                                                Property="BorderBrush"
+                                                Value="{DynamicResource AccentBrush}"/>
+                                    </Trigger>
                                     <Trigger Property="IsKeyboardFocusWithin" Value="True">
                                         <Setter TargetName="ItemBorder"
                                                 Property="BorderBrush"
