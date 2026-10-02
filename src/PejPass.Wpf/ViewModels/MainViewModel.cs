@@ -877,8 +877,14 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            SnackbarService.Show(
-                $"Import merged · +{result.AddedToList} added · {result.RestoredFromTrash} restored · {result.SkippedAlreadyInList} skipped.");
+            DialogService.Success(
+                $"Import finished.\n\n" +
+                $"Added to list:              {result.AddedToList}\n" +
+                $"Restored from trash → list: {result.RestoredFromTrash}\n" +
+                $"Skipped (already in list):  {result.SkippedAlreadyInList}\n\n" +
+                $"Vault now: {vault.Entries.Count} entries · {vault.Trash.Count} in trash\n\n" +
+                $"Saved to:\n{_vaultSession.VaultPath}",
+                "Import complete");
             ResetAutoLockTimer();
         }
         catch (Exception ex)
