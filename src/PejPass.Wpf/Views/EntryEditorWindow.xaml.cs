@@ -14,13 +14,19 @@ public partial class EntryEditorWindow : Window
 {
     public VaultEntry? Result { get; private set; }
 
-    public EntryEditorWindow(EntryEditorViewModel viewModel)
+    private readonly Func<VaultEntry, bool>? _isDuplicate;
+
+    public EntryEditorWindow(
+        EntryEditorViewModel viewModel,
+        Func<VaultEntry, bool>? isDuplicate = null)
     {
         InitializeComponent();
         App.PrepareCustomChrome(this);
         App.SetCustomWindowTitle(
             this,
             viewModel.Original is null ? "Add Entry" : "Edit Entry");
+
+        _isDuplicate = isDuplicate;
 
         DataContext = viewModel;
         viewModel.PropertyChanged += ViewModel_PropertyChanged;
@@ -186,7 +192,17 @@ public partial class EntryEditorWindow : Window
             return;
         }
 
-        Result = vm.ToEntry();
+        var entry = vm.ToEntry();
+
+        if (_isDuplicate?.Invoke(entry) == true)
+        {
+            DialogService.Warning(
+                "An identical entry already exists in your list.",
+                "Duplicate entry");
+            return;
+        }
+
+        Result = entry;
         DialogResult = true;
         Close();
     }
