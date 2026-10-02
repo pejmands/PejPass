@@ -309,8 +309,8 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// Full content fingerprint. Match only when every content field is exactly equal
-    /// (Ordinal, case-sensitive). Id / dates / history / sort order are ignored.
+    /// Content fingerprint. Match only when every content field is exactly equal
+    /// (Ordinal, case-sensitive). Favorite state, Id, dates, history, and sort order are ignored.
     /// </summary>
     private static string EntryContentFingerprint(VaultEntry e, bool includeTags = true)
     {
@@ -334,8 +334,7 @@ public partial class MainViewModel
             S(e.TotpSecret),
             S(e.Notes),
             tags,
-            customs,
-            e.IsFavorite ? "1" : "0");
+            customs);
     }
 
     private static VaultEntry CloneEntry(VaultEntry source, bool newId = false)
