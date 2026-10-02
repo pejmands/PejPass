@@ -454,15 +454,55 @@
 
             <!-- Resizable divider -->
             <GridSplitter Grid.Column="1"
-                          Width="5"
+                          Width="7"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch"
-                          Background="Transparent"
+                          Background="{DynamicResource BorderBrush}"
                           Cursor="SizeWE"
                           ResizeDirection="Columns"
                           ResizeBehavior="PreviousAndNext"
                           ShowsPreview="False"
-                          ToolTip="Resize entry list"/>
+                          ToolTip="Drag to resize entry list">
+                <GridSplitter.Template>
+                    <ControlTemplate TargetType="GridSplitter">
+                        <Border x:Name="SplitterBorder"
+                                Background="{TemplateBinding Background}">
+                            <Border x:Name="SplitterGrip"
+                                    Width="3"
+                                    Height="36"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Background="{DynamicResource MutedBrush}"
+                                    CornerRadius="2"
+                                    Opacity="0.7"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="SplitterBorder"
+                                        Property="Background"
+                                        Value="{DynamicResource SurfaceHoverBrush}"/>
+                                <Setter TargetName="SplitterGrip"
+                                        Property="Background"
+                                        Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="SplitterGrip"
+                                        Property="Opacity"
+                                        Value="1"/>
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="SplitterBorder"
+                                        Property="Background"
+                                        Value="{DynamicResource SurfacePressedBrush}"/>
+                                <Setter TargetName="SplitterGrip"
+                                        Property="Background"
+                                        Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="SplitterGrip"
+                                        Property="Opacity"
+                                        Value="1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </GridSplitter.Template>
+            </GridSplitter>
 
             <!-- Entry Details -->
             <Grid Grid.Column="2"
