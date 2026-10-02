@@ -8,7 +8,7 @@ namespace PejPass.Infrastructure.Import;
 /// Chrome/Edge-style CSV: name,url,username,password,note.
 /// Output is plain text — never treat as a secure backup.
 /// </summary>
-public sealed class CsvExportService : ICsvExportService
+public sealed partial class CsvExportService : ICsvExportService
 {
     public async Task ExportToCsvAsync(
         string filePath,
