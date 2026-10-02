@@ -81,6 +81,7 @@ public partial class MainWindow : Window
         };
 
         PreviewKeyDown += OnPreviewKeyDown;
+        EntryList.SelectionChanged += (_, _) => UpdateSelectedEntriesToolbar();
 
         FaviconService.FaviconsBatchReady += () =>
         {
@@ -99,6 +100,25 @@ public partial class MainWindow : Window
                 AttachNotesScrollChain();
             }, DispatcherPriority.Loaded);
         };
+    }
+
+    private void UpdateSelectedEntriesToolbar()
+    {
+        var count = EntryList.SelectedItems.Count;
+        SelectedEntriesCountText.Text = count == 1 ? "1 selected" : $"{count} selected";
+        SelectedEntriesCountText.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        DeleteSelectedButton.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        DeleteSelectedButton.IsEnabled = count > 0;
+    }
+
+    private void DeleteSelected_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm)
+            return;
+
+        var selected = EntryList.SelectedItems.Cast<PejPass.Domain.Entities.VaultEntry>().ToArray();
+        if (vm.DeleteSelectedEntriesCommand.CanExecute(selected))
+            vm.DeleteSelectedEntriesCommand.Execute(selected);
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
