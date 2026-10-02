@@ -122,10 +122,6 @@ public partial class TrashViewModel : ObservableObject
                 ? $"Skipped {duplicates} duplicate item(s); they remain in Trash."
                 : "No selected items could be restored.";
 
-            if (duplicates > 0)
-                DialogService.Warning(
-                    $"All {duplicates} selected item(s) duplicate entries already in your list. They remain in Trash.",
-                    "Nothing restored");
             return;
         }
 
@@ -140,12 +136,9 @@ public partial class TrashViewModel : ObservableObject
             ? $"Restored {restoredIds.Count}; skipped {duplicates} duplicate item(s)."
             : $"Restored {restoredIds.Count} item(s).";
 
-        if (duplicates > 0)
-            DialogService.Warning(
-                $"Restored {restoredIds.Count} item(s).\n\nSkipped {duplicates} duplicate item(s); they remain in Trash.",
-                "Restore selected items");
-        else
-            DialogService.Success($"Restored {restoredIds.Count} item(s).", "Restore selected items");
+        SnackbarService.Show(duplicates > 0
+            ? $"Restored {restoredIds.Count}; skipped {duplicates} duplicate item(s)."
+            : $"Restored {restoredIds.Count} item(s).");
     }
 
     [RelayCommand]
@@ -252,9 +245,7 @@ public partial class TrashViewModel : ObservableObject
         StatusMessage = _all.Count == 0
             ? "Trash is empty."
             : $"Permanently deleted {purgedIds.Count} item(s).";
-        DialogService.Success(
-            $"Permanently deleted {purgedIds.Count} item(s).",
-            "Items permanently deleted");
+        SnackbarService.Show($"Permanently deleted {purgedIds.Count} item(s).");
     }
 
     [RelayCommand]
