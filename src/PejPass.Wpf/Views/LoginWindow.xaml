@@ -24,29 +24,18 @@
             <StackPanel VerticalAlignment="Top"
                         MaxWidth="440">
 
-                <TextBlock Text="PejPass"
-                           FontSize="{DynamicResource AppFontSize28}"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource TextBrush}"
-                           HorizontalAlignment="Center"
-                           Margin="0,0,0,8"/>
-
-                <TextBlock Text="Local encrypted vault"
-                           FontSize="{DynamicResource AppFontSize13}"
-                           Foreground="{DynamicResource MutedBrush}"
-                           HorizontalAlignment="Center"
-                           Margin="0,0,0,28"/>
-
-                <!-- Recent vaults -->
-                <Grid Margin="0,0,0,10">
+                <!-- Header -->
+                <Grid Margin="0,0,0,8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                     <Button x:Name="RecentsButton"
                             Grid.Column="0"
                             HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
                             Style="{StaticResource SecondaryButton}"
                             Content="Recents ▾"
                             Padding="8,4"
@@ -87,10 +76,48 @@
                                         </Setter>
                                     </Style>
                                 </ContextMenu.ItemContainerStyle>
+
+                                <ContextMenu.Items>
+                                    <Separator/>
+                                    <MenuItem Header="Remove a recent vault"
+                                              Style="{StaticResource PejPassContextMenuItem}"
+                                              ItemsSource="{Binding RecentVaults}">
+                                        <MenuItem.ItemContainerStyle>
+                                            <Style TargetType="MenuItem"
+                                                   BasedOn="{StaticResource PejPassContextMenuItem}">
+                                                <Setter Property="Header"
+                                                        Value="{Binding DisplayName}"/>
+                                                <Setter Property="ToolTip"
+                                                        Value="{Binding Path}"/>
+                                                <Setter Property="Command"
+                                                        Value="{Binding DataContext.RemoveRecentVaultCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
+                                                <Setter Property="CommandParameter"
+                                                        Value="{Binding}"/>
+                                            </Style>
+                                        </MenuItem.ItemContainerStyle>
+                                    </MenuItem>
+                                    <MenuItem Header="Clear all recents"
+                                              Style="{StaticResource PejPassContextMenuItem}"
+                                              Command="{Binding ClearRecentVaultsCommand}"/>
+                                </ContextMenu.Items>
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
+
+                    <TextBlock Grid.Column="1"
+                               Text="PejPass"
+                               FontSize="{DynamicResource AppFontSize28}"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource TextBrush}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
                 </Grid>
+
+                <TextBlock Text="Local encrypted vault"
+                           FontSize="{DynamicResource AppFontSize13}"
+                           Foreground="{DynamicResource MutedBrush}"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,28"/>
 
                 <!-- Mode -->
                 <StackPanel Orientation="Horizontal"
