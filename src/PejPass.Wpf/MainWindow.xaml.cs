@@ -102,6 +102,11 @@ public partial class MainWindow : Window
         };
     }
 
+    private void ClearContentFilters_Click(object sender, RoutedEventArgs e)
+    {
+        ContentFilterPopup.IsOpen = false;
+    }
+
     private void UpdateSelectedEntriesToolbar()
     {
         var count = EntryList.SelectedItems.Count;
