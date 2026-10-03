@@ -182,10 +182,10 @@ public partial class LoginWindow : Window
             };
             removeHoverTrigger.Setters.Add(new Setter(
                 Control.BackgroundProperty,
-                new System.Windows.DynamicResourceExtension("SurfaceHoverBrush")));
+                new System.Windows.DynamicResourceExtension("SurfacePressedBrush")));
             removeHoverTrigger.Setters.Add(new Setter(
                 Control.ForegroundProperty,
-                new System.Windows.DynamicResourceExtension("AccentBrush")));
+                new System.Windows.DynamicResourceExtension("TextBrush")));
 
             removeButtonTemplate.Triggers.Add(removeHoverTrigger);
 
