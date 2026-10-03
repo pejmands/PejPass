@@ -113,9 +113,16 @@ public partial class LoginWindow : Window
 
             var removeButton = new Button
             {
-                Content = "×",
-                Width = 22,
-                Height = 22,
+                Content = new TextBlock
+                {
+                    Text = "×",
+                    TextAlignment = TextAlignment.Center,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(0, -1, 0, 1)
+                },
+                Width = 24,
+                Height = 24,
                 Padding = new Thickness(0),
                 FontSize = 16,
                 VerticalAlignment = VerticalAlignment.Center,
@@ -132,6 +139,69 @@ public partial class LoginWindow : Window
                 removeButton,
                 $"Remove {recent.DisplayName} from recents");
 
+            var removeButtonTemplate = new ControlTemplate(typeof(Button));
+            var buttonBorder = new FrameworkElementFactory(typeof(Border))
+            {
+                Name = "ButtonBorder"
+            };
+            buttonBorder.SetValue(
+                Border.CornerRadiusProperty,
+                new CornerRadius(5));
+            buttonBorder.SetValue(
+                Border.BackgroundProperty,
+                new System.Windows.TemplateBindingExtension(Control.BackgroundProperty));
+            buttonBorder.SetValue(
+                Border.BorderBrushProperty,
+                new System.Windows.TemplateBindingExtension(Control.BorderBrushProperty));
+            buttonBorder.SetValue(
+                Border.BorderThicknessProperty,
+                new System.Windows.TemplateBindingExtension(Control.BorderThicknessProperty));
+
+            var contentPresenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            contentPresenter.SetValue(
+                FrameworkElement.HorizontalAlignmentProperty,
+                HorizontalAlignment.Center);
+            contentPresenter.SetValue(
+                FrameworkElement.VerticalAlignmentProperty,
+                VerticalAlignment.Center);
+            contentPresenter.SetValue(
+                ContentPresenter.HorizontalAlignmentProperty,
+                HorizontalAlignment.Center);
+            contentPresenter.SetValue(
+                ContentPresenter.VerticalAlignmentProperty,
+                VerticalAlignment.Center);
+            contentPresenter.SetValue(
+                ContentPresenter.RecognizesAccessKeyProperty,
+                true);
+            buttonBorder.AppendChild(contentPresenter);
+            removeButtonTemplate.VisualTree = buttonBorder;
+
+            var removeHoverTrigger = new Trigger
+            {
+                Property = Button.IsMouseOverProperty,
+                Value = true
+            };
+            removeHoverTrigger.Setters.Add(new Setter(
+                Control.BackgroundProperty,
+                new System.Windows.DynamicResourceExtension("SurfaceHoverBrush")));
+            removeHoverTrigger.Setters.Add(new Setter(
+                Control.ForegroundProperty,
+                new System.Windows.DynamicResourceExtension("TextBrush")));
+            removeButtonTemplate.Triggers.Add(removeHoverTrigger);
+
+            var removeFocusTrigger = new Trigger
+            {
+                Property = UIElement.IsKeyboardFocusedProperty,
+                Value = true
+            };
+            removeFocusTrigger.Setters.Add(new Setter(
+                Control.BackgroundProperty,
+                new System.Windows.DynamicResourceExtension("SurfaceHoverBrush")));
+            removeFocusTrigger.Setters.Add(new Setter(
+                Control.ForegroundProperty,
+                new System.Windows.DynamicResourceExtension("TextBrush")));
+            removeButtonTemplate.Triggers.Add(removeFocusTrigger);
+
             var removeButtonStyle = new Style(typeof(Button));
             removeButtonStyle.Setters.Add(new Setter(
                 Control.BackgroundProperty,
@@ -142,32 +212,9 @@ public partial class LoginWindow : Window
             removeButtonStyle.Setters.Add(new Setter(
                 Control.BorderThicknessProperty,
                 new Thickness(0)));
-
-            var removeHoverTrigger = new Trigger
-            {
-                Property = Button.IsMouseOverProperty,
-                Value = true
-            };
-            removeHoverTrigger.Setters.Add(new Setter(
-                Control.BackgroundProperty,
-                new System.Windows.DynamicResourceExtension("SurfaceAltBrush")));
-            removeHoverTrigger.Setters.Add(new Setter(
-                Control.ForegroundProperty,
-                new System.Windows.DynamicResourceExtension("TextBrush")));
-            removeButtonStyle.Triggers.Add(removeHoverTrigger);
-
-            var removeFocusTrigger = new Trigger
-            {
-                Property = UIElement.IsKeyboardFocusedProperty,
-                Value = true
-            };
-            removeFocusTrigger.Setters.Add(new Setter(
-                Control.BackgroundProperty,
-                new System.Windows.DynamicResourceExtension("SurfaceAltBrush")));
-            removeFocusTrigger.Setters.Add(new Setter(
-                Control.ForegroundProperty,
-                new System.Windows.DynamicResourceExtension("TextBrush")));
-            removeButtonStyle.Triggers.Add(removeFocusTrigger);
+            removeButtonStyle.Setters.Add(new Setter(
+                Control.TemplateProperty,
+                removeButtonTemplate));
 
             removeButton.Style = removeButtonStyle;
 
