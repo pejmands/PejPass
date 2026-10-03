@@ -23,6 +23,9 @@ public sealed class AppSettings
     /// <summary>How the entry list is ordered. Favorites always float to the top.</summary>
     public EntrySortMode SortMode { get; set; } = EntrySortMode.TitleAsc;
 
+    /// <summary>How the tag filter chips are ordered.</summary>
+    public TagSortMode TagSortMode { get; set; } = TagSortMode.MostUsed;
+
     /// <summary>
     /// After a successful master-password unlock in this process, allow Windows Hello
     /// to unlock again without retyping the password (same vault path).
@@ -36,4 +39,10 @@ public sealed class AppSettings
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "PejPass",
             "settings.json");
+}
+
+public enum TagSortMode
+{
+    MostUsed,
+    Alphabetical
 }
