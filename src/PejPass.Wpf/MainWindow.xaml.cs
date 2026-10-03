@@ -254,6 +254,9 @@ public partial class MainWindow : Window
         if (!enabled)
             return;
 
+        if (DataContext is MainViewModel vm)
+            FaviconService.Prefetch(vm.Entries.Select(e => (e.Url, e.Title)));
+
         Dispatcher.BeginInvoke(() =>
         {
             if (IsLoaded)
