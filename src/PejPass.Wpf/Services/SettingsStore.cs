@@ -99,6 +99,9 @@ public static class SettingsStore
         if (root.TryGetProperty("recentVaultPaths", out var recentVaultPaths) &&
             recentVaultPaths.ValueKind == JsonValueKind.Array)
         {
+            if (recentVaultPaths.GetArrayLength() > 5)
+                needsSave = true;
+
             settings.RecentVaultPaths = recentVaultPaths
                 .EnumerateArray()
                 .Where(item => item.ValueKind == JsonValueKind.String)
