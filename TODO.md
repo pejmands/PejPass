@@ -9,3 +9,8 @@
   - Allow users to mark a code as used; prevent accidental reuse where practical.
   - Ensure editing, history/restore, and deletion behavior are consistent with the existing entry and custom-field model.
   - Include the data in encrypted vault backups and preserve it through import/export where applicable.
+
+## History Retention and Storage
+
+- [ ] Keep entry history snapshots indefinitely unless the user explicitly deletes them; do not automatically delete snapshots based on age.
+- [ ] If history storage becomes a practical concern, consider showing the space used by history and offering user-controlled cleanup instead of silently deleting old snapshots.
