@@ -241,6 +241,8 @@ public partial class App : System.Windows.Application
         {
             titleBar.Title = title;
             titleBar.FilePath = filePath ?? string.Empty;
+            titleBar.ShowFilePathToolTip =
+                window is MainWindow && !string.IsNullOrWhiteSpace(filePath);
         }
     }
 
