@@ -148,6 +148,23 @@ public partial class LoginWindow : Window
                 Border.CornerRadiusProperty,
                 new CornerRadius(5));
             buttonBorder.SetValue(
+                FrameworkElement.RenderTransformOriginProperty,
+                new System.Windows.Point(0.5, 0.5));
+
+            var buttonScale = new FrameworkElementFactory(typeof(System.Windows.Media.ScaleTransform))
+            {
+                Name = "ButtonScale"
+            };
+            buttonScale.SetValue(System.Windows.Media.ScaleTransform.ScaleXProperty, 1.0);
+            buttonScale.SetValue(System.Windows.Media.ScaleTransform.ScaleYProperty, 1.0);
+            buttonBorder.SetValue(
+                UIElement.RenderTransformProperty,
+                buttonScale);
+            buttonBorder.SetValue(
+                UIElement.ClipToBoundsProperty,
+                false);
+
+            buttonBorder.SetValue(
                 Border.BackgroundProperty,
                 new System.Windows.TemplateBindingExtension(Control.BackgroundProperty));
             buttonBorder.SetValue(
@@ -187,6 +204,44 @@ public partial class LoginWindow : Window
             removeHoverTrigger.Setters.Add(new Setter(
                 Control.ForegroundProperty,
                 new System.Windows.DynamicResourceExtension("TextBrush")));
+
+            var hoverStoryboard = new System.Windows.Media.Animation.Storyboard();
+            var hoverScaleX = new System.Windows.Media.Animation.DoubleAnimation
+            {
+                To = 1.08,
+                Duration = TimeSpan.FromMilliseconds(100),
+                EasingFunction = new System.Windows.Media.Animation.CubicEase
+                {
+                    EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
+                }
+            };
+            System.Windows.Media.Animation.Storyboard.SetTargetName(
+                hoverScaleX,
+                "ButtonScale");
+            System.Windows.Media.Animation.Storyboard.SetTargetProperty(
+                hoverScaleX,
+                new PropertyPath(System.Windows.Media.ScaleTransform.ScaleXProperty));
+            hoverStoryboard.Children.Add(hoverScaleX);
+
+            var hoverScaleY = new System.Windows.Media.Animation.DoubleAnimation
+            {
+                To = 1.08,
+                Duration = TimeSpan.FromMilliseconds(100),
+                EasingFunction = new System.Windows.Media.Animation.CubicEase
+                {
+                    EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
+                }
+            };
+            System.Windows.Media.Animation.Storyboard.SetTargetName(
+                hoverScaleY,
+                "ButtonScale");
+            System.Windows.Media.Animation.Storyboard.SetTargetProperty(
+                hoverScaleY,
+                new PropertyPath(System.Windows.Media.ScaleTransform.ScaleYProperty));
+            hoverStoryboard.Children.Add(hoverScaleY);
+
+            removeHoverTrigger.EnterActions.Add(
+                new BeginStoryboard { Storyboard = hoverStoryboard });
             removeButtonTemplate.Triggers.Add(removeHoverTrigger);
 
             var removeFocusTrigger = new Trigger
