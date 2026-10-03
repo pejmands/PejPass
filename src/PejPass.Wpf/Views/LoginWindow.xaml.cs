@@ -151,15 +151,9 @@ public partial class LoginWindow : Window
                 FrameworkElement.RenderTransformOriginProperty,
                 new System.Windows.Point(0.5, 0.5));
 
-            var buttonScale = new FrameworkElementFactory(typeof(System.Windows.Media.ScaleTransform))
-            {
-                Name = "ButtonScale"
-            };
-            buttonScale.SetValue(System.Windows.Media.ScaleTransform.ScaleXProperty, 1.0);
-            buttonScale.SetValue(System.Windows.Media.ScaleTransform.ScaleYProperty, 1.0);
             buttonBorder.SetValue(
                 UIElement.RenderTransformProperty,
-                buttonScale);
+                new System.Windows.Media.ScaleTransform(1, 1));
             buttonBorder.SetValue(
                 UIElement.ClipToBoundsProperty,
                 false);
@@ -217,10 +211,10 @@ public partial class LoginWindow : Window
             };
             System.Windows.Media.Animation.Storyboard.SetTargetName(
                 hoverScaleX,
-                "ButtonScale");
+                "ButtonBorder");
             System.Windows.Media.Animation.Storyboard.SetTargetProperty(
                 hoverScaleX,
-                new PropertyPath(System.Windows.Media.ScaleTransform.ScaleXProperty));
+                new PropertyPath("(UIElement.RenderTransform).(ScaleTransform.ScaleX)"));
             hoverStoryboard.Children.Add(hoverScaleX);
 
             var hoverScaleY = new System.Windows.Media.Animation.DoubleAnimation
@@ -234,10 +228,10 @@ public partial class LoginWindow : Window
             };
             System.Windows.Media.Animation.Storyboard.SetTargetName(
                 hoverScaleY,
-                "ButtonScale");
+                "ButtonBorder");
             System.Windows.Media.Animation.Storyboard.SetTargetProperty(
                 hoverScaleY,
-                new PropertyPath(System.Windows.Media.ScaleTransform.ScaleYProperty));
+                new PropertyPath("(UIElement.RenderTransform).(ScaleTransform.ScaleY)"));
             hoverStoryboard.Children.Add(hoverScaleY);
 
             removeHoverTrigger.EnterActions.Add(
