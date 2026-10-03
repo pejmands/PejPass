@@ -75,15 +75,24 @@ public partial class LoginWindow : Window
 
         foreach (var recent in viewModel.RecentVaults)
         {
-            var header = new StackPanel
+            var header = new Grid
             {
-                MaxWidth = 340
+                MinWidth = 280,
+                MaxWidth = 360
+            };
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var details = new StackPanel
+            {
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 1, 12, 1)
             };
 
             var name = new TextBlock
             {
                 Text = recent.DisplayName,
-                TextTrimming = System.Windows.TextTrimming.CharacterEllipsis
+                TextTrimming = TextTrimming.CharacterEllipsis
             };
             name.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
 
@@ -91,17 +100,40 @@ public partial class LoginWindow : Window
             {
                 Text = recent.Path,
                 FontSize = 11,
-                TextTrimming = System.Windows.TextTrimming.CharacterEllipsis
+                TextTrimming = TextTrimming.CharacterEllipsis
             };
             path.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
 
-            header.Children.Add(name);
-            header.Children.Add(path);
+            details.Children.Add(name);
+            details.Children.Add(path);
+            Grid.SetColumn(details, 0);
+            header.Children.Add(details);
+
+            var removeButton = new Button
+            {
+                Content = "×",
+                Width = 22,
+                Height = 22,
+                Padding = new Thickness(0),
+                FontSize = 16,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Focusable = false,
+                ToolTip = "Remove from recents",
+                Background = System.Windows.Media.Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Foreground = (System.Windows.Media.Brush)FindResource("MutedBrush"),
+                Tag = recent
+            };
+            removeButton.Click += RecentRemoveButton_Click;
+            Grid.SetColumn(removeButton, 1);
+            header.Children.Add(removeButton);
 
             menu.Items.Add(new System.Windows.Controls.MenuItem
             {
                 Header = header,
                 ToolTip = recent.Path,
+                StaysOpenOnClick = true,
                 Style = (Style)FindResource("PejPassContextMenuItem"),
                 Command = viewModel.SelectRecentVaultCommand,
                 CommandParameter = recent
@@ -109,35 +141,27 @@ public partial class LoginWindow : Window
         }
 
         menu.Items.Add(new Separator());
-
-        var removeMenu = new System.Windows.Controls.MenuItem
-        {
-            Header = "Remove a recent vault",
-            Style = (Style)FindResource("PejPassContextMenuItem")
-        };
-
-        foreach (var recent in viewModel.RecentVaults)
-        {
-            removeMenu.Items.Add(new System.Windows.Controls.MenuItem
-            {
-                Header = recent.DisplayName,
-                ToolTip = recent.Path,
-                Style = (Style)FindResource("PejPassContextMenuItem"),
-                Command = viewModel.RemoveRecentVaultCommand,
-                CommandParameter = recent
-            });
-        }
-
-        menu.Items.Add(removeMenu);
         menu.Items.Add(new System.Windows.Controls.MenuItem
         {
             Header = "Clear all recents",
             Style = (Style)FindResource("PejPassContextMenuItem"),
-            Command = viewModel.ClearRecentVaultsCommand
+            Command = viewModel.ClearRecentVaultsCommand,
+            CommandParameter = this
         });
 
         menu.PlacementTarget = button;
         menu.IsOpen = true;
+    }
+
+    private void RecentRemoveButton_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+
+        if (sender is Button { Tag: RecentVaultItem recent } &&
+            DataContext is LoginViewModel viewModel)
+        {
+            viewModel.RemoveRecentVaultCommand.Execute(recent);
+        }
     }
 
     private void ClearPasswordInputs()
