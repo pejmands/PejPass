@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using PejPass.Wpf.ViewModels;
+using PejPass.Wpf.Dialogs;
+using System.Windows.Input;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -125,7 +127,7 @@ public partial class LoginWindow : Window
                 Foreground = (System.Windows.Media.Brush)FindResource("MutedBrush"),
                 Tag = recent
             };
-            removeButton.Click += RecentRemoveButton_Click;
+            removeButton.PreviewMouseLeftButtonDown += RecentRemoveButton_PreviewMouseLeftButtonDown;
             Grid.SetColumn(removeButton, 1);
             header.Children.Add(removeButton);
 
@@ -152,13 +154,14 @@ public partial class LoginWindow : Window
         menu.IsOpen = true;
     }
 
-    private void RecentRemoveButton_Click(object sender, RoutedEventArgs e)
+    private void RecentRemoveButton_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;
 
         if (sender is Button { Tag: RecentVaultItem recent } &&
             DataContext is LoginViewModel viewModel)
         {
+            RecentVaultsMenu.IsOpen = false;
             viewModel.RemoveRecentVaultCommand.Execute(recent);
         }
     }
@@ -168,16 +171,15 @@ public partial class LoginWindow : Window
         if (DataContext is not LoginViewModel viewModel)
             return;
 
-        var result = MessageBox.Show(
-            this,
+        if (DialogService.Confirm(
             "Remove all recent vaults from this list? This will not delete any vault files.",
             "Clear all recents",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question,
-            MessageBoxResult.No);
-
-        if (result == MessageBoxResult.Yes)
+            yesText: "Clear all",
+            noText: "Cancel"))
+        {
+            RecentVaultsMenu.IsOpen = false;
             viewModel.ClearRecentVaultsCommand.Execute(null);
+        }
     }
 
     private void ClearPasswordInputs()
