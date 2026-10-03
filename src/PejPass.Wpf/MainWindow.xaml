@@ -146,6 +146,7 @@
                                               Margin="0,0,0,12"
                                               Foreground="{DynamicResource TextBrush}"/>
                                     <Button Content="Clear filters"
+                                            Click="ClearContentFilters_Click"
                                             Command="{Binding ClearContentFiltersCommand}"
                                             HorizontalAlignment="Right"
                                             Padding="10,5"
