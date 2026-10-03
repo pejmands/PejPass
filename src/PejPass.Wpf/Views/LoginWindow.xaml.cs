@@ -127,7 +127,10 @@ public partial class LoginWindow : Window
                 Foreground = (System.Windows.Media.Brush)FindResource("MutedBrush"),
                 Tag = recent
             };
-            removeButton.PreviewMouseLeftButtonDown += RecentRemoveButton_PreviewMouseLeftButtonDown;
+            removeButton.AddHandler(
+                UIElement.PreviewMouseLeftButtonDownEvent,
+                new MouseButtonEventHandler(RecentRemoveButton_PreviewMouseLeftButtonDown),
+                true);
             Grid.SetColumn(removeButton, 1);
             header.Children.Add(removeButton);
 
@@ -143,12 +146,13 @@ public partial class LoginWindow : Window
         }
 
         menu.Items.Add(new Separator());
-        menu.Items.Add(new System.Windows.Controls.MenuItem
+        var clearAllItem = new System.Windows.Controls.MenuItem
         {
             Header = "Clear all recents",
-            Style = (Style)FindResource("PejPassContextMenuItem"),
-            Click = ClearAllRecents_Click
-        });
+            Style = (Style)FindResource("PejPassContextMenuItem")
+        };
+        clearAllItem.Click += ClearAllRecents_Click;
+        menu.Items.Add(clearAllItem);
 
         menu.PlacementTarget = button;
         menu.IsOpen = true;
