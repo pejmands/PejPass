@@ -74,9 +74,18 @@ public partial class MainViewModel
             });
         }
 
-        foreach (var kv in counts
-                     .OrderByDescending(x => x.Value)
-                     .ThenBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
+        var orderedTags = _settings.TagSortMode switch
+        {
+            TagSortMode.Alphabetical => counts
+                .OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(x => x.Key, StringComparer.Ordinal),
+            _ => counts
+                .OrderByDescending(x => x.Value)
+                .ThenBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(x => x.Key, StringComparer.Ordinal)
+        };
+
+        foreach (var kv in orderedTags)
         {
             TagFilters.Add(new TagFilterItem
             {
