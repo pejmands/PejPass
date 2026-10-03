@@ -12,6 +12,15 @@ public partial class LoginWindow : Window
         InitializeComponent();
         DataContext = viewModel;
 
+        viewModel.RecentVaultSelected += (_, _) =>
+        {
+            ClearPasswordInputs();
+
+            Dispatcher.BeginInvoke(
+                () => MasterPasswordBox.FocusInput(),
+                System.Windows.Threading.DispatcherPriority.Input);
+        };
+
         viewModel.ValidationFailed += (_, _) =>
         {
             if (!string.IsNullOrEmpty(viewModel.VaultPathError))
@@ -50,6 +59,18 @@ public partial class LoginWindow : Window
 
             await viewModel.RefreshWindowsHelloVisibilityAsync();
         };
+    }
+
+    private void RecentsButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement button ||
+            button.ContextMenu is not { } menu)
+        {
+            return;
+        }
+
+        menu.PlacementTarget = button;
+        menu.IsOpen = true;
     }
 
     private void ClearPasswordInputs()
