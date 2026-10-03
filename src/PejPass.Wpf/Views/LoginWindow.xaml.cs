@@ -79,8 +79,7 @@ public partial class LoginWindow : Window
         {
             var header = new Grid
             {
-                MinWidth = 280,
-                MaxWidth = 360
+                Width = 320
             };
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -183,10 +182,10 @@ public partial class LoginWindow : Window
             };
             removeHoverTrigger.Setters.Add(new Setter(
                 Control.BackgroundProperty,
-                new System.Windows.DynamicResourceExtension("DangerSurfaceBrush")));
+                new System.Windows.DynamicResourceExtension("SurfaceHoverBrush")));
             removeHoverTrigger.Setters.Add(new Setter(
                 Control.ForegroundProperty,
-                new System.Windows.DynamicResourceExtension("DangerBrush")));
+                new System.Windows.DynamicResourceExtension("TextBrush")));
 
             removeButtonTemplate.Triggers.Add(removeHoverTrigger);
 
