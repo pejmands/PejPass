@@ -1,10 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
-using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Dialogs;
-using System.Windows.Input;
+using PejPass.Wpf.ViewModels;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace PejPass.Wpf.Views;
 
@@ -128,13 +128,13 @@ public partial class LoginWindow : Window
                 Tag = recent
             };
             removeButton.AddHandler(
-                UIElement.PreviewMouseLeftButtonDownEvent,
+                PreviewMouseLeftButtonDownEvent,
                 new MouseButtonEventHandler(RecentRemoveButton_PreviewMouseLeftButtonDown),
                 true);
             Grid.SetColumn(removeButton, 1);
             header.Children.Add(removeButton);
 
-            menu.Items.Add(new System.Windows.Controls.MenuItem
+            menu.Items.Add(new MenuItem
             {
                 Header = header,
                 ToolTip = recent.Path,
@@ -145,8 +145,13 @@ public partial class LoginWindow : Window
             });
         }
 
-        menu.Items.Add(new Separator());
-        var clearAllItem = new System.Windows.Controls.MenuItem
+        menu.Items.Add(new Separator
+        {
+            Style = (Style)FindResource("PejPassContextMenuSeparator"),
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        });
+
+        var clearAllItem = new MenuItem
         {
             Header = "Clear all recents",
             Style = (Style)FindResource("PejPassContextMenuItem")
