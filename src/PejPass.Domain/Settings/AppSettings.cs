@@ -8,6 +8,8 @@ public sealed class AppSettings
 {
     public string? LastVaultPath { get; set; }
 
+    public List<string> RecentVaultPaths { get; set; } = [];
+
     public int AutoLockMinutes { get; set; } = 10;
 
     public int ClipboardClearSeconds { get; set; } = 30;
