@@ -75,6 +75,7 @@
                            PreviewMouseLeftButtonDown="TitleText_PreviewMouseLeftButtonDown"
                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
                            ToolTipService.ToolTip="{Binding FilePath, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           ToolTipService.IsEnabled="{Binding ShowFilePathToolTip, RelativeSource={RelativeSource AncestorType=UserControl}}"
                            Margin="0,0,8,0"/>
             </Grid>
 
