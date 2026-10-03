@@ -148,17 +148,6 @@ public partial class LoginWindow : Window
                 Border.CornerRadiusProperty,
                 new CornerRadius(5));
             buttonBorder.SetValue(
-                FrameworkElement.RenderTransformOriginProperty,
-                new System.Windows.Point(0.5, 0.5));
-
-            buttonBorder.SetValue(
-                UIElement.RenderTransformProperty,
-                new System.Windows.Media.ScaleTransform(1, 1));
-            buttonBorder.SetValue(
-                UIElement.ClipToBoundsProperty,
-                false);
-
-            buttonBorder.SetValue(
                 Border.BackgroundProperty,
                 new System.Windows.TemplateBindingExtension(Control.BackgroundProperty));
             buttonBorder.SetValue(
@@ -194,48 +183,11 @@ public partial class LoginWindow : Window
             };
             removeHoverTrigger.Setters.Add(new Setter(
                 Control.BackgroundProperty,
-                new System.Windows.DynamicResourceExtension("SurfaceHoverBrush")));
+                new System.Windows.DynamicResourceExtension("DangerSurfaceBrush")));
             removeHoverTrigger.Setters.Add(new Setter(
                 Control.ForegroundProperty,
-                new System.Windows.DynamicResourceExtension("TextBrush")));
+                new System.Windows.DynamicResourceExtension("DangerBrush")));
 
-            var hoverStoryboard = new System.Windows.Media.Animation.Storyboard();
-            var hoverScaleX = new System.Windows.Media.Animation.DoubleAnimation
-            {
-                To = 1.08,
-                Duration = TimeSpan.FromMilliseconds(100),
-                EasingFunction = new System.Windows.Media.Animation.CubicEase
-                {
-                    EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
-                }
-            };
-            System.Windows.Media.Animation.Storyboard.SetTargetName(
-                hoverScaleX,
-                "ButtonBorder");
-            System.Windows.Media.Animation.Storyboard.SetTargetProperty(
-                hoverScaleX,
-                new PropertyPath("(UIElement.RenderTransform).(ScaleTransform.ScaleX)"));
-            hoverStoryboard.Children.Add(hoverScaleX);
-
-            var hoverScaleY = new System.Windows.Media.Animation.DoubleAnimation
-            {
-                To = 1.08,
-                Duration = TimeSpan.FromMilliseconds(100),
-                EasingFunction = new System.Windows.Media.Animation.CubicEase
-                {
-                    EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
-                }
-            };
-            System.Windows.Media.Animation.Storyboard.SetTargetName(
-                hoverScaleY,
-                "ButtonBorder");
-            System.Windows.Media.Animation.Storyboard.SetTargetProperty(
-                hoverScaleY,
-                new PropertyPath("(UIElement.RenderTransform).(ScaleTransform.ScaleY)"));
-            hoverStoryboard.Children.Add(hoverScaleY);
-
-            removeHoverTrigger.EnterActions.Add(
-                new BeginStoryboard { Storyboard = hoverStoryboard });
             removeButtonTemplate.Triggers.Add(removeHoverTrigger);
 
             var removeFocusTrigger = new Trigger
