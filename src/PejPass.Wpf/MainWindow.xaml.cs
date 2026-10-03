@@ -126,7 +126,7 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel vm)
             return;
 
-        var selected = EntryList.SelectedItems.Cast<PejPass.Domain.Entities.VaultEntry>().ToArray();
+        var selected = EntryList.SelectedItems.Cast<Domain.Entities.VaultEntry>().ToArray();
         if (vm.DeleteSelectedEntriesCommand.CanExecute(selected))
             vm.DeleteSelectedEntriesCommand.Execute(selected);
     }
@@ -317,9 +317,9 @@ public partial class MainWindow : Window
         if (target is null)
             return;
 
-        target.RemoveHandler(UIElement.PreviewMouseWheelEvent,
+        target.RemoveHandler(PreviewMouseWheelEvent,
             (MouseWheelEventHandler)TagFilterScroll_OnPreviewMouseWheel);
-        target.AddHandler(UIElement.PreviewMouseWheelEvent,
+        target.AddHandler(PreviewMouseWheelEvent,
             (MouseWheelEventHandler)TagFilterScroll_OnPreviewMouseWheel,
             handledEventsToo: true);
 

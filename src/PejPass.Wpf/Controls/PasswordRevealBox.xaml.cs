@@ -223,7 +223,7 @@ public partial class PasswordRevealBox : UserControl
 
     private void StartRevealTimer()
     {
-        var seconds = App.Services.GetService<PejPass.Domain.Settings.AppSettings>()?.RevealSecretSeconds ?? 10;
+        var seconds = App.Services.GetService<Domain.Settings.AppSettings>()?.RevealSecretSeconds ?? 10;
         _revealTimer.Start(seconds, () => IsRevealed = false);
     }
 

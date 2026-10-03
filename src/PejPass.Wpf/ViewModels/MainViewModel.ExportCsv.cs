@@ -48,7 +48,7 @@ public partial class MainViewModel
 
         try
         {
-            var csvExport = global::PejPass.Wpf.App.Services.GetRequiredService<ICsvExportService>();
+            var csvExport = App.Services.GetRequiredService<ICsvExportService>();
             await csvExport.ExportToCsvAsync(dlg.FileName, Entries);
 
             DialogService.Warning(
@@ -96,7 +96,7 @@ public partial class MainViewModel
 
         try
         {
-            var csvExport = global::PejPass.Wpf.App.Services.GetRequiredService<ICsvExportService>();
+            var csvExport = App.Services.GetRequiredService<ICsvExportService>();
             await csvExport.ExportPejPassCsvAsync(dlg.FileName, Entries);
             DialogService.Warning(
                 $"Saved {Entries.Count} entries to:\n{dlg.FileName}\n\n" +

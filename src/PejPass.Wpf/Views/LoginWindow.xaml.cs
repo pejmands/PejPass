@@ -149,26 +149,26 @@ public partial class LoginWindow : Window
                 new CornerRadius(5));
             buttonBorder.SetValue(
                 Border.BackgroundProperty,
-                new System.Windows.TemplateBindingExtension(Control.BackgroundProperty));
+                new TemplateBindingExtension(BackgroundProperty));
             buttonBorder.SetValue(
                 Border.BorderBrushProperty,
-                new System.Windows.TemplateBindingExtension(Control.BorderBrushProperty));
+                new TemplateBindingExtension(BorderBrushProperty));
             buttonBorder.SetValue(
                 Border.BorderThicknessProperty,
-                new System.Windows.TemplateBindingExtension(Control.BorderThicknessProperty));
+                new TemplateBindingExtension(BorderThicknessProperty));
 
             var contentPresenter = new FrameworkElementFactory(typeof(ContentPresenter));
             contentPresenter.SetValue(
-                FrameworkElement.HorizontalAlignmentProperty,
+                HorizontalAlignmentProperty,
                 HorizontalAlignment.Center);
             contentPresenter.SetValue(
-                FrameworkElement.VerticalAlignmentProperty,
+                VerticalAlignmentProperty,
                 VerticalAlignment.Center);
             contentPresenter.SetValue(
-                ContentPresenter.HorizontalAlignmentProperty,
+                HorizontalAlignmentProperty,
                 HorizontalAlignment.Center);
             contentPresenter.SetValue(
-                ContentPresenter.VerticalAlignmentProperty,
+                VerticalAlignmentProperty,
                 VerticalAlignment.Center);
             contentPresenter.SetValue(
                 ContentPresenter.RecognizesAccessKeyProperty,
@@ -178,43 +178,43 @@ public partial class LoginWindow : Window
 
             var removeHoverTrigger = new Trigger
             {
-                Property = Button.IsMouseOverProperty,
+                Property = IsMouseOverProperty,
                 Value = true
             };
             removeHoverTrigger.Setters.Add(new Setter(
-                Control.BackgroundProperty,
-                new System.Windows.DynamicResourceExtension("SurfacePressedBrush")));
+                BackgroundProperty,
+                new DynamicResourceExtension("SurfacePressedBrush")));
             removeHoverTrigger.Setters.Add(new Setter(
-                Control.ForegroundProperty,
-                new System.Windows.DynamicResourceExtension("TextBrush")));
+                ForegroundProperty,
+                new DynamicResourceExtension("TextBrush")));
 
             removeButtonTemplate.Triggers.Add(removeHoverTrigger);
 
             var removeFocusTrigger = new Trigger
             {
-                Property = UIElement.IsKeyboardFocusedProperty,
+                Property = IsKeyboardFocusedProperty,
                 Value = true
             };
             removeFocusTrigger.Setters.Add(new Setter(
-                Control.BackgroundProperty,
-                new System.Windows.DynamicResourceExtension("SurfaceHoverBrush")));
+                BackgroundProperty,
+                new DynamicResourceExtension("SurfaceHoverBrush")));
             removeFocusTrigger.Setters.Add(new Setter(
-                Control.ForegroundProperty,
-                new System.Windows.DynamicResourceExtension("TextBrush")));
+                ForegroundProperty,
+                new DynamicResourceExtension("TextBrush")));
             removeButtonTemplate.Triggers.Add(removeFocusTrigger);
 
             var removeButtonStyle = new Style(typeof(Button));
             removeButtonStyle.Setters.Add(new Setter(
-                Control.BackgroundProperty,
+                BackgroundProperty,
                 System.Windows.Media.Brushes.Transparent));
             removeButtonStyle.Setters.Add(new Setter(
-                Control.ForegroundProperty,
-                new System.Windows.DynamicResourceExtension("MutedBrush")));
+                ForegroundProperty,
+                new DynamicResourceExtension("MutedBrush")));
             removeButtonStyle.Setters.Add(new Setter(
-                Control.BorderThicknessProperty,
+                BorderThicknessProperty,
                 new Thickness(0)));
             removeButtonStyle.Setters.Add(new Setter(
-                Control.TemplateProperty,
+                TemplateProperty,
                 removeButtonTemplate));
 
             removeButton.Style = removeButtonStyle;

@@ -1,6 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.ObjectModel;
 using Microsoft.Win32;
 using PejPass.Application.Services;
 using PejPass.Domain.Entities;
@@ -8,6 +7,7 @@ using PejPass.Domain.Policies;
 using PejPass.Domain.Security;
 using PejPass.Domain.Settings;
 using PejPass.Wpf.Services;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 
@@ -206,9 +206,7 @@ public partial class LoginViewModel : ObservableObject
     private void SaveRecentVaults()
     {
         HasRecentVaults = RecentVaults.Count > 0;
-        _settings.RecentVaultPaths = RecentVaults
-            .Select(item => item.Path)
-            .ToList();
+        _settings.RecentVaultPaths = [.. RecentVaults.Select(item => item.Path)];
 
         SettingsStore.Save(_settings);
     }

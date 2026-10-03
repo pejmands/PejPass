@@ -403,7 +403,7 @@ public partial class EntryEditorViewModel : ObservableObject
 
     public VaultEntry ToEntry()
     {
-        var tags = EntryEditorViewModel.NormalizeTags(TagsText);
+        var tags = NormalizeTags(TagsText);
 
         var customFields = CustomFields
             .Where(f => !string.IsNullOrWhiteSpace(f.Name) &&

@@ -6,7 +6,7 @@
 public sealed class EntryHistoryItem
 {
     public Guid Id { get; init; } = Guid.NewGuid();
-    
+
     public Guid EntryId { get; init; }
 
     public string Title { get; init; } = string.Empty;

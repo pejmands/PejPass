@@ -1,382 +1,408 @@
-<Window x:Class="PejPass.Wpf.Views.VaultHealthWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Vault Health"
-        Height="720"
-        Width="720"
-        MinHeight="560"
-        MinWidth="560"
-        WindowStartupLocation="CenterOwner"
-        ResizeMode="CanResize"
-        ShowInTaskbar="False"
-        Background="{DynamicResource BgBrush}">
+<Window
+	x:Class="PejPass.Wpf.Views.VaultHealthWindow"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	Title="Vault Health"
+	Width="720"
+	Height="720"
+	MinWidth="560"
+	MinHeight="560"
+	Background="{DynamicResource BgBrush}"
+	ResizeMode="CanResize"
+	ShowInTaskbar="False"
+	WindowStartupLocation="CenterOwner">
 
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+	<Grid Margin="24">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Grid Margin="0,0,0,18">
-            <TextBlock Text="Vault Health"
-                       FontSize="{DynamicResource AppFontSize22}"
-                       FontWeight="Bold"
-                       Foreground="{DynamicResource TextBrush}"/>
+		<!--  Header  -->
+		<Grid Margin="0,0,0,18">
+			<TextBlock
+				FontSize="{DynamicResource AppFontSize22}"
+				FontWeight="Bold"
+				Foreground="{DynamicResource TextBrush}"
+				Text="Vault Health" />
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Cancel"
-                        Command="{Binding CancelScanCommand}"
-                        Width="70"
-                        ToolTip="Cancel the running health scan">
-                    <Button.Style>
-                        <Style TargetType="Button"
-                               BasedOn="{StaticResource SecondaryButton}">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsScanning}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
-                <Button Content="Rescan"
-                        Width="70"
-                        Command="{Binding RefreshCommand}"
-                        ToolTip="Run health scan again">
-                    <Button.Style>
-                        <Style TargetType="Button"
-                               BasedOn="{StaticResource SecondaryButton}">
-                            <Setter Property="Visibility" Value="Visible"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsScanning}" Value="True">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
-            </StackPanel>
-        </Grid>
+			<StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+				<Button
+					Width="70"
+					Command="{Binding CancelScanCommand}"
+					Content="Cancel"
+					ToolTip="Cancel the running health scan">
+					<Button.Style>
+						<Style BasedOn="{StaticResource SecondaryButton}" TargetType="Button">
+							<Setter Property="Visibility" Value="Collapsed" />
+							<Style.Triggers>
+								<DataTrigger Binding="{Binding IsScanning}" Value="True">
+									<Setter Property="Visibility" Value="Visible" />
+								</DataTrigger>
+							</Style.Triggers>
+						</Style>
+					</Button.Style>
+				</Button>
+				<Button
+					Width="70"
+					Command="{Binding RefreshCommand}"
+					Content="Rescan"
+					ToolTip="Run health scan again">
+					<Button.Style>
+						<Style BasedOn="{StaticResource SecondaryButton}" TargetType="Button">
+							<Setter Property="Visibility" Value="Visible" />
+							<Style.Triggers>
+								<DataTrigger Binding="{Binding IsScanning}" Value="True">
+									<Setter Property="Visibility" Value="Collapsed" />
+								</DataTrigger>
+							</Style.Triggers>
+						</Style>
+					</Button.Style>
+				</Button>
+			</StackPanel>
+		</Grid>
 
-        <!-- Health summary -->
-        <Border Grid.Row="1"
-                Background="{DynamicResource SurfaceBrush}"
-                CornerRadius="10"
-                Padding="20,16"
-                Margin="0,0,0,16">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1*"/>
-                    <ColumnDefinition Width="2*"/>
-                </Grid.ColumnDefinitions>
+		<!--  Health summary  -->
+		<Border
+			Grid.Row="1"
+			Margin="0,0,0,16"
+			Padding="20,16"
+			Background="{DynamicResource SurfaceBrush}"
+			CornerRadius="10">
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="1*" />
+					<ColumnDefinition Width="2*" />
+				</Grid.ColumnDefinitions>
 
-                <StackPanel HorizontalAlignment="Center"
-                            VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Margin="0,0,0,4">
-                        <TextBlock Text="Vault health"
-                                   FontSize="{DynamicResource AppFontSize11}"
-                                   Foreground="{DynamicResource MutedBrush}"
-                                   VerticalAlignment="Center"/>
-                        <Border CornerRadius="4"
-                                Padding="7,3"
-                                Margin="8,0,0,0"
-                                VerticalAlignment="Center">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Background"
-                                            Value="{DynamicResource SurfaceAltBrush}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HealthLabel}"
-                                                     Value="Excellent">
-                                            <Setter Property="Background"
-                                                    Value="{DynamicResource SuccessBrush}"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding HealthLabel}"
-                                                     Value="Good">
-                                            <Setter Property="Background"
-                                                    Value="{DynamicResource AccentBrush}"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding HealthLabel}"
-                                                     Value="Needs attention">
-                                            <Setter Property="Background"
-                                                    Value="{DynamicResource WarningBrush}"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding HealthLabel}"
-                                                     Value="At risk">
-                                            <Setter Property="Background"
-                                                    Value="{DynamicResource DangerBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <TextBlock Text="{Binding HealthLabel}"
-                                       FontSize="{DynamicResource AppFontSize10}"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource ButtonTextBrush}"/>
-                        </Border>
-                    </StackPanel>
-                    <TextBlock Text="{Binding HealthScore, StringFormat={}{0}%}"
-                               FontSize="{DynamicResource AppFontSize30}"
-                               FontWeight="Bold"
-                               Foreground="{DynamicResource TextBrush}"
-                               HorizontalAlignment="Center"/>
-                </StackPanel>
+				<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+					<StackPanel
+						Margin="0,0,0,4"
+						HorizontalAlignment="Center"
+						VerticalAlignment="Center"
+						Orientation="Horizontal">
+						<TextBlock
+							VerticalAlignment="Center"
+							FontSize="{DynamicResource AppFontSize11}"
+							Foreground="{DynamicResource MutedBrush}"
+							Text="Vault health" />
+						<Border
+							Margin="8,0,0,0"
+							Padding="7,3"
+							VerticalAlignment="Center"
+							CornerRadius="4">
+							<Border.Style>
+								<Style TargetType="Border">
+									<Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+									<Style.Triggers>
+										<DataTrigger Binding="{Binding HealthLabel}" Value="Excellent">
+											<Setter Property="Background" Value="{DynamicResource SuccessBrush}" />
+										</DataTrigger>
+										<DataTrigger Binding="{Binding HealthLabel}" Value="Good">
+											<Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+										</DataTrigger>
+										<DataTrigger Binding="{Binding HealthLabel}" Value="Needs attention">
+											<Setter Property="Background" Value="{DynamicResource WarningBrush}" />
+										</DataTrigger>
+										<DataTrigger Binding="{Binding HealthLabel}" Value="At risk">
+											<Setter Property="Background" Value="{DynamicResource DangerBrush}" />
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</Border.Style>
+							<TextBlock
+								FontSize="{DynamicResource AppFontSize10}"
+								FontWeight="SemiBold"
+								Foreground="{DynamicResource ButtonTextBrush}"
+								Text="{Binding HealthLabel}" />
+						</Border>
+					</StackPanel>
+					<TextBlock
+						HorizontalAlignment="Center"
+						FontSize="{DynamicResource AppFontSize30}"
+						FontWeight="Bold"
+						Foreground="{DynamicResource TextBrush}"
+						Text="{Binding HealthScore, StringFormat={}{0}%}" />
+				</StackPanel>
 
-                <StackPanel Grid.Column="1"
-                            VerticalAlignment="Center"
-                            Margin="18,0,0,0">
-                    <TextBlock Text="{Binding TotalIssues, StringFormat={}{0} issues found}"
-                               FontSize="{DynamicResource AppFontSize14}"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextBrush}"/>
-                    <TextBlock Text="Review the issues below to improve your vault security."
-                               FontSize="{DynamicResource AppFontSize11}"
-                               Foreground="{DynamicResource MutedBrush}"
-                               TextWrapping="Wrap"
-                               Margin="0,4,0,0"/>
-                </StackPanel>
-            </Grid>
-        </Border>
+				<StackPanel
+					Grid.Column="1"
+					Margin="18,0,0,0"
+					VerticalAlignment="Center">
+					<TextBlock
+						FontSize="{DynamicResource AppFontSize14}"
+						FontWeight="SemiBold"
+						Foreground="{DynamicResource TextBrush}"
+						Text="{Binding TotalIssues, StringFormat={}{0} issues found}" />
+					<TextBlock
+						Margin="0,4,0,0"
+						FontSize="{DynamicResource AppFontSize11}"
+						Foreground="{DynamicResource MutedBrush}"
+						Text="Review the issues below to improve your vault security."
+						TextWrapping="Wrap" />
+				</StackPanel>
+			</Grid>
+		</Border>
 
-        <!-- Issue summary -->
-        <Grid Grid.Row="2"
-              Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+		<!--  Issue summary  -->
+		<Grid Grid.Row="2" Margin="0,0,0,16">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="*" />
+			</Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0">
-                <TextBlock Text="{Binding WeakCount}"
-                           FontSize="{DynamicResource AppFontSize20}"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource WarningBrush}"/>
-                <TextBlock Text="Weak passwords"
-                           FontSize="{DynamicResource AppFontSize11}"
-                           Foreground="{DynamicResource MutedBrush}"
-                           Margin="0,2,0,0"/>
-            </StackPanel>
+			<StackPanel Grid.Column="0">
+				<TextBlock
+					FontSize="{DynamicResource AppFontSize20}"
+					FontWeight="Bold"
+					Foreground="{DynamicResource WarningBrush}"
+					Text="{Binding WeakCount}" />
+				<TextBlock
+					Margin="0,2,0,0"
+					FontSize="{DynamicResource AppFontSize11}"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="Weak passwords" />
+			</StackPanel>
 
-            <StackPanel Grid.Column="1">
-                <TextBlock Text="{Binding DuplicateCount}"
-                           FontSize="{DynamicResource AppFontSize20}"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource DangerBrush}"/>
-                <TextBlock Text="Duplicate passwords"
-                           FontSize="{DynamicResource AppFontSize11}"
-                           Foreground="{DynamicResource MutedBrush}"
-                           Margin="0,2,0,0"/>
-            </StackPanel>
+			<StackPanel Grid.Column="1">
+				<TextBlock
+					FontSize="{DynamicResource AppFontSize20}"
+					FontWeight="Bold"
+					Foreground="{DynamicResource DangerBrush}"
+					Text="{Binding DuplicateCount}" />
+				<TextBlock
+					Margin="0,2,0,0"
+					FontSize="{DynamicResource AppFontSize11}"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="Duplicate passwords" />
+			</StackPanel>
 
-            <StackPanel Grid.Column="2">
-                <TextBlock Text="{Binding MissingTotpCount}"
-                           FontSize="{DynamicResource AppFontSize20}"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource AccentBrush}"/>
-                <TextBlock Text="Missing TOTP"
-                           FontSize="{DynamicResource AppFontSize11}"
-                           Foreground="{DynamicResource MutedBrush}"
-                           Margin="0,2,0,0"/>
-            </StackPanel>
+			<StackPanel Grid.Column="2">
+				<TextBlock
+					FontSize="{DynamicResource AppFontSize20}"
+					FontWeight="Bold"
+					Foreground="{DynamicResource AccentBrush}"
+					Text="{Binding MissingTotpCount}" />
+				<TextBlock
+					Margin="0,2,0,0"
+					FontSize="{DynamicResource AppFontSize11}"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="Missing TOTP" />
+			</StackPanel>
 
-            <StackPanel Grid.Column="3">
-                <TextBlock Text="{Binding StaleCount}"
-                           FontSize="{DynamicResource AppFontSize20}"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource MutedBrush}"/>
-                <TextBlock Text="Old passwords"
-                           FontSize="{DynamicResource AppFontSize11}"
-                           Foreground="{DynamicResource MutedBrush}"
-                           Margin="0,2,0,0"/>
-            </StackPanel>
+			<StackPanel Grid.Column="3">
+				<TextBlock
+					FontSize="{DynamicResource AppFontSize20}"
+					FontWeight="Bold"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="{Binding StaleCount}" />
+				<TextBlock
+					Margin="0,2,0,0"
+					FontSize="{DynamicResource AppFontSize11}"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="Old passwords" />
+			</StackPanel>
 
-            <StackPanel Grid.Column="4">
-                <TextBlock Text="{Binding UsernameEqualsPasswordCount}"
-                           FontSize="{DynamicResource AppFontSize20}"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource WarningBrush}"/>
-                <TextBlock Text="Username = password"
-                           FontSize="{DynamicResource AppFontSize11}"
-                           Foreground="{DynamicResource MutedBrush}"
-                           Margin="0,2,0,0"/>
-            </StackPanel>
-        </Grid>
+			<StackPanel Grid.Column="4">
+				<TextBlock
+					FontSize="{DynamicResource AppFontSize20}"
+					FontWeight="Bold"
+					Foreground="{DynamicResource WarningBrush}"
+					Text="{Binding UsernameEqualsPasswordCount}" />
+				<TextBlock
+					Margin="0,2,0,0"
+					FontSize="{DynamicResource AppFontSize11}"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="Username = password" />
+			</StackPanel>
+		</Grid>
 
-        <!-- Issues -->
-        <Grid Grid.Row="3">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+		<!--  Issues  -->
+		<Grid Grid.Row="3">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="*" />
+			</Grid.RowDefinitions>
 
-            <!-- Scan status and filter -->
-            <DockPanel Grid.Row="0"
-                       Margin="0,0,0,12">
-                <ComboBox DockPanel.Dock="Right"
-                          Width="200"
-                          Height="40"
-                          ItemsSource="{Binding FilterOptions}"
-                          SelectedIndex="{Binding SelectedFilterIndex}"
-                          IsEnabled="{Binding IsReady}"/>
+			<!--  Scan status and filter  -->
+			<DockPanel Grid.Row="0" Margin="0,0,0,12">
+				<ComboBox
+					Width="200"
+					Height="40"
+					DockPanel.Dock="Right"
+					IsEnabled="{Binding IsReady}"
+					ItemsSource="{Binding FilterOptions}"
+					SelectedIndex="{Binding SelectedFilterIndex}" />
 
-                <StackPanel Margin="0,0,12,0">
-                    <TextBlock Text="{Binding ScanStatus}"
-                               FontSize="{DynamicResource AppFontSize12}"
-                               Foreground="{DynamicResource MutedBrush}"
-                               Margin="0,0,0,4"/>
+				<StackPanel Margin="0,0,12,0">
+					<TextBlock
+						Margin="0,0,0,4"
+						FontSize="{DynamicResource AppFontSize12}"
+						Foreground="{DynamicResource MutedBrush}"
+						Text="{Binding ScanStatus}" />
 
-                    <ProgressBar Height="6"
-                                 Minimum="0"
-                                 Maximum="100"
-                                 Value="{Binding ScanProgress}"
-                                 Background="{DynamicResource SurfaceAltBrush}"/>
-                </StackPanel>
-            </DockPanel>
+					<ProgressBar
+						Height="6"
+						Background="{DynamicResource SurfaceAltBrush}"
+						Maximum="100"
+						Minimum="0"
+						Value="{Binding ScanProgress}" />
+				</StackPanel>
+			</DockPanel>
 
-            <Grid Grid.Row="1">
-                <ListBox ItemsSource="{Binding Issues}"
-                     Background="Transparent"
-                     BorderThickness="0"
-                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+			<Grid Grid.Row="1">
+				<ListBox
+					Background="Transparent"
+					BorderThickness="0"
+					ItemsSource="{Binding Issues}"
+					ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 
-                <ListBox.ItemContainerStyle>
-                    <Style TargetType="ListBoxItem">
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                        <Setter Property="Padding" Value="0"/>
-                        <Setter Property="Margin" Value="0,0,0,6"/>
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="ListBoxItem">
-                                    <Border x:Name="ItemBorder"
-                                            Background="{DynamicResource SurfaceBrush}"
-                                            BorderBrush="Transparent"
-                                            BorderThickness="1"
-                                            CornerRadius="8"
-                                            Padding="12,10">
-                                        <ContentPresenter/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                                            <Setter TargetName="ItemBorder"
-                                                    Property="BorderBrush"
-                                                    Value="{DynamicResource AccentBrush}"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </ListBox.ItemContainerStyle>
+					<ListBox.ItemContainerStyle>
+						<Style TargetType="ListBoxItem">
+							<Setter Property="HorizontalContentAlignment" Value="Stretch" />
+							<Setter Property="Padding" Value="0" />
+							<Setter Property="Margin" Value="0,0,0,6" />
+							<Setter Property="Template">
+								<Setter.Value>
+									<ControlTemplate TargetType="ListBoxItem">
+										<Border
+											x:Name="ItemBorder"
+											Padding="12,10"
+											Background="{DynamicResource SurfaceBrush}"
+											BorderBrush="Transparent"
+											BorderThickness="1"
+											CornerRadius="8">
+											<ContentPresenter />
+										</Border>
+										<ControlTemplate.Triggers>
+											<Trigger Property="IsKeyboardFocusWithin" Value="True">
+												<Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+											</Trigger>
+										</ControlTemplate.Triggers>
+									</ControlTemplate>
+								</Setter.Value>
+							</Setter>
+						</Style>
+					</ListBox.ItemContainerStyle>
 
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="88"/>
-                                <ColumnDefinition Width="*"
-                                                  MinWidth="80"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
+					<ListBox.ItemTemplate>
+						<DataTemplate>
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="88" />
+									<ColumnDefinition Width="*" MinWidth="80" />
+									<ColumnDefinition Width="Auto" />
+								</Grid.ColumnDefinitions>
 
-                            <Border Background="{DynamicResource SurfaceAltBrush}"
-                                    CornerRadius="4"
-                                    Padding="8,3"
-                                    HorizontalAlignment="Left"
-                                    VerticalAlignment="Top"
-                                    Margin="0,2,0,0">
-                                <TextBlock Text="{Binding KindLabel}"
-                                           FontSize="{DynamicResource AppFontSize11}"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
-                            </Border>
+								<Border
+									Margin="0,2,0,0"
+									Padding="8,3"
+									HorizontalAlignment="Left"
+									VerticalAlignment="Top"
+									Background="{DynamicResource SurfaceAltBrush}"
+									CornerRadius="4">
+									<TextBlock
+										FontSize="{DynamicResource AppFontSize11}"
+										FontWeight="SemiBold"
+										Foreground="{DynamicResource TextBrush}"
+										Text="{Binding KindLabel}" />
+								</Border>
 
-                            <StackPanel Grid.Column="1"
-                                        Margin="10,0,10,0"
-                                        VerticalAlignment="Center">
-                                <TextBlock Text="{Binding EntryTitle}"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"
-                                           TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Text="{Binding Detail}"
-                                           FontSize="{DynamicResource AppFontSize12}"
-                                           Margin="0,2,0,0"
-                                           Foreground="{DynamicResource MutedBrush}"
-                                           MaxHeight="48"
-                                           TextTrimming="CharacterEllipsis"
-                                           TextWrapping="Wrap"/>
-                                </StackPanel>
+								<StackPanel
+									Grid.Column="1"
+									Margin="10,0,10,0"
+									VerticalAlignment="Center">
+									<TextBlock
+										FontWeight="SemiBold"
+										Foreground="{DynamicResource TextBrush}"
+										Text="{Binding EntryTitle}"
+										TextTrimming="CharacterEllipsis" />
+									<TextBlock
+										MaxHeight="48"
+										Margin="0,2,0,0"
+										FontSize="{DynamicResource AppFontSize12}"
+										Foreground="{DynamicResource MutedBrush}"
+										Text="{Binding Detail}"
+										TextTrimming="CharacterEllipsis"
+										TextWrapping="Wrap" />
+								</StackPanel>
 
-                            <Button Grid.Column="2"
-                                    Style="{StaticResource SecondaryButton}"
-                                    Content="Open"
-                                    Height="32"
-                                    MinWidth="64"
-                                    Padding="12,4"
-                                    VerticalAlignment="Center"
-                                    IsEnabled="{Binding DataContext.IsReady, RelativeSource={RelativeSource AncestorType=Window}}"
-                                    Command="{Binding DataContext.OpenEntryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                    CommandParameter="{Binding}"/>
-                        </Grid>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-                </ListBox>
+								<Button
+									Grid.Column="2"
+									Height="32"
+									MinWidth="64"
+									Padding="12,4"
+									VerticalAlignment="Center"
+									Command="{Binding DataContext.OpenEntryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+									CommandParameter="{Binding}"
+									Content="Open"
+									IsEnabled="{Binding DataContext.IsReady, RelativeSource={RelativeSource AncestorType=Window}}"
+									Style="{StaticResource SecondaryButton}" />
+							</Grid>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
 
-                <StackPanel HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Visibility="{Binding IsEmptyVault, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Text="No entries to scan"
-                               FontSize="{DynamicResource AppFontSize16}"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextBrush}"
-                               HorizontalAlignment="Center"/>
-                    <TextBlock Text="Add entries to run a vault health check."
-                               FontSize="{DynamicResource AppFontSize13}"
-                               Margin="0,8,0,0"
-                               Foreground="{DynamicResource MutedBrush}"
-                               HorizontalAlignment="Center"/>
-                </StackPanel>
+				<StackPanel
+					HorizontalAlignment="Center"
+					VerticalAlignment="Center"
+					Visibility="{Binding IsEmptyVault, Converter={StaticResource BoolToVis}}">
+					<TextBlock
+						HorizontalAlignment="Center"
+						FontSize="{DynamicResource AppFontSize16}"
+						FontWeight="SemiBold"
+						Foreground="{DynamicResource TextBrush}"
+						Text="No entries to scan" />
+					<TextBlock
+						Margin="0,8,0,0"
+						HorizontalAlignment="Center"
+						FontSize="{DynamicResource AppFontSize13}"
+						Foreground="{DynamicResource MutedBrush}"
+						Text="Add entries to run a vault health check." />
+				</StackPanel>
 
-                <StackPanel HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Visibility="{Binding HasNoIssues, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Text="No issues found"
-                               FontSize="{DynamicResource AppFontSize16}"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextBrush}"
-                               HorizontalAlignment="Center"/>
-                    <TextBlock Text="Your current entries passed all health checks."
-                               FontSize="{DynamicResource AppFontSize13}"
-                               Margin="0,8,0,0"
-                               Foreground="{DynamicResource MutedBrush}"
-                               HorizontalAlignment="Center"/>
-                </StackPanel>
+				<StackPanel
+					HorizontalAlignment="Center"
+					VerticalAlignment="Center"
+					Visibility="{Binding HasNoIssues, Converter={StaticResource BoolToVis}}">
+					<TextBlock
+						HorizontalAlignment="Center"
+						FontSize="{DynamicResource AppFontSize16}"
+						FontWeight="SemiBold"
+						Foreground="{DynamicResource TextBrush}"
+						Text="No issues found" />
+					<TextBlock
+						Margin="0,8,0,0"
+						HorizontalAlignment="Center"
+						FontSize="{DynamicResource AppFontSize13}"
+						Foreground="{DynamicResource MutedBrush}"
+						Text="Your current entries passed all health checks." />
+				</StackPanel>
 
-                <StackPanel HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Visibility="{Binding HasNoMatchingIssues, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Text="No matching issues"
-                               FontSize="{DynamicResource AppFontSize16}"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextBrush}"
-                               HorizontalAlignment="Center"/>
-                    <TextBlock Text="Try a different issue filter."
-                               FontSize="{DynamicResource AppFontSize13}"
-                               Margin="0,8,0,0"
-                               Foreground="{DynamicResource MutedBrush}"
-                               HorizontalAlignment="Center"/>
-                </StackPanel>
-            </Grid>
-        </Grid>
+				<StackPanel
+					HorizontalAlignment="Center"
+					VerticalAlignment="Center"
+					Visibility="{Binding HasNoMatchingIssues, Converter={StaticResource BoolToVis}}">
+					<TextBlock
+						HorizontalAlignment="Center"
+						FontSize="{DynamicResource AppFontSize16}"
+						FontWeight="SemiBold"
+						Foreground="{DynamicResource TextBrush}"
+						Text="No matching issues" />
+					<TextBlock
+						Margin="0,8,0,0"
+						HorizontalAlignment="Center"
+						FontSize="{DynamicResource AppFontSize13}"
+						Foreground="{DynamicResource MutedBrush}"
+						Text="Try a different issue filter." />
+				</StackPanel>
+			</Grid>
+		</Grid>
 
-    </Grid>
+	</Grid>
 </Window>

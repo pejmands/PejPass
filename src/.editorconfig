@@ -1,2 +1,6 @@
 [*]
 insert_final_newline = true
+
+[*.cs]
+dotnet_diagnostic.ide0001.severity = warning
+dotnet_diagnostic.ide0002.severity = warning

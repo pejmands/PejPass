@@ -1,534 +1,555 @@
-﻿<Window x:Class="PejPass.Wpf.Views.HistoryWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:controls="clr-namespace:PejPass.Wpf.Controls"
-        Title="History"
-        Width="980"
-        Height="620"
-        MinWidth="820"
-        MinHeight="520"
-        WindowStartupLocation="CenterOwner"
-        ResizeMode="CanResize"
-        ShowInTaskbar="False"
-        Background="{DynamicResource BgBrush}">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+﻿<Window
+	x:Class="PejPass.Wpf.Views.HistoryWindow"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:controls="clr-namespace:PejPass.Wpf.Controls"
+	Title="History"
+	Width="980"
+	Height="620"
+	MinWidth="820"
+	MinHeight="520"
+	Background="{DynamicResource BgBrush}"
+	ResizeMode="CanResize"
+	ShowInTaskbar="False"
+	WindowStartupLocation="CenterOwner">
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
 
-        <controls:AppTitleBar Grid.Row="0"
-                              ShowMinimize="false"
-                              ShowMaximize="true"/>
+		<controls:AppTitleBar
+			Grid.Row="0"
+			ShowMaximize="true"
+			ShowMinimize="false" />
 
-        <Grid Grid.Row="1"
-              Margin="16">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+		<Grid Grid.Row="1" Margin="16">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="*" />
+				<RowDefinition Height="Auto" />
+			</Grid.RowDefinitions>
 
-            <controls:SearchBox Grid.Row="0"
-                                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                Placeholder="Search history..."
-                                ToolTip="Search history by title, username, or URL"
-                                Margin="0,0,0,12"/>
+			<controls:SearchBox
+				Grid.Row="0"
+				Margin="0,0,0,12"
+				Placeholder="Search history..."
+				Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+				ToolTip="Search history by title, username, or URL" />
 
-            <!-- Header & Instruction -->
-            <Grid Grid.Row="1"
-                  Margin="0,0,0,16">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="2*"/>
-                    <ColumnDefinition Width="3*"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+			<!--  Header & Instruction  -->
+			<Grid Grid.Row="1" Margin="0,0,0,16">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="2*" />
+					<ColumnDefinition Width="3*" />
+				</Grid.ColumnDefinitions>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0"
-                           Grid.Column="0"
-                           Text="Entry History"
-                           FontSize="{DynamicResource AppFontSize22}"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource TextBrush}"
-                           Margin="0,0,0,4"/>
+				<TextBlock
+					Grid.Row="0"
+					Grid.Column="0"
+					Margin="0,0,0,4"
+					FontSize="{DynamicResource AppFontSize22}"
+					FontWeight="Bold"
+					Foreground="{DynamicResource TextBrush}"
+					Text="Entry History" />
 
-                <TextBlock Grid.Row="1"
-                           Grid.Column="0"
-                           Text="Compare previous versions and restore selected fields"
-                           FontSize="{DynamicResource AppFontSize12}"
-                           Foreground="{DynamicResource MutedBrush}"/>
+				<TextBlock
+					Grid.Row="1"
+					Grid.Column="0"
+					FontSize="{DynamicResource AppFontSize12}"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="Compare previous versions and restore selected fields" />
 
-                <TextBlock Grid.Row="1"
-                           Grid.Column="1"
-                           Text="Select the changed fields you want to restore. Fields without changes cannot be selected."
-                           FontSize="{DynamicResource AppFontSize12}"
-                           Foreground="{DynamicResource MutedBrush}"
-                           TextWrapping="Wrap"
-                           Margin="12,0,0,0"/>
-            </Grid>
+				<TextBlock
+					Grid.Row="1"
+					Grid.Column="1"
+					Margin="12,0,0,0"
+					FontSize="{DynamicResource AppFontSize12}"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="Select the changed fields you want to restore. Fields without changes cannot be selected."
+					TextWrapping="Wrap" />
+			</Grid>
 
-            <!-- Main content -->
-            <Grid Grid.Row="2">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="2*"/>
-                    <ColumnDefinition Width="3*"/>
-                </Grid.ColumnDefinitions>
+			<!--  Main content  -->
+			<Grid Grid.Row="2">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="2*" />
+					<ColumnDefinition Width="3*" />
+				</Grid.ColumnDefinitions>
 
-                <!-- History list -->
-                <ListBox Grid.Column="0"
-                         ItemsSource="{Binding FilteredItems}"
-                         SelectedItem="{Binding SelectedItem}"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto">
-                    <ListBox.Resources>
-                        <Style TargetType="TextBlock"
-                               x:Key="EmptyHistoryTextStyle">
-                            <Setter Property="Foreground"
-                                    Value="{DynamicResource MutedBrush}"/>
-                            <Setter Property="FontSize"
-                                    Value="13"/>
-                            <Setter Property="HorizontalAlignment"
-                                    Value="Center"/>
-                            <Setter Property="TextAlignment"
-                                    Value="Center"/>
-                        </Style>
-                    </ListBox.Resources>
+				<!--  History list  -->
+				<ListBox
+					Grid.Column="0"
+					Background="Transparent"
+					BorderThickness="0"
+					ItemsSource="{Binding FilteredItems}"
+					ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+					ScrollViewer.VerticalScrollBarVisibility="Auto"
+					SelectedItem="{Binding SelectedItem}">
+					<ListBox.Resources>
+						<Style x:Key="EmptyHistoryTextStyle" TargetType="TextBlock">
+							<Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+							<Setter Property="FontSize" Value="13" />
+							<Setter Property="HorizontalAlignment" Value="Center" />
+							<Setter Property="TextAlignment" Value="Center" />
+						</Style>
+					</ListBox.Resources>
 
-                    <ListBox.Style>
-                        <Style TargetType="ListBox">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListBox">
-                                        <Grid>
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                                          HorizontalScrollBarVisibility="Disabled">
-                                                <ItemsPresenter/>
-                                            </ScrollViewer>
+					<ListBox.Style>
+						<Style TargetType="ListBox">
+							<Setter Property="Template">
+								<Setter.Value>
+									<ControlTemplate TargetType="ListBox">
+										<Grid>
+											<ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+												<ItemsPresenter />
+											</ScrollViewer>
 
-                                            <StackPanel HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center">
-                                                <StackPanel.Style>
-                                                    <Style TargetType="StackPanel">
-                                                        <Setter Property="Visibility"
-                                                                Value="Collapsed"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding HasHistoryItems}"
-                                                                         Value="False">
-                                                                <Setter Property="Visibility"
-                                                                        Value="Visible"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </StackPanel.Style>
+											<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+												<StackPanel.Style>
+													<Style TargetType="StackPanel">
+														<Setter Property="Visibility" Value="Collapsed" />
+														<Style.Triggers>
+															<DataTrigger Binding="{Binding HasHistoryItems}" Value="False">
+																<Setter Property="Visibility" Value="Visible" />
+															</DataTrigger>
+														</Style.Triggers>
+													</Style>
+												</StackPanel.Style>
 
-                                                <TextBlock Text="No history snapshots"
-                                                           FontSize="{DynamicResource AppFontSize16}"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextBrush}"
-                                                           HorizontalAlignment="Center"/>
+												<TextBlock
+													HorizontalAlignment="Center"
+													FontSize="{DynamicResource AppFontSize16}"
+													FontWeight="SemiBold"
+													Foreground="{DynamicResource TextBrush}"
+													Text="No history snapshots" />
 
-                                                <TextBlock Text="Changes made to entries will appear here."
-                                                           Margin="0,8,0,0"
-                                                           Style="{StaticResource EmptyHistoryTextStyle}"/>
-                                            </StackPanel>
+												<TextBlock
+													Margin="0,8,0,0"
+													Style="{StaticResource EmptyHistoryTextStyle}"
+													Text="Changes made to entries will appear here." />
+											</StackPanel>
 
-                                            <StackPanel HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center">
-                                                <StackPanel.Style>
-                                                    <Style TargetType="StackPanel">
-                                                        <Setter Property="Visibility"
-                                                                Value="Collapsed"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding HasNoSearchResults}"
-                                                                         Value="True">
-                                                                <Setter Property="Visibility"
-                                                                        Value="Visible"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </StackPanel.Style>
+											<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+												<StackPanel.Style>
+													<Style TargetType="StackPanel">
+														<Setter Property="Visibility" Value="Collapsed" />
+														<Style.Triggers>
+															<DataTrigger Binding="{Binding HasNoSearchResults}" Value="True">
+																<Setter Property="Visibility" Value="Visible" />
+															</DataTrigger>
+														</Style.Triggers>
+													</Style>
+												</StackPanel.Style>
 
-                                                <TextBlock Text="No matching history snapshots"
-                                                           FontSize="{DynamicResource AppFontSize16}"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextBrush}"
-                                                           HorizontalAlignment="Center"/>
+												<TextBlock
+													HorizontalAlignment="Center"
+													FontSize="{DynamicResource AppFontSize16}"
+													FontWeight="SemiBold"
+													Foreground="{DynamicResource TextBrush}"
+													Text="No matching history snapshots" />
 
-                                                <TextBlock Text="Try a different search."
-                                                           Margin="0,8,0,0"
-                                                           Style="{StaticResource EmptyHistoryTextStyle}"/>
-                                            </StackPanel>
-                                        </Grid>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </ListBox.Style>
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <EventSetter Event="PreviewMouseLeftButtonDown"
-                                         Handler="HistoryListBoxItem_PreviewMouseLeftButtonDown"/>
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                            <Setter Property="Padding" Value="0"/>
-                            <Setter Property="Margin" Value="0,0,12,6"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListBoxItem">
-                                        <Border x:Name="ItemBorder"
-                                                Background="{DynamicResource SurfaceBrush}"
-                                                BorderBrush="Transparent"
-                                                BorderThickness="1"
-                                                CornerRadius="8"
-                                                Padding="14,12">
-                                            <ContentPresenter/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-                                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            </Trigger>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-                                            </Trigger>
-                                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="24"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
+												<TextBlock
+													Margin="0,8,0,0"
+													Style="{StaticResource EmptyHistoryTextStyle}"
+													Text="Try a different search." />
+											</StackPanel>
+										</Grid>
+									</ControlTemplate>
+								</Setter.Value>
+							</Setter>
+						</Style>
+					</ListBox.Style>
+					<ListBox.ItemContainerStyle>
+						<Style TargetType="ListBoxItem">
+							<EventSetter Event="PreviewMouseLeftButtonDown" Handler="HistoryListBoxItem_PreviewMouseLeftButtonDown" />
+							<Setter Property="HorizontalContentAlignment" Value="Stretch" />
+							<Setter Property="Padding" Value="0" />
+							<Setter Property="Margin" Value="0,0,12,6" />
+							<Setter Property="Template">
+								<Setter.Value>
+									<ControlTemplate TargetType="ListBoxItem">
+										<Border
+											x:Name="ItemBorder"
+											Padding="14,12"
+											Background="{DynamicResource SurfaceBrush}"
+											BorderBrush="Transparent"
+											BorderThickness="1"
+											CornerRadius="8">
+											<ContentPresenter />
+										</Border>
+										<ControlTemplate.Triggers>
+											<Trigger Property="IsSelected" Value="True">
+												<Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+												<Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+											</Trigger>
+											<Trigger Property="IsMouseOver" Value="True">
+												<Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+											</Trigger>
+											<Trigger Property="IsKeyboardFocusWithin" Value="True">
+												<Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+											</Trigger>
+										</ControlTemplate.Triggers>
+									</ControlTemplate>
+								</Setter.Value>
+							</Setter>
+						</Style>
+					</ListBox.ItemContainerStyle>
+					<ListBox.ItemTemplate>
+						<DataTemplate>
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="24" />
+									<ColumnDefinition Width="*" />
+								</Grid.ColumnDefinitions>
 
-                                <Grid Grid.Column="0">
-                                    <Border Width="1"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Stretch"
-                                            Background="{DynamicResource BorderBrush}"
-                                            Margin="0,14,0,0"/>
-                                    <Ellipse Width="9"
-                                             Height="9"
-                                             HorizontalAlignment="Center"
-                                             VerticalAlignment="Top"
-                                             Margin="0,7,0,0"
-                                             Fill="{DynamicResource AccentBrush}"/>
-                                </Grid>
+								<Grid Grid.Column="0">
+									<Border
+										Width="1"
+										Margin="0,14,0,0"
+										HorizontalAlignment="Center"
+										VerticalAlignment="Stretch"
+										Background="{DynamicResource BorderBrush}" />
+									<Ellipse
+										Width="9"
+										Height="9"
+										Margin="0,7,0,0"
+										HorizontalAlignment="Center"
+										VerticalAlignment="Top"
+										Fill="{DynamicResource AccentBrush}" />
+								</Grid>
 
-                                <Border Grid.Column="1"
-                                        Background="{DynamicResource SurfaceBrush}"
-                                        CornerRadius="8"
-                                        Padding="14,12"
-                                        Margin="8,0,0,6">
-                                    <Expander IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
-                                              BorderThickness="0">
-                                        <Expander.Header>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
+								<Border
+									Grid.Column="1"
+									Margin="8,0,0,6"
+									Padding="14,12"
+									Background="{DynamicResource SurfaceBrush}"
+									CornerRadius="8">
+									<Expander BorderThickness="0" IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
+										<Expander.Header>
+											<Grid>
+												<Grid.ColumnDefinitions>
+													<ColumnDefinition Width="*" />
+													<ColumnDefinition Width="Auto" />
+												</Grid.ColumnDefinitions>
 
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding Title}"
-                                                               FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource TextBrush}"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding ChangedAtText}"
-                                                               FontSize="{DynamicResource AppFontSize11}"
-                                                               Foreground="{DynamicResource MutedBrush}"
-                                                               Margin="0,3,0,0"/>
-                                                    <TextBlock Text="{Binding ChangeSummary}"
-                                                               FontSize="{DynamicResource AppFontSize12}"
-                                                               Foreground="{DynamicResource MutedBrush}"
-                                                               Margin="0,5,0,0"/>
-                                                </StackPanel>
+												<StackPanel>
+													<TextBlock
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource TextBrush}"
+														Text="{Binding Title}"
+														TextTrimming="CharacterEllipsis" />
+													<TextBlock
+														Margin="0,3,0,0"
+														FontSize="{DynamicResource AppFontSize11}"
+														Foreground="{DynamicResource MutedBrush}"
+														Text="{Binding ChangedAtText}" />
+													<TextBlock
+														Margin="0,5,0,0"
+														FontSize="{DynamicResource AppFontSize12}"
+														Foreground="{DynamicResource MutedBrush}"
+														Text="{Binding ChangeSummary}" />
+												</StackPanel>
 
-                                                <TextBlock Grid.Column="1"
-                                                           Text="{Binding Username}"
-                                                           FontSize="{DynamicResource AppFontSize11}"
-                                                           Foreground="{DynamicResource MutedBrush}"
-                                                           VerticalAlignment="Center"
-                                                           Margin="12,0,0,0"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                            </Grid>
-                                        </Expander.Header>
+												<TextBlock
+													Grid.Column="1"
+													Margin="12,0,0,0"
+													VerticalAlignment="Center"
+													FontSize="{DynamicResource AppFontSize11}"
+													Foreground="{DynamicResource MutedBrush}"
+													Text="{Binding Username}"
+													TextTrimming="CharacterEllipsis" />
+											</Grid>
+										</Expander.Header>
 
-                                        <Border Margin="0,12,0,0"
-                                                Padding="10,10,10,2"
-                                                Background="{DynamicResource SurfaceAltBrush}"
-                                                CornerRadius="6">
-                                            <StackPanel>
-                                                <TextBlock Text="Changed fields"
-                                                           FontSize="{DynamicResource AppFontSize11}"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource MutedBrush}"
-                                                           Margin="0,0,0,8"/>
+										<Border
+											Margin="0,12,0,0"
+											Padding="10,10,10,2"
+											Background="{DynamicResource SurfaceAltBrush}"
+											CornerRadius="6">
+											<StackPanel>
+												<TextBlock
+													Margin="0,0,0,8"
+													FontSize="{DynamicResource AppFontSize11}"
+													FontWeight="SemiBold"
+													Foreground="{DynamicResource MutedBrush}"
+													Text="Changed fields" />
 
-                                                <ItemsControl ItemsSource="{Binding ChangedFields}">
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate>
-                                                            <WrapPanel/>
-                                                        </ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <Border Background="{DynamicResource SurfaceBrush}"
-                                                                    CornerRadius="4"
-                                                                    Padding="8,4"
-                                                                    Margin="0,0,6,6">
-                                                                <TextBlock Text="{Binding}"
-                                                                           FontSize="{DynamicResource AppFontSize11}"
-                                                                           Foreground="{DynamicResource TextBrush}"/>
-                                                            </Border>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
+												<ItemsControl ItemsSource="{Binding ChangedFields}">
+													<ItemsControl.ItemsPanel>
+														<ItemsPanelTemplate>
+															<WrapPanel />
+														</ItemsPanelTemplate>
+													</ItemsControl.ItemsPanel>
+													<ItemsControl.ItemTemplate>
+														<DataTemplate>
+															<Border
+																Margin="0,0,6,6"
+																Padding="8,4"
+																Background="{DynamicResource SurfaceBrush}"
+																CornerRadius="4">
+																<TextBlock
+																	FontSize="{DynamicResource AppFontSize11}"
+																	Foreground="{DynamicResource TextBrush}"
+																	Text="{Binding}" />
+															</Border>
+														</DataTemplate>
+													</ItemsControl.ItemTemplate>
+												</ItemsControl>
 
-                                                <TextBlock Text="No field changes detected."
-                                                           FontSize="{DynamicResource AppFontSize11}"
-                                                           Foreground="{DynamicResource MutedBrush}"
-                                                           Margin="0,0,0,8">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding ChangedFields.Count}"
-                                                                             Value="0">
-                                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </StackPanel>
-                                        </Border>
-                                    </Expander>
-                                </Border>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+												<TextBlock
+													Margin="0,0,0,8"
+													FontSize="{DynamicResource AppFontSize11}"
+													Foreground="{DynamicResource MutedBrush}"
+													Text="No field changes detected.">
+													<TextBlock.Style>
+														<Style TargetType="TextBlock">
+															<Setter Property="Visibility" Value="Collapsed" />
+															<Style.Triggers>
+																<DataTrigger Binding="{Binding ChangedFields.Count}" Value="0">
+																	<Setter Property="Visibility" Value="Visible" />
+																</DataTrigger>
+															</Style.Triggers>
+														</Style>
+													</TextBlock.Style>
+												</TextBlock>
+											</StackPanel>
+										</Border>
+									</Expander>
+								</Border>
+							</Grid>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
 
-                <!-- Comparison panel -->
-                <Border Grid.Column="1"
-                        Background="{DynamicResource SurfaceBrush}"
-                        CornerRadius="8"
-                        Margin="12,0,0,0"
-                        Padding="16">
-                    <Grid>
-                        <StackPanel HorizontalAlignment="Center"
-                                    VerticalAlignment="Center">
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedItem}" Value="{x:Null}">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
-                            <TextBlock Text="No snapshot selected"
-                                       FontSize="{DynamicResource AppFontSize18}"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextBrush}"
-                                       HorizontalAlignment="Center"/>
-                            <TextBlock Text="Select a history snapshot from the left to compare it with the current entry."
-                                       FontSize="{DynamicResource AppFontSize12}"
-                                       Foreground="{DynamicResource MutedBrush}"
-                                       Margin="0,8,0,0"
-                                       TextWrapping="Wrap"
-                                       TextAlignment="Center"
-                                       HorizontalAlignment="Center"/>
-                        </StackPanel>
+				<!--  Comparison panel  -->
+				<Border
+					Grid.Column="1"
+					Margin="12,0,0,0"
+					Padding="16"
+					Background="{DynamicResource SurfaceBrush}"
+					CornerRadius="8">
+					<Grid>
+						<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+							<StackPanel.Style>
+								<Style TargetType="StackPanel">
+									<Setter Property="Visibility" Value="Collapsed" />
+									<Style.Triggers>
+										<DataTrigger Binding="{Binding SelectedItem}" Value="{x:Null}">
+											<Setter Property="Visibility" Value="Visible" />
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</StackPanel.Style>
+							<TextBlock
+								HorizontalAlignment="Center"
+								FontSize="{DynamicResource AppFontSize18}"
+								FontWeight="SemiBold"
+								Foreground="{DynamicResource TextBrush}"
+								Text="No snapshot selected" />
+							<TextBlock
+								Margin="0,8,0,0"
+								HorizontalAlignment="Center"
+								FontSize="{DynamicResource AppFontSize12}"
+								Foreground="{DynamicResource MutedBrush}"
+								Text="Select a history snapshot from the left to compare it with the current entry."
+								TextAlignment="Center"
+								TextWrapping="Wrap" />
+						</StackPanel>
 
-                        <Grid>
-                            <Grid.Style>
-                                <Style TargetType="Grid">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedItem}" Value="{x:Null}">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Grid.Style>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
+						<Grid>
+							<Grid.Style>
+								<Style TargetType="Grid">
+									<Setter Property="Visibility" Value="Visible" />
+									<Style.Triggers>
+										<DataTrigger Binding="{Binding SelectedItem}" Value="{x:Null}">
+											<Setter Property="Visibility" Value="Collapsed" />
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</Grid.Style>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="Auto" />
+								<RowDefinition Height="*" />
+							</Grid.RowDefinitions>
 
-                            <Grid Grid.Row="0"
-                                  Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="34"/>
-                                    <ColumnDefinition Width="120"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="1"
-                                           Text="Field"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource MutedBrush}"/>
-                                <TextBlock Grid.Column="2"
-                                           Text="Current"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource MutedBrush}"/>
-                                <TextBlock Grid.Column="3"
-                                           Text="Snapshot"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource MutedBrush}"/>
-                            </Grid>
+							<Grid Grid.Row="0" Margin="0,0,0,8">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="34" />
+									<ColumnDefinition Width="120" />
+									<ColumnDefinition Width="*" />
+									<ColumnDefinition Width="*" />
+								</Grid.ColumnDefinitions>
+								<TextBlock
+									Grid.Column="1"
+									FontWeight="SemiBold"
+									Foreground="{DynamicResource MutedBrush}"
+									Text="Field" />
+								<TextBlock
+									Grid.Column="2"
+									FontWeight="SemiBold"
+									Foreground="{DynamicResource MutedBrush}"
+									Text="Current" />
+								<TextBlock
+									Grid.Column="3"
+									FontWeight="SemiBold"
+									Foreground="{DynamicResource MutedBrush}"
+									Text="Snapshot" />
+							</Grid>
 
-                            <ScrollViewer Grid.Row="1"
-                                          VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollBarVisibility="Disabled">
-                                <ItemsControl ItemsSource="{Binding Fields}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Padding="0,10"
-                                                    BorderBrush="{DynamicResource BorderBrush}"
-                                                    BorderThickness="0,0,0,1">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="34"/>
-                                                        <ColumnDefinition Width="120"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
+							<ScrollViewer
+								Grid.Row="1"
+								HorizontalScrollBarVisibility="Disabled"
+								VerticalScrollBarVisibility="Auto">
+								<ItemsControl ItemsSource="{Binding Fields}">
+									<ItemsControl.ItemTemplate>
+										<DataTemplate>
+											<Border
+												Padding="0,10"
+												BorderBrush="{DynamicResource BorderBrush}"
+												BorderThickness="0,0,0,1">
+												<Grid>
+													<Grid.ColumnDefinitions>
+														<ColumnDefinition Width="34" />
+														<ColumnDefinition Width="120" />
+														<ColumnDefinition Width="*" />
+														<ColumnDefinition Width="*" />
+													</Grid.ColumnDefinitions>
 
-                                                    <CheckBox Grid.Column="0"
-                                                              IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                                              Visibility="{Binding IsChanged, Converter={StaticResource BoolToVis}}"
-                                                              VerticalAlignment="Center"/>
+													<CheckBox
+														Grid.Column="0"
+														VerticalAlignment="Center"
+														IsChecked="{Binding IsSelected, Mode=TwoWay}"
+														Visibility="{Binding IsChanged, Converter={StaticResource BoolToVis}}" />
 
-                                                    <Grid Grid.Column="1"
-                                                          VerticalAlignment="Center">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBlock Text="{Binding Name}"
-                                                                   FontWeight="SemiBold"
-                                                                   Foreground="{DynamicResource TextBrush}"
-                                                                   VerticalAlignment="Center"
-                                                                   Margin="0,0,6,0"
-                                                                   TextTrimming="CharacterEllipsis"/>
-                                                        <Button Grid.Column="1"
-                                                                Content="&#xE890;"
-                                                                Command="{Binding ToggleSecretVisibilityCommand}"
-                                                                Width="32"
-                                                                Height="32"
-                                                                Padding="0"
-                                                                FontFamily="Segoe MDL2 Assets"
-                                                                FontSize="{DynamicResource AppFontSize13}"
-                                                                Foreground="{DynamicResource AccentBrush}"
-                                                                Background="Transparent"
-                                                                BorderThickness="0"
-                                                                Cursor="Hand"
-                                                                VerticalAlignment="Center">
-                                                            <Button.Style>
-                                                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                                    <Setter Property="ToolTip" Value="Show or hide secret"/>
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsSecret}" Value="True">
-                                                                            <Setter Property="Visibility" Value="Visible"/>
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </Button.Style>
-                                                        </Button>
-                                                    </Grid>
+													<Grid Grid.Column="1" VerticalAlignment="Center">
+														<Grid.ColumnDefinitions>
+															<ColumnDefinition Width="*" />
+															<ColumnDefinition Width="Auto" />
+														</Grid.ColumnDefinitions>
+														<TextBlock
+															Margin="0,0,6,0"
+															VerticalAlignment="Center"
+															FontWeight="SemiBold"
+															Foreground="{DynamicResource TextBrush}"
+															Text="{Binding Name}"
+															TextTrimming="CharacterEllipsis" />
+														<Button
+															Grid.Column="1"
+															Width="32"
+															Height="32"
+															Padding="0"
+															VerticalAlignment="Center"
+															Background="Transparent"
+															BorderThickness="0"
+															Command="{Binding ToggleSecretVisibilityCommand}"
+															Content="&#xE890;"
+															Cursor="Hand"
+															FontFamily="Segoe MDL2 Assets"
+															FontSize="{DynamicResource AppFontSize13}"
+															Foreground="{DynamicResource AccentBrush}">
+															<Button.Style>
+																<Style BasedOn="{StaticResource {x:Type Button}}" TargetType="Button">
+																	<Setter Property="Visibility" Value="Collapsed" />
+																	<Setter Property="ToolTip" Value="Show or hide secret" />
+																	<Style.Triggers>
+																		<DataTrigger Binding="{Binding IsSecret}" Value="True">
+																			<Setter Property="Visibility" Value="Visible" />
+																		</DataTrigger>
+																	</Style.Triggers>
+																</Style>
+															</Button.Style>
+														</Button>
+													</Grid>
 
-                                                    <TextBlock Grid.Column="2"
-                                                               Text="{Binding CurrentDisplayValue}"
-                                                               Foreground="{DynamicResource TextBrush}"
-                                                               TextWrapping="NoWrap"
-                                                               VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               MaxHeight="48"
-                                                               Margin="0,0,8,0"/>
+													<TextBlock
+														Grid.Column="2"
+														MaxHeight="48"
+														Margin="0,0,8,0"
+														VerticalAlignment="Center"
+														Foreground="{DynamicResource TextBrush}"
+														Text="{Binding CurrentDisplayValue}"
+														TextTrimming="CharacterEllipsis"
+														TextWrapping="NoWrap" />
 
-                                                    <TextBlock Grid.Column="3"
-                                                               Text="{Binding SnapshotDisplayValue}"
-                                                               Foreground="{DynamicResource TextBrush}"
-                                                               TextWrapping="NoWrap"
-                                                               VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               MaxHeight="48"
-                                                               Margin="0,0,8,0"/>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </Grid>
-                    </Grid>
-                </Border>
-            </Grid>
+													<TextBlock
+														Grid.Column="3"
+														MaxHeight="48"
+														Margin="0,0,8,0"
+														VerticalAlignment="Center"
+														Foreground="{DynamicResource TextBrush}"
+														Text="{Binding SnapshotDisplayValue}"
+														TextTrimming="CharacterEllipsis"
+														TextWrapping="NoWrap" />
+												</Grid>
+											</Border>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</ScrollViewer>
+						</Grid>
+					</Grid>
+				</Border>
+			</Grid>
 
-            <!-- Footer -->
-            <Grid Grid.Row="3"
-                  Margin="0,16,0,0">
-                <TextBlock Text="{Binding FilteredItems.Count, StringFormat={}{0} history snapshots}"
-                           Foreground="{DynamicResource MutedBrush}"
-                           VerticalAlignment="Center"/>
-                <StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Right">
-                    <Button Content="Delete"
-                            Command="{Binding DeleteHistoryCommand}"
-                            Margin="0,0,8,0"
-                            IsEnabled="{Binding HasSelectedItem}"/>
+			<!--  Footer  -->
+			<Grid Grid.Row="3" Margin="0,16,0,0">
+				<TextBlock
+					VerticalAlignment="Center"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="{Binding FilteredItems.Count, StringFormat={}{0} history snapshots}" />
+				<StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+					<Button
+						Margin="0,0,8,0"
+						Command="{Binding DeleteHistoryCommand}"
+						Content="Delete"
+						IsEnabled="{Binding HasSelectedItem}" />
 
-                    <Button Content="Delete All"
-                            Command="{Binding DeleteAllHistoryCommand}"
-                            Margin="0,0,8,0"
-                            IsEnabled="{Binding HasHistoryItems}"/>
+					<Button
+						Margin="0,0,8,0"
+						Command="{Binding DeleteAllHistoryCommand}"
+						Content="Delete All"
+						IsEnabled="{Binding HasHistoryItems}" />
 
-                    <Button Content="Restore"
-                            Command="{Binding RestoreCommand}"
-                            IsEnabled="{Binding HasSelectedFields}"
-                            IsDefault="True"/>
-                </StackPanel>
-            </Grid>
-        </Grid>
+					<Button
+						Command="{Binding RestoreCommand}"
+						Content="Restore"
+						IsDefault="True"
+						IsEnabled="{Binding HasSelectedFields}" />
+				</StackPanel>
+			</Grid>
+		</Grid>
 
-        <!-- Busy overlay -->
-        <Border Grid.Row="0"
-                Grid.RowSpan="2"
-                Panel.ZIndex="100"
-                Background="#80000000"
-                Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
-            <Border HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Background="{DynamicResource SurfaceBrush}"
-                    Margin="24"
-                    Padding="24">
-                <StackPanel>
-                    <ProgressBar Width="180"
-                                 Height="4"
-                                 IsIndeterminate="True"/>
-                    <TextBlock Text="{Binding BusyMessage}"
-                               Margin="0,12,0,0"
-                               Foreground="{DynamicResource TextBrush}"
-                               HorizontalAlignment="Center"/>
-                </StackPanel>
-            </Border>
-        </Border>
-    </Grid>
+		<!--  Busy overlay  -->
+		<Border
+			Grid.Row="0"
+			Grid.RowSpan="2"
+			Panel.ZIndex="100"
+			Background="#80000000"
+			Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
+			<Border
+				Margin="24"
+				Padding="24"
+				HorizontalAlignment="Center"
+				VerticalAlignment="Center"
+				Background="{DynamicResource SurfaceBrush}">
+				<StackPanel>
+					<ProgressBar
+						Width="180"
+						Height="4"
+						IsIndeterminate="True" />
+					<TextBlock
+						Margin="0,12,0,0"
+						HorizontalAlignment="Center"
+						Foreground="{DynamicResource TextBrush}"
+						Text="{Binding BusyMessage}" />
+				</StackPanel>
+			</Border>
+		</Border>
+	</Grid>
 </Window>

@@ -258,7 +258,7 @@ public static class SettingsStore
         {
             if (!Directory.Exists(directory))
                 return;
-            
+
             var files = Directory.GetFiles(
                     directory,
                     "settings.corrupt-*.json")

@@ -385,7 +385,7 @@ public partial class App : System.Windows.Application
             "BgBrush");
 
         window.SetResourceReference(
-            Window.BackgroundProperty,
+            Control.BackgroundProperty,
             "BgBrush");
 
         window.Content = root;

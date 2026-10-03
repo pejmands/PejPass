@@ -1,68 +1,78 @@
-<Window x:Class="PejPass.Wpf.Dialogs.AppDialog"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:controls="clr-namespace:PejPass.Wpf.Controls"
-        Title="PejPass"
-        SizeToContent="Height"
-        Width="440"
-        WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
-        ShowInTaskbar="False"
-        Background="{DynamicResource BgBrush}">
+<Window
+	x:Class="PejPass.Wpf.Dialogs.AppDialog"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:controls="clr-namespace:PejPass.Wpf.Controls"
+	Title="PejPass"
+	Width="440"
+	Background="{DynamicResource BgBrush}"
+	ResizeMode="NoResize"
+	ShowInTaskbar="False"
+	SizeToContent="Height"
+	WindowStartupLocation="CenterOwner">
 
-    <DockPanel>
-        <controls:AppTitleBar DockPanel.Dock="Top" ShowMinimize="false" ShowMaximize="false"/>
+	<DockPanel>
+		<controls:AppTitleBar
+			DockPanel.Dock="Top"
+			ShowMaximize="false"
+			ShowMinimize="false" />
 
-        <Border BorderBrush="{DynamicResource BorderBrush}"
-                BorderThickness="1"
-                Background="{DynamicResource SurfaceBrush}"
-                CornerRadius="0"
-                Padding="24">
-            <StackPanel>
-                <ScrollViewer MaxHeight="420"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel>
-                        <TextBlock x:Name="TitleText"
-                                   FontSize="{DynamicResource AppFontSize18}"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource TextBrush}"
-                                   Margin="0,0,0,10"
-                                   TextWrapping="Wrap"/>
+		<Border
+			Padding="24"
+			Background="{DynamicResource SurfaceBrush}"
+			BorderBrush="{DynamicResource BorderBrush}"
+			BorderThickness="1"
+			CornerRadius="0">
+			<StackPanel>
+				<ScrollViewer
+					MaxHeight="420"
+					HorizontalScrollBarVisibility="Disabled"
+					VerticalScrollBarVisibility="Auto">
+					<StackPanel>
+						<TextBlock
+							x:Name="TitleText"
+							Margin="0,0,0,10"
+							FontSize="{DynamicResource AppFontSize18}"
+							FontWeight="Bold"
+							Foreground="{DynamicResource TextBrush}"
+							TextWrapping="Wrap" />
 
-                        <TextBlock x:Name="MessageText"
-                                   FontSize="{DynamicResource AppFontSize14}"
-                                   Foreground="{DynamicResource MutedBrush}"
-                                   TextWrapping="Wrap"
-                                   Margin="0,0,0,24"/>
-                    </StackPanel>
-                </ScrollViewer>
+						<TextBlock
+							x:Name="MessageText"
+							Margin="0,0,0,24"
+							FontSize="{DynamicResource AppFontSize14}"
+							Foreground="{DynamicResource MutedBrush}"
+							TextWrapping="Wrap" />
+					</StackPanel>
+				</ScrollViewer>
 
-                <StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Right">
-                    <Button x:Name="TertiaryButton"
-                            Content="Cancel"
-                            Click="Tertiary_Click"
-                            Margin="0,0,8,0"
-                            Padding="16,8"
-                            Style="{StaticResource SecondaryButton}"
-                            IsCancel="True"
-                            Visibility="Collapsed"/>
-                    <Button x:Name="SecondaryButton"
-                            Content="No"
-                            Click="Secondary_Click"
-                            Margin="0,0,8,0"
-                            Padding="16,8"
-                            Style="{StaticResource SecondaryButton}"
-                            Visibility="Collapsed"/>
-                    <Button x:Name="PrimaryButton"
-                            Content="OK"
-                            Click="Primary_Click"
-                            Padding="16,8"
-                            IsDefault="True"
-                            Style="{StaticResource PrimaryButton}"/>
-                </StackPanel>
-            </StackPanel>
-        </Border>
-    </DockPanel>
+				<StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+					<Button
+						x:Name="TertiaryButton"
+						Margin="0,0,8,0"
+						Padding="16,8"
+						Click="Tertiary_Click"
+						Content="Cancel"
+						IsCancel="True"
+						Style="{StaticResource SecondaryButton}"
+						Visibility="Collapsed" />
+					<Button
+						x:Name="SecondaryButton"
+						Margin="0,0,8,0"
+						Padding="16,8"
+						Click="Secondary_Click"
+						Content="No"
+						Style="{StaticResource SecondaryButton}"
+						Visibility="Collapsed" />
+					<Button
+						x:Name="PrimaryButton"
+						Padding="16,8"
+						Click="Primary_Click"
+						Content="OK"
+						IsDefault="True"
+						Style="{StaticResource PrimaryButton}" />
+				</StackPanel>
+			</StackPanel>
+		</Border>
+	</DockPanel>
 </Window>
