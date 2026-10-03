@@ -120,17 +120,60 @@ public partial class LoginWindow : Window
                 FontSize = 16,
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Center,
-                Focusable = false,
+                Focusable = true,
+                IsTabStop = true,
                 ToolTip = "Remove from recents",
+                AutomationProperties = { Name = $"Remove {recent.DisplayName} from recents" },
                 Background = System.Windows.Media.Brushes.Transparent,
                 BorderThickness = new Thickness(0),
                 Foreground = (System.Windows.Media.Brush)FindResource("MutedBrush"),
                 Tag = recent
             };
+
+            var removeButtonStyle = new Style(typeof(Button));
+            removeButtonStyle.Setters.Add(new Setter(
+                Control.BackgroundProperty,
+                System.Windows.Media.Brushes.Transparent));
+            removeButtonStyle.Setters.Add(new Setter(
+                Control.ForegroundProperty,
+                new System.Windows.DynamicResourceExtension("MutedBrush")));
+            removeButtonStyle.Setters.Add(new Setter(
+                Control.BorderThicknessProperty,
+                new Thickness(0)));
+
+            var removeHoverTrigger = new Trigger
+            {
+                Property = Button.IsMouseOverProperty,
+                Value = true
+            };
+            removeHoverTrigger.Setters.Add(new Setter(
+                Control.BackgroundProperty,
+                new System.Windows.DynamicResourceExtension("SurfaceAltBrush")));
+            removeHoverTrigger.Setters.Add(new Setter(
+                Control.ForegroundProperty,
+                new System.Windows.DynamicResourceExtension("TextBrush")));
+            removeButtonStyle.Triggers.Add(removeHoverTrigger);
+
+            var removeFocusTrigger = new Trigger
+            {
+                Property = UIElement.IsKeyboardFocusedProperty,
+                Value = true
+            };
+            removeFocusTrigger.Setters.Add(new Setter(
+                Control.BackgroundProperty,
+                new System.Windows.DynamicResourceExtension("SurfaceAltBrush")));
+            removeFocusTrigger.Setters.Add(new Setter(
+                Control.ForegroundProperty,
+                new System.Windows.DynamicResourceExtension("TextBrush")));
+            removeButtonStyle.Triggers.Add(removeFocusTrigger);
+
+            removeButton.Style = removeButtonStyle;
+
             removeButton.AddHandler(
                 PreviewMouseLeftButtonDownEvent,
                 new MouseButtonEventHandler(RecentRemoveButton_PreviewMouseLeftButtonDown),
                 true);
+            removeButton.Click += RecentRemoveButton_Click;
             Grid.SetColumn(removeButton, 1);
             header.Children.Add(removeButton);
 
@@ -166,7 +209,17 @@ public partial class LoginWindow : Window
     private void RecentRemoveButton_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;
+        RemoveRecentVault(sender);
+    }
 
+    private void RecentRemoveButton_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        RemoveRecentVault(sender);
+    }
+
+    private void RemoveRecentVault(object sender)
+    {
         if (sender is Button { Tag: RecentVaultItem recent } &&
             DataContext is LoginViewModel viewModel)
         {
