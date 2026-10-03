@@ -57,6 +57,7 @@ public partial class MainWindow : Window
 
         Closed += (_, _) =>
         {
+            FaviconService.OnlineFetchingChanged -= OnOnlineFetchingChanged;
             SnackbarService.Shown -= OnSnackbarShown;
             _snackbarTimer.Stop();
             SnackbarBorder.Visibility = Visibility.Collapsed;
@@ -82,6 +83,7 @@ public partial class MainWindow : Window
 
         PreviewKeyDown += OnPreviewKeyDown;
         EntryList.SelectionChanged += (_, _) => UpdateSelectedEntriesToolbar();
+        FaviconService.OnlineFetchingChanged += OnOnlineFetchingChanged;
 
         FaviconService.FaviconsBatchReady += () =>
         {
@@ -245,6 +247,18 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 break;
         }
+    }
+
+    private void OnOnlineFetchingChanged(bool enabled)
+    {
+        if (!enabled)
+            return;
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (IsLoaded)
+                EntryList.Items.Refresh();
+        }, DispatcherPriority.Background);
     }
 
     private void OnSnackbarShown(object? sender, SnackbarEventArgs e)
