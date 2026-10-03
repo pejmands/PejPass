@@ -109,6 +109,24 @@ public static class SettingsStore
             needsSave = true;
         }
 
+        if (root.TryGetProperty("recentVaultPaths", out var recentVaultPaths) &&
+            recentVaultPaths.ValueKind == JsonValueKind.Array)
+        {
+            settings.RecentVaultPaths = recentVaultPaths
+                .EnumerateArray()
+                .Where(item => item.ValueKind == JsonValueKind.String)
+                .Select(item => item.GetString())
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Cast<string>()
+                .Take(10)
+                .ToList();
+        }
+        else
+        {
+            settings.RecentVaultPaths = [];
+            needsSave = true;
+        }
+
         if (!TryGetInt32(root, "autoLockMinutes", out var autoLockMinutes) ||
             autoLockMinutes < 0 ||
             autoLockMinutes > MaxAutoLockMinutes)
