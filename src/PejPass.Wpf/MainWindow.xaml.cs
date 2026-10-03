@@ -109,6 +109,38 @@ public partial class MainWindow : Window
         ContentFilterPopup.IsOpen = false;
     }
 
+    private void TagSortMenuButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || DataContext is not MainViewModel vm)
+            return;
+
+        var menu = new ContextMenu
+        {
+            Style = (Style)FindResource("PejPassContextMenu"),
+            PlacementTarget = button,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+            FlowDirection = FlowDirection.LeftToRight
+        };
+
+        var mostUsedItem = new MenuItem
+        {
+            Header = vm.SelectedTagSortIndex == 0 ? "✓  Most used" : "Most used",
+            Style = (Style)FindResource("PejPassContextMenuItem")
+        };
+        mostUsedItem.Click += (_, _) => vm.SelectedTagSortIndex = 0;
+
+        var alphabeticalItem = new MenuItem
+        {
+            Header = vm.SelectedTagSortIndex == 1 ? "✓  Alphabetical" : "Alphabetical",
+            Style = (Style)FindResource("PejPassContextMenuItem")
+        };
+        alphabeticalItem.Click += (_, _) => vm.SelectedTagSortIndex = 1;
+
+        menu.Items.Add(mostUsedItem);
+        menu.Items.Add(alphabeticalItem);
+        menu.IsOpen = true;
+    }
+
     private void UpdateSelectedEntriesToolbar()
     {
         var count = EntryList.SelectedItems.Count;
