@@ -233,16 +233,63 @@
 							</ItemsControl>
 						</ScrollViewer>
 
-						<ComboBox
+						<Button
+							x:Name="TagSortMenuButton"
 							Grid.Column="1"
-							Width="112"
+							Width="30"
 							Height="30"
-							Padding="6,3"
-							VerticalAlignment="Top"
-							FontSize="{DynamicResource AppFontSize12}"
-							ItemsSource="{Binding TagSortOptions}"
-							SelectedIndex="{Binding SelectedTagSortIndex}"
-							ToolTip="Sort tags by usage or name" />
+							Margin="0,0,0,2"
+							Padding="0"
+							Background="{DynamicResource SurfaceBrush}"
+							BorderBrush="{DynamicResource BorderBrush}"
+							BorderThickness="1"
+							Click="TagSortMenuButton_Click"
+							Content="⋯"
+							Cursor="Hand"
+							FontSize="18"
+							FontWeight="SemiBold"
+							Foreground="{DynamicResource MutedBrush}"
+							ToolTip="Tag sorting options">
+							<Button.Style>
+								<Style BasedOn="{StaticResource {x:Type Button}}" TargetType="Button">
+									<Setter Property="Template">
+										<Setter.Value>
+											<ControlTemplate TargetType="Button">
+												<Grid>
+													<Border
+														x:Name="ButtonBorder"
+														Background="{TemplateBinding Background}"
+														BorderBrush="{TemplateBinding BorderBrush}"
+														BorderThickness="{TemplateBinding BorderThickness}"
+														CornerRadius="6">
+														<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+													</Border>
+													<Border
+														x:Name="FocusRing"
+														BorderBrush="{DynamicResource BorderFocusBrush}"
+														BorderThickness="1"
+														CornerRadius="6"
+														IsHitTestVisible="False"
+														Visibility="Collapsed" />
+												</Grid>
+												<ControlTemplate.Triggers>
+													<Trigger Property="IsMouseOver" Value="True">
+														<Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+														<Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+													</Trigger>
+													<Trigger Property="IsPressed" Value="True">
+														<Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource SurfacePressedBrush}" />
+													</Trigger>
+													<Trigger Property="IsKeyboardFocused" Value="True">
+														<Setter TargetName="FocusRing" Property="Visibility" Value="Visible" />
+													</Trigger>
+												</ControlTemplate.Triggers>
+											</ControlTemplate>
+										</Setter.Value>
+									</Setter>
+								</Style>
+							</Button.Style>
+						</Button>
 					</Grid>
 
 					<!--  Count / Sort  -->
