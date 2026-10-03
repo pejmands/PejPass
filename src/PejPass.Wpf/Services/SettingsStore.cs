@@ -179,6 +179,14 @@ public static class SettingsStore
 
         settings.SortMode = sortMode;
 
+        if (!TryGetEnumValue<TagSortMode>(root, "tagSortMode", out var tagSortMode))
+        {
+            tagSortMode = defaults.TagSortMode;
+            needsSave = true;
+        }
+
+        settings.TagSortMode = tagSortMode;
+
         if (!TryGetBool(root, "windowsHelloEnabled", out var windowsHelloEnabled))
         {
             windowsHelloEnabled = defaults.WindowsHelloEnabled;
