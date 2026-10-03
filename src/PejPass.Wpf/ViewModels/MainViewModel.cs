@@ -97,6 +97,9 @@ public partial class MainViewModel : ObservableObject
     public partial int SelectedSortIndex { get; set; }
 
     [ObservableProperty]
+    public partial int SelectedTagSortIndex { get; set; }
+
+    [ObservableProperty]
     public partial string TotpCode { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -115,6 +118,12 @@ public partial class MainViewModel : ObservableObject
         "Newest",
         "Oldest",
         "Manual"
+    ];
+
+    public string[] TagSortOptions { get; } =
+    [
+        "Most used",
+        "Alphabetical"
     ];
 
     public ObservableCollection<VaultEntry> Entries { get; } = [];
@@ -148,6 +157,7 @@ public partial class MainViewModel : ObservableObject
         InputManager.Current.PreProcessInput += OnPreProcessInput;
 
         SelectedSortIndex = (int)_settings.SortMode;
+        SelectedTagSortIndex = (int)_settings.TagSortMode;
 
         _ = LoadVaultAsync();
         StartAutoLockTimer();
@@ -189,6 +199,14 @@ public partial class MainViewModel : ObservableObject
         _settings.SortMode = (EntrySortMode)value;
         SettingsStore.Save(_settings);
         ApplyFilter();
+    }
+
+    partial void OnSelectedTagSortIndexChanged(int value)
+    {
+        if (value < 0 || value > 1) return;
+        _settings.TagSortMode = (TagSortMode)value;
+        SettingsStore.Save(_settings);
+        RebuildTagFilters();
     }
 
     private void RebuildDisplayCustomFields()
