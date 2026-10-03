@@ -42,6 +42,7 @@ public static class FaviconService
 
     private static readonly Lock ExpirationCleanupLock = new();
     private static readonly Lock StartupCleanupLock = new();
+    private static readonly Lock OnlineFetchingStateLock = new();
     private static long _cacheGeneration;
     private static Task _startupCleanupTask = Task.CompletedTask;
     private static bool _startupCleanupStarted;
@@ -51,7 +52,21 @@ public static class FaviconService
     private static int _diskWarmRunning;
     private static volatile bool _onlineFetchingEnabled;
 
-    public static void ConfigureOnlineFetching(bool enabled) => _onlineFetchingEnabled = enabled;
+    public static event Action<bool>? OnlineFetchingChanged;
+
+    public static void ConfigureOnlineFetching(bool enabled)
+    {
+        bool changed;
+
+        lock (OnlineFetchingStateLock)
+        {
+            changed = _onlineFetchingEnabled != enabled;
+            _onlineFetchingEnabled = enabled;
+        }
+
+        if (changed)
+            OnlineFetchingChanged?.Invoke(enabled);
+    }
 
     /// <summary>
     /// Clears all persisted and in-memory favicon cache state.
@@ -322,35 +337,41 @@ public static class FaviconService
 
             if (bytes is null || bytes.Length < 16)
             {
-                MarkFailed(host);
+                if (_onlineFetchingEnabled)
+                    MarkFailed(host);
                 return;
-            }
-
-            if (generation != Volatile.Read(ref _cacheGeneration))
-                return;
-
-            try
-            {
-                Directory.CreateDirectory(CacheDir);
-                await File.WriteAllBytesAsync(CachePath(host), bytes).ConfigureAwait(false);
-                PruneDiskCache(CacheDir);
-            }
-            catch
-            {
             }
 
             var image = CreateBitmap(bytes);
             if (image is null)
             {
-                MarkFailed(host);
+                if (_onlineFetchingEnabled)
+                    MarkFailed(host);
                 return;
             }
 
-            if (generation != Volatile.Read(ref _cacheGeneration))
-                return;
+            lock (OnlineFetchingStateLock)
+            {
+                if (!_onlineFetchingEnabled ||
+                    generation != Volatile.Read(ref _cacheGeneration))
+                {
+                    return;
+                }
 
-            SetMemory(host, image);
-            Failed.TryRemove(host, out _);
+                try
+                {
+                    Directory.CreateDirectory(CacheDir);
+                    File.WriteAllBytes(CachePath(host), bytes);
+                    PruneDiskCache(CacheDir);
+                }
+                catch
+                {
+                }
+
+                SetMemory(host, image);
+                Failed.TryRemove(host, out _);
+            }
+
             ScheduleBatchNotify();
         }
         catch
