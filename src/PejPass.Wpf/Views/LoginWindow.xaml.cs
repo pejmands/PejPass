@@ -123,12 +123,14 @@ public partial class LoginWindow : Window
                 Focusable = true,
                 IsTabStop = true,
                 ToolTip = "Remove from recents",
-                AutomationProperties = { Name = $"Remove {recent.DisplayName} from recents" },
-                Background = System.Windows.Media.Brushes.Transparent,
                 BorderThickness = new Thickness(0),
-                Foreground = (System.Windows.Media.Brush)FindResource("MutedBrush"),
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center,
                 Tag = recent
             };
+            AutomationProperties.SetName(
+                removeButton,
+                $"Remove {recent.DisplayName} from recents");
 
             var removeButtonStyle = new Style(typeof(Button));
             removeButtonStyle.Setters.Add(new Setter(
