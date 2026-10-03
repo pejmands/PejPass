@@ -61,6 +61,13 @@ public partial class AppTitleBar : UserControl
             typeof(AppTitleBar),
             new PropertyMetadata(false));
 
+    public static readonly DependencyProperty ShowFilePathToolTipProperty =
+        DependencyProperty.Register(
+            nameof(ShowFilePathToolTip),
+            typeof(bool),
+            typeof(AppTitleBar),
+            new PropertyMetadata(false));
+
     public bool ShowMainActions
     {
         get => (bool)GetValue(ShowMainActionsProperty);
@@ -71,6 +78,12 @@ public partial class AppTitleBar : UserControl
     {
         get => (bool)GetValue(ShowFileActionsProperty);
         set => SetValue(ShowFileActionsProperty, value);
+    }
+
+    public bool ShowFilePathToolTip
+    {
+        get => (bool)GetValue(ShowFilePathToolTipProperty);
+        set => SetValue(ShowFilePathToolTipProperty, value);
     }
 
     public string Title
