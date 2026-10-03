@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Collections.ObjectModel;
 using Microsoft.Win32;
 using PejPass.Application.Services;
 using PejPass.Domain.Entities;
@@ -12,6 +13,8 @@ using System.Windows;
 
 namespace PejPass.Wpf.ViewModels;
 
+public sealed record RecentVaultItem(string Path, string DisplayName);
+
 public partial class LoginViewModel : ObservableObject
 {
     private readonly VaultService _vaultService;
@@ -19,6 +22,13 @@ public partial class LoginViewModel : ObservableObject
     private readonly VaultSession _vaultSession;
 
     public event EventHandler? RequestClose;
+
+    public event EventHandler? RecentVaultSelected;
+
+    public ObservableCollection<RecentVaultItem> RecentVaults { get; } = [];
+
+    [ObservableProperty]
+    public partial bool HasRecentVaults { get; set; }
 
     [ObservableProperty]
     public partial string VaultPath { get; set; } = string.Empty;
@@ -76,15 +86,135 @@ public partial class LoginViewModel : ObservableObject
         _settings = settings;
         _vaultSession = vaultSession;
 
-        VaultPath = Path.Combine(
-            GetInitialVaultDirectory(),
-            "vault.pejpass");
+        var recentPaths = NormalizeRecentPaths(_settings.RecentVaultPaths);
 
-        if (!string.IsNullOrEmpty(_settings.LastVaultPath) &&
-            File.Exists(_settings.LastVaultPath))
+        if (recentPaths.Count == 0 &&
+            !string.IsNullOrWhiteSpace(_settings.LastVaultPath))
         {
-            VaultPath = _settings.LastVaultPath;
+            recentPaths.Add(NormalizePathOrOriginal(_settings.LastVaultPath));
         }
+
+        foreach (var path in recentPaths.Take(10))
+        {
+            RecentVaults.Add(new RecentVaultItem(
+                path,
+                GetVaultDisplayName(path)));
+        }
+
+        HasRecentVaults = RecentVaults.Count > 0;
+
+        if (RecentVaults.Count > 0)
+        {
+            VaultPath = RecentVaults[0].Path;
+        }
+        else
+        {
+            VaultPath = GetDefaultVaultPath();
+
+            if (File.Exists(VaultPath))
+            {
+                IsOpenMode = true;
+                IsCreateMode = false;
+            }
+            else
+            {
+                IsCreateMode = true;
+                IsOpenMode = false;
+            }
+        }
+    }
+
+    private static List<string> NormalizeRecentPaths(IEnumerable<string>? paths)
+    {
+        var normalized = new List<string>();
+
+        foreach (var path in paths ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                continue;
+
+            var candidate = NormalizePathOrOriginal(path);
+
+            if (!normalized.Contains(candidate, StringComparer.OrdinalIgnoreCase))
+                normalized.Add(candidate);
+
+            if (normalized.Count == 10)
+                break;
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizePathOrOriginal(string path)
+    {
+        try
+        {
+            return Path.GetFullPath(path);
+        }
+        catch
+        {
+            return path;
+        }
+    }
+
+    private static string GetVaultDisplayName(string path)
+    {
+        var name = Path.GetFileNameWithoutExtension(path);
+        return string.IsNullOrWhiteSpace(name) ? path : name;
+    }
+
+    private static string GetDefaultVaultPath()
+    {
+        var directory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "PejPass");
+
+        Directory.CreateDirectory(directory);
+        return Path.Combine(directory, "vault.pejpass");
+    }
+
+    [RelayCommand]
+    private void SelectRecentVault(RecentVaultItem? item)
+    {
+        if (item is null)
+            return;
+
+        IsOpenMode = true;
+        IsCreateMode = false;
+        VaultPath = item.Path;
+        ResetModeState();
+        RecentVaultSelected?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void RecordRecentVault(string path)
+    {
+        var normalizedPath = Path.GetFullPath(path);
+        var paths = new List<string> { normalizedPath };
+
+        paths.AddRange(
+            RecentVaults
+                .Select(item => item.Path)
+                .Where(existing => !string.Equals(
+                    existing,
+                    normalizedPath,
+                    StringComparison.OrdinalIgnoreCase)));
+
+        RecentVaults.Clear();
+
+        foreach (var recentPath in paths.Take(10))
+        {
+            RecentVaults.Add(new RecentVaultItem(
+                recentPath,
+                GetVaultDisplayName(recentPath)));
+        }
+
+        HasRecentVaults = RecentVaults.Count > 0;
+        _settings.LastVaultPath = normalizedPath;
+        _settings.RecentVaultPaths = RecentVaults
+            .Select(item => item.Path)
+            .ToList();
+
+        SettingsStore.Save(_settings);
     }
 
     /// <summary>
@@ -364,8 +494,7 @@ public partial class LoginViewModel : ObservableObject
                 VaultPath,
                 password);
 
-            _settings.LastVaultPath = VaultPath;
-            SettingsStore.Save(_settings);
+            RecordRecentVault(VaultPath);
 
             StatusMessage = "Vault unlocked.";
             RequestClose?.Invoke(this, EventArgs.Empty);
@@ -484,8 +613,7 @@ public partial class LoginViewModel : ObservableObject
                 SessionPasswordCache.Clear();
             }
 
-            _settings.LastVaultPath = VaultPath;
-            SettingsStore.Save(_settings);
+            RecordRecentVault(VaultPath);
 
             MasterPassword = string.Empty;
             ConfirmMasterPassword = string.Empty;
