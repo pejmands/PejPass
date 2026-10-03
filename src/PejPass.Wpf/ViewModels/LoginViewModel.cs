@@ -88,13 +88,7 @@ public partial class LoginViewModel : ObservableObject
 
         var recentPaths = NormalizeRecentPaths(_settings.RecentVaultPaths);
 
-        if (recentPaths.Count == 0 &&
-            !string.IsNullOrWhiteSpace(_settings.LastVaultPath))
-        {
-            recentPaths.Add(NormalizePathOrOriginal(_settings.LastVaultPath));
-        }
-
-        foreach (var path in recentPaths.Take(10))
+        foreach (var path in recentPaths.Take(5))
         {
             RecentVaults.Add(new RecentVaultItem(
                 path,
@@ -138,7 +132,7 @@ public partial class LoginViewModel : ObservableObject
             if (!normalized.Contains(candidate, StringComparer.OrdinalIgnoreCase))
                 normalized.Add(candidate);
 
-            if (normalized.Count == 10)
+            if (normalized.Count == 5)
                 break;
         }
 
@@ -186,6 +180,35 @@ public partial class LoginViewModel : ObservableObject
         RecentVaultSelected?.Invoke(this, EventArgs.Empty);
     }
 
+    [RelayCommand]
+    private void RemoveRecentVault(RecentVaultItem? item)
+    {
+        if (item is null)
+            return;
+
+        var existing = RecentVaults.FirstOrDefault(recent =>
+            string.Equals(recent.Path, item.Path, StringComparison.OrdinalIgnoreCase));
+
+        if (existing is null)
+            return;
+
+        RecentVaults.Remove(existing);
+        SaveRecentVaults();
+    }
+
+    [RelayCommand]
+    private void ClearRecentVaults()
+    {
+        RecentVaults.Clear();
+        SaveRecentVaults();
+    }
+
+    private void SaveRecentVaults()
+    {
+        HasRecentVaults = RecentVaults.Count > 0;
+        SaveRecentVaults();
+    }
+
     private void RecordRecentVault(string path)
     {
         var normalizedPath = Path.GetFullPath(path);
@@ -201,7 +224,7 @@ public partial class LoginViewModel : ObservableObject
 
         RecentVaults.Clear();
 
-        foreach (var recentPath in paths.Take(10))
+        foreach (var recentPath in paths.Take(5))
         {
             RecentVaults.Add(new RecentVaultItem(
                 recentPath,
@@ -209,7 +232,6 @@ public partial class LoginViewModel : ObservableObject
         }
 
         HasRecentVaults = RecentVaults.Count > 0;
-        _settings.LastVaultPath = normalizedPath;
         _settings.RecentVaultPaths = RecentVaults
             .Select(item => item.Path)
             .ToList();
@@ -341,16 +363,16 @@ public partial class LoginViewModel : ObservableObject
 
     private string GetInitialVaultDirectory()
     {
-        if (!string.IsNullOrWhiteSpace(_settings.LastVaultPath))
+        if (RecentVaults.Count > 0)
         {
             try
             {
-                var lastDirectory = Path.GetDirectoryName(_settings.LastVaultPath);
+                var recentDirectory = Path.GetDirectoryName(RecentVaults[0].Path);
 
-                if (!string.IsNullOrWhiteSpace(lastDirectory) &&
-                    Directory.Exists(lastDirectory))
+                if (!string.IsNullOrWhiteSpace(recentDirectory) &&
+                    Directory.Exists(recentDirectory))
                 {
-                    return lastDirectory;
+                    return recentDirectory;
                 }
             }
             catch
