@@ -206,7 +206,11 @@ public partial class LoginViewModel : ObservableObject
     private void SaveRecentVaults()
     {
         HasRecentVaults = RecentVaults.Count > 0;
-        SaveRecentVaults();
+        _settings.RecentVaultPaths = RecentVaults
+            .Select(item => item.Path)
+            .ToList();
+
+        SettingsStore.Save(_settings);
     }
 
     private void RecordRecentVault(string path)
@@ -231,12 +235,7 @@ public partial class LoginViewModel : ObservableObject
                 GetVaultDisplayName(recentPath)));
         }
 
-        HasRecentVaults = RecentVaults.Count > 0;
-        _settings.RecentVaultPaths = RecentVaults
-            .Select(item => item.Path)
-            .ToList();
-
-        SettingsStore.Save(_settings);
+        SaveRecentVaults();
     }
 
     /// <summary>
