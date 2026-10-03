@@ -96,19 +96,6 @@ public static class SettingsStore
         var defaults = new AppSettings();
         var needsSave = false;
 
-        if (root.TryGetProperty("lastVaultPath", out var lastVaultPath) &&
-            (lastVaultPath.ValueKind is JsonValueKind.String or JsonValueKind.Null))
-        {
-            settings.LastVaultPath = lastVaultPath.ValueKind == JsonValueKind.Null
-                ? null
-                : lastVaultPath.GetString();
-        }
-        else
-        {
-            settings.LastVaultPath = defaults.LastVaultPath;
-            needsSave = true;
-        }
-
         if (root.TryGetProperty("recentVaultPaths", out var recentVaultPaths) &&
             recentVaultPaths.ValueKind == JsonValueKind.Array)
         {
@@ -118,7 +105,7 @@ public static class SettingsStore
                 .Select(item => item.GetString())
                 .Where(path => !string.IsNullOrWhiteSpace(path))
                 .Cast<string>()
-                .Take(10)
+                .Take(5)
                 .ToList();
         }
         else
