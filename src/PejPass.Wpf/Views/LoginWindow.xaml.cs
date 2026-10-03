@@ -145,8 +145,7 @@ public partial class LoginWindow : Window
         {
             Header = "Clear all recents",
             Style = (Style)FindResource("PejPassContextMenuItem"),
-            Command = viewModel.ClearRecentVaultsCommand,
-            CommandParameter = this
+            Click = ClearAllRecents_Click
         });
 
         menu.PlacementTarget = button;
@@ -162,6 +161,23 @@ public partial class LoginWindow : Window
         {
             viewModel.RemoveRecentVaultCommand.Execute(recent);
         }
+    }
+
+    private void ClearAllRecents_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not LoginViewModel viewModel)
+            return;
+
+        var result = MessageBox.Show(
+            this,
+            "Remove all recent vaults from this list? This will not delete any vault files.",
+            "Clear all recents",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question,
+            MessageBoxResult.No);
+
+        if (result == MessageBoxResult.Yes)
+            viewModel.ClearRecentVaultsCommand.Execute(null);
     }
 
     private void ClearPasswordInputs()
