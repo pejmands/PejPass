@@ -24,9 +24,6 @@ public sealed class UpdateService : IDisposable
     private readonly HttpClient _http;
     private readonly string _manifestUrl;
 
-    /// <summary>
-    /// Last successfully fetched manifest (used by What's New).
-    /// </summary>
     public UpdateManifest? LastManifest { get; private set; }
 
     public UpdateService()
@@ -52,9 +49,6 @@ public sealed class UpdateService : IDisposable
     public static string DefaultStatusMessage =>
         $"You are running v{CurrentVersion}.";
 
-    /// <summary>
-    /// Disk cache path (LocalAppData\PejPass\update-manifest.json).
-    /// </summary>
     public static string ManifestCachePath =>
         Path.Combine(
             Path.GetDirectoryName(AppSettings.SettingsFilePath)
@@ -63,9 +57,6 @@ public sealed class UpdateService : IDisposable
                     "PejPass"),
             "update-manifest.json");
 
-    /// <summary>
-    /// Marker written before restart; consumed once after the new build starts.
-    /// </summary>
     public static string PendingWhatsNewPath =>
         Path.Combine(
             Path.GetDirectoryName(AppSettings.SettingsFilePath)
@@ -122,9 +113,6 @@ public sealed class UpdateService : IDisposable
         }
     }
 
-    /// <summary>
-    /// Instant notes from memory or disk cache (no network).
-    /// </summary>
     public IReadOnlyList<ReleaseNote> GetCachedReleaseNotes()
     {
         var manifest = LastManifest ?? TryLoadManifestCache();
@@ -135,11 +123,6 @@ public sealed class UpdateService : IDisposable
         return ToReleaseNotes(manifest, CurrentVersion);
     }
 
-    /// <summary>
-    /// Cache-first changelog for What's New.
-    /// Prefer GetCachedReleaseNotes() for an immediate UI paint, then call this
-    /// to refresh from the network and update the on-disk cache.
-    /// </summary>
     public async Task<IReadOnlyList<ReleaseNote>> LoadReleaseNotesAsync(
         CancellationToken cancellationToken = default)
     {
@@ -160,7 +143,6 @@ public sealed class UpdateService : IDisposable
         }
         catch
         {
-            // Offline / error — keep cache.
         }
 
         return cachedNotes;
@@ -216,10 +198,6 @@ public sealed class UpdateService : IDisposable
         }
     }
 
-    /// <summary>
-    /// Portable self-update: extract the zip, schedule file replace after exit, restart PejPass.
-    /// Requires user confirmation from the UI layer.
-    /// </summary>
     public void ApplyPortableUpdateAndRestart(string zipPath, string targetVersion)
     {
         if (string.IsNullOrWhiteSpace(zipPath) || !File.Exists(zipPath))
@@ -237,6 +215,15 @@ public sealed class UpdateService : IDisposable
 
         Directory.CreateDirectory(stageRoot);
         ZipFile.ExtractToDirectory(zipPath, stageRoot);
+
+        try
+        {
+            if (File.Exists(zipPath))
+                File.Delete(zipPath);
+        }
+        catch
+        {
+        }
 
         var sourceDir = ResolveExtractedPayloadRoot(stageRoot);
         WritePendingWhatsNew(targetVersion);
@@ -489,14 +476,10 @@ public sealed class UpdateService : IDisposable
         response.EnsureSuccessStatusCode();
 
         var fileName = ResolveFileName(downloadUrl, response);
-        var downloads = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "Downloads");
-
-        Directory.CreateDirectory(downloads);
-
-        var destPath = Path.Combine(downloads, fileName);
-        destPath = MakeUniquePath(destPath);
+        // Always stage under %TEMP% with a unique name; deleted after install.
+        var destPath = Path.Combine(
+            Path.GetTempPath(),
+            $"PejPass-dl-{Guid.NewGuid():N}-{fileName}");
 
         var total = response.Content.Headers.ContentLength ?? -1L;
         await using var input = await response.Content
@@ -547,25 +530,6 @@ public sealed class UpdateService : IDisposable
         }
 
         return $"{AppInfoService.Name}-update.zip";
-    }
-
-    private static string MakeUniquePath(string path)
-    {
-        if (!File.Exists(path))
-            return path;
-
-        var dir = Path.GetDirectoryName(path)!;
-        var name = Path.GetFileNameWithoutExtension(path);
-        var ext = Path.GetExtension(path);
-
-        for (var i = 1; i < 1000; i++)
-        {
-            var candidate = Path.Combine(dir, $"{name} ({i}){ext}");
-            if (!File.Exists(candidate))
-                return candidate;
-        }
-
-        return Path.Combine(dir, $"{name}-{Guid.NewGuid():N}{ext}");
     }
 
     public static bool IsNewerVersion(string candidate, string current)
