@@ -3,6 +3,7 @@ using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using PejPass.Domain.Entities;
+using PejPass.Domain.Settings;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,6 +16,7 @@ public partial class MainWindow : Window
 {
     private readonly VaultSession _vaultSession;
     private readonly DispatcherTimer _snackbarTimer;
+    private readonly AppSettings _settings;
     private Point _dragStartPoint;
     private VaultEntry? _dragStartEntry;
 
@@ -25,6 +27,7 @@ public partial class MainWindow : Window
         DataContext = viewModel;
 
         _vaultSession = vaultSession;
+        _settings = App.Services.GetRequiredService<AppSettings>();
 
         _snackbarTimer = new DispatcherTimer();
         _snackbarTimer.Tick += (_, _) => HideSnackbar();
