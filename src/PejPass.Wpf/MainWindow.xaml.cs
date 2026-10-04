@@ -261,20 +261,22 @@ public partial class MainWindow : Window
             FlowDirection = FlowDirection.LeftToRight
         };
 
+        var selectedForMove = GetSelectedEntriesForGroup(clickedEntry);
+
         var moveToTop = CreateReorderMenuItem("Move to Top");
-        moveToTop.IsEnabled = vm.SelectedSortIndex == (int)Domain.Settings.EntrySortMode.Manual;
+        moveToTop.IsEnabled = vm.SelectedSortIndex == (int)Domain.Settings.EntrySortMode.Manual &&
+                              CanMoveEntriesToEdge(vm, selectedForMove, clickedEntry.IsFavorite, moveToTop: true);
         moveToTop.Click += async (_, _) =>
         {
-            var selected = GetSelectedEntriesForGroup(clickedEntry);
-            await vm.MoveEntriesToEdgeAsync(selected, clickedEntry.IsFavorite, moveToTop: true);
+            await vm.MoveEntriesToEdgeAsync(selectedForMove, clickedEntry.IsFavorite, moveToTop: true);
         };
 
         var moveToBottom = CreateReorderMenuItem("Move to Bottom");
-        moveToBottom.IsEnabled = vm.SelectedSortIndex == (int)Domain.Settings.EntrySortMode.Manual;
+        moveToBottom.IsEnabled = vm.SelectedSortIndex == (int)Domain.Settings.EntrySortMode.Manual &&
+                                 CanMoveEntriesToEdge(vm, selectedForMove, clickedEntry.IsFavorite, moveToTop: false);
         moveToBottom.Click += async (_, _) =>
         {
-            var selected = GetSelectedEntriesForGroup(clickedEntry);
-            await vm.MoveEntriesToEdgeAsync(selected, clickedEntry.IsFavorite, moveToTop: false);
+            await vm.MoveEntriesToEdgeAsync(selectedForMove, clickedEntry.IsFavorite, moveToTop: false);
         };
 
         menu.Items.Add(moveToTop);
@@ -298,6 +300,35 @@ public partial class MainWindow : Window
             .ToList();
 
         return selected.Count > 0 ? selected : [contextEntry];
+    }
+
+    private static bool CanMoveEntriesToEdge(
+        MainViewModel vm,
+        IReadOnlyList<VaultEntry> movingEntries,
+        bool isFavorite,
+        bool moveToTop)
+    {
+        if (movingEntries.Count == 0)
+            return false;
+
+        var movingIds = movingEntries
+            .Select(entry => entry.Id)
+            .ToHashSet();
+
+        var group = vm.Entries
+            .Where(entry => entry.IsFavorite == isFavorite)
+            .OrderBy(entry => entry.SortOrder)
+            .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (group.Count <= movingEntries.Count)
+            return false;
+
+        var edgeEntries = moveToTop
+            ? group.Take(movingEntries.Count)
+            : group.Skip(group.Count - movingEntries.Count);
+
+        return edgeEntries.Any(entry => !movingIds.Contains(entry.Id));
     }
 
     private void EntryList_DragOver(object sender, DragEventArgs e)
