@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PejPass.Domain.Settings;
 using System.Collections.ObjectModel;
 
 namespace PejPass.Wpf.ViewModels;
