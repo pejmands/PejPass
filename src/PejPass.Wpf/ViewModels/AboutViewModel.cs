@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Records;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
@@ -96,8 +97,8 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
     }
 
     /// <summary>
-    /// PejTools-style: download the package. User installs (unzip / run) themselves.
-    /// We never replace the running password-manager process.
+    /// Download the package, then optionally apply a portable self-update and restart.
+    /// Never replaces the running process in-place while it is still open.
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanDownloadUpdate))]
     private async Task DownloadUpdateAsync()
@@ -130,9 +131,46 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
                 .ConfigureAwait(true);
 
             DownloadedPath = path;
-            StatusMessage =
-                "Download complete. Open the file in Downloads to install.";
-            UpdateService.OpenFolder(path);
+            StatusMessage = "Download complete.";
+
+            var versionLabel = string.IsNullOrWhiteSpace(LatestVersion)
+                ? "the new version"
+                : $"v{LatestVersion}";
+
+            var install = DialogService.Confirm(
+                $"PejPass {versionLabel} was downloaded.\n\n" +
+                "Install now and restart PejPass?\n\n" +
+                "Your vault files are not modified by this update.",
+                "Install update",
+                yesText: "Install & restart",
+                noText: "Open folder only");
+
+            if (install)
+            {
+                StatusMessage = "Installing update…";
+                try
+                {
+                    _updateService.ApplyPortableUpdateAndRestart(
+                        path,
+                        LatestVersion ?? "0.0.0");
+                    return;
+                }
+                catch (Exception applyEx)
+                {
+                    StatusMessage = $"Install failed: {applyEx.Message}";
+                    DialogService.Error(
+                        $"Could not apply the update automatically.\n\n{applyEx.Message}\n\n" +
+                        "The package is still in your Downloads folder.",
+                        "Install failed");
+                    UpdateService.OpenFolder(path);
+                }
+            }
+            else
+            {
+                StatusMessage =
+                    "Download complete. Open the file in Downloads to install manually.";
+                UpdateService.OpenFolder(path);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -157,7 +195,6 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
     {
         var window = new WhatsNewWindow
         {
-            // Fully qualify: PejPass.Application is a project namespace and shadows System.Windows.Application
             Owner = System.Windows.Application.Current.MainWindow
         };
 
