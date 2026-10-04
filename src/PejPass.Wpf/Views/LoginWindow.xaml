@@ -26,7 +26,7 @@
 
 			<StackPanel MaxWidth="440" VerticalAlignment="Top">
 
-				<!--  Header  -->
+				<!--  Header: Recents | title | About  -->
 				<Grid Margin="0,0,0,8">
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="*" />
@@ -64,6 +64,20 @@
 						FontWeight="Bold"
 						Foreground="{DynamicResource TextBrush}"
 						Text="PejPass" />
+
+					<!-- About → Check for Updates + What's New (no vault required) -->
+					<Button
+						Grid.Column="2"
+						Height="28"
+						Padding="8,4"
+						HorizontalAlignment="Right"
+						VerticalAlignment="Center"
+						Background="{DynamicResource SurfaceAltBrush}"
+						Click="AboutButton_Click"
+						Content="About"
+						Foreground="{DynamicResource TextBrush}"
+						Style="{StaticResource SecondaryButton}"
+						ToolTip="Version, updates, and changelog" />
 				</Grid>
 
 				<TextBlock

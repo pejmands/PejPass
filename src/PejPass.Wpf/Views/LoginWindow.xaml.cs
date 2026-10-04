@@ -65,6 +65,19 @@ public partial class LoginWindow : Window
         };
     }
 
+    /// <summary>
+    /// About / updates / changelog — available before unlock (no vault access).
+    /// </summary>
+    private void AboutButton_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new AboutWindow
+        {
+            Owner = this
+        };
+
+        window.ShowDialog();
+    }
+
     private void RecentsButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement button ||
@@ -158,12 +171,6 @@ public partial class LoginWindow : Window
                 new TemplateBindingExtension(BorderThicknessProperty));
 
             var contentPresenter = new FrameworkElementFactory(typeof(ContentPresenter));
-            contentPresenter.SetValue(
-                HorizontalAlignmentProperty,
-                HorizontalAlignment.Center);
-            contentPresenter.SetValue(
-                VerticalAlignmentProperty,
-                VerticalAlignment.Center);
             contentPresenter.SetValue(
                 HorizontalAlignmentProperty,
                 HorizontalAlignment.Center);
