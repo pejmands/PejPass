@@ -1061,10 +1061,10 @@
 
 		<Border
 			x:Name="FastDragScrollHintBorder"
-			Panel.ZIndex="90"
-			Margin="24,0,0,24"
+			Panel.ZIndex="1000"
+			Margin="0,0,0,24"
 			Padding="14,9"
-			HorizontalAlignment="Left"
+			HorizontalAlignment="Center"
 			VerticalAlignment="Bottom"
 			Background="{DynamicResource SurfaceBrush}"
 			BorderBrush="{DynamicResource BorderBrush}"
@@ -1075,6 +1075,7 @@
 			<TextBlock
 				FontSize="{DynamicResource AppFontSize12}"
 				Foreground="{DynamicResource TextBrush}"
+				FontWeight="SemiBold"
 				Text="Tip: Hold Alt while dragging for faster scrolling" />
 		</Border>
 
