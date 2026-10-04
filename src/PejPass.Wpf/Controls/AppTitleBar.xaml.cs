@@ -54,6 +54,13 @@ public partial class AppTitleBar : UserControl
             typeof(AppTitleBar),
             new PropertyMetadata(false, OnChromeFlagsChanged));
 
+    public static readonly DependencyProperty ShowLoginActionsProperty =
+        DependencyProperty.Register(
+            nameof(ShowLoginActions),
+            typeof(bool),
+            typeof(AppTitleBar),
+            new PropertyMetadata(false, OnChromeFlagsChanged));
+
     public static readonly DependencyProperty ShowFileActionsProperty =
         DependencyProperty.Register(
             nameof(ShowFileActions),
@@ -73,6 +80,16 @@ public partial class AppTitleBar : UserControl
         get => (bool)GetValue(ShowMainActionsProperty);
         set => SetValue(ShowMainActionsProperty, value);
     }
+
+    public bool ShowLoginActions
+    {
+        get => (bool)GetValue(ShowLoginActionsProperty);
+        set => SetValue(ShowLoginActionsProperty, value);
+    }
+
+    public event EventHandler? SettingsRequested;
+    public event EventHandler? AboutRequested;
+    public event EventHandler? WhatsNewRequested;
 
     public bool ShowFileActions
     {
@@ -215,7 +232,6 @@ public partial class AppTitleBar : UserControl
 
     private static bool IsOnCaption(IntPtr lParam)
     {
-        // Simplified: treat NC right-click as caption menu
         return true;
     }
 
@@ -251,7 +267,6 @@ public partial class AppTitleBar : UserControl
 
     private void UpdateFileActionsVisibility()
     {
-        // no-op placeholder for binding path changes; menu items update on open
     }
 
     private void ApplyChromeFlags()
@@ -263,9 +278,48 @@ public partial class AppTitleBar : UserControl
             ? Visibility.Visible
             : Visibility.Collapsed;
 
-        MainActionsSeparator.Visibility = ShowMainActions
+        LoginActionsPanel.Visibility = ShowLoginActions
             ? Visibility.Visible
             : Visibility.Collapsed;
+
+        MainActionsSeparator.Visibility = ShowMainActions || ShowLoginActions
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void LoginMoreButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (LoginMoreButton.ContextMenu is { } menu)
+        {
+            menu.PlacementTarget = LoginMoreButton;
+            menu.Placement = PlacementMode.Bottom;
+            menu.VerticalOffset = 6;
+            menu.IsOpen = true;
+        }
+        e.Handled = true;
+    }
+
+    private void LoginMoreButton_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+    }
+
+    private void LoginSettings_Click(object sender, RoutedEventArgs e)
+    {
+        SettingsRequested?.Invoke(this, EventArgs.Empty);
+        e.Handled = true;
+    }
+
+    private void LoginAbout_Click(object sender, RoutedEventArgs e)
+    {
+        AboutRequested?.Invoke(this, EventArgs.Empty);
+        e.Handled = true;
+    }
+
+    private void LoginWhatsNew_Click(object sender, RoutedEventArgs e)
+    {
+        WhatsNewRequested?.Invoke(this, EventArgs.Empty);
+        e.Handled = true;
     }
 
     private void TitleText_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
