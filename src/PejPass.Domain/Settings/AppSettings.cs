@@ -34,6 +34,8 @@ public sealed class AppSettings
 
     public bool OnlineFaviconFetchingEnabled { get; set; }
 
+    public bool HasSeenFastDragScrollTip { get; set; }
+
     public static string SettingsFilePath =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
