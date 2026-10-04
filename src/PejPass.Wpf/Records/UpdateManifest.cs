@@ -4,17 +4,21 @@ using System.Text.Json.Serialization;
 namespace PejPass.Wpf.Records;
 
 /// <summary>
-/// Remote update.json — same idea as PejTools:
-/// { "version", "downloadUrl", "notes", optional "released" }.
+/// Remote update.json.
+///
+/// Root fields (PejTools-compatible) drive update check + download:
+///   version, downloadUrl, optional released, optional notes
+///
+/// Optional releases[] drives the full What's New changelog:
+///   each item has version, released, notes
+///
+/// If releases is omitted, a single entry is synthesized from the root fields.
 /// </summary>
 public sealed class UpdateManifest
 {
     [JsonPropertyName("version")]
     public string Version { get; init; } = string.Empty;
 
-    /// <summary>
-    /// Optional publish date of the remote build (e.g. "October 5, 2026").
-    /// </summary>
     [JsonPropertyName("released")]
     public string? Released { get; init; }
 
@@ -22,8 +26,30 @@ public sealed class UpdateManifest
     public string? DownloadUrl { get; init; }
 
     /// <summary>
-    /// Accepts either a plain string (PejTools) or a structured object for What's New.
+    /// Notes for the latest (root) version when releases[] is not used.
     /// </summary>
+    [JsonPropertyName("notes")]
+    [JsonConverter(typeof(UpdateNotesJsonConverter))]
+    public UpdateNotes? Notes { get; init; }
+
+    /// <summary>
+    /// Full changelog, typically newest first. Optional.
+    /// </summary>
+    [JsonPropertyName("releases")]
+    public List<ManifestRelease> Releases { get; init; } = [];
+}
+
+/// <summary>
+/// One published version in the changelog.
+/// </summary>
+public sealed class ManifestRelease
+{
+    [JsonPropertyName("version")]
+    public string Version { get; init; } = string.Empty;
+
+    [JsonPropertyName("released")]
+    public string? Released { get; init; }
+
     [JsonPropertyName("notes")]
     [JsonConverter(typeof(UpdateNotesJsonConverter))]
     public UpdateNotes? Notes { get; init; }
@@ -47,8 +73,7 @@ public sealed class UpdateNotes
 }
 
 /// <summary>
-/// PejTools uses "notes": "Latest release".
-/// PejPass What's New prefers structured notes.
+/// Accepts "notes": "text" (PejTools) or structured { added, improved, fixed }.
 /// </summary>
 public sealed class UpdateNotesJsonConverter : JsonConverter<UpdateNotes?>
 {

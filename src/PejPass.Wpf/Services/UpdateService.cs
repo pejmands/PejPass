@@ -82,8 +82,6 @@ public sealed class UpdateService : IDisposable
         }
         catch (OperationCanceledException)
         {
-            // HttpClient timeout surfaces as TaskCanceledException → OperationCanceledException
-            // without the caller's token being cancelled.
             return UpdateCheckResult.NetworkError("Request timed out.");
         }
         catch (HttpRequestException ex)
@@ -101,8 +99,9 @@ public sealed class UpdateService : IDisposable
     }
 
     /// <summary>
-    /// Loads release notes for the What's New window.
-    /// Prefers remote update.json; falls back to embedded offline notes.
+    /// Loads the changelog for What's New.
+    /// Prefers remote update.json (releases[] or root notes);
+    /// falls back to embedded offline notes.
     /// </summary>
     public async Task<IReadOnlyList<ReleaseNote>> LoadReleaseNotesAsync(
         CancellationToken cancellationToken = default)
@@ -115,9 +114,9 @@ public sealed class UpdateService : IDisposable
             if (manifest is not null)
             {
                 LastManifest = manifest;
-                var note = ToReleaseNote(manifest);
-                if (note is not null)
-                    return [note];
+                var notes = ToReleaseNotes(manifest, CurrentVersion);
+                if (notes.Count > 0)
+                    return notes;
             }
         }
         catch
@@ -146,34 +145,138 @@ public sealed class UpdateService : IDisposable
             .ConfigureAwait(false);
     }
 
-    private static ReleaseNote? ToReleaseNote(UpdateManifest manifest)
+    /// <summary>
+    /// Builds ordered changelog cards from the manifest.
+    /// Newest version first.
+    /// </summary>
+    internal static IReadOnlyList<ReleaseNote> ToReleaseNotes(
+        UpdateManifest manifest,
+        string installedVersion)
     {
-        if (string.IsNullOrWhiteSpace(manifest.Version))
+        var entries = new List<(string Version, string? Released, UpdateNotes? Notes)>();
+
+        if (manifest.Releases is { Count: > 0 })
+        {
+            foreach (var r in manifest.Releases)
+            {
+                if (string.IsNullOrWhiteSpace(r.Version))
+                    continue;
+
+                entries.Add((r.Version.Trim(), r.Released, r.Notes));
+            }
+        }
+
+        // Always ensure the root version is present (PejTools single-entry manifests).
+        if (!string.IsNullOrWhiteSpace(manifest.Version))
+        {
+            var rootVer = manifest.Version.Trim();
+            var already = entries.Any(e =>
+                string.Equals(
+                    Normalize(e.Version),
+                    Normalize(rootVer),
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (!already)
+                entries.Insert(0, (rootVer, manifest.Released, manifest.Notes));
+            else if (manifest.Notes is not null)
+            {
+                // Prefer richer root notes if the matching release had empty notes.
+                var idx = entries.FindIndex(e =>
+                    string.Equals(
+                        Normalize(e.Version),
+                        Normalize(rootVer),
+                        StringComparison.OrdinalIgnoreCase));
+
+                if (idx >= 0 && IsEmptyNotes(entries[idx].Notes))
+                {
+                    entries[idx] = (entries[idx].Version, entries[idx].Released ?? manifest.Released, manifest.Notes);
+                }
+            }
+        }
+
+        if (entries.Count == 0)
+            return [];
+
+        // Sort newest first by semantic version when possible.
+        entries.Sort((a, b) => CompareVersionsDesc(a.Version, b.Version));
+
+        var latestNorm = Normalize(entries[0].Version);
+        var installedNorm = Normalize(installedVersion);
+
+        var list = new List<ReleaseNote>(entries.Count);
+
+        foreach (var (version, released, notes) in entries)
+        {
+            var note = MapNotes(version, released, notes, latestNorm, installedNorm);
+            if (note is not null)
+                list.Add(note);
+        }
+
+        return list;
+    }
+
+    private static ReleaseNote? MapNotes(
+        string version,
+        string? released,
+        UpdateNotes? notes,
+        string latestNorm,
+        string installedNorm)
+    {
+        if (string.IsNullOrWhiteSpace(version))
             return null;
 
-        var added = manifest.Notes?.Added ?? [];
-        var improved = manifest.Notes?.Improved ?? [];
-        var fixedItems = manifest.Notes?.Fixed ?? [];
+        var added = notes?.Added ?? [];
+        var improved = notes?.Improved ?? [];
+        var fixedItems = notes?.Fixed ?? [];
 
-        // PejTools-style plain string notes (converter stores text on PlainText)
         if (added.Count == 0 && improved.Count == 0 && fixedItems.Count == 0
-            && !string.IsNullOrWhiteSpace(manifest.Notes?.PlainText))
+            && !string.IsNullOrWhiteSpace(notes?.PlainText))
         {
-            improved = [manifest.Notes!.PlainText!];
+            improved = [notes!.PlainText!];
         }
+
+        var norm = Normalize(version);
+        var display = version.StartsWith('v') || version.StartsWith('V')
+            ? version
+            : $"v{version}";
+
+        var isLatest = string.Equals(norm, latestNorm, StringComparison.OrdinalIgnoreCase);
+        var isInstalled = string.Equals(norm, installedNorm, StringComparison.OrdinalIgnoreCase);
+        var isAvailableUpdate = IsNewerVersion(version, installedNorm);
 
         return new ReleaseNote
         {
-            Version = manifest.Version.StartsWith('v')
-                ? manifest.Version
-                : $"v{manifest.Version}",
-            Date = string.IsNullOrWhiteSpace(manifest.Released)
-                ? string.Empty
-                : manifest.Released,
+            Version = display,
+            Date = string.IsNullOrWhiteSpace(released) ? string.Empty : released,
             Added = added,
             Improved = improved,
-            Fixed = fixedItems
+            Fixed = fixedItems,
+            IsLatest = isLatest,
+            IsInstalled = isInstalled,
+            IsAvailableUpdate = isAvailableUpdate
         };
+    }
+
+    private static bool IsEmptyNotes(UpdateNotes? notes)
+    {
+        if (notes is null)
+            return true;
+
+        return notes.Added.Count == 0
+               && notes.Improved.Count == 0
+               && notes.Fixed.Count == 0
+               && string.IsNullOrWhiteSpace(notes.PlainText);
+    }
+
+    private static int CompareVersionsDesc(string a, string b)
+    {
+        if (System.Version.TryParse(Normalize(a), out var va)
+            && System.Version.TryParse(Normalize(b), out var vb))
+        {
+            return vb.CompareTo(va);
+        }
+
+        return string.Compare(b, a, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -278,10 +381,10 @@ public sealed class UpdateService : IDisposable
 
     public static bool IsNewerVersion(string candidate, string current)
     {
-        if (!Version.TryParse(Normalize(candidate), out var next))
+        if (!System.Version.TryParse(Normalize(candidate), out var next))
             return false;
 
-        if (!Version.TryParse(Normalize(current), out var cur))
+        if (!System.Version.TryParse(Normalize(current), out var cur))
             return true;
 
         return next > cur;

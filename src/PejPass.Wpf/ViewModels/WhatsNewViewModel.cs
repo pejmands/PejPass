@@ -16,7 +16,7 @@ public partial class WhatsNewViewModel : ObservableObject
     private bool isLoading;
 
     [ObservableProperty]
-    private string subtitle = "Latest changes and improvements";
+    private string subtitle = "Changelog";
 
     public WhatsNewViewModel(UpdateService updateService)
     {
@@ -38,11 +38,19 @@ public partial class WhatsNewViewModel : ObservableObject
                 .LoadReleaseNotesAsync()
                 .ConfigureAwait(true);
 
-            Releases = notes;
+            Releases = notes.Count > 0 ? notes : ReleaseNotes.All;
 
-            Subtitle = _updateService.LastManifest is not null
-                ? "From update manifest"
-                : "Offline changelog";
+            if (_updateService.LastManifest is not null)
+            {
+                var n = Releases.Count;
+                Subtitle = n == 1
+                    ? "Latest release notes"
+                    : $"{n} releases";
+            }
+            else
+            {
+                Subtitle = "Offline changelog";
+            }
         }
         catch
         {

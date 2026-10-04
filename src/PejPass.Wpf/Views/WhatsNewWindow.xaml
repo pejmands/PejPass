@@ -4,7 +4,7 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	Title="What's New"
 	Width="520"
-	Height="600"
+	Height="620"
 	MinWidth="480"
 	MinHeight="480"
 	Background="{DynamicResource BgBrush}"
@@ -63,18 +63,73 @@
 
 							<StackPanel>
 
-								<TextBlock
-									FontSize="{DynamicResource AppFontSize16}"
-									FontWeight="SemiBold"
-									Foreground="{DynamicResource TextBrush}"
-									Text="{Binding Version}" />
+								<!-- Version row + badges -->
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="*" />
+										<ColumnDefinition Width="Auto" />
+									</Grid.ColumnDefinitions>
+
+									<TextBlock
+										VerticalAlignment="Center"
+										FontSize="{DynamicResource AppFontSize16}"
+										FontWeight="SemiBold"
+										Foreground="{DynamicResource TextBrush}"
+										Text="{Binding Version}" />
+
+									<StackPanel
+										Grid.Column="1"
+										Orientation="Horizontal">
+
+										<Border
+											Margin="6,0,0,0"
+											Padding="6,2"
+											Background="{DynamicResource AccentBrush}"
+											CornerRadius="4"
+											Visibility="{Binding IsAvailableUpdate, Converter={StaticResource BoolToVis}}">
+											<TextBlock
+												FontSize="{DynamicResource AppFontSize10}"
+												FontWeight="SemiBold"
+												Foreground="White"
+												Text="Update" />
+										</Border>
+
+										<Border
+											Margin="6,0,0,0"
+											Padding="6,2"
+											Background="{DynamicResource SurfaceAltBrush}"
+											CornerRadius="4"
+											Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}">
+											<TextBlock
+												FontSize="{DynamicResource AppFontSize10}"
+												FontWeight="SemiBold"
+												Foreground="{DynamicResource MutedBrush}"
+												Text="Installed" />
+										</Border>
+
+										<Border
+											Margin="6,0,0,0"
+											Padding="6,2"
+											Background="{DynamicResource SurfaceAltBrush}"
+											CornerRadius="4"
+											Visibility="{Binding IsLatest, Converter={StaticResource BoolToVis}}">
+											<TextBlock
+												FontSize="{DynamicResource AppFontSize10}"
+												FontWeight="SemiBold"
+												Foreground="{DynamicResource MutedBrush}"
+												Text="Latest" />
+										</Border>
+
+									</StackPanel>
+
+								</Grid>
 
 								<TextBlock
 									Margin="0,4,0,12"
 									FontSize="{DynamicResource AppFontSize11}"
-									Foreground="{DynamicResource MutedBrush}"
-									Text="{Binding Date}"
-									Visibility="{Binding Date, Converter={StaticResource NullOrEmptyToVis}}" />
+										Foreground="{DynamicResource MutedBrush}"
+										Text="{Binding Date}"
+										Visibility="{Binding Date, Converter={StaticResource NullOrEmptyToVis}}" />
 
 								<!-- Added -->
 								<StackPanel Visibility="{Binding Added, Converter={StaticResource NullOrEmptyToVis}}">
@@ -152,8 +207,8 @@
 			HorizontalAlignment="Center"
 			Click="CloseButton_Click"
 			Content="Close"
-			IsDefault="True"
 			IsCancel="True"
+			IsDefault="True"
 			Style="{StaticResource SecondaryButton}" />
 
 	</Grid>
