@@ -1,5 +1,4 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using PejPass.Wpf.Data;
 using PejPass.Wpf.Records;
 using PejPass.Wpf.Services;
 
@@ -10,7 +9,7 @@ public partial class WhatsNewViewModel(UpdateService updateService) : Observable
     private readonly UpdateService _updateService = updateService;
 
     [ObservableProperty]
-    public partial IReadOnlyList<ReleaseNote> Releases { get; set; } = ReleaseNotes.All;
+    public partial IReadOnlyList<ReleaseNote> Releases { get; set; } = [];
 
     [ObservableProperty]
     public partial bool IsLoading { get; set; }
@@ -24,37 +23,61 @@ public partial class WhatsNewViewModel(UpdateService updateService) : Observable
 
     public async Task LoadAsync()
     {
-        IsLoading = true;
-        Subtitle = "Loading…";
+        // Phase 1 — show disk/memory cache immediately (no network wait).
+        var cached = _updateService.GetCachedReleaseNotes();
+        if (cached.Count > 0)
+        {
+            Releases = cached;
+            Subtitle = FormatSubtitle(cached.Count, offline: true);
+            IsLoading = false;
+        }
+        else
+        {
+            IsLoading = true;
+            Subtitle = "Loading…";
+        }
 
+        // Phase 2 — refresh from update.json; update UI + cache when data arrives.
         try
         {
             var notes = await _updateService
                 .LoadReleaseNotesAsync()
                 .ConfigureAwait(true);
 
-            Releases = notes.Count > 0 ? notes : ReleaseNotes.All;
-
-            if (_updateService.LastManifest is not null)
+            if (notes.Count > 0)
             {
-                var n = Releases.Count;
-                Subtitle = n == 1
-                    ? "Latest release notes"
-                    : $"{n} releases";
+                Releases = notes;
+                Subtitle = FormatSubtitle(
+                    notes.Count,
+                    offline: _updateService.LastManifest is null);
             }
-            else
+            else if (cached.Count == 0)
             {
-                Subtitle = "Offline changelog";
+                Releases = [];
+                Subtitle = "No changelog yet. Connect once to download release notes.";
             }
         }
         catch
         {
-            Releases = ReleaseNotes.All;
-            Subtitle = "Offline changelog";
+            if (cached.Count == 0)
+            {
+                Releases = [];
+                Subtitle = "Offline — no cached changelog yet.";
+            }
+            else
+            {
+                Subtitle = FormatSubtitle(cached.Count, offline: true);
+            }
         }
         finally
         {
             IsLoading = false;
         }
+    }
+
+    private static string FormatSubtitle(int count, bool offline)
+    {
+        var label = count == 1 ? "1 release" : $"{count} releases";
+        return offline ? $"{label} (cached)" : label;
     }
 }
