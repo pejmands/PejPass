@@ -19,6 +19,9 @@ public partial class AboutViewModel : ObservableObject
     private bool isChecking;
 
     [ObservableProperty]
+    private bool isDownloading;
+
+    [ObservableProperty]
     private bool hasUpdate;
 
     [ObservableProperty]
@@ -27,9 +30,17 @@ public partial class AboutViewModel : ObservableObject
     [ObservableProperty]
     private string? latestVersion;
 
+    [ObservableProperty]
+    private double downloadProgress;
+
+    [ObservableProperty]
+    private string? downloadedPath;
+
     public string AppName => AppInfoService.Name;
 
     public string VersionDisplay => $"v{AppInfoService.Version}";
+
+    public bool IsBusy => IsChecking || IsDownloading;
 
     public AboutViewModel(UpdateService updateService)
     {
@@ -37,10 +48,6 @@ public partial class AboutViewModel : ObservableObject
         StatusMessage = _updateService.DefaultStatusMessage;
     }
 
-    /// <summary>
-    /// Parameterless constructor kept for designer / simple new() sites.
-    /// Prefer the DI constructor in production code.
-    /// </summary>
     public AboutViewModel() : this(new UpdateService())
     {
     }
@@ -55,7 +62,10 @@ public partial class AboutViewModel : ObservableObject
         HasUpdate = false;
         DownloadUrl = null;
         LatestVersion = null;
+        DownloadedPath = null;
+        DownloadProgress = 0;
         StatusMessage = "Checking for updates…";
+        NotifyBusy();
 
         try
         {
@@ -68,12 +78,11 @@ public partial class AboutViewModel : ObservableObject
         finally
         {
             IsChecking = false;
-            CheckForUpdatesCommand.NotifyCanExecuteChanged();
-            OpenDownloadCommand.NotifyCanExecuteChanged();
+            NotifyBusy();
         }
     }
 
-    private bool CanCheckForUpdates() => !IsChecking;
+    private bool CanCheckForUpdates() => !IsBusy;
 
     private void ApplyResult(UpdateCheckResult result)
     {
@@ -83,17 +92,57 @@ public partial class AboutViewModel : ObservableObject
         DownloadUrl = result.DownloadUrl;
     }
 
-    [RelayCommand(CanExecute = nameof(CanOpenDownload))]
-    private void OpenDownload()
+    [RelayCommand(CanExecute = nameof(CanDownloadUpdate))]
+    private async Task DownloadUpdateAsync()
     {
-        if (!string.IsNullOrWhiteSpace(DownloadUrl))
-            _updateService.OpenUrl(DownloadUrl);
-        else
+        if (string.IsNullOrWhiteSpace(DownloadUrl))
+        {
             _updateService.OpenReleasesPage();
+            return;
+        }
+
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+
+        IsDownloading = true;
+        DownloadProgress = 0;
+        DownloadedPath = null;
+        StatusMessage = $"Downloading v{LatestVersion}…";
+        NotifyBusy();
+
+        try
+        {
+            var progress = new Progress<double>(p =>
+            {
+                DownloadProgress = p;
+                StatusMessage = $"Downloading v{LatestVersion}… {p:P0}";
+            });
+
+            var path = await _updateService
+                .DownloadUpdateAsync(DownloadUrl, progress, _cts.Token)
+                .ConfigureAwait(true);
+
+            DownloadedPath = path;
+            StatusMessage = $"Downloaded to Downloads folder.";
+            _updateService.OpenFolder(path);
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "Download cancelled.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Download failed: {ex.Message}";
+        }
+        finally
+        {
+            IsDownloading = false;
+            NotifyBusy();
+        }
     }
 
-    private bool CanOpenDownload() =>
-        HasUpdate && !IsChecking;
+    private bool CanDownloadUpdate() =>
+        HasUpdate && !IsBusy && !string.IsNullOrWhiteSpace(DownloadUrl);
 
     [RelayCommand]
     private void ShowWhatsNew()
@@ -110,7 +159,14 @@ public partial class AboutViewModel : ObservableObject
     private void OpenGitHub() =>
         _updateService.OpenRepositoryPage();
 
-    public void CancelPendingCheck()
+    private void NotifyBusy()
+    {
+        OnPropertyChanged(nameof(IsBusy));
+        CheckForUpdatesCommand.NotifyCanExecuteChanged();
+        DownloadUpdateCommand.NotifyCanExecuteChanged();
+    }
+
+    public void CancelPending()
     {
         _cts?.Cancel();
     }

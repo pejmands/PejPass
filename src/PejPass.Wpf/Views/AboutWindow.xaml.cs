@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using PejPass.Wpf.ViewModels;
 using System.Windows;
 
@@ -8,13 +9,12 @@ public partial class AboutWindow : Window
     public AboutWindow()
     {
         InitializeComponent();
+        App.PrepareCustomChrome(this);
 
-        // Prefer DI when available; fall back for designer / simple new().
         AboutViewModel vm;
         try
         {
-            vm = App.Services.GetService(typeof(AboutViewModel)) as AboutViewModel
-                 ?? new AboutViewModel();
+            vm = App.Services.GetService<AboutViewModel>() ?? new AboutViewModel();
         }
         catch
         {
@@ -27,7 +27,7 @@ public partial class AboutWindow : Window
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is AboutViewModel vm)
-            vm.CancelPendingCheck();
+            vm.CancelPending();
 
         Close();
     }

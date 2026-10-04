@@ -4,7 +4,7 @@ namespace PejPass.Wpf.Records;
 
 /// <summary>
 /// Shape of the remote update.json file.
-/// Keep this contract stable; clients depend on it.
+/// Compatible with the PejTools-style manifest (version + downloadUrl + notes).
 /// </summary>
 public sealed class UpdateManifest
 {
@@ -17,8 +17,18 @@ public sealed class UpdateManifest
     [JsonPropertyName("downloadUrl")]
     public string? DownloadUrl { get; init; }
 
+    /// <summary>
+    /// Structured notes (preferred).
+    /// </summary>
     [JsonPropertyName("notes")]
     public UpdateNotes? Notes { get; init; }
+
+    /// <summary>
+    /// Plain-text notes fallback (PejTools style: "notes": "Latest release").
+    /// Used only when structured Notes is absent.
+    /// </summary>
+    [JsonPropertyName("notesText")]
+    public string? NotesText { get; init; }
 }
 
 public sealed class UpdateNotes

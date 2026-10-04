@@ -1,18 +1,18 @@
-﻿<Window
+<Window
 	x:Class="PejPass.Wpf.Views.WhatsNewWindow"
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	Title="What's New"
 	Width="520"
-	Height="620"
-	MinWidth="520"
-	MinHeight="620"
+	Height="600"
+	MinWidth="480"
+	MinHeight="480"
 	Background="{DynamicResource BgBrush}"
 	ResizeMode="NoResize"
 	ShowInTaskbar="False"
 	WindowStartupLocation="CenterOwner">
 
-	<Grid Margin="32">
+	<Grid Margin="28,20">
 
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
@@ -21,26 +21,32 @@
 		</Grid.RowDefinitions>
 
 
-		<StackPanel>
+		<StackPanel Margin="0,0,0,16">
 
 			<TextBlock
-				FontSize="{DynamicResource AppFontSize24}"
+				FontSize="{DynamicResource AppFontSize22}"
 				FontWeight="Bold"
 				Foreground="{DynamicResource TextBrush}"
 				Text="What's New" />
 
 			<TextBlock
-				Margin="0,6,0,0"
+				Margin="0,4,0,0"
 				FontSize="{DynamicResource AppFontSize12}"
 				Foreground="{DynamicResource MutedBrush}"
-				Text="Latest changes and improvements" />
+				Text="{Binding Subtitle}" />
+
+			<ProgressBar
+				Height="2"
+				Margin="0,10,0,0"
+				IsIndeterminate="True"
+				Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" />
 
 		</StackPanel>
 
 
 		<ScrollViewer
 			Grid.Row="1"
-			Margin="0,28,0,20"
+			Margin="0,0,0,16"
 			VerticalScrollBarVisibility="Auto">
 
 			<ItemsControl ItemsSource="{Binding Releases}">
@@ -64,63 +70,68 @@
 									Text="{Binding Version}" />
 
 								<TextBlock
-									Margin="0,4,0,16"
+									Margin="0,4,0,12"
 									FontSize="{DynamicResource AppFontSize11}"
 									Foreground="{DynamicResource MutedBrush}"
-									Text="{Binding Date}" />
+									Text="{Binding Date}"
+									Visibility="{Binding Date, Converter={StaticResource NullOrEmptyToVis}}" />
 
+								<!-- Added -->
+								<StackPanel Visibility="{Binding Added, Converter={StaticResource NullOrEmptyToVis}}">
+									<TextBlock
+										FontWeight="SemiBold"
+										Foreground="{DynamicResource TextBrush}"
+										Text="Added" />
+									<ItemsControl ItemsSource="{Binding Added}">
+										<ItemsControl.ItemTemplate>
+											<DataTemplate>
+												<TextBlock
+													Margin="0,4,0,0"
+													Foreground="{DynamicResource TextBrush}"
+													Text="{Binding StringFormat=• {0}}"
+													TextWrapping="Wrap" />
+											</DataTemplate>
+										</ItemsControl.ItemTemplate>
+									</ItemsControl>
+								</StackPanel>
 
-								<TextBlock
-									FontWeight="SemiBold"
-									Foreground="{DynamicResource TextBrush}"
-									Text="Added" />
+								<!-- Improved -->
+								<StackPanel Margin="0,12,0,0" Visibility="{Binding Improved, Converter={StaticResource NullOrEmptyToVis}}">
+									<TextBlock
+										FontWeight="SemiBold"
+										Foreground="{DynamicResource TextBrush}"
+										Text="Improved" />
+									<ItemsControl ItemsSource="{Binding Improved}">
+										<ItemsControl.ItemTemplate>
+											<DataTemplate>
+												<TextBlock
+													Margin="0,4,0,0"
+													Foreground="{DynamicResource TextBrush}"
+													Text="{Binding StringFormat=• {0}}"
+													TextWrapping="Wrap" />
+											</DataTemplate>
+										</ItemsControl.ItemTemplate>
+									</ItemsControl>
+								</StackPanel>
 
-								<ItemsControl ItemsSource="{Binding Added}">
-									<ItemsControl.ItemTemplate>
-										<DataTemplate>
-											<TextBlock
-												Margin="0,4,0,0"
-												Foreground="{DynamicResource TextBrush}"
-												Text="{Binding StringFormat=• {0}}" />
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-
-
-								<TextBlock
-									Margin="0,14,0,0"
-									FontWeight="SemiBold"
-									Foreground="{DynamicResource TextBrush}"
-									Text="Improved" />
-
-								<ItemsControl ItemsSource="{Binding Improved}">
-									<ItemsControl.ItemTemplate>
-										<DataTemplate>
-											<TextBlock
-												Margin="0,4,0,0"
-												Foreground="{DynamicResource TextBrush}"
-												Text="{Binding StringFormat=• {0}}" />
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-
-
-								<TextBlock
-									Margin="0,14,0,0"
-									FontWeight="SemiBold"
-									Foreground="{DynamicResource TextBrush}"
-									Text="Fixed" />
-
-								<ItemsControl ItemsSource="{Binding Fixed}">
-									<ItemsControl.ItemTemplate>
-										<DataTemplate>
-											<TextBlock
-												Margin="0,4,0,0"
-												Foreground="{DynamicResource TextBrush}"
-												Text="{Binding StringFormat=• {0}}" />
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
+								<!-- Fixed -->
+								<StackPanel Margin="0,12,0,0" Visibility="{Binding Fixed, Converter={StaticResource NullOrEmptyToVis}}">
+									<TextBlock
+										FontWeight="SemiBold"
+										Foreground="{DynamicResource TextBrush}"
+										Text="Fixed" />
+									<ItemsControl ItemsSource="{Binding Fixed}">
+										<ItemsControl.ItemTemplate>
+											<DataTemplate>
+												<TextBlock
+													Margin="0,4,0,0"
+													Foreground="{DynamicResource TextBrush}"
+													Text="{Binding StringFormat=• {0}}"
+													TextWrapping="Wrap" />
+											</DataTemplate>
+										</ItemsControl.ItemTemplate>
+									</ItemsControl>
+								</StackPanel>
 
 							</StackPanel>
 
@@ -142,6 +153,7 @@
 			Click="CloseButton_Click"
 			Content="Close"
 			IsDefault="True"
+			IsCancel="True"
 			Style="{StaticResource SecondaryButton}" />
 
 	</Grid>

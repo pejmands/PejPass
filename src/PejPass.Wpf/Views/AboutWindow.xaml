@@ -3,178 +3,198 @@
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	Title="About PejPass"
-	Width="460"
-	Height="640"
-	MinWidth="460"
-	MinHeight="620"
+	Width="480"
+	Height="620"
+	MinWidth="440"
+	MinHeight="520"
 	Background="{DynamicResource BgBrush}"
 	ResizeMode="NoResize"
 	ShowInTaskbar="False"
 	WindowStartupLocation="CenterOwner">
 
-	<Grid Margin="32,24">
+	<Grid Margin="28,20,28,20">
 
 		<Grid.RowDefinitions>
+			<!-- Header + actions (fixed) -->
 			<RowDefinition Height="Auto" />
+			<!-- Scrollable body -->
 			<RowDefinition Height="*" />
+			<!-- Footer (fixed) -->
 			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
 
 
-		<!-- Header -->
+		<!-- ========== Header ========== -->
 
-		<StackPanel HorizontalAlignment="Center">
+		<StackPanel>
 
-			<Image
-				Width="64"
-				Height="64"
-				Margin="0,0,0,12"
-				Source="/Assets/PejPass.ico" />
+			<StackPanel HorizontalAlignment="Center">
 
-			<TextBlock
-				HorizontalAlignment="Center"
-				FontSize="{DynamicResource AppFontSize24}"
-				FontWeight="Bold"
-				Foreground="{DynamicResource TextBrush}"
-				Text="{Binding AppName}" />
+				<Image
+					Width="56"
+					Height="56"
+					Margin="0,0,0,10"
+					Source="/Assets/PejPass.ico" />
 
-			<TextBlock
-				Margin="0,4,0,0"
-				HorizontalAlignment="Center"
-				FontSize="{DynamicResource AppFontSize12}"
-				Foreground="{DynamicResource MutedBrush}"
-				Text="{Binding VersionDisplay}" />
+				<TextBlock
+					HorizontalAlignment="Center"
+					FontSize="{DynamicResource AppFontSize22}"
+					FontWeight="Bold"
+					Foreground="{DynamicResource TextBrush}"
+					Text="{Binding AppName}" />
 
-			<TextBlock
-				Margin="0,10,0,0"
-				HorizontalAlignment="Center"
-				FontSize="{DynamicResource AppFontSize11}"
-				Foreground="{DynamicResource MutedBrush}"
-				Text="{Binding StatusMessage}"
-				TextAlignment="Center"
-				TextWrapping="Wrap" />
+				<TextBlock
+					Margin="0,2,0,0"
+					HorizontalAlignment="Center"
+					FontSize="{DynamicResource AppFontSize12}"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="{Binding VersionDisplay}" />
 
-			<!-- Progress while checking -->
-			<ProgressBar
-				Width="180"
-				Height="3"
-				Margin="0,10,0,0"
-				IsIndeterminate="True"
-				Visibility="{Binding IsChecking, Converter={StaticResource BoolToVis}}" />
+				<TextBlock
+					Margin="0,8,0,0"
+					HorizontalAlignment="Center"
+					FontSize="{DynamicResource AppFontSize11}"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="{Binding StatusMessage}"
+					TextAlignment="Center"
+					TextWrapping="Wrap" />
 
-			<!-- Primary actions -->
-			<StackPanel
-				Margin="0,16,0,0"
-				HorizontalAlignment="Center"
-				Orientation="Horizontal">
-
-				<Button
-					Width="150"
-					Margin="0,0,8,0"
-					Command="{Binding CheckForUpdatesCommand}"
-					Content="Check for Updates"
-					Style="{StaticResource SecondaryButton}"
-					ToolTip="Fetches update.json only when you click (no background checks)" />
-
-				<Button
-					Width="120"
-					Command="{Binding ShowWhatsNewCommand}"
-					Content="What's New"
-					Style="{StaticResource SecondaryButton}" />
+				<ProgressBar
+					Width="200"
+					Height="3"
+					Margin="0,8,0,0"
+					IsIndeterminate="{Binding IsChecking}"
+					Maximum="1"
+					Value="{Binding DownloadProgress}"
+					Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
 
 			</StackPanel>
 
-			<!-- Shown only when an update is available -->
-			<Button
-				Width="180"
-				Margin="0,10,0,0"
-				HorizontalAlignment="Center"
-				Command="{Binding OpenDownloadCommand}"
-				Content="Open Download Page"
-				Style="{StaticResource PrimaryButton}"
-				Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVis}}" />
+			<!-- Actions: always reserved space -->
+			<StackPanel
+				Margin="0,14,0,4"
+				HorizontalAlignment="Center">
+
+				<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+
+					<Button
+						Width="148"
+						Margin="0,0,8,0"
+						Command="{Binding CheckForUpdatesCommand}"
+						Content="Check for Updates"
+						Style="{StaticResource SecondaryButton}"
+						ToolTip="Fetches update.json only when you click" />
+
+					<Button
+						Width="120"
+						Command="{Binding ShowWhatsNewCommand}"
+						Content="What's New"
+						Style="{StaticResource SecondaryButton}" />
+
+				</StackPanel>
+
+				<!-- Download: reserved height so layout does not jump -->
+				<Button
+					Width="180"
+					Margin="0,10,0,0"
+					HorizontalAlignment="Center"
+					Command="{Binding DownloadUpdateCommand}"
+					Content="Download Update"
+					Style="{StaticResource PrimaryButton}"
+					Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVis}}"
+					ToolTip="Downloads the package to your Downloads folder" />
+
+			</StackPanel>
 
 		</StackPanel>
 
 
-		<!-- Body -->
+		<!-- ========== Body (scrollable) ========== -->
 
-		<StackPanel Grid.Row="1" Margin="0,22,0,18">
+		<ScrollViewer
+			Grid.Row="1"
+			Margin="0,12,0,12"
+			HorizontalScrollBarVisibility="Disabled"
+			VerticalScrollBarVisibility="Auto">
 
-			<TextBlock
-				HorizontalAlignment="Center"
-				FontSize="{DynamicResource AppFontSize13}"
-				Foreground="{DynamicResource TextBrush}"
-				Text="A simple, secure, privacy-focused password manager."
-				TextAlignment="Center"
-				TextWrapping="Wrap" />
+			<StackPanel>
 
-			<TextBlock
-				Margin="0,6,0,16"
-				HorizontalAlignment="Center"
-				FontSize="{DynamicResource AppFontSize11}"
-				Foreground="{DynamicResource MutedBrush}"
-				Text="Your vault stays encrypted, local, and under your control."
-				TextAlignment="Center"
-				TextWrapping="Wrap" />
+				<TextBlock
+					HorizontalAlignment="Center"
+					FontSize="{DynamicResource AppFontSize13}"
+					Foreground="{DynamicResource TextBrush}"
+					Text="A simple, secure, privacy-focused password manager."
+					TextAlignment="Center"
+					TextWrapping="Wrap" />
 
-			<Border
-				Margin="0,0,0,8"
-				Padding="12"
-				Background="{DynamicResource SurfaceBrush}"
-				CornerRadius="8">
-				<StackPanel>
-					<TextBlock
-						FontWeight="SemiBold"
-						Foreground="{DynamicResource TextBrush}"
-						Text="Security" />
-					<TextBlock
-						Margin="0,4,0,0"
-						FontSize="{DynamicResource AppFontSize11}"
-						Foreground="{DynamicResource MutedBrush}"
-						Text="Argon2id key derivation&#10;AES-256-GCM vault encryption" />
-				</StackPanel>
-			</Border>
+				<TextBlock
+					Margin="0,6,0,14"
+					HorizontalAlignment="Center"
+					FontSize="{DynamicResource AppFontSize11}"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="Your vault stays encrypted, local, and under your control."
+					TextAlignment="Center"
+					TextWrapping="Wrap" />
 
-			<Border
-				Margin="0,0,0,8"
-				Padding="12"
-				Background="{DynamicResource SurfaceBrush}"
-				CornerRadius="8">
-				<StackPanel>
-					<TextBlock
-						FontWeight="SemiBold"
-						Foreground="{DynamicResource TextBrush}"
-						Text="Local First" />
-					<TextBlock
-						Margin="0,4,0,0"
-						FontSize="{DynamicResource AppFontSize11}"
-						Foreground="{DynamicResource MutedBrush}"
-						Text="No account. No cloud dependency.&#10;Update checks happen only when you ask." />
-				</StackPanel>
-			</Border>
+				<Border
+					Margin="0,0,0,8"
+					Padding="12"
+					Background="{DynamicResource SurfaceBrush}"
+					CornerRadius="8">
+					<StackPanel>
+						<TextBlock
+							FontWeight="SemiBold"
+							Foreground="{DynamicResource TextBrush}"
+							Text="Security" />
+						<TextBlock
+							Margin="0,4,0,0"
+							FontSize="{DynamicResource AppFontSize11}"
+							Foreground="{DynamicResource MutedBrush}"
+							Text="Argon2id key derivation&#10;AES-256-GCM vault encryption" />
+					</StackPanel>
+				</Border>
 
-			<Border
-				Padding="12"
-				Background="{DynamicResource SurfaceBrush}"
-				CornerRadius="8">
-				<StackPanel>
-					<TextBlock
-						FontWeight="SemiBold"
-						Foreground="{DynamicResource TextBrush}"
-						Text="Built With" />
-					<TextBlock
-						Margin="0,4,0,0"
-						FontSize="{DynamicResource AppFontSize11}"
-						Foreground="{DynamicResource MutedBrush}"
-						Text=".NET 10 • WPF • CommunityToolkit.Mvvm" />
-				</StackPanel>
-			</Border>
+				<Border
+					Margin="0,0,0,8"
+					Padding="12"
+					Background="{DynamicResource SurfaceBrush}"
+					CornerRadius="8">
+					<StackPanel>
+						<TextBlock
+							FontWeight="SemiBold"
+							Foreground="{DynamicResource TextBrush}"
+							Text="Local First" />
+						<TextBlock
+							Margin="0,4,0,0"
+							FontSize="{DynamicResource AppFontSize11}"
+							Foreground="{DynamicResource MutedBrush}"
+							Text="No account. No cloud dependency.&#10;Update checks and downloads only when you ask." />
+					</StackPanel>
+				</Border>
 
-		</StackPanel>
+				<Border
+					Padding="12"
+					Background="{DynamicResource SurfaceBrush}"
+					CornerRadius="8">
+					<StackPanel>
+						<TextBlock
+							FontWeight="SemiBold"
+							Foreground="{DynamicResource TextBrush}"
+							Text="Built With" />
+						<TextBlock
+							Margin="0,4,0,0"
+							FontSize="{DynamicResource AppFontSize11}"
+							Foreground="{DynamicResource MutedBrush}"
+							Text=".NET 10 • WPF • CommunityToolkit.Mvvm" />
+					</StackPanel>
+				</Border>
+
+			</StackPanel>
+
+		</ScrollViewer>
 
 
-		<!-- Footer -->
+		<!-- ========== Footer ========== -->
 
 		<Grid Grid.Row="2">
 
@@ -205,6 +225,7 @@
 				Click="CloseButton_Click"
 				Content="Close"
 				IsDefault="True"
+				IsCancel="True"
 				Style="{StaticResource SecondaryButton}" />
 
 		</Grid>

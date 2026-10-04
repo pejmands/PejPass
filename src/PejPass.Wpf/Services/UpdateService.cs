@@ -1,13 +1,15 @@
+using PejPass.Wpf.Data;
 using PejPass.Wpf.Records;
 using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 
 namespace PejPass.Wpf.Services;
 
 /// <summary>
-/// Manual update discovery. Never runs automatically.
-/// Fetches a small JSON manifest only when the user asks.
+/// Manual update discovery and package download.
+/// Never runs automatically. Never replaces the running process.
 /// </summary>
 public sealed class UpdateService : IDisposable
 {
@@ -21,6 +23,11 @@ public sealed class UpdateService : IDisposable
     private readonly HttpClient _http;
     private readonly string _manifestUrl;
 
+    /// <summary>
+    /// Last successfully fetched manifest (used by What's New).
+    /// </summary>
+    public UpdateManifest? LastManifest { get; private set; }
+
     public UpdateService()
         : this(AppInfoService.UpdateManifestUrl)
     {
@@ -32,10 +39,9 @@ public sealed class UpdateService : IDisposable
 
         _http = new HttpClient
         {
-            Timeout = TimeSpan.FromSeconds(12)
+            Timeout = TimeSpan.FromSeconds(30)
         };
 
-        // Identify ourselves politely; no telemetry.
         _http.DefaultRequestHeaders.UserAgent.ParseAdd(
             $"{AppInfoService.Name}/{AppInfoService.Version}");
     }
@@ -45,37 +51,20 @@ public sealed class UpdateService : IDisposable
     public string DefaultStatusMessage =>
         $"You are running v{CurrentVersion}.";
 
-    /// <summary>
-    /// Performs a single, user-initiated update check.
-    /// </summary>
     public async Task<UpdateCheckResult> CheckForUpdatesAsync(
         CancellationToken cancellationToken = default)
     {
         try
         {
-            using var response = await _http
-                .GetAsync(_manifestUrl, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                return UpdateCheckResult.NetworkError(
-                    $"HTTP {(int)response.StatusCode}.");
-            }
-
-            await using var stream = await response.Content
-                .ReadAsStreamAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            var manifest = await JsonSerializer
-                .DeserializeAsync<UpdateManifest>(stream, JsonOptions, cancellationToken)
-                .ConfigureAwait(false);
+            var manifest = await FetchManifestAsync(cancellationToken).ConfigureAwait(false);
 
             if (manifest is null || string.IsNullOrWhiteSpace(manifest.Version))
             {
                 return UpdateCheckResult.InvalidManifest(
                     "Missing or empty version field.");
             }
+
+            LastManifest = manifest;
 
             if (!IsNewerVersion(manifest.Version, CurrentVersion))
                 return UpdateCheckResult.UpToDate(CurrentVersion);
@@ -110,9 +99,184 @@ public sealed class UpdateService : IDisposable
     }
 
     /// <summary>
-    /// Returns true when <paramref name="candidate"/> is strictly newer than <paramref name="current"/>.
-    /// Accepts simple dotted versions (e.g. 0.1.0, 1.2.3).
+    /// Loads release notes for the What's New window.
+    /// Prefers remote update.json; falls back to embedded offline notes.
     /// </summary>
+    public async Task<IReadOnlyList<ReleaseNote>> LoadReleaseNotesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var manifest = LastManifest
+                ?? await FetchManifestAsync(cancellationToken).ConfigureAwait(false);
+
+            if (manifest is not null)
+            {
+                LastManifest = manifest;
+                var note = ToReleaseNote(manifest);
+                if (note is not null)
+                    return [note];
+            }
+        }
+        catch
+        {
+            // Offline / error → embedded notes.
+        }
+
+        return ReleaseNotes.All;
+    }
+
+    private async Task<UpdateManifest?> FetchManifestAsync(CancellationToken cancellationToken)
+    {
+        using var response = await _http
+            .GetAsync(_manifestUrl, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+            return null;
+
+        await using var stream = await response.Content
+            .ReadAsStreamAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return await JsonSerializer
+            .DeserializeAsync<UpdateManifest>(stream, JsonOptions, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static ReleaseNote? ToReleaseNote(UpdateManifest manifest)
+    {
+        if (string.IsNullOrWhiteSpace(manifest.Version))
+            return null;
+
+        var added = manifest.Notes?.Added ?? [];
+        var improved = manifest.Notes?.Improved ?? [];
+        var fixedItems = manifest.Notes?.Fixed ?? [];
+
+        // PejTools-style plain notes string
+        if (added.Count == 0 && improved.Count == 0 && fixedItems.Count == 0
+            && !string.IsNullOrWhiteSpace(manifest.NotesText))
+        {
+            improved = [manifest.NotesText!];
+        }
+
+        // System.Text.Json may bind a JSON string "notes" into neither field;
+        // we already prefer structured. Empty is ok — UI can hide sections.
+
+        return new ReleaseNote
+        {
+            Version = manifest.Version.StartsWith('v')
+                ? manifest.Version
+                : $"v{manifest.Version}",
+            Date = string.IsNullOrWhiteSpace(manifest.Released)
+                ? string.Empty
+                : manifest.Released,
+            Added = added,
+            Improved = improved,
+            Fixed = fixedItems
+        };
+    }
+
+    /// <summary>
+    /// Downloads the update package to the user's Downloads folder.
+    /// Does not install or replace the running app.
+    /// </summary>
+    public async Task<string> DownloadUpdateAsync(
+        string downloadUrl,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(downloadUrl))
+            throw new ArgumentException("Download URL is empty.", nameof(downloadUrl));
+
+        using var response = await _http
+            .GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            .ConfigureAwait(false);
+
+        response.EnsureSuccessStatusCode();
+
+        var fileName = ResolveFileName(downloadUrl, response);
+        var downloads = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            "Downloads");
+
+        Directory.CreateDirectory(downloads);
+
+        var destPath = Path.Combine(downloads, fileName);
+        destPath = MakeUniquePath(destPath);
+
+        var total = response.Content.Headers.ContentLength ?? -1L;
+        await using var input = await response.Content
+            .ReadAsStreamAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        await using var output = new FileStream(
+            destPath,
+            FileMode.CreateNew,
+            FileAccess.Write,
+            FileShare.None,
+            81920,
+            useAsync: true);
+
+        var buffer = new byte[81920];
+        long readTotal = 0;
+        int read;
+
+        while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)
+                   .ConfigureAwait(false)) > 0)
+        {
+            await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken)
+                .ConfigureAwait(false);
+
+            readTotal += read;
+
+            if (total > 0 && progress is not null)
+                progress.Report(readTotal / (double)total);
+        }
+
+        progress?.Report(1.0);
+        return destPath;
+    }
+
+    private static string ResolveFileName(string url, HttpResponseMessage response)
+    {
+        if (response.Content.Headers.ContentDisposition?.FileName is { Length: > 0 } cd)
+        {
+            return cd.Trim('"', '\'');
+        }
+
+        try
+        {
+            var name = Path.GetFileName(new Uri(url).AbsolutePath);
+            if (!string.IsNullOrWhiteSpace(name))
+                return name;
+        }
+        catch
+        {
+        }
+
+        return $"{AppInfoService.Name}-update.zip";
+    }
+
+    private static string MakeUniquePath(string path)
+    {
+        if (!File.Exists(path))
+            return path;
+
+        var dir = Path.GetDirectoryName(path)!;
+        var name = Path.GetFileNameWithoutExtension(path);
+        var ext = Path.GetExtension(path);
+
+        for (var i = 1; i < 1000; i++)
+        {
+            var candidate = Path.Combine(dir, $"{name} ({i}){ext}");
+            if (!File.Exists(candidate))
+                return candidate;
+        }
+
+        return Path.Combine(dir, $"{name}-{Guid.NewGuid():N}{ext}");
+    }
+
     public static bool IsNewerVersion(string candidate, string current)
     {
         if (!Version.TryParse(Normalize(candidate), out var next))
@@ -142,6 +306,33 @@ public sealed class UpdateService : IDisposable
             FileName = url,
             UseShellExecute = true
         });
+    }
+
+    public void OpenFolder(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        if (File.Exists(path))
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"/select,\"{path}\"",
+                UseShellExecute = true
+            });
+            return;
+        }
+
+        var dir = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = dir,
+                UseShellExecute = true
+            });
+        }
     }
 
     public void OpenRepositoryPage() =>
