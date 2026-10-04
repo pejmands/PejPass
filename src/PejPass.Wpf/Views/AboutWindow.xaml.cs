@@ -22,6 +22,7 @@ public partial class AboutWindow : Window
         }
 
         DataContext = vm;
+        vm.ApplyKnownUpdateState();
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
