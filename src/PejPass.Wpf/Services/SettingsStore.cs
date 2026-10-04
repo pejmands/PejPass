@@ -203,6 +203,14 @@ public static class SettingsStore
 
         settings.OnlineFaviconFetchingEnabled = onlineFaviconFetchingEnabled;
 
+        if (!TryGetBool(root, "hasSeenFastDragScrollTip", out var hasSeenFastDragScrollTip))
+        {
+            hasSeenFastDragScrollTip = defaults.HasSeenFastDragScrollTip;
+            needsSave = true;
+        }
+
+        settings.HasSeenFastDragScrollTip = hasSeenFastDragScrollTip;
+
         return needsSave;
     }
 
