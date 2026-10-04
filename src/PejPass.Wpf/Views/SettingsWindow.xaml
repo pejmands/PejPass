@@ -66,59 +66,60 @@
 						SelectedIndex="{Binding SelectedThemeIndex}" />
 				</Grid>
 
-				<Grid Margin="0,0,0,20">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="*" />
-						<ColumnDefinition Width="180" />
-					</Grid.ColumnDefinitions>
-					<StackPanel VerticalAlignment="Center">
-						<TextBlock
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"
-							Text="Download website icons" />
-						<TextBlock
-							Margin="0,4,12,0"
-							FontSize="{DynamicResource AppFontSize11}"
-							Foreground="{DynamicResource MutedBrush}"
-							Text="When enabled, website domains may be shared with external icon providers to download favicons."
-							TextWrapping="Wrap" />
-					</StackPanel>
-					<CheckBox
-						Grid.Column="1"
-						HorizontalAlignment="Left"
-						VerticalAlignment="Center"
-						IsChecked="{Binding OnlineFaviconFetchingEnabled}" />
-				</Grid>
+				<!-- Advanced: favicon (hidden pre-login) -->
+				<StackPanel Visibility="{Binding ShowAdvancedSettings, Converter={StaticResource BoolToVis}}">
+					<Grid Margin="0,0,0,20">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="180" />
+						</Grid.ColumnDefinitions>
+						<StackPanel VerticalAlignment="Center">
+							<TextBlock
+								FontSize="{DynamicResource AppFontSize12}"
+								Foreground="{DynamicResource TextBrush}"
+								Text="Download website icons" />
+							<TextBlock
+								Margin="0,4,12,0"
+								FontSize="{DynamicResource AppFontSize11}"
+								Foreground="{DynamicResource MutedBrush}"
+								Text="When enabled, website domains may be shared with external icon providers to download favicons."
+								TextWrapping="Wrap" />
+						</StackPanel>
+						<CheckBox
+							Grid.Column="1"
+							HorizontalAlignment="Left"
+							VerticalAlignment="Center"
+							IsChecked="{Binding OnlineFaviconFetchingEnabled}" />
+					</Grid>
 
-				<Grid Margin="0,0,0,20">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="*" />
-						<ColumnDefinition Width="180" />
-					</Grid.ColumnDefinitions>
-
-					<StackPanel VerticalAlignment="Top">
-						<TextBlock
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"
-							Text="Favicon cache" />
-						<TextBlock
-							Margin="0,4,12,0"
-							FontSize="{DynamicResource AppFontSize11}"
-							Foreground="{DynamicResource MutedBrush}"
-							Text="Stored website icons are removed automatically over time."
-							TextWrapping="Wrap" />
-					</StackPanel>
-
-					<Button
-						Grid.Column="1"
-						Height="36"
-						Padding="12,6"
-						HorizontalAlignment="Left"
-						Command="{Binding ClearFaviconCacheCommand}"
-						Content="Clear cache"
-						Style="{StaticResource SecondaryButton}"
-						ToolTip="Remove all stored website icons" />
-				</Grid>
+					<Grid Margin="0,0,0,20">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="180" />
+						</Grid.ColumnDefinitions>
+						<StackPanel VerticalAlignment="Top">
+							<TextBlock
+								FontSize="{DynamicResource AppFontSize12}"
+								Foreground="{DynamicResource TextBrush}"
+								Text="Favicon cache" />
+							<TextBlock
+								Margin="0,4,12,0"
+								FontSize="{DynamicResource AppFontSize11}"
+								Foreground="{DynamicResource MutedBrush}"
+								Text="Stored website icons are removed automatically over time."
+								TextWrapping="Wrap" />
+						</StackPanel>
+						<Button
+							Grid.Column="1"
+							Height="36"
+							Padding="12,6"
+							HorizontalAlignment="Left"
+							Command="{Binding ClearFaviconCacheCommand}"
+							Content="Clear cache"
+							Style="{StaticResource SecondaryButton}"
+							ToolTip="Remove all stored website icons" />
+					</Grid>
+				</StackPanel>
 
 				<Grid Margin="0,0,0,20">
 					<Grid.ColumnDefinitions>
@@ -172,202 +173,195 @@
 						SelectedIndex="{Binding SelectedZoomIndex}" />
 				</Grid>
 
-				<!--  Security  -->
-				<Border
-					Margin="0,0,0,12"
-					Padding="0,0,0,8"
-					BorderBrush="{DynamicResource BorderBrush}"
-					BorderThickness="0,0,0,1">
-					<TextBlock
-						FontSize="{DynamicResource AppFontSize13}"
-						FontWeight="SemiBold"
-						Foreground="{DynamicResource TextBrush}"
-						Text="Security" />
-				</Border>
-
-				<Grid Margin="0,0,0,20">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="*" />
-						<ColumnDefinition Width="180" />
-					</Grid.ColumnDefinitions>
-
-					<StackPanel VerticalAlignment="Top">
+				<!-- Advanced: Security + Clipboard (hidden pre-login) -->
+				<StackPanel Visibility="{Binding ShowAdvancedSettings, Converter={StaticResource BoolToVis}}">
+					<!--  Security  -->
+					<Border
+						Margin="0,0,0,12"
+						Padding="0,0,0,8"
+						BorderBrush="{DynamicResource BorderBrush}"
+						BorderThickness="0,0,0,1">
 						<TextBlock
-							FontSize="{DynamicResource AppFontSize12}"
+							FontSize="{DynamicResource AppFontSize13}"
+							FontWeight="SemiBold"
 							Foreground="{DynamicResource TextBrush}"
-							Text="Hide revealed secrets after" />
-						<TextBlock
-							Margin="0,4,12,0"
-							FontSize="{DynamicResource AppFontSize11}"
-							Foreground="{DynamicResource MutedBrush}"
-							Text="Automatically hide passwords and secret keys after they are revealed."
-							TextWrapping="Wrap" />
-					</StackPanel>
+							Text="Security" />
+					</Border>
 
-					<ComboBox
-						Grid.Column="1"
-						Height="36"
-						ItemsSource="{Binding RevealSecretOptions}"
-						SelectedIndex="{Binding SelectedRevealSecretIndex}" />
-				</Grid>
-
-				<Grid Margin="0,0,0,20">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="*" />
-						<ColumnDefinition Width="180" />
-					</Grid.ColumnDefinitions>
-
-					<StackPanel VerticalAlignment="Top">
-						<TextBlock
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"
-							Text="Auto-lock" />
-						<TextBlock
-							Margin="0,4,12,0"
-							FontSize="{DynamicResource AppFontSize11}"
-							Foreground="{DynamicResource MutedBrush}"
-							Text="Lock the vault after this many minutes of inactivity. Use 0 to disable."
-							TextWrapping="Wrap" />
-					</StackPanel>
-
-					<StackPanel Grid.Column="1" VerticalAlignment="Top">
-						<StackPanel Height="36" Orientation="Horizontal">
-							<TextBox
-								x:Name="AutoLockTextBox"
-								Width="70"
-								Height="36"
-								VerticalContentAlignment="Center"
-								MaxLength="4"
-								Text="{Binding AutoLockMinutes, UpdateSourceTrigger=PropertyChanged}" />
+					<Grid Margin="0,0,0,20">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="180" />
+						</Grid.ColumnDefinitions>
+						<StackPanel VerticalAlignment="Top">
 							<TextBlock
-								Margin="10,0,0,0"
-								VerticalAlignment="Center"
-								Foreground="{DynamicResource MutedBrush}"
-								Text="min" />
-						</StackPanel>
-						<TextBlock
-							Margin="0,5,0,0"
-							Style="{StaticResource ValidationErrorText}"
-							Text="{Binding AutoLockError, StringFormat=⚠ {0}}"
-							TextWrapping="Wrap"
-							Visibility="{Binding AutoLockError, Converter={StaticResource NullOrEmptyToVis}}" />
-					</StackPanel>
-				</Grid>
-
-				<Grid Margin="0,0,0,20">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="*" />
-						<ColumnDefinition Width="180" />
-					</Grid.ColumnDefinitions>
-
-					<StackPanel VerticalAlignment="Center">
-						<TextBlock
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"
-							Text="Windows Hello" />
-						<TextBlock
-							Margin="0,4,12,0"
-							FontSize="{DynamicResource AppFontSize11}"
-							Foreground="{DynamicResource MutedBrush}"
-							Text="Unlock with Windows Hello after the first password unlock."
-							TextWrapping="Wrap" />
-					</StackPanel>
-
-					<CheckBox
-						Grid.Column="1"
-						HorizontalAlignment="Left"
-						VerticalAlignment="Center"
-						IsChecked="{Binding WindowsHelloEnabled}"
-						ToolTip="Unlock with Windows Hello after first password unlock" />
-				</Grid>
-
-				<Grid Margin="0,0,0,20">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="*" />
-						<ColumnDefinition Width="180" />
-					</Grid.ColumnDefinitions>
-
-					<StackPanel VerticalAlignment="Top">
-						<TextBlock
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"
-							Text="Master password" />
-						<TextBlock
-							Margin="0,4,12,0"
-							FontSize="{DynamicResource AppFontSize11}"
-							Foreground="{DynamicResource MutedBrush}"
-							Text="Change the password used to encrypt and unlock your vault."
-							TextWrapping="Wrap" />
-					</StackPanel>
-
-					<Button
-						Grid.Column="1"
-						Height="36"
-						Padding="12,6"
-						HorizontalAlignment="Left"
-						Command="{Binding ChangeMasterPasswordCommand}"
-						Content="Change password"
-						Style="{StaticResource SecondaryButton}"
-						ToolTip="Change the master password used to protect the vault" />
-				</Grid>
-
-				<!--  Clipboard  -->
-				<Border
-					Margin="0,0,0,12"
-					Padding="0,0,0,8"
-					BorderBrush="{DynamicResource BorderBrush}"
-					BorderThickness="0,0,0,1">
-					<TextBlock
-						FontSize="{DynamicResource AppFontSize13}"
-						FontWeight="SemiBold"
-						Foreground="{DynamicResource TextBrush}"
-						Text="Clipboard" />
-				</Border>
-
-				<Grid Margin="0,0,0,20">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="*" />
-						<ColumnDefinition Width="180" />
-					</Grid.ColumnDefinitions>
-
-					<StackPanel VerticalAlignment="Top">
-						<TextBlock
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"
-							Text="Clear after" />
-						<TextBlock
-							Margin="0,4,12,0"
-							FontSize="{DynamicResource AppFontSize11}"
-							Foreground="{DynamicResource MutedBrush}"
-							Text="Clear copied secrets from the clipboard after this delay."
-							TextWrapping="Wrap" />
-					</StackPanel>
-
-					<StackPanel Grid.Column="1" VerticalAlignment="Top">
-						<StackPanel Height="36" Orientation="Horizontal">
-							<TextBox
-								x:Name="ClipboardTextBox"
-								Width="70"
-								Height="36"
-								VerticalContentAlignment="Center"
-								MaxLength="3"
-								Text="{Binding ClipboardClearSeconds, UpdateSourceTrigger=PropertyChanged}" />
+								FontSize="{DynamicResource AppFontSize12}"
+								Foreground="{DynamicResource TextBrush}"
+								Text="Hide revealed secrets after" />
 							<TextBlock
-								Margin="10,0,0,0"
-								VerticalAlignment="Center"
+								Margin="0,4,12,0"
+								FontSize="{DynamicResource AppFontSize11}"
 								Foreground="{DynamicResource MutedBrush}"
-								Text="sec" />
+								Text="Automatically hide passwords and secret keys after they are revealed."
+								TextWrapping="Wrap" />
 						</StackPanel>
-						<TextBlock
-							Margin="0,5,0,0"
-							Style="{StaticResource ValidationErrorText}"
-							Text="{Binding ClipboardError, StringFormat=⚠ {0}}"
-							TextWrapping="Wrap"
-							Visibility="{Binding ClipboardError, Converter={StaticResource NullOrEmptyToVis}}" />
-					</StackPanel>
-				</Grid>
+						<ComboBox
+							Grid.Column="1"
+							Height="36"
+							ItemsSource="{Binding RevealSecretOptions}"
+							SelectedIndex="{Binding SelectedRevealSecretIndex}" />
+					</Grid>
 
-				<!--  Keyboard Shortcuts  -->
+					<Grid Margin="0,0,0,20">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="180" />
+						</Grid.ColumnDefinitions>
+						<StackPanel VerticalAlignment="Top">
+							<TextBlock
+								FontSize="{DynamicResource AppFontSize12}"
+								Foreground="{DynamicResource TextBrush}"
+								Text="Auto-lock" />
+							<TextBlock
+								Margin="0,4,12,0"
+								FontSize="{DynamicResource AppFontSize11}"
+								Foreground="{DynamicResource MutedBrush}"
+								Text="Lock the vault after this many minutes of inactivity. Use 0 to disable."
+								TextWrapping="Wrap" />
+						</StackPanel>
+						<StackPanel Grid.Column="1" VerticalAlignment="Top">
+							<StackPanel Height="36" Orientation="Horizontal">
+								<TextBox
+									x:Name="AutoLockTextBox"
+									Width="70"
+									Height="36"
+									VerticalContentAlignment="Center"
+									MaxLength="4"
+									Text="{Binding AutoLockMinutes, UpdateSourceTrigger=PropertyChanged}" />
+								<TextBlock
+									Margin="10,0,0,0"
+									VerticalAlignment="Center"
+									Foreground="{DynamicResource MutedBrush}"
+									Text="min" />
+							</StackPanel>
+							<TextBlock
+								Margin="0,5,0,0"
+								Style="{StaticResource ValidationErrorText}"
+								Text="{Binding AutoLockError, StringFormat=⚠ {0}}"
+								TextWrapping="Wrap"
+								Visibility="{Binding AutoLockError, Converter={StaticResource NullOrEmptyToVis}}" />
+						</StackPanel>
+					</Grid>
+
+					<Grid Margin="0,0,0,20">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="180" />
+						</Grid.ColumnDefinitions>
+						<StackPanel VerticalAlignment="Center">
+							<TextBlock
+								FontSize="{DynamicResource AppFontSize12}"
+								Foreground="{DynamicResource TextBrush}"
+								Text="Windows Hello" />
+							<TextBlock
+								Margin="0,4,12,0"
+								FontSize="{DynamicResource AppFontSize11}"
+								Foreground="{DynamicResource MutedBrush}"
+								Text="Unlock with Windows Hello after the first password unlock."
+								TextWrapping="Wrap" />
+						</StackPanel>
+						<CheckBox
+							Grid.Column="1"
+							HorizontalAlignment="Left"
+							VerticalAlignment="Center"
+							IsChecked="{Binding WindowsHelloEnabled}"
+							ToolTip="Unlock with Windows Hello after first password unlock" />
+					</Grid>
+
+					<Grid Margin="0,0,0,20">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="180" />
+						</Grid.ColumnDefinitions>
+						<StackPanel VerticalAlignment="Top">
+							<TextBlock
+								FontSize="{DynamicResource AppFontSize12}"
+								Foreground="{DynamicResource TextBrush}"
+								Text="Master password" />
+							<TextBlock
+								Margin="0,4,12,0"
+								FontSize="{DynamicResource AppFontSize11}"
+								Foreground="{DynamicResource MutedBrush}"
+								Text="Change the password used to encrypt and unlock your vault."
+								TextWrapping="Wrap" />
+						</StackPanel>
+						<Button
+							Grid.Column="1"
+							Height="36"
+							Padding="12,6"
+							HorizontalAlignment="Left"
+							Command="{Binding ChangeMasterPasswordCommand}"
+							Content="Change password"
+							Style="{StaticResource SecondaryButton}"
+							ToolTip="Change the master password used to protect the vault" />
+					</Grid>
+
+					<!--  Clipboard  -->
+					<Border
+						Margin="0,0,0,12"
+						Padding="0,0,0,8"
+						BorderBrush="{DynamicResource BorderBrush}"
+						BorderThickness="0,0,0,1">
+						<TextBlock
+							FontSize="{DynamicResource AppFontSize13}"
+							FontWeight="SemiBold"
+							Foreground="{DynamicResource TextBrush}"
+							Text="Clipboard" />
+					</Border>
+
+					<Grid Margin="0,0,0,20">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="180" />
+						</Grid.ColumnDefinitions>
+						<StackPanel VerticalAlignment="Top">
+							<TextBlock
+								FontSize="{DynamicResource AppFontSize12}"
+								Foreground="{DynamicResource TextBrush}"
+								Text="Clear after" />
+							<TextBlock
+								Margin="0,4,12,0"
+								FontSize="{DynamicResource AppFontSize11}"
+								Foreground="{DynamicResource MutedBrush}"
+								Text="Clear copied secrets from the clipboard after this delay."
+								TextWrapping="Wrap" />
+						</StackPanel>
+						<StackPanel Grid.Column="1" VerticalAlignment="Top">
+							<StackPanel Height="36" Orientation="Horizontal">
+								<TextBox
+									x:Name="ClipboardTextBox"
+									Width="70"
+									Height="36"
+									VerticalContentAlignment="Center"
+									MaxLength="3"
+									Text="{Binding ClipboardClearSeconds, UpdateSourceTrigger=PropertyChanged}" />
+								<TextBlock
+									Margin="10,0,0,0"
+									VerticalAlignment="Center"
+									Foreground="{DynamicResource MutedBrush}"
+									Text="sec" />
+							</StackPanel>
+							<TextBlock
+								Margin="0,5,0,0"
+								Style="{StaticResource ValidationErrorText}"
+								Text="{Binding ClipboardError, StringFormat=⚠ {0}}"
+								TextWrapping="Wrap"
+								Visibility="{Binding ClipboardError, Converter={StaticResource NullOrEmptyToVis}}" />
+						</StackPanel>
+					</Grid>
+				</StackPanel>
+
+				<!--  Keyboard Shortcuts (always visible, including pre-login)  -->
 				<Border
 					Margin="0,0,0,12"
 					Padding="0,0,0,8"
@@ -386,87 +380,22 @@
 					Background="{DynamicResource SurfaceBrush}"
 					CornerRadius="8">
 					<StackPanel>
-						<TextBlock
-							Margin="0,0,0,6"
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+N" /><Run Foreground="{DynamicResource MutedBrush}" Text="  New entry" /></TextBlock>
-						<TextBlock
-							Margin="0,0,0,6"
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+E" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Edit entry" /></TextBlock>
-						<TextBlock
-							Margin="0,0,0,6"
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Enter" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Edit selected entry" /></TextBlock>
-						<TextBlock
-							Margin="0,0,0,6"
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Delete" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Move selected entry to trash" /></TextBlock>
-						<TextBlock
-							Margin="0,0,0,6"
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+K" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Search" /></TextBlock>
-						<TextBlock
-							Margin="0,0,0,6"
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+C" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Copy password" /></TextBlock>
-						<TextBlock
-							Margin="0,0,0,6"
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+Shift+C" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Copy username" /></TextBlock>
-						<TextBlock
-							Margin="0,0,0,6"
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+T" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Copy TOTP" /></TextBlock>
-						<TextBlock
-							Margin="0,0,0,6"
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+L" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Lock vault" /></TextBlock>
-						<TextBlock
-							Margin="0,0,0,6"
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+B" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Backup" /></TextBlock>
-						<TextBlock
-							Margin="0,0,0,6"
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+H" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Vault Health" /></TextBlock>
-						<TextBlock
-							Margin="0,0,0,6"
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+Shift+T" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Trash" /></TextBlock>
-						<TextBlock
-							Margin="0,0,0,6"
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+S" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Settings" /></TextBlock>
-						<TextBlock
-							Margin="0,0,0,6"
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl++ / Ctrl+-" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Adjust zoom" /></TextBlock>
-						<TextBlock
-							Margin="0,0,0,6"
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+0" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Reset zoom" /></TextBlock>
-						<TextBlock
-							FontFamily="Consolas"
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Esc" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Clear selection" /></TextBlock>
+						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+N" /><Run Foreground="{DynamicResource MutedBrush}" Text="  New entry" /></TextBlock>
+						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+E" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Edit entry" /></TextBlock>
+						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Enter" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Edit selected entry" /></TextBlock>
+						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Delete" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Move selected entry to trash" /></TextBlock>
+						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+K" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Search" /></TextBlock>
+						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+C" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Copy password" /></TextBlock>
+						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+Shift+C" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Copy username" /></TextBlock>
+						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+T" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Copy TOTP" /></TextBlock>
+						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+L" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Lock vault" /></TextBlock>
+						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+B" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Backup" /></TextBlock>
+						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+H" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Vault Health" /></TextBlock>
+						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+Shift+T" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Trash" /></TextBlock>
+						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+S" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Settings" /></TextBlock>
 					</StackPanel>
 				</Border>
+
 			</StackPanel>
 		</ScrollViewer>
 
@@ -476,18 +405,20 @@
 			HorizontalAlignment="Right"
 			Orientation="Horizontal">
 			<Button
+				Width="100"
+				Height="36"
 				Margin="0,0,8,0"
-				Background="{DynamicResource SurfaceAltBrush}"
-				Command="{Binding CancelCommand}"
-				Content="Cancel"
-				Foreground="{DynamicResource TextBrush}"
-				IsCancel="True"
-				Style="{StaticResource SecondaryButton}" />
-			<Button
 				Command="{Binding SaveCommand}"
 				Content="Save"
 				IsDefault="True"
 				Style="{StaticResource PrimaryButton}" />
+			<Button
+				Width="100"
+				Height="36"
+				Click="Cancel_Click"
+				Content="Cancel"
+				IsCancel="True"
+				Style="{StaticResource SecondaryButton}" />
 		</StackPanel>
 	</Grid>
 </Window>
