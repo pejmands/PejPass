@@ -4,27 +4,31 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	Title="About PejPass"
 	Width="460"
-	Height="580"
+	Height="600"
 	MinWidth="460"
-	MinHeight="560"
+	MinHeight="580"
 	Background="{DynamicResource BgBrush}"
 	ResizeMode="NoResize"
 	ShowInTaskbar="False"
 	WindowStartupLocation="CenterOwner">
 
-	<Grid Margin="32">
+	<Grid Margin="32,20">
+
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
 			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
 
+
+		<!--  Header  -->
+
 		<StackPanel HorizontalAlignment="Center">
 
 			<Image
-				Width="80"
-				Height="80"
-				Margin="0,0,0,14"
+				Width="64"
+				Height="64"
+				Margin="0,0,0,10"
 				Source="/Assets/PejPass.ico" />
 
 			<TextBlock
@@ -36,14 +40,32 @@
 
 			<TextBlock
 				x:Name="VersionText"
-				Margin="0,6,0,0"
+				Margin="0,4,0,0"
 				HorizontalAlignment="Center"
 				FontSize="{DynamicResource AppFontSize12}"
 				Foreground="{DynamicResource MutedBrush}" />
+
+			<TextBlock
+				Margin="0,6,0,0"
+				HorizontalAlignment="Center"
+				FontSize="{DynamicResource AppFontSize11}"
+				Foreground="{DynamicResource MutedBrush}"
+				Text="{Binding UpdateStatus}" />
+
+			<Button
+				Width="150"
+				Margin="0,8,0,0"
+				HorizontalAlignment="Center"
+				Command="{Binding CheckForUpdatesCommand}"
+				Content="Check for Updates"
+				Style="{StaticResource SecondaryButton}" />
+
 		</StackPanel>
 
 
-		<StackPanel Grid.Row="1" Margin="0,32,0,24">
+		<!--  Main content  -->
+
+		<StackPanel Grid.Row="1" Margin="0,18,0,18">
 
 			<TextBlock
 				HorizontalAlignment="Center"
@@ -54,7 +76,7 @@
 				TextWrapping="Wrap" />
 
 			<TextBlock
-				Margin="0,10,0,24"
+				Margin="0,6,0,14"
 				HorizontalAlignment="Center"
 				FontSize="{DynamicResource AppFontSize11}"
 				Foreground="{DynamicResource MutedBrush}"
@@ -63,9 +85,11 @@
 				TextWrapping="Wrap" />
 
 
+			<!--  Security  -->
+
 			<Border
-				Margin="0,0,0,12"
-				Padding="16"
+				Margin="0,0,0,8"
+				Padding="12"
 				Background="{DynamicResource SurfaceBrush}"
 				CornerRadius="8">
 
@@ -77,18 +101,21 @@
 						Text="Security" />
 
 					<TextBlock
-						Margin="0,6,0,0"
+						Margin="0,4,0,0"
 						FontSize="{DynamicResource AppFontSize11}"
 						Foreground="{DynamicResource MutedBrush}"
 						Text="Argon2id key derivation&#10;AES-256-GCM vault encryption" />
+
 				</StackPanel>
 
 			</Border>
 
 
+			<!--  Local First  -->
+
 			<Border
-				Margin="0,0,0,12"
-				Padding="16"
+				Margin="0,0,0,8"
+				Padding="12"
 				Background="{DynamicResource SurfaceBrush}"
 				CornerRadius="8">
 
@@ -100,17 +127,20 @@
 						Text="Local First" />
 
 					<TextBlock
-						Margin="0,6,0,0"
+						Margin="0,4,0,0"
 						FontSize="{DynamicResource AppFontSize11}"
 						Foreground="{DynamicResource MutedBrush}"
 						Text="No account. No cloud dependency.&#10;Your data remains on your device." />
+
 				</StackPanel>
 
 			</Border>
 
 
+			<!--  Built With  -->
+
 			<Border
-				Padding="16"
+				Padding="12"
 				Background="{DynamicResource SurfaceBrush}"
 				CornerRadius="8">
 
@@ -122,33 +152,49 @@
 						Text="Built With" />
 
 					<TextBlock
-						Margin="0,6,0,0"
+						Margin="0,4,0,0"
 						FontSize="{DynamicResource AppFontSize11}"
 						Foreground="{DynamicResource MutedBrush}"
 						Text=".NET 10 • WPF • CommunityToolkit.Mvvm" />
+
 				</StackPanel>
 
 			</Border>
 
-
-			<Button
-				Margin="0,20,0,0"
-				HorizontalAlignment="Center"
-				Click="GitHub_Click"
-				Content="GitHub"
-				Style="{StaticResource SecondaryButton}" />
-
 		</StackPanel>
 
 
-		<Button
-			Grid.Row="2"
-			Width="100"
-			HorizontalAlignment="Center"
-			Click="CloseButton_Click"
-			Content="Close"
-			IsDefault="True"
-			Style="{StaticResource SecondaryButton}" />
+		<!--  Footer  -->
+
+		<Grid Grid.Row="2">
+
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="*" />
+			</Grid.ColumnDefinitions>
+
+
+			<TextBlock
+				Grid.Column="0"
+				HorizontalAlignment="Left"
+				VerticalAlignment="Center"
+				Cursor="Hand"
+				FontSize="{DynamicResource AppFontSize11}"
+				Foreground="{DynamicResource AccentBrush}"
+				MouseLeftButtonUp="GitHub_Click"
+				Text="GitHub" />
+
+
+			<Button
+				Grid.Column="1"
+				Width="100"
+				Click="CloseButton_Click"
+				Content="Close"
+				IsDefault="True"
+				Style="{StaticResource SecondaryButton}" />
+
+		</Grid>
 
 	</Grid>
 
