@@ -88,6 +88,7 @@ public partial class MainWindow : Window
         EntryList.SelectionChanged += (_, _) => UpdateSelectedEntriesToolbar();
         EntryList.PreviewMouseLeftButtonDown += EntryList_PreviewMouseLeftButtonDown;
         EntryList.PreviewMouseMove += EntryList_PreviewMouseMove;
+        EntryList.PreviewMouseRightButtonDown += EntryList_PreviewMouseRightButtonDown;
         EntryList.DragOver += EntryList_DragOver;
         EntryList.Drop += EntryList_Drop;
         FaviconService.OnlineFetchingChanged += OnOnlineFetchingChanged;
@@ -187,6 +188,73 @@ public partial class MainWindow : Window
         _dragStartEntry = null;
     }
 
+    private void EntryList_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm ||
+            FindEntryFromSource(e.OriginalSource as DependencyObject) is not { } clickedEntry)
+        {
+            return;
+        }
+
+        var item = ItemsControl.ContainerFromElement(
+            EntryList, e.OriginalSource as DependencyObject) as ListBoxItem;
+
+        if (item is null)
+            return;
+
+        if (!item.IsSelected)
+        {
+            EntryList.SelectedItems.Clear();
+            item.IsSelected = true;
+        }
+
+        var menu = new ContextMenu
+        {
+            Style = (Style)FindResource("PejPassContextMenu"),
+            PlacementTarget = item,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+            FlowDirection = FlowDirection.LeftToRight
+        };
+
+        var moveToTop = CreateReorderMenuItem("Move to Top");
+        moveToTop.IsEnabled = vm.SelectedSortIndex == (int)Domain.Settings.EntrySortMode.Manual;
+        moveToTop.Click += async (_, _) =>
+        {
+            var selected = GetSelectedEntriesForGroup(clickedEntry);
+            await vm.MoveEntriesToEdgeAsync(selected, clickedEntry.IsFavorite, moveToTop: true);
+        };
+
+        var moveToBottom = CreateReorderMenuItem("Move to Bottom");
+        moveToBottom.IsEnabled = vm.SelectedSortIndex == (int)Domain.Settings.EntrySortMode.Manual;
+        moveToBottom.Click += async (_, _) =>
+        {
+            var selected = GetSelectedEntriesForGroup(clickedEntry);
+            await vm.MoveEntriesToEdgeAsync(selected, clickedEntry.IsFavorite, moveToTop: false);
+        };
+
+        menu.Items.Add(moveToTop);
+        menu.Items.Add(moveToBottom);
+        menu.IsOpen = true;
+        e.Handled = true;
+    }
+
+    private MenuItem CreateReorderMenuItem(string header) => new()
+    {
+        Header = header,
+        Style = (Style)FindResource("PejPassContextMenuItem")
+    };
+
+    private List<VaultEntry> GetSelectedEntriesForGroup(VaultEntry contextEntry)
+    {
+        var selected = EntryList.SelectedItems
+            .Cast<VaultEntry>()
+            .Where(entry => entry.IsFavorite == contextEntry.IsFavorite)
+            .OrderBy(entry => EntryList.Items.IndexOf(entry))
+            .ToList();
+
+        return selected.Count > 0 ? selected : new List<VaultEntry> { contextEntry };
+    }
+
     private void EntryList_DragOver(object sender, DragEventArgs e)
     {
         AutoScrollEntryListDuringDrag(e);
@@ -220,7 +288,7 @@ public partial class MainWindow : Window
 
         var position = e.GetPosition(scrollViewer);
         const double edgeSize = 40;
-        const double scrollStep = 18;
+        var scrollStep = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) ? 50 : 18;
 
         if (position.Y < edgeSize && scrollViewer.VerticalOffset > 0)
         {
