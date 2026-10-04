@@ -288,7 +288,7 @@ public partial class MainWindow : Window
 
         var position = e.GetPosition(scrollViewer);
         const double edgeSize = 40;
-        var scrollStep = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) ? 50 : 18;
+        var scrollStep = e.KeyStates.HasFlag(DragDropKeyStates.Alt) ? 50 : 18;
 
         if (position.Y < edgeSize && scrollViewer.VerticalOffset > 0)
         {
