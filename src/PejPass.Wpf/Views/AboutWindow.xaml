@@ -13,20 +13,15 @@
 	WindowStartupLocation="CenterOwner">
 
 	<Grid Margin="28,20,28,20">
-
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
 			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
 
-
-		<!-- Header -->
-
+		<!--  Header  -->
 		<StackPanel>
-
 			<StackPanel HorizontalAlignment="Center">
-
 				<Image
 					Width="56"
 					Height="56"
@@ -40,7 +35,7 @@
 					Foreground="{DynamicResource TextBrush}"
 					Text="{Binding AppName}" />
 
-				<!-- Installed build: Version + release date (PejTools-style line) -->
+				<!--  Installed build: Version + release date  -->
 				<TextBlock
 					Margin="0,4,0,0"
 					HorizontalAlignment="Center"
@@ -65,60 +60,57 @@
 					Margin="0,8,0,0"
 					IsIndeterminate="{Binding IsChecking}"
 					Maximum="1"
-					Value="{Binding DownloadProgress}"
-					Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
-
+					Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"
+					Value="{Binding DownloadProgress}" />
 			</StackPanel>
 
-			<StackPanel
-				Margin="0,14,0,4"
-				HorizontalAlignment="Center">
-
+			<StackPanel Margin="0,14,0,4" HorizontalAlignment="Center">
 				<StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
-
 					<Button
 						Width="148"
 						Margin="0,0,8,0"
 						Command="{Binding CheckForUpdatesCommand}"
 						Content="Check for Updates"
-						Style="{StaticResource SecondaryButton}"
-						ToolTip="Reads update.json (same idea as PejTools)" />
+						Style="{StaticResource SecondaryButton}" />
 
 					<Button
 						Width="120"
 						Command="{Binding ShowWhatsNewCommand}"
 						Content="What's New"
 						Style="{StaticResource SecondaryButton}" />
-
 				</StackPanel>
 
 				<StackPanel
 					Margin="0,10,0,0"
 					HorizontalAlignment="Center"
-					Orientation="Horizontal"
 					Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVis}}">
+
 					<Button
-						Width="148"
-						Margin="0,0,8,0"
+						Width="180"
+						HorizontalAlignment="Center"
 						Command="{Binding DownloadUpdateCommand}"
-						Content="Download & Install"
+						Content="Download &amp; Install"
 						Style="{StaticResource PrimaryButton}"
 						ToolTip="Download the update package and install it" />
-					<Button
-						Width="148"
-						Command="{Binding OpenDownloadPageCommand}"
-						Content="Open Download Link"
-						Style="{StaticResource SecondaryButton}"
-						ToolTip="Open the download URL in your browser" />
+
+					<TextBlock
+						Margin="0,8,0,0"
+						HorizontalAlignment="Center"
+						Cursor="Hand"
+						FontSize="{DynamicResource AppFontSize11}"
+						Foreground="{DynamicResource AccentBrush}"
+						Text="Open download link"
+						TextAlignment="Center"
+						ToolTip="Open the download URL in your browser">
+						<TextBlock.InputBindings>
+							<MouseBinding Command="{Binding OpenDownloadPageCommand}" MouseAction="LeftClick" />
+						</TextBlock.InputBindings>
+					</TextBlock>
 				</StackPanel>
-
 			</StackPanel>
-
 		</StackPanel>
 
-
-		<!-- Body -->
-
+		<!--  Body  -->
 		<ScrollViewer
 			Grid.Row="1"
 			Margin="0,12,0,12"
@@ -126,7 +118,6 @@
 			VerticalScrollBarVisibility="Auto">
 
 			<StackPanel>
-
 				<TextBlock
 					HorizontalAlignment="Center"
 					FontSize="{DynamicResource AppFontSize13}"
@@ -196,14 +187,10 @@
 							Text=".NET 10 • WPF • CommunityToolkit.Mvvm" />
 					</StackPanel>
 				</Border>
-
 			</StackPanel>
-
 		</ScrollViewer>
 
-
-		<!-- Footer -->
-
+		<!--  Footer  -->
 		<Grid Grid.Row="2">
 
 			<Grid.ColumnDefinitions>
@@ -221,9 +208,7 @@
 				Foreground="{DynamicResource AccentBrush}"
 				Text="GitHub">
 				<TextBlock.InputBindings>
-					<MouseBinding
-						Command="{Binding OpenGitHubCommand}"
-						MouseAction="LeftClick" />
+					<MouseBinding Command="{Binding OpenGitHubCommand}" MouseAction="LeftClick" />
 				</TextBlock.InputBindings>
 			</TextBlock>
 
@@ -235,9 +220,6 @@
 				IsCancel="True"
 				IsDefault="True"
 				Style="{StaticResource SecondaryButton}" />
-
 		</Grid>
-
 	</Grid>
-
 </Window>

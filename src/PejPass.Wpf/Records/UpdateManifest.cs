@@ -6,7 +6,7 @@ namespace PejPass.Wpf.Records;
 /// <summary>
 /// Remote update.json.
 ///
-/// Root fields (PejTools-compatible) drive update check + download:
+/// Root fields drive update check + download:
 ///   version, downloadUrl, optional released, optional notes
 ///
 /// Optional releases[] drives the full What's New changelog:
@@ -73,7 +73,7 @@ public sealed class UpdateNotes
 }
 
 /// <summary>
-/// Accepts "notes": "text" (PejTools) or structured { added, improved, fixed }.
+/// Accepts "notes": "text" or structured { added, improved, fixed }.
 /// </summary>
 public sealed class UpdateNotesJsonConverter : JsonConverter<UpdateNotes?>
 {

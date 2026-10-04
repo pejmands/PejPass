@@ -198,7 +198,7 @@ public sealed class UpdateService : IDisposable
         }
     }
 
-    public void ApplyPortableUpdateAndRestart(string zipPath, string targetVersion)
+    public static void ApplyPortableUpdateAndRestart(string zipPath, string targetVersion)
     {
         if (string.IsNullOrWhiteSpace(zipPath) || !File.Exists(zipPath))
             throw new FileNotFoundException("Update package not found.", zipPath);

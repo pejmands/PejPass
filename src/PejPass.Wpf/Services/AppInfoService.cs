@@ -18,7 +18,7 @@ public static class AppInfoService
         "https://github.com/pejmands/PejPass";
 
     /// <summary>
-    /// PejTools-style manifest URL.
+    /// Manifest URL.
     /// Local test: http://localhost/update.json
     /// </summary>
     public const string UpdateManifestUrl =

@@ -42,7 +42,7 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
     public static string AppName => AppInfoService.Name;
 
     /// <summary>
-    /// Installed build line — same spirit as PejTools:
+    /// Installed build line:
     /// "Version 1.0.4 · Updated September 17, 2026"
     /// </summary>
     public static string VersionDisplay =>
@@ -154,7 +154,7 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
             StatusMessage = "Installing update…";
             try
             {
-                _updateService.ApplyPortableUpdateAndRestart(
+                UpdateService.ApplyPortableUpdateAndRestart(
                     path,
                     LatestVersion ?? "0.0.0");
                 return;
