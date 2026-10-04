@@ -329,19 +329,29 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void ChangeMasterPassword()
     {
-        if (!_vaultSession.IsUnlocked)
+        if (!_vaultSession.IsActive)
         {
-            DialogService.Info(
-                "Unlock the vault before changing the master password.",
-                "Vault locked");
+            DialogService.Warning(
+                "Open a vault first to change the master password.",
+                "Change password");
             return;
         }
 
-        var window = new ChangeMasterPasswordWindow
+        var owner = System.Windows.Application.Current?.Windows.OfType<Window>()
+            .FirstOrDefault(w => w.IsActive)
+            ?? System.Windows.Application.Current?.MainWindow;
+
+        var vm = new ChangeMasterPasswordViewModel(
+            _vaultService,
+            _vaultSession);
+
+        var win = new ChangeMasterPasswordWindow(vm) { Owner = owner };
+        if (win.ShowDialog() == true)
         {
-            Owner = System.Windows.Application.Current.MainWindow
-        };
-        window.ShowDialog();
+            DialogService.Info(
+                "Master password changed successfully.\n\nThe vault is now encrypted with the new password.",
+                "Password changed");
+        }
     }
 
     [RelayCommand]
@@ -356,5 +366,12 @@ public partial class SettingsViewModel : ObservableObject
         {
             DialogService.Error(ex.Message, "Clear cache failed");
         }
+    }
+
+    [RelayCommand]
+    private void Cancel()
+    {
+        RevertPreview();
+        RequestClose?.Invoke(this, EventArgs.Empty);
     }
 }
