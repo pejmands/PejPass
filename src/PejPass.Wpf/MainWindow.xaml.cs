@@ -177,7 +177,7 @@ public partial class MainWindow : Window
                 ? EntryList.SelectedItems.Cast<VaultEntry>()
                     .OrderBy(entry => EntryList.Items.IndexOf(entry))
                     .ToList()
-                : [_dragStartEntry];
+                : new List<VaultEntry> { _dragStartEntry };
 
         if (draggedEntries.Count == 0)
             return;
