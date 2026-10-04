@@ -307,9 +307,28 @@
 								Foreground="{DynamicResource MutedBrush}"
 								Text="{Binding FilteredEntries.Count, StringFormat={}{0} results}" />
 						</StackPanel>
+						<Button
+							x:Name="ManualOrderMenuButton"
+							Grid.Column="1"
+							Width="30"
+							Height="30"
+							Margin="8,0,0,0"
+							Padding="0"
+							Background="{DynamicResource SurfaceBrush}"
+							BorderBrush="{DynamicResource BorderBrush}"
+							BorderThickness="1"
+							Click="ManualOrderMenuButton_Click"
+							Content="⋯"
+							Cursor="Hand"
+							FontSize="18"
+							FontWeight="SemiBold"
+							Foreground="{DynamicResource MutedBrush}"
+							ToolTip="Manual order options" />
+
 						<ComboBox
 							Grid.Column="2"
 							Width="110"
+							Margin="8,0,0,0"
 							Padding="6,4"
 							FontSize="{DynamicResource AppFontSize12}"
 							ItemsSource="{Binding SortOptions}"
