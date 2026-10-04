@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _snackbarTimer;
     private readonly AppSettings _settings;
     private bool _fastDragScrollHintShown;
+    private bool _fastDragScrollUsed;
     private Point _dragStartPoint;
     private VaultEntry? _dragStartEntry;
 
@@ -241,8 +242,12 @@ public partial class MainWindow : Window
         }
         finally
         {
+            if (_fastDragScrollUsed)
+                MarkFastDragScrollTipSeen();
+
             HideFastDragScrollHint();
             _fastDragScrollHintShown = false;
+            _fastDragScrollUsed = false;
             _dragStartEntry = null;
         }
     }
@@ -390,6 +395,9 @@ public partial class MainWindow : Window
         if (isInScrollableEdge && !_settings.HasSeenFastDragScrollTip)
             ShowFastDragScrollHint();
 
+        if (isInScrollableEdge && altPressed)
+            _fastDragScrollUsed = true;
+
         var previousOffset = scrollViewer.VerticalOffset;
         var scrollStep = altPressed ? 100 : 20;
 
@@ -405,10 +413,7 @@ public partial class MainWindow : Window
                     previousOffset + scrollStep));
         }
 
-        var didScroll = Math.Abs(scrollViewer.VerticalOffset - previousOffset) > 0.01;
 
-        if (didScroll && altPressed && _fastDragScrollHintShown)
-            MarkFastDragScrollTipSeen();
     }
 
     private void ShowFastDragScrollHint()
@@ -433,7 +438,6 @@ public partial class MainWindow : Window
 
         _settings.HasSeenFastDragScrollTip = true;
         SettingsStore.TrySave(_settings);
-        HideFastDragScrollHint();
     }
 
     private async void EntryList_Drop(object sender, DragEventArgs e)
