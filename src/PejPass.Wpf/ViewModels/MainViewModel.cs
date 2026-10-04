@@ -484,6 +484,54 @@ public partial class MainViewModel : ObservableObject
         ResetAutoLockTimer();
     }
 
+    public async Task ResetManualOrderAsync(EntrySortMode sourceSortMode)
+    {
+        if (_settings.SortMode != EntrySortMode.Manual ||
+            sourceSortMode == EntrySortMode.Manual ||
+            Entries.Count == 0)
+        {
+            return;
+        }
+
+        if (!await EnsureVaultWritableAsync())
+            return;
+
+        var vault = _vaultSession.Vault!;
+        var snapshot = vault.CreateSnapshot();
+
+        foreach (var isFavorite in new[] { true, false })
+        {
+            var group = Entries
+                .Where(entry => entry.IsFavorite == isFavorite)
+                .ToList();
+
+            IEnumerable<VaultEntry> ordered = sourceSortMode switch
+            {
+                EntrySortMode.TitleAsc => group.OrderBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase),
+                EntrySortMode.TitleDesc => group.OrderByDescending(entry => entry.Title, StringComparer.OrdinalIgnoreCase),
+                EntrySortMode.NewestFirst => group.OrderByDescending(entry => entry.CreatedAt),
+                EntrySortMode.OldestFirst => group.OrderBy(entry => entry.CreatedAt),
+                _ => group
+            };
+
+            var orderedEntries = ordered.ToList();
+
+            for (var index = 0; index < orderedEntries.Count; index++)
+                orderedEntries[index].SortOrder = index * 10;
+        }
+
+        ApplyFilter(preserveSelectionId: SelectedEntry?.Id);
+
+        if (!await SaveVaultAsync())
+        {
+            RestoreVaultSnapshot(snapshot, SelectedEntry?.Id);
+            return;
+        }
+
+        SnackbarService.Show("Manual order reset.");
+        ResetAutoLockTimer();
+    }
+
     public async Task MoveEntriesToEdgeAsync(
         IReadOnlyList<VaultEntry> movingEntries,
         bool isFavorite,
