@@ -323,7 +323,18 @@
 							FontSize="18"
 							FontWeight="SemiBold"
 							Foreground="{DynamicResource MutedBrush}"
-							ToolTip="Manual order options" />
+						ToolTip="Manual order options">
+							<Button.Style>
+								<Style BasedOn="{StaticResource {x:Type Button}}" TargetType="Button">
+									<Setter Property="Visibility" Value="Collapsed" />
+									<Style.Triggers>
+										<DataTrigger Binding="{Binding SelectedSortIndex}" Value="4">
+											<Setter Property="Visibility" Value="Visible" />
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</Button.Style>
+						</Button>
 
 						<ComboBox
 							Grid.Column="2"
