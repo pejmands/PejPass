@@ -149,6 +149,52 @@ public partial class MainWindow : Window
         menu.IsOpen = true;
     }
 
+    private void ManualOrderMenuButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || DataContext is not MainViewModel vm)
+            return;
+
+        var menu = new ContextMenu
+        {
+            Style = (Style)FindResource("PejPassContextMenu"),
+            PlacementTarget = button,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+            FlowDirection = FlowDirection.LeftToRight
+        };
+
+        var resetItem = new MenuItem
+        {
+            Header = "Reset Manual Order",
+            Style = (Style)FindResource("PejPassContextMenuItem"),
+            IsEnabled = vm.SelectedSortIndex == (int)Domain.Settings.EntrySortMode.Manual
+        };
+
+        AddManualOrderResetItem(resetItem, vm, "A → Z", Domain.Settings.EntrySortMode.TitleAsc);
+        AddManualOrderResetItem(resetItem, vm, "Z → A", Domain.Settings.EntrySortMode.TitleDesc);
+        AddManualOrderResetItem(resetItem, vm, "Newest", Domain.Settings.EntrySortMode.NewestFirst);
+        AddManualOrderResetItem(resetItem, vm, "Oldest", Domain.Settings.EntrySortMode.OldestFirst);
+
+        menu.Items.Add(resetItem);
+        menu.IsOpen = true;
+        e.Handled = true;
+    }
+
+    private void AddManualOrderResetItem(
+        MenuItem parent,
+        MainViewModel vm,
+        string header,
+        Domain.Settings.EntrySortMode sortMode)
+    {
+        var item = new MenuItem
+        {
+            Header = header,
+            Style = (Style)FindResource("PejPassContextMenuItem")
+        };
+
+        item.Click += async (_, _) => await vm.ResetManualOrderAsync(sortMode);
+        parent.Items.Add(item);
+    }
+
     private void EntryList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _dragStartPoint = e.GetPosition(EntryList);
