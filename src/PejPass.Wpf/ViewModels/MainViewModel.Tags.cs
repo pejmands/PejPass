@@ -6,8 +6,9 @@ namespace PejPass.Wpf.ViewModels;
 
 public partial class MainViewModel
 {
-    /// <summary>null / empty = show all entries.</summary>
-    public string? SelectedTagFilter { get; private set; }
+    private readonly HashSet<string> _selectedTagFilters = new(StringComparer.Ordinal);
+
+    public IReadOnlySet<string> SelectedTagFilters => _selectedTagFilters;
 
     public bool IsNoTagsFilterSelected { get; private set; }
 
@@ -23,7 +24,7 @@ public partial class MainViewModel
     /// </summary>
     private void RebuildTagFilters()
     {
-        var selected = SelectedTagFilter;
+        var selectedTags = _selectedTagFilters;
         var noTagsSelected = IsNoTagsFilterSelected;
 
         var counts = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -44,9 +45,8 @@ public partial class MainViewModel
             }
         }
 
-        // Drop filter if that tag no longer exists
-        if (!string.IsNullOrEmpty(selected) && !counts.ContainsKey(selected))
-            SelectedTagFilter = selected = null;
+        // Drop selected filters for tags that no longer exist.
+        selectedTags.RemoveWhere(tag => !counts.ContainsKey(tag));
 
         var noTagsCount = Entries.Count(entry =>
             !entry.Tags.Any(tag => !string.IsNullOrWhiteSpace(tag)));
@@ -60,7 +60,7 @@ public partial class MainViewModel
             Name = "All",
             Count = Entries.Count,
             IsAll = true,
-            IsSelected = string.IsNullOrEmpty(selected) && !noTagsSelected
+            IsSelected = selectedTags.Count == 0 && !noTagsSelected
         });
 
         if (noTagsCount > 0)
@@ -91,8 +91,7 @@ public partial class MainViewModel
             {
                 Name = labels[kv.Key],
                 Count = kv.Value,
-                IsSelected = !noTagsSelected && selected is not null &&
-                             selected.Equals(kv.Key, StringComparison.Ordinal)
+                IsSelected = !noTagsSelected && selectedTags.Contains(kv.Key)
             });
         }
 
@@ -107,34 +106,30 @@ public partial class MainViewModel
 
         if (item.IsAll)
         {
-            SelectedTagFilter = null;
+            _selectedTagFilters.Clear();
             IsNoTagsFilterSelected = false;
         }
         else if (item.IsNoTags)
         {
-            SelectedTagFilter = null;
+            _selectedTagFilters.Clear();
             IsNoTagsFilterSelected = !IsNoTagsFilterSelected;
-        }
-        else if (SelectedTagFilter is not null &&
-                 SelectedTagFilter.Equals(item.Name, StringComparison.Ordinal))
-        {
-            SelectedTagFilter = null; // click again clears
-            IsNoTagsFilterSelected = false;
         }
         else
         {
-            SelectedTagFilter = item.Name;
             IsNoTagsFilterSelected = false;
+
+            if (!_selectedTagFilters.Add(item.Name))
+                _selectedTagFilters.Remove(item.Name);
         }
 
         foreach (var chip in TagFilters)
+        {
             chip.IsSelected = chip.IsAll
-                ? string.IsNullOrEmpty(SelectedTagFilter) && !IsNoTagsFilterSelected
+                ? _selectedTagFilters.Count == 0 && !IsNoTagsFilterSelected
                 : chip.IsNoTags
                     ? IsNoTagsFilterSelected
-                    : !IsNoTagsFilterSelected &&
-                      SelectedTagFilter is not null &&
-                      chip.Name.Equals(SelectedTagFilter, StringComparison.Ordinal);
+                    : !IsNoTagsFilterSelected && _selectedTagFilters.Contains(chip.Name);
+        }
 
         ApplyFilter();
         ResetAutoLockTimer();
