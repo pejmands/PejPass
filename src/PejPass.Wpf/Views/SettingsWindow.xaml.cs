@@ -58,4 +58,9 @@ public partial class SettingsWindow : Window
         _vm.RevertPreview();
         _committed = true;
     }
+
+    private void Cancel_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
 }
