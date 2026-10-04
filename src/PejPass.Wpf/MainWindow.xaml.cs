@@ -189,6 +189,8 @@ public partial class MainWindow : Window
 
     private void EntryList_DragOver(object sender, DragEventArgs e)
     {
+        AutoScrollEntryListDuringDrag(e);
+
         if (DataContext is not MainViewModel vm ||
             vm.SelectedSortIndex != (int)Domain.Settings.EntrySortMode.Manual ||
             !e.Data.GetDataPresent(typeof(List<VaultEntry>)))
@@ -208,6 +210,30 @@ public partial class MainWindow : Window
             ? DragDropEffects.Move
             : DragDropEffects.None;
         e.Handled = true;
+    }
+
+    private void AutoScrollEntryListDuringDrag(DragEventArgs e)
+    {
+        var scrollViewer = FindVisualChildren<ScrollViewer>(EntryList).FirstOrDefault();
+        if (scrollViewer is null || scrollViewer.ViewportHeight <= 0)
+            return;
+
+        var position = e.GetPosition(scrollViewer);
+        const double edgeSize = 40;
+        const double scrollStep = 18;
+
+        if (position.Y < edgeSize && scrollViewer.VerticalOffset > 0)
+        {
+            scrollViewer.ScrollToVerticalOffset(
+                Math.Max(0, scrollViewer.VerticalOffset - scrollStep));
+        }
+        else if (position.Y > scrollViewer.ViewportHeight - edgeSize &&
+                 scrollViewer.VerticalOffset < scrollViewer.ScrollableHeight)
+        {
+            scrollViewer.ScrollToVerticalOffset(
+                Math.Min(scrollViewer.ScrollableHeight,
+                    scrollViewer.VerticalOffset + scrollStep));
+        }
     }
 
     private async void EntryList_Drop(object sender, DragEventArgs e)
