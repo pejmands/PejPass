@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
+using PejPass.Domain.Entities;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -14,6 +15,8 @@ public partial class MainWindow : Window
 {
     private readonly VaultSession _vaultSession;
     private readonly DispatcherTimer _snackbarTimer;
+    private Point _dragStartPoint;
+    private VaultEntry? _dragStartEntry;
 
 
     public MainWindow(MainViewModel viewModel, VaultSession vaultSession)
@@ -83,6 +86,10 @@ public partial class MainWindow : Window
 
         PreviewKeyDown += OnPreviewKeyDown;
         EntryList.SelectionChanged += (_, _) => UpdateSelectedEntriesToolbar();
+        EntryList.PreviewMouseLeftButtonDown += EntryList_PreviewMouseLeftButtonDown;
+        EntryList.PreviewMouseMove += EntryList_PreviewMouseMove;
+        EntryList.DragOver += EntryList_DragOver;
+        EntryList.Drop += EntryList_Drop;
         FaviconService.OnlineFetchingChanged += OnOnlineFetchingChanged;
 
         FaviconService.FaviconsBatchReady += () =>
@@ -139,6 +146,102 @@ public partial class MainWindow : Window
         menu.Items.Add(mostUsedItem);
         menu.Items.Add(alphabeticalItem);
         menu.IsOpen = true;
+    }
+
+    private void EntryList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _dragStartPoint = e.GetPosition(EntryList);
+        _dragStartEntry = FindEntryFromSource(e.OriginalSource as DependencyObject);
+    }
+
+    private void EntryList_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed ||
+            _dragStartEntry is null ||
+            DataContext is not MainViewModel vm ||
+            vm.SelectedSortIndex != (int)Domain.Settings.EntrySortMode.Manual)
+        {
+            return;
+        }
+
+        var position = e.GetPosition(EntryList);
+        if (Math.Abs(position.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(position.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+
+        var draggedEntries = EntryList.SelectedItems
+            .Cast<VaultEntry>()
+            .Contains(_dragStartEntry)
+                ? EntryList.SelectedItems.Cast<VaultEntry>()
+                    .OrderBy(entry => EntryList.Items.IndexOf(entry))
+                    .ToList()
+                : [_dragStartEntry];
+
+        if (draggedEntries.Count == 0)
+            return;
+
+        var data = new DataObject(typeof(List<VaultEntry>), draggedEntries);
+        DragDrop.DoDragDrop(EntryList, data, DragDropEffects.Move);
+        _dragStartEntry = null;
+    }
+
+    private void EntryList_DragOver(object sender, DragEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm ||
+            vm.SelectedSortIndex != (int)Domain.Settings.EntrySortMode.Manual ||
+            !e.Data.GetDataPresent(typeof(List<VaultEntry>)))
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+        var dragged = e.Data.GetData(typeof(List<VaultEntry>)) as List<VaultEntry>;
+        var target = FindEntryFromSource(e.OriginalSource as DependencyObject);
+
+        e.Effects = dragged is { Count: > 0 } &&
+                    target is not null &&
+                    !dragged.Any(entry => entry.Id == target.Id) &&
+                    dragged.All(entry => entry.IsFavorite == target.IsFavorite)
+            ? DragDropEffects.Move
+            : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private async void EntryList_Drop(object sender, DragEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm ||
+            vm.SelectedSortIndex != (int)Domain.Settings.EntrySortMode.Manual ||
+            e.Data.GetData(typeof(List<VaultEntry>)) is not List<VaultEntry> dragged ||
+            FindEntryFromSource(e.OriginalSource as DependencyObject) is not { } target ||
+            dragged.Any(entry => entry.Id == target.Id) ||
+            dragged.Any(entry => entry.IsFavorite != target.IsFavorite))
+        {
+            return;
+        }
+
+        var item = ItemsControl.ContainerFromElement(EntryList, e.OriginalSource as DependencyObject)
+            as ListBoxItem;
+        var insertAfter = item is not null &&
+                          e.GetPosition(item).Y >= item.ActualHeight / 2;
+
+        e.Handled = true;
+        await vm.MoveEntriesAsync(dragged, target, insertAfter);
+    }
+
+    private VaultEntry? FindEntryFromSource(DependencyObject? source)
+    {
+        while (source is not null && !ReferenceEquals(source, EntryList))
+        {
+            if (source is ListBoxItem item)
+                return item.DataContext as VaultEntry;
+
+            source = VisualTreeHelper.GetParent(source);
+        }
+
+        return null;
     }
 
     private void UpdateSelectedEntriesToolbar()
