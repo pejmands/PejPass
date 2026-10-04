@@ -77,7 +77,8 @@ public partial class LoginWindow : Window
 
         window.Owner = this;
         window.Title = "Appearance";
-        window.Height = 420;
+        window.Height = 560;
+        window.MinHeight = 480;
         window.ShowDialog();
     }
 
