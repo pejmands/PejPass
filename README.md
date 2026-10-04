@@ -1,10 +1,10 @@
 # PejPass
 
-**PejPass** is a professional, fully offline password manager for Windows.
+**PejPass** is a professional, offline-first password manager for Windows.
 
 Built with **C# / .NET 10**, **WPF**, **CommunityToolkit.Mvvm**, and modern authenticated encryption.
 
-> Your secrets never leave your machine. No accounts. No telemetry. No network.
+> Your secrets stay on your machine. No accounts. No telemetry. Network is used only when you explicitly ask (for example update check or optional favicons).
 
 ## Security Model
 
@@ -36,10 +36,12 @@ Built with **C# / .NET 10**, **WPF**, **CommunityToolkit.Mvvm**, and modern auth
 
 - [x] Create encrypted vault
 - [x] Open / lock vault
-- [x] Custom vault location
+- [x] Custom vault location and recent vault list
 - [x] Automatic locking after inactivity
 - [x] Windows Hello authentication
+- [x] Change master password
 - [x] Secure local-only storage
+- [x] Soft-delete trash with restore / permanent delete
 
 ### Credential Management
 
@@ -51,6 +53,7 @@ Built with **C# / .NET 10**, **WPF**, **CommunityToolkit.Mvvm**, and modern auth
 - [x] Search across entries and custom fields
 - [x] Favorites
 - [x] Tags and tag filtering
+- [x] Entry sort modes (favorites stay on top)
 
 ### Password Features
 
@@ -65,12 +68,11 @@ Built with **C# / .NET 10**, **WPF**, **CommunityToolkit.Mvvm**, and modern auth
 - [x] TOTP support
 - [x] Generate time-based verification codes
 - [x] Store TOTP secrets securely
+- [x] Import TOTP from QR / otpauth URI (where available)
 
 ### History & Restore
 
 PejPass keeps entry history snapshots to protect against accidental changes.
-
-Features:
 
 - [x] View previous entry versions
 - [x] Compare current data with previous snapshots
@@ -79,6 +81,18 @@ Features:
 - [x] Restore complete snapshots
 - [x] Delete individual history snapshots
 - [x] Delete all history snapshots
+
+### Updates & What’s New
+
+Update checks and downloads are **manual only** (from About).
+
+- [x] Check for updates via remote `update.json` manifest
+- [x] Download & install portable update (with user confirmation)
+- [x] Open download link in the browser
+- [x] What’s New changelog (cache-first, multi-version notes)
+- [x] Show What’s New once after a successful update
+
+Version and release date shown in About come from the running `PejPass.exe` metadata.
 
 ## Import & Export
 
@@ -106,11 +120,20 @@ password
 notes
 ```
 
+### CSV Export
+
+- [x] Export entries to a plain-text CSV (Chrome/Edge-style columns)
+
+> Export is for migration convenience — it is **not** an encrypted backup. Prefer copying your `.pejpass` vault file for backups.
+
 ## User Interface
 
-- Modern WPF interface
-- Light / dark theme support
-- Custom controls and consistent styling
+- Modern WPF interface with custom window chrome
+- Light / dark / system theme
+- Font size and zoom
+- Keyboard shortcuts reference in Settings
+- Optional online favicon fetching (off by default)
+- About, Settings, and What’s New available from the title-bar menu (including before unlock, with appearance-only settings on the login screen)
 - Native Windows application
 - No WebView dependency
 
@@ -122,6 +145,11 @@ src/
  ├── PejPass.Application
  ├── PejPass.Infrastructure
  └── PejPass.Wpf
+
+tests/
+ ├── PejPass.Domain.Tests
+ ├── PejPass.Infrastructure.Tests
+ └── PejPass.Wpf.Tests
 ```
 
 ## Requirements
@@ -147,12 +175,12 @@ dotnet run --project src/PejPass.Wpf
 
 PejPass is an actively developed personal project.
 
-The current focus areas include:
+Recent focus areas include:
 
-- Improving user experience
-- Additional import/export options
-- More vault management tools
-- Further security improvements
+- About / update / What’s New experience
+- Appearance and pre-login settings
+- Vault trash and recovery flows
+- Further UX and security polish
 
 ## License
 
