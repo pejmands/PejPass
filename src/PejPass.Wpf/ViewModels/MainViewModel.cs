@@ -135,7 +135,7 @@ public partial class MainViewModel : ObservableObject
     public bool HasContentFilter => HasTotpFilter || HasNotesFilter;
     public bool HasActiveEntryFilter =>
         !string.IsNullOrWhiteSpace(SearchText) ||
-        !string.IsNullOrWhiteSpace(SelectedTagFilter) ||
+        _selectedTagFilters.Count > 0 ||
         IsNoTagsFilterSelected ||
         HasContentFilter;
 
@@ -379,11 +379,11 @@ public partial class MainViewModel : ObservableObject
             source = source.Where(e =>
                 !e.Tags.Any(t => !string.IsNullOrWhiteSpace(t)));
         }
-        else if (!string.IsNullOrEmpty(SelectedTagFilter))
+        else if (_selectedTagFilters.Count > 0)
         {
-            var tag = SelectedTagFilter;
+            var selectedTags = _selectedTagFilters;
             source = source.Where(e =>
-                e.Tags.Any(t => string.Equals(t.Trim(), tag, StringComparison.Ordinal)));
+                e.Tags.Any(t => selectedTags.Contains(t.Trim())));
         }
 
         if (HasTotpFilter)
