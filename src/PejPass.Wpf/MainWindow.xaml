@@ -1063,20 +1063,30 @@
 			x:Name="FastDragScrollHintBorder"
 			Panel.ZIndex="1000"
 			Margin="0,0,0,24"
-			Padding="14,9"
+			Padding="16,11"
 			HorizontalAlignment="Center"
 			VerticalAlignment="Bottom"
-			Background="{DynamicResource SurfaceBrush}"
-			BorderBrush="{DynamicResource BorderBrush}"
+			Background="{DynamicResource SurfaceAltBrush}"
+			BorderBrush="{DynamicResource AccentBrush}"
 			BorderThickness="1"
-			CornerRadius="7"
+			CornerRadius="8"
 			IsHitTestVisible="False"
 			Visibility="Collapsed">
-			<TextBlock
-				FontSize="{DynamicResource AppFontSize12}"
-				Foreground="{DynamicResource TextBrush}"
-				FontWeight="SemiBold"
-				Text="Tip: Hold Alt while dragging for faster scrolling" />
+			<StackPanel Orientation="Horizontal">
+				<TextBlock
+					Margin="0,0,10,0"
+					VerticalAlignment="Center"
+					FontSize="{DynamicResource AppFontSize12}"
+					FontWeight="Bold"
+					Foreground="{DynamicResource AccentBrush}"
+					Text="TIP" />
+				<TextBlock
+					VerticalAlignment="Center"
+					FontSize="{DynamicResource AppFontSize13}"
+					Foreground="{DynamicResource TextBrush}"
+					FontWeight="SemiBold"
+					Text="Hold Alt while dragging near the edge to scroll faster" />
+			</StackPanel>
 		</Border>
 
 		<Border
