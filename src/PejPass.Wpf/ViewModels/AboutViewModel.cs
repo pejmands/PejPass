@@ -94,6 +94,26 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
         LatestVersion = result.LatestVersion;
         LatestReleased = result.Released;
         DownloadUrl = result.DownloadUrl;
+        UpdateAvailability.Set(HasUpdate);
+    }
+
+    /// <summary>
+    /// If a previous check (e.g. startup auto-check) already found an update,
+    /// show Download & Install without requiring another check click.
+    /// </summary>
+    public void ApplyKnownUpdateState()
+    {
+        if (IsBusy)
+            return;
+
+        var manifest = _updateService.LastManifest;
+        if (manifest is null || string.IsNullOrWhiteSpace(manifest.Version))
+            return;
+
+        if (!UpdateService.IsNewerVersion(manifest.Version, AppInfoService.Version))
+            return;
+
+        ApplyResult(UpdateCheckResult.Available(AppInfoService.Version, manifest));
     }
 
     /// <summary>
