@@ -97,8 +97,7 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
     }
 
     /// <summary>
-    /// Download the package, then optionally apply a portable self-update and restart.
-    /// Never replaces the running process in-place while it is still open.
+    /// Download to %TEMP%, then ask to install and restart.
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanDownloadUpdate))]
     private async Task DownloadUpdateAsync()
@@ -138,38 +137,35 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
                 : $"v{LatestVersion}";
 
             var install = DialogService.Confirm(
-                $"PejPass {versionLabel} was downloaded.\n\n" +
+                $"PejPass {versionLabel} is ready to install.\n\n" +
                 "Install now and restart PejPass?\n\n" +
                 "Your vault files are not modified by this update.",
                 "Install update",
                 yesText: "Install & restart",
-                noText: "Open folder only");
+                noText: "Cancel");
 
-            if (install)
+            if (!install)
             {
-                StatusMessage = "Installing update…";
-                try
-                {
-                    _updateService.ApplyPortableUpdateAndRestart(
-                        path,
-                        LatestVersion ?? "0.0.0");
-                    return;
-                }
-                catch (Exception applyEx)
-                {
-                    StatusMessage = $"Install failed: {applyEx.Message}";
-                    DialogService.Error(
-                        $"Could not apply the update automatically.\n\n{applyEx.Message}\n\n" +
-                        "The package is still in your Downloads folder.",
-                        "Install failed");
-                    UpdateService.OpenFolder(path);
-                }
+                TryDeleteTempPackage(path);
+                StatusMessage = UpdateService.DefaultStatusMessage;
+                return;
             }
-            else
+
+            StatusMessage = "Installing update…";
+            try
             {
-                StatusMessage =
-                    "Download complete. Open the file in Downloads to install manually.";
-                UpdateService.OpenFolder(path);
+                _updateService.ApplyPortableUpdateAndRestart(
+                    path,
+                    LatestVersion ?? "0.0.0");
+                return;
+            }
+            catch (Exception applyEx)
+            {
+                TryDeleteTempPackage(path);
+                StatusMessage = $"Install failed: {applyEx.Message}";
+                DialogService.Error(
+                    $"Could not apply the update automatically.\n\n{applyEx.Message}",
+                    "Install failed");
             }
         }
         catch (OperationCanceledException)
@@ -189,6 +185,30 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
 
     private bool CanDownloadUpdate() =>
         HasUpdate && !IsBusy && !string.IsNullOrWhiteSpace(DownloadUrl);
+
+    [RelayCommand(CanExecute = nameof(CanOpenDownloadPage))]
+    private void OpenDownloadPage()
+    {
+        if (!string.IsNullOrWhiteSpace(DownloadUrl))
+            UpdateService.OpenUrl(DownloadUrl);
+        else
+            UpdateService.OpenReleasesPage();
+    }
+
+    private bool CanOpenDownloadPage() =>
+        HasUpdate && !string.IsNullOrWhiteSpace(DownloadUrl);
+
+    private static void TryDeleteTempPackage(string? path)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(path) && System.IO.File.Exists(path))
+                System.IO.File.Delete(path);
+        }
+        catch
+        {
+        }
+    }
 
     [RelayCommand]
     private static void ShowWhatsNew()
@@ -210,6 +230,7 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
         OnPropertyChanged(nameof(IsBusy));
         CheckForUpdatesCommand.NotifyCanExecuteChanged();
         DownloadUpdateCommand.NotifyCanExecuteChanged();
+        OpenDownloadPageCommand.NotifyCanExecuteChanged();
     }
 
     public void CancelPending()
