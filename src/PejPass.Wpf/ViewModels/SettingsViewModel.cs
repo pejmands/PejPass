@@ -6,7 +6,6 @@ using PejPass.Wpf.Controls;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
-using System.IO;
 using System.Windows;
 using ThemeMode = PejPass.Domain.Settings.ThemeMode;
 
@@ -355,7 +354,7 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ClearFaviconCache()
+    private static void ClearFaviconCache()
     {
         try
         {

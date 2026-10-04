@@ -5,23 +5,18 @@ using PejPass.Wpf.Services;
 
 namespace PejPass.Wpf.ViewModels;
 
-public partial class WhatsNewViewModel : ObservableObject
+public partial class WhatsNewViewModel(UpdateService updateService) : ObservableObject
 {
-    private readonly UpdateService _updateService;
+    private readonly UpdateService _updateService = updateService;
 
     [ObservableProperty]
-    private IReadOnlyList<ReleaseNote> releases = ReleaseNotes.All;
+    public partial IReadOnlyList<ReleaseNote> Releases { get; set; } = ReleaseNotes.All;
 
     [ObservableProperty]
-    private bool isLoading;
+    public partial bool IsLoading { get; set; }
 
     [ObservableProperty]
-    private string subtitle = "Changelog";
-
-    public WhatsNewViewModel(UpdateService updateService)
-    {
-        _updateService = updateService;
-    }
+    public partial string Subtitle { get; set; } = "Changelog";
 
     public WhatsNewViewModel() : this(new UpdateService())
     {

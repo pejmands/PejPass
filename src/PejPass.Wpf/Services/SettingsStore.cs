@@ -102,14 +102,13 @@ public static class SettingsStore
             if (recentVaultPaths.GetArrayLength() > 5)
                 needsSave = true;
 
-            settings.RecentVaultPaths = recentVaultPaths
+            settings.RecentVaultPaths = [.. recentVaultPaths
                 .EnumerateArray()
                 .Where(item => item.ValueKind == JsonValueKind.String)
                 .Select(item => item.GetString())
                 .Where(path => !string.IsNullOrWhiteSpace(path))
                 .Cast<string>()
-                .Take(5)
-                .ToList();
+                .Take(5)];
         }
         else
         {

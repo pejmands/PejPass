@@ -1,7 +1,5 @@
-using PejPass.Wpf.Services;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -138,8 +136,8 @@ public partial class AppTitleBar : UserControl
         DependencyObject d,
         DependencyPropertyChangedEventArgs e)
     {
-        if (d is AppTitleBar bar)
-            bar.UpdateFileActionsVisibility();
+        if (d is AppTitleBar)
+            UpdateFileActionsVisibility();
     }
 
     private static void OnChromeFlagsChanged(
@@ -200,11 +198,8 @@ public partial class AppTitleBar : UserControl
 
     private void DetachHook()
     {
-        if (_hwndSource is not null)
-        {
-            _hwndSource.RemoveHook(WndProc);
-            _hwndSource = null;
-        }
+        _hwndSource?.RemoveHook(WndProc);
+        _hwndSource = null;
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -220,7 +215,7 @@ public partial class AppTitleBar : UserControl
         }
         else if (msg is WmNcRButtonUp or WmNcRButtonDown or WmContextMenu)
         {
-            if (IsOnCaption(lParam))
+            if (IsOnCaption())
             {
                 OpenSystemMenu();
                 handled = true;
@@ -230,7 +225,7 @@ public partial class AppTitleBar : UserControl
         return IntPtr.Zero;
     }
 
-    private static bool IsOnCaption(IntPtr lParam)
+    private static bool IsOnCaption()
     {
         return true;
     }
@@ -265,7 +260,7 @@ public partial class AppTitleBar : UserControl
         FileActionsSeparator.Visibility = hasPath ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private void UpdateFileActionsVisibility()
+    private static void UpdateFileActionsVisibility()
     {
     }
 

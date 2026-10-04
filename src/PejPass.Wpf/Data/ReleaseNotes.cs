@@ -13,7 +13,7 @@ public static class ReleaseNotes
 
     public static IReadOnlyList<ReleaseNote> All { get; } = Build();
 
-    private static IReadOnlyList<ReleaseNote> Build()
+    private static ReleaseNote[] Build()
     {
         var installed = AppInfoService.Version;
 

@@ -6,54 +6,48 @@ using PejPass.Wpf.Views;
 
 namespace PejPass.Wpf.ViewModels;
 
-public partial class AboutViewModel : ObservableObject
+public partial class AboutViewModel(UpdateService updateService) : ObservableObject
 {
-    private readonly UpdateService _updateService;
+    private readonly UpdateService _updateService = updateService;
     private CancellationTokenSource? _cts;
 
     [ObservableProperty]
-    private string statusMessage = string.Empty;
+    public partial string StatusMessage { get; set; } = UpdateService.DefaultStatusMessage;
 
     [ObservableProperty]
-    private bool isChecking;
+    public partial bool IsChecking { get; set; }
 
     [ObservableProperty]
-    private bool isDownloading;
+    public partial bool IsDownloading { get; set; }
 
     [ObservableProperty]
-    private bool hasUpdate;
+    public partial bool HasUpdate { get; set; }
 
     [ObservableProperty]
-    private string? downloadUrl;
+    public partial string? DownloadUrl { get; set; }
 
     [ObservableProperty]
-    private string? latestVersion;
+    public partial string? LatestVersion { get; set; }
 
     [ObservableProperty]
-    private string? latestReleased;
+    public partial string? LatestReleased { get; set; }
 
     [ObservableProperty]
-    private double downloadProgress;
+    public partial double DownloadProgress { get; set; }
 
     [ObservableProperty]
-    private string? downloadedPath;
+    public partial string? DownloadedPath { get; set; }
 
-    public string AppName => AppInfoService.Name;
+    public static string AppName => AppInfoService.Name;
 
     /// <summary>
     /// Installed build line — same spirit as PejTools:
     /// "Version 1.0.4 · Updated September 17, 2026"
     /// </summary>
-    public string VersionDisplay =>
+    public static string VersionDisplay =>
         $"Version {AppInfoService.Version} · {AppInfoService.ReleaseDate}";
 
     public bool IsBusy => IsChecking || IsDownloading;
-
-    public AboutViewModel(UpdateService updateService)
-    {
-        _updateService = updateService;
-        StatusMessage = _updateService.DefaultStatusMessage;
-    }
 
     public AboutViewModel() : this(new UpdateService())
     {
@@ -110,7 +104,7 @@ public partial class AboutViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(DownloadUrl))
         {
-            _updateService.OpenReleasesPage();
+            UpdateService.OpenReleasesPage();
             return;
         }
 
@@ -138,7 +132,7 @@ public partial class AboutViewModel : ObservableObject
             DownloadedPath = path;
             StatusMessage =
                 "Download complete. Open the file in Downloads to install.";
-            _updateService.OpenFolder(path);
+            UpdateService.OpenFolder(path);
         }
         catch (OperationCanceledException)
         {
@@ -159,7 +153,7 @@ public partial class AboutViewModel : ObservableObject
         HasUpdate && !IsBusy && !string.IsNullOrWhiteSpace(DownloadUrl);
 
     [RelayCommand]
-    private void ShowWhatsNew()
+    private static void ShowWhatsNew()
     {
         var window = new WhatsNewWindow
         {
@@ -171,8 +165,8 @@ public partial class AboutViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenGitHub() =>
-        _updateService.OpenRepositoryPage();
+    private static void OpenGitHub() =>
+        UpdateService.OpenRepositoryPage();
 
     private void NotifyBusy()
     {

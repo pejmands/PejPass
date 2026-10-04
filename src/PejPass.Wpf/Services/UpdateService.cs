@@ -46,9 +46,9 @@ public sealed class UpdateService : IDisposable
             $"{AppInfoService.Name}/{AppInfoService.Version}");
     }
 
-    public string CurrentVersion => AppInfoService.Version;
+    public static string CurrentVersion => AppInfoService.Version;
 
-    public string DefaultStatusMessage =>
+    public static string DefaultStatusMessage =>
         $"You are running v{CurrentVersion}.";
 
     public async Task<UpdateCheckResult> CheckForUpdatesAsync(
@@ -270,8 +270,8 @@ public sealed class UpdateService : IDisposable
 
     private static int CompareVersionsDesc(string a, string b)
     {
-        if (System.Version.TryParse(Normalize(a), out var va)
-            && System.Version.TryParse(Normalize(b), out var vb))
+        if (Version.TryParse(Normalize(a), out var va)
+            && Version.TryParse(Normalize(b), out var vb))
         {
             return vb.CompareTo(va);
         }
@@ -381,10 +381,10 @@ public sealed class UpdateService : IDisposable
 
     public static bool IsNewerVersion(string candidate, string current)
     {
-        if (!System.Version.TryParse(Normalize(candidate), out var next))
+        if (!Version.TryParse(Normalize(candidate), out var next))
             return false;
 
-        if (!System.Version.TryParse(Normalize(current), out var cur))
+        if (!Version.TryParse(Normalize(current), out var cur))
             return true;
 
         return next > cur;
@@ -398,7 +398,7 @@ public sealed class UpdateService : IDisposable
         return v;
     }
 
-    public void OpenUrl(string? url)
+    public static void OpenUrl(string? url)
     {
         if (string.IsNullOrWhiteSpace(url))
             return;
@@ -410,7 +410,7 @@ public sealed class UpdateService : IDisposable
         });
     }
 
-    public void OpenFolder(string path)
+    public static void OpenFolder(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
             return;
@@ -437,10 +437,10 @@ public sealed class UpdateService : IDisposable
         }
     }
 
-    public void OpenRepositoryPage() =>
+    public static void OpenRepositoryPage() =>
         OpenUrl(AppInfoService.RepositoryUrl);
 
-    public void OpenReleasesPage() =>
+    public static void OpenReleasesPage() =>
         OpenUrl($"{AppInfoService.RepositoryUrl.TrimEnd('/')}/releases");
 
     public void Dispose() => _http.Dispose();

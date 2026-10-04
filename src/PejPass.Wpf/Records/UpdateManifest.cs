@@ -88,30 +88,30 @@ public sealed class UpdateNotesJsonConverter : JsonConverter<UpdateNotes?>
                 return null;
 
             case JsonTokenType.String:
-            {
-                var text = reader.GetString();
-                if (string.IsNullOrWhiteSpace(text))
-                    return null;
-
-                return new UpdateNotes
                 {
-                    PlainText = text,
-                    Improved = [text]
-                };
-            }
+                    var text = reader.GetString();
+                    if (string.IsNullOrWhiteSpace(text))
+                        return null;
+
+                    return new UpdateNotes
+                    {
+                        PlainText = text,
+                        Improved = [text]
+                    };
+                }
 
             case JsonTokenType.StartObject:
-            {
-                using var doc = JsonDocument.ParseValue(ref reader);
-                var root = doc.RootElement;
-
-                return new UpdateNotes
                 {
-                    Added = ReadStringList(root, "added"),
-                    Improved = ReadStringList(root, "improved"),
-                    Fixed = ReadStringList(root, "fixed")
-                };
-            }
+                    using var doc = JsonDocument.ParseValue(ref reader);
+                    var root = doc.RootElement;
+
+                    return new UpdateNotes
+                    {
+                        Added = ReadStringList(root, "added"),
+                        Improved = ReadStringList(root, "improved"),
+                        Fixed = ReadStringList(root, "fixed")
+                    };
+                }
 
             default:
                 throw new JsonException(
