@@ -186,6 +186,11 @@
 								<Separator Style="{StaticResource PejPassContextMenuSeparator}" />
 
 								<MenuItem
+									Command="{Binding OpenWhatsNewCommand}"
+									Header="What's New"
+									Style="{StaticResource PejPassContextMenuItem}" />
+
+								<MenuItem
 									Command="{Binding OpenAboutCommand}"
 									Header="About PejPass"
 									Style="{StaticResource PejPassContextMenuItem}" />
