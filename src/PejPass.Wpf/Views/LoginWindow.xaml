@@ -15,7 +15,9 @@
 
 	<DockPanel>
 		<controls:AppTitleBar
+			x:Name="TitleBar"
 			DockPanel.Dock="Top"
+			ShowLoginActions="True"
 			ShowMaximize="false"
 			ShowMinimize="true" />
 
@@ -26,7 +28,7 @@
 
 			<StackPanel MaxWidth="440" VerticalAlignment="Top">
 
-				<!--  Header: Recents | title | Settings + About  -->
+				<!--  Header: Recents | title  -->
 				<Grid Margin="0,0,0,8">
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="*" />
@@ -64,35 +66,6 @@
 						FontWeight="Bold"
 						Foreground="{DynamicResource TextBrush}"
 						Text="PejPass" />
-
-					<!-- App-level: available before unlock -->
-					<StackPanel
-						Grid.Column="2"
-						HorizontalAlignment="Right"
-						VerticalAlignment="Center"
-						Orientation="Horizontal">
-
-						<Button
-							Height="28"
-							Margin="0,0,6,0"
-							Padding="8,4"
-							Background="{DynamicResource SurfaceAltBrush}"
-							Click="SettingsButton_Click"
-							Content="Settings"
-							Foreground="{DynamicResource TextBrush}"
-							Style="{StaticResource SecondaryButton}"
-							ToolTip="Theme, font size, zoom, and more" />
-
-						<Button
-							Height="28"
-							Padding="8,4"
-							Background="{DynamicResource SurfaceAltBrush}"
-							Click="AboutButton_Click"
-							Content="About"
-							Foreground="{DynamicResource TextBrush}"
-							Style="{StaticResource SecondaryButton}"
-							ToolTip="Version, updates, and changelog" />
-					</StackPanel>
 				</Grid>
 
 				<TextBlock
