@@ -2,14 +2,15 @@ using PejPass.Domain.Settings;
 using PejPass.Wpf.Records;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Net.Http;
 using System.Text.Json;
 
 namespace PejPass.Wpf.Services;
 
 /// <summary>
-/// Manual update discovery and package download.
-/// Never runs automatically. Never replaces the running process.
+/// Manual update discovery, package download, and portable self-apply.
+/// Never runs automatically. Never replaces the running process in-place.
 /// </summary>
 public sealed class UpdateService : IDisposable
 {
@@ -61,6 +62,17 @@ public sealed class UpdateService : IDisposable
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "PejPass"),
             "update-manifest.json");
+
+    /// <summary>
+    /// Marker written before restart; consumed once after the new build starts.
+    /// </summary>
+    public static string PendingWhatsNewPath =>
+        Path.Combine(
+            Path.GetDirectoryName(AppSettings.SettingsFilePath)
+                ?? Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PejPass"),
+            "pending-whats-new.txt");
 
     public async Task<UpdateCheckResult> CheckForUpdatesAsync(
         CancellationToken cancellationToken = default)
@@ -154,6 +166,133 @@ public sealed class UpdateService : IDisposable
         return cachedNotes;
     }
 
+    public static bool HasPendingWhatsNew()
+    {
+        try
+        {
+            if (!File.Exists(PendingWhatsNewPath))
+                return false;
+
+            var expected = File.ReadAllText(PendingWhatsNewPath).Trim();
+            if (string.IsNullOrEmpty(expected))
+                return false;
+
+            return string.Equals(
+                Normalize(expected),
+                Normalize(CurrentVersion),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static void ClearPendingWhatsNew()
+    {
+        try
+        {
+            if (File.Exists(PendingWhatsNewPath))
+                File.Delete(PendingWhatsNewPath);
+        }
+        catch
+        {
+        }
+    }
+
+    private static void WritePendingWhatsNew(string version)
+    {
+        try
+        {
+            var path = PendingWhatsNewPath;
+            var dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+
+            File.WriteAllText(path, Normalize(version));
+        }
+        catch
+        {
+        }
+    }
+
+    /// <summary>
+    /// Portable self-update: extract the zip, schedule file replace after exit, restart PejPass.
+    /// Requires user confirmation from the UI layer.
+    /// </summary>
+    public void ApplyPortableUpdateAndRestart(string zipPath, string targetVersion)
+    {
+        if (string.IsNullOrWhiteSpace(zipPath) || !File.Exists(zipPath))
+            throw new FileNotFoundException("Update package not found.", zipPath);
+
+        var processPath = Environment.ProcessPath
+            ?? throw new InvalidOperationException("Cannot resolve PejPass.exe path.");
+
+        var appDir = Path.GetDirectoryName(processPath)
+            ?? throw new InvalidOperationException("Cannot resolve application directory.");
+
+        var stageRoot = Path.Combine(
+            Path.GetTempPath(),
+            "PejPass-update-" + Guid.NewGuid().ToString("N"));
+
+        Directory.CreateDirectory(stageRoot);
+        ZipFile.ExtractToDirectory(zipPath, stageRoot);
+
+        var sourceDir = ResolveExtractedPayloadRoot(stageRoot);
+        WritePendingWhatsNew(targetVersion);
+
+        var scriptPath = Path.Combine(
+            Path.GetTempPath(),
+            "PejPass-apply-update-" + Guid.NewGuid().ToString("N") + ".cmd");
+
+        var appDirEsc = EscapeCmd(appDir);
+        var sourceEsc = EscapeCmd(sourceDir);
+        var exeEsc = EscapeCmd(processPath);
+        var stageEsc = EscapeCmd(stageRoot);
+
+        var script =
+            "@echo off" + Environment.NewLine +
+            "setlocal EnableExtensions" + Environment.NewLine +
+            "set \"APPDIR=" + appDirEsc + "\"" + Environment.NewLine +
+            "set \"SOURCE=" + sourceEsc + "\"" + Environment.NewLine +
+            "set \"EXE=" + exeEsc + "\"" + Environment.NewLine +
+            "set \"STAGE=" + stageEsc + "\"" + Environment.NewLine +
+            ":wait" + Environment.NewLine +
+            "timeout /t 1 /nobreak >nul" + Environment.NewLine +
+            "tasklist /FI \"IMAGENAME eq PejPass.exe\" 2>nul | find /I \"PejPass.exe\" >nul" + Environment.NewLine +
+            "if not errorlevel 1 goto wait" + Environment.NewLine +
+            "robocopy \"%SOURCE%\" \"%APPDIR%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1" + Environment.NewLine +
+            "if errorlevel 8 exit /b 1" + Environment.NewLine +
+            "start \"\" \"%EXE%\"" + Environment.NewLine +
+            "rmdir /S /Q \"%STAGE%\" 2>nul" + Environment.NewLine +
+            "del \"%~f0\" 2>nul" + Environment.NewLine;
+
+        File.WriteAllText(scriptPath, script);
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = scriptPath,
+            UseShellExecute = true,
+            WindowStyle = ProcessWindowStyle.Hidden,
+            CreateNoWindow = true
+        });
+
+        System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            System.Windows.Application.Current.Shutdown());
+    }
+
+    private static string ResolveExtractedPayloadRoot(string stageRoot)
+    {
+        var entries = Directory.GetFileSystemEntries(stageRoot);
+        if (entries.Length == 1 && Directory.Exists(entries[0]))
+            return entries[0];
+
+        return stageRoot;
+    }
+
+    private static string EscapeCmd(string path) =>
+        path.Replace("\"", string.Empty);
+
     private static UpdateManifest? TryLoadManifestCache()
     {
         try
@@ -187,7 +326,6 @@ public sealed class UpdateService : IDisposable
         }
         catch
         {
-            // Best-effort cache; never fail the UX on disk errors.
         }
     }
 
@@ -209,10 +347,6 @@ public sealed class UpdateService : IDisposable
             .ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Builds ordered changelog cards from the manifest.
-    /// Newest version first.
-    /// </summary>
     internal static IReadOnlyList<ReleaseNote> ToReleaseNotes(
         UpdateManifest manifest,
         string installedVersion)
@@ -230,7 +364,6 @@ public sealed class UpdateService : IDisposable
             }
         }
 
-        // Always ensure the root version is present (PejTools single-entry manifests).
         if (!string.IsNullOrWhiteSpace(manifest.Version))
         {
             var rootVer = manifest.Version.Trim();
@@ -341,10 +474,6 @@ public sealed class UpdateService : IDisposable
         return string.Compare(b, a, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>
-    /// Downloads the update package to the user's Downloads folder.
-    /// Does not install or replace the running app.
-    /// </summary>
     public async Task<string> DownloadUpdateAsync(
         string downloadUrl,
         IProgress<double>? progress = null,
@@ -405,9 +534,7 @@ public sealed class UpdateService : IDisposable
     private static string ResolveFileName(string url, HttpResponseMessage response)
     {
         if (response.Content.Headers.ContentDisposition?.FileName is { Length: > 0 } cd)
-        {
             return cd.Trim('"', '\'');
-        }
 
         try
         {
