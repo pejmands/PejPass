@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -12,6 +12,15 @@
     <Platforms>x64</Platforms>
     <ApplicationIcon>Assets\PejPass.ico</ApplicationIcon>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- Single place to bump the product version (File Properties + About). -->
+    <Version>0.1.0</Version>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+    <InformationalVersion>0.1.0</InformationalVersion>
+    <Product>PejPass</Product>
+    <Company>PejPass</Company>
+    <Authors>pejmands</Authors>
   </PropertyGroup>
 
   <ItemGroup>
