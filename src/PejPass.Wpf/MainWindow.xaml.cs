@@ -1,11 +1,13 @@
 using Microsoft.Extensions.DependencyInjection;
+using PejPass.Domain.Entities;
+using PejPass.Domain.Settings;
+using PejPass.Wpf.Adorners;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
-using PejPass.Domain.Entities;
-using PejPass.Domain.Settings;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -21,7 +23,9 @@ public partial class MainWindow : Window
     private bool _fastDragScrollUsed;
     private Point _dragStartPoint;
     private VaultEntry? _dragStartEntry;
-
+    private DropIndicatorAdorner? _dropIndicatorAdorner;
+    private VaultEntry? _lastDropTarget;
+    private bool _lastDropInsertAfter;
 
     public MainWindow(MainViewModel viewModel, VaultSession vaultSession)
     {
@@ -67,8 +71,17 @@ public partial class MainWindow : Window
         {
             FaviconService.OnlineFetchingChanged -= OnOnlineFetchingChanged;
             SnackbarService.Shown -= OnSnackbarShown;
+
             _snackbarTimer.Stop();
             SnackbarBorder.Visibility = Visibility.Collapsed;
+
+            if (_dropIndicatorAdorner is not null)
+            {
+                var layer = AdornerLayer.GetAdornerLayer(EntryList);
+                layer?.Remove(_dropIndicatorAdorner);
+                _dropIndicatorAdorner = null;
+            }
+
             viewModel.StopBackgroundTimers();
 
             if (System.Windows.Application.Current?.Windows.OfType<LoginWindow>().Any(w => w.IsVisible) == true)
@@ -111,10 +124,29 @@ public partial class MainWindow : Window
 
             Dispatcher.BeginInvoke(() =>
             {
+                AttachDropIndicatorAdorner();
+
                 AttachTagFilterMouseWheel();
                 AttachNotesScrollChain();
             }, DispatcherPriority.Loaded);
         };
+    }
+
+    private void AttachDropIndicatorAdorner()
+    {
+        if (_dropIndicatorAdorner is not null)
+            return;
+
+        var layer = AdornerLayer.GetAdornerLayer(EntryList);
+
+        if (layer is null)
+            return;
+
+        _dropIndicatorAdorner = new DropIndicatorAdorner(
+            EntryList,
+            (Brush)FindResource("AccentBrush"));
+
+        layer.Add(_dropIndicatorAdorner);
     }
 
     private void ClearContentFilters_Click(object sender, RoutedEventArgs e)
@@ -171,13 +203,13 @@ public partial class MainWindow : Window
         {
             Header = "Reset Manual Order",
             Style = (Style)FindResource("PejPassContextMenuItem"),
-            IsEnabled = vm.SelectedSortIndex == (int)Domain.Settings.EntrySortMode.Manual
+            IsEnabled = vm.SelectedSortIndex == (int)EntrySortMode.Manual
         };
 
-        AddManualOrderResetItem(resetItem, vm, "A → Z", Domain.Settings.EntrySortMode.TitleAsc);
-        AddManualOrderResetItem(resetItem, vm, "Z → A", Domain.Settings.EntrySortMode.TitleDesc);
-        AddManualOrderResetItem(resetItem, vm, "Newest", Domain.Settings.EntrySortMode.NewestFirst);
-        AddManualOrderResetItem(resetItem, vm, "Oldest", Domain.Settings.EntrySortMode.OldestFirst);
+        AddManualOrderResetItem(resetItem, vm, "A → Z", EntrySortMode.TitleAsc);
+        AddManualOrderResetItem(resetItem, vm, "Z → A", EntrySortMode.TitleDesc);
+        AddManualOrderResetItem(resetItem, vm, "Newest", EntrySortMode.NewestFirst);
+        AddManualOrderResetItem(resetItem, vm, "Oldest", EntrySortMode.OldestFirst);
 
         menu.Items.Add(resetItem);
         menu.IsOpen = true;
@@ -188,7 +220,7 @@ public partial class MainWindow : Window
         MenuItem parent,
         MainViewModel vm,
         string header,
-        Domain.Settings.EntrySortMode sortMode)
+        EntrySortMode sortMode)
     {
         var item = new MenuItem
         {
@@ -202,6 +234,8 @@ public partial class MainWindow : Window
 
     private void EntryList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        CancelPendingDrag();
+
         _dragStartPoint = e.GetPosition(EntryList);
         _dragStartEntry = FindEntryFromSource(e.OriginalSource as DependencyObject);
     }
@@ -211,7 +245,7 @@ public partial class MainWindow : Window
         if (e.LeftButton != MouseButtonState.Pressed ||
             _dragStartEntry is null ||
             DataContext is not MainViewModel vm ||
-            vm.SelectedSortIndex != (int)Domain.Settings.EntrySortMode.Manual)
+            vm.SelectedSortIndex != (int)EntrySortMode.Manual)
         {
             return;
         }
@@ -246,6 +280,7 @@ public partial class MainWindow : Window
                 MarkFastDragScrollTipSeen();
 
             HideFastDragScrollHint();
+            _dropIndicatorAdorner?.Hide();
             _fastDragScrollHintShown = false;
             _fastDragScrollUsed = false;
             _dragStartEntry = null;
@@ -254,6 +289,8 @@ public partial class MainWindow : Window
 
     private void EntryList_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
+        CancelPendingDrag();
+
         if (DataContext is not MainViewModel vm ||
             FindEntryFromSource(e.OriginalSource as DependencyObject) is not { } clickedEntry)
         {
@@ -279,19 +316,41 @@ public partial class MainWindow : Window
             FlowDirection = FlowDirection.LeftToRight
         };
 
+        var selectedEntries = EntryList.SelectedItems
+            .Cast<VaultEntry>()
+            .ToList();
+
+        if (selectedEntries.Count == 0)
+        {
+            selectedEntries.Add(clickedEntry);
+        }
+
+        var hasMixedFavorites = selectedEntries
+            .Select(e => e.IsFavorite)
+            .Distinct()
+            .Count() > 1;
+
+        var canMoveSelection =
+            !hasMixedFavorites &&
+            vm.SelectedSortIndex == (int)EntrySortMode.Manual;
+
         var selectedForMove = GetSelectedEntriesForGroup(clickedEntry);
 
         var moveToTop = CreateReorderMenuItem("Move to Top");
-        moveToTop.IsEnabled = vm.SelectedSortIndex == (int)Domain.Settings.EntrySortMode.Manual &&
-                              CanMoveEntriesToEdge(vm, selectedForMove, clickedEntry.IsFavorite, moveToTop: true);
+        moveToTop.IsEnabled =
+            canMoveSelection &&
+            CanMoveEntriesToEdge(vm, selectedForMove, clickedEntry.IsFavorite, true);
+
         moveToTop.Click += async (_, _) =>
         {
             await vm.MoveEntriesToEdgeAsync(selectedForMove, clickedEntry.IsFavorite, moveToTop: true);
         };
 
         var moveToBottom = CreateReorderMenuItem("Move to Bottom");
-        moveToBottom.IsEnabled = vm.SelectedSortIndex == (int)Domain.Settings.EntrySortMode.Manual &&
-                                 CanMoveEntriesToEdge(vm, selectedForMove, clickedEntry.IsFavorite, moveToTop: false);
+        moveToBottom.IsEnabled =
+            canMoveSelection &&
+            CanMoveEntriesToEdge(vm, selectedForMove, clickedEntry.IsFavorite, false);
+
         moveToBottom.Click += async (_, _) =>
         {
             await vm.MoveEntriesToEdgeAsync(selectedForMove, clickedEntry.IsFavorite, moveToTop: false);
@@ -301,6 +360,16 @@ public partial class MainWindow : Window
         menu.Items.Add(moveToBottom);
         menu.IsOpen = true;
         e.Handled = true;
+    }
+
+    private void CancelPendingDrag()
+    {
+        _dragStartEntry = null;
+        _dragStartPoint = default;
+
+        HideFastDragScrollHint();
+        _fastDragScrollHintShown = false;
+        _fastDragScrollUsed = false;
     }
 
     private MenuItem CreateReorderMenuItem(string header) => new()
@@ -322,7 +391,7 @@ public partial class MainWindow : Window
 
     private static bool CanMoveEntriesToEdge(
         MainViewModel vm,
-        IReadOnlyList<VaultEntry> movingEntries,
+        List<VaultEntry> movingEntries,
         bool isFavorite,
         bool moveToTop)
     {
@@ -354,24 +423,91 @@ public partial class MainWindow : Window
         AutoScrollEntryListDuringDrag(e);
 
         if (DataContext is not MainViewModel vm ||
-            vm.SelectedSortIndex != (int)Domain.Settings.EntrySortMode.Manual ||
+            vm.SelectedSortIndex != (int)EntrySortMode.Manual ||
             !e.Data.GetDataPresent(typeof(List<VaultEntry>)))
+        {
+            _dropIndicatorAdorner?.Hide();
+            _lastDropTarget = null;
+
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+
+        if (e.Data.GetData(typeof(List<VaultEntry>)) is not List<VaultEntry> dragged || dragged.Count == 0)
+        {
+            _dropIndicatorAdorner?.Hide();
+            _lastDropTarget = null;
+
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+        var target = FindEntryFromSource(e.OriginalSource as DependencyObject);
+
+        if (target is not null)
+        {
+            _lastDropTarget = target;
+        }
+        else
+        {
+            target = _lastDropTarget;
+        }
+
+        if (target is null)
+        {
+            _dropIndicatorAdorner?.Hide();
+
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+
+        if (EntryList.ItemContainerGenerator
+            .ContainerFromItem(target) is not ListBoxItem item)
         {
             e.Effects = DragDropEffects.None;
             e.Handled = true;
             return;
         }
 
-        var dragged = e.Data.GetData(typeof(List<VaultEntry>)) as List<VaultEntry>;
-        var target = FindEntryFromSource(e.OriginalSource as DependencyObject);
+        var insertAfter =
+            e.GetPosition(item).Y >= item.ActualHeight / 2;
 
-        e.Effects = dragged is { Count: > 0 } &&
-                    target is not null &&
-                    !dragged.Any(entry => entry.Id == target.Id) &&
-                    dragged.All(entry => entry.IsFavorite == target.IsFavorite)
+        _lastDropInsertAfter = insertAfter;
+
+        UpdateDropIndicator(target, insertAfter);
+
+        var isValid =
+            !dragged.Any(entry => entry.Id == target.Id) &&
+            dragged.All(entry => entry.IsFavorite == target.IsFavorite);
+
+        e.Effects = isValid
             ? DragDropEffects.Move
             : DragDropEffects.None;
+
         e.Handled = true;
+    }
+
+    private void UpdateDropIndicator(VaultEntry? target, bool insertAfter)
+    {
+        if (_dropIndicatorAdorner is null || target is null)
+            return;
+
+        if (EntryList.ItemContainerGenerator
+            .ContainerFromItem(target) is not ListBoxItem item)
+            return;
+
+        var point = item.TranslatePoint(
+            new Point(0, 0),
+            EntryList);
+
+        var y = point.Y + (insertAfter ? item.ActualHeight : 0);
+
+        _dropIndicatorAdorner.ShowAt(y);
     }
 
     private void AutoScrollEntryListDuringDrag(DragEventArgs e)
@@ -443,21 +579,44 @@ public partial class MainWindow : Window
     private async void EntryList_Drop(object sender, DragEventArgs e)
     {
         if (DataContext is not MainViewModel vm ||
-            vm.SelectedSortIndex != (int)Domain.Settings.EntrySortMode.Manual ||
-            e.Data.GetData(typeof(List<VaultEntry>)) is not List<VaultEntry> dragged ||
-            FindEntryFromSource(e.OriginalSource as DependencyObject) is not { } target ||
-            dragged.Any(entry => entry.Id == target.Id) ||
-            dragged.Any(entry => entry.IsFavorite != target.IsFavorite))
+            vm.SelectedSortIndex != (int)EntrySortMode.Manual ||
+            e.Data.GetData(typeof(List<VaultEntry>)) is not List<VaultEntry> dragged)
         {
+            _dropIndicatorAdorner?.Hide();
+            _lastDropTarget = null;
             return;
         }
 
-        var item = ItemsControl.ContainerFromElement(EntryList, e.OriginalSource as DependencyObject)
-            as ListBoxItem;
-        var insertAfter = item is not null &&
-                          e.GetPosition(item).Y >= item.ActualHeight / 2;
+        var target = FindEntryFromSource(e.OriginalSource as DependencyObject)
+                     ?? _lastDropTarget;
+
+        if (target is null ||
+            dragged.Any(entry => entry.Id == target.Id) ||
+            dragged.Any(entry => entry.IsFavorite != target.IsFavorite))
+        {
+            _dropIndicatorAdorner?.Hide();
+            _lastDropTarget = null;
+            return;
+        }
+
+
+        if (EntryList.ItemContainerGenerator
+            .ContainerFromItem(target) is not ListBoxItem item)
+        {
+            _dropIndicatorAdorner?.Hide();
+            _lastDropTarget = null;
+            return;
+        }
+
+        var insertAfter = _lastDropTarget == target
+            ? _lastDropInsertAfter
+            : e.GetPosition(item).Y >= item.ActualHeight / 2;
 
         e.Handled = true;
+
+        _dropIndicatorAdorner?.Hide();
+        _lastDropTarget = null;
+
         await vm.MoveEntriesAsync(dragged, target, insertAfter);
     }
 

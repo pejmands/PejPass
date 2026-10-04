@@ -323,7 +323,7 @@
 							FontSize="18"
 							FontWeight="SemiBold"
 							Foreground="{DynamicResource MutedBrush}"
-						ToolTip="Manual order options">
+							ToolTip="Manual order options">
 							<Button.Style>
 								<Style BasedOn="{StaticResource {x:Type Button}}" TargetType="Button">
 									<Setter Property="Visibility" Value="Collapsed" />
@@ -352,11 +352,11 @@
 						<ListBox
 							x:Name="EntryList"
 							Padding="8,0,8,12"
+							AllowDrop="True"
 							Background="Transparent"
 							BorderThickness="0"
 							IsSynchronizedWithCurrentItem="False"
 							ItemsSource="{Binding FilteredEntries}"
-							AllowDrop="True"
 							ScrollViewer.HorizontalScrollBarVisibility="Disabled"
 							ScrollViewer.VerticalScrollBarVisibility="Auto"
 							SelectedItem="{Binding SelectedEntry}"
@@ -366,7 +366,6 @@
 								<Style TargetType="ListBoxItem">
 									<Setter Property="HorizontalContentAlignment" Value="Stretch" />
 									<Setter Property="Padding" Value="0" />
-									<Setter Property="Margin" Value="0,0,0,4" />
 									<Setter Property="Focusable" Value="True" />
 
 									<Setter Property="Template">
@@ -374,12 +373,12 @@
 											<ControlTemplate TargetType="ListBoxItem">
 												<Border
 													x:Name="Bd"
+													Margin="0,0,0,4"
 													Padding="10,8"
 													Background="Transparent"
 													BorderBrush="Transparent"
 													BorderThickness="1"
-													CornerRadius="6"
-													SnapsToDevicePixels="True">
+													CornerRadius="6">
 													<Grid>
 														<Grid.ColumnDefinitions>
 															<ColumnDefinition Width="3" />
@@ -1061,11 +1060,11 @@
 
 		<Border
 			x:Name="FastDragScrollHintBorder"
-			Panel.ZIndex="1000"
 			Margin="0,0,0,24"
 			Padding="16,11"
 			HorizontalAlignment="Center"
 			VerticalAlignment="Bottom"
+			Panel.ZIndex="1000"
 			Background="{DynamicResource SurfaceAltBrush}"
 			BorderBrush="{DynamicResource AccentBrush}"
 			BorderThickness="1"
@@ -1083,8 +1082,8 @@
 				<TextBlock
 					VerticalAlignment="Center"
 					FontSize="{DynamicResource AppFontSize13}"
-					Foreground="{DynamicResource TextBrush}"
 					FontWeight="SemiBold"
+					Foreground="{DynamicResource TextBrush}"
 					Text="Hold Alt while dragging near the edge to scroll faster" />
 			</StackPanel>
 		</Border>
