@@ -66,6 +66,30 @@
 						SelectedIndex="{Binding SelectedThemeIndex}" />
 				</Grid>
 
+				<Grid Margin="0,0,0,20">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*" />
+						<ColumnDefinition Width="180" />
+					</Grid.ColumnDefinitions>
+					<StackPanel VerticalAlignment="Center">
+						<TextBlock
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"
+							Text="Check for updates at startup" />
+						<TextBlock
+							Margin="0,4,12,0"
+							FontSize="{DynamicResource AppFontSize11}"
+							Foreground="{DynamicResource MutedBrush}"
+							Text="When enabled, PejPass checks once when the app starts. Install still requires your confirmation."
+							TextWrapping="Wrap" />
+					</StackPanel>
+					<CheckBox
+						Grid.Column="1"
+						HorizontalAlignment="Left"
+						VerticalAlignment="Center"
+						IsChecked="{Binding AutoCheckForUpdates}" />
+				</Grid>
+
 				<!-- Advanced: favicon (hidden pre-login) -->
 				<StackPanel Visibility="{Binding ShowAdvancedSettings, Converter={StaticResource BoolToVis}}">
 					<Grid Margin="0,0,0,20">
@@ -408,17 +432,15 @@
 				Width="100"
 				Height="36"
 				Margin="0,0,8,0"
-				Command="{Binding SaveCommand}"
-				Content="Save"
-				IsDefault="True"
-				Style="{StaticResource PrimaryButton}" />
+				Command="{Binding CancelCommand}"
+				Content="Cancel"
+				Style="{StaticResource SecondaryButton}" />
 			<Button
 				Width="100"
 				Height="36"
-				Click="Cancel_Click"
-				Content="Cancel"
-				IsCancel="True"
-				Style="{StaticResource SecondaryButton}" />
+				Command="{Binding SaveCommand}"
+				Content="Save"
+				Style="{StaticResource PrimaryButton}" />
 		</StackPanel>
 	</Grid>
 </Window>
