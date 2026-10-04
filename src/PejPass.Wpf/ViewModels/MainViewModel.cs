@@ -417,6 +417,73 @@ public partial class MainViewModel : ObservableObject
             SelectedEntry = FilteredEntries.FirstOrDefault(e => e.Id == id);
     }
 
+    public async Task MoveEntriesAsync(
+        IReadOnlyList<VaultEntry> movingEntries,
+        VaultEntry target,
+        bool insertAfter)
+    {
+        if (_settings.SortMode != EntrySortMode.Manual ||
+            movingEntries.Count == 0 ||
+            !Entries.Any(entry => entry.Id == target.Id))
+        {
+            return;
+        }
+
+        var movingIds = movingEntries
+            .Select(entry => entry.Id)
+            .ToHashSet();
+
+        if (movingIds.Contains(target.Id) ||
+            movingEntries.Any(entry => entry.IsFavorite != target.IsFavorite) ||
+            movingEntries.Any(entry => !FilteredEntries.Any(visible => visible.Id == entry.Id)))
+        {
+            return;
+        }
+
+        if (!await EnsureVaultWritableAsync())
+            return;
+
+        var vault = _vaultSession.Vault!;
+        var snapshot = vault.CreateSnapshot();
+
+        // Reorder only within the target's favorite group.
+        var group = Entries
+            .Where(entry => entry.IsFavorite == target.IsFavorite)
+            .OrderBy(entry => entry.SortOrder)
+            .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var movingInOrder = group
+            .Where(entry => movingIds.Contains(entry.Id))
+            .ToList();
+
+        if (movingInOrder.Count != movingIds.Count)
+            return;
+
+        group.RemoveAll(entry => movingIds.Contains(entry.Id));
+
+        var targetIndex = group.FindIndex(entry => entry.Id == target.Id);
+        if (targetIndex < 0)
+            return;
+
+        var insertIndex = targetIndex + (insertAfter ? 1 : 0);
+        group.InsertRange(insertIndex, movingInOrder);
+
+        for (var index = 0; index < group.Count; index++)
+            group[index].SortOrder = index * 10;
+
+        ApplyFilter(preserveSelectionId: SelectedEntry?.Id);
+
+        if (!await SaveVaultAsync())
+        {
+            RestoreVaultSnapshot(snapshot, SelectedEntry?.Id);
+            return;
+        }
+
+        SnackbarService.Show("Entry order updated.");
+        ResetAutoLockTimer();
+    }
+
     private IEnumerable<VaultEntry> SortEntries(IEnumerable<VaultEntry> source)
     {
         var mode = _settings.SortMode;
@@ -747,6 +814,12 @@ public partial class MainViewModel : ObservableObject
 
             var vault = _vaultSession.Vault!;
             var snapshot = vault.CreateSnapshot();
+
+            newEntry.SortOrder = Entries
+                .Where(entry => entry.IsFavorite == newEntry.IsFavorite)
+                .Select(entry => entry.SortOrder)
+                .DefaultIfEmpty(-10)
+                .Max() + 10;
 
             vault.AddEntry(newEntry);
             Entries.Add(newEntry);
