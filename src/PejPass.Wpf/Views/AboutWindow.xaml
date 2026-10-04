@@ -73,7 +73,6 @@
 					Margin="0,0,8,0"
 					Command="{Binding CheckForUpdatesCommand}"
 					Content="Check for Updates"
-					IsEnabled="{Binding IsChecking, Converter={StaticResource InvertBool}}"
 					Style="{StaticResource SecondaryButton}"
 					ToolTip="Fetches update.json only when you click (no background checks)" />
 

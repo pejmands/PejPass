@@ -73,17 +73,20 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IClipboardService, ClipboardService>();
         services.AddSingleton<VaultService>();
         services.AddSingleton<VaultSession>();
+        services.AddSingleton<UpdateService>();
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<MainViewModel>();
         services.AddTransient<EntryEditorViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<HistoryViewModel>();
+        services.AddTransient<AboutViewModel>();
 
         services.AddTransient<LoginWindow>();
         services.AddTransient<MainWindow>();
         services.AddTransient<SettingsWindow>();
         services.AddTransient<HistoryWindow>();
+        services.AddTransient<AboutWindow>();
 
         Services = services.BuildServiceProvider();
 
