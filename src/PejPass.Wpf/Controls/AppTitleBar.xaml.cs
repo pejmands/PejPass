@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using PejPass.Wpf.Services;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -152,6 +153,9 @@ public partial class AppTitleBar : UserControl
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        UpdateAvailability.Changed += OnUpdateAvailabilityChanged;
+        ApplyUpdateBadge();
+
         ApplyChromeFlags();
         UpdateFileActionsVisibility();
 
@@ -170,6 +174,8 @@ public partial class AppTitleBar : UserControl
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        UpdateAvailability.Changed -= OnUpdateAvailabilityChanged;
+
         if (Host is { } window)
         {
             window.StateChanged -= OnHostStateChanged;
@@ -177,6 +183,58 @@ public partial class AppTitleBar : UserControl
         }
 
         DetachHook();
+    }
+
+    private void OnUpdateAvailabilityChanged()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.Invoke(ApplyUpdateBadge);
+            return;
+        }
+
+        ApplyUpdateBadge();
+    }
+
+    private void ApplyUpdateBadge()
+    {
+        var visible = UpdateAvailability.IsUpdateAvailable
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        if (MoreActionsUpdateBadge is not null)
+            MoreActionsUpdateBadge.Visibility = visible;
+
+        if (LoginMoreUpdateBadge is not null)
+            LoginMoreUpdateBadge.Visibility = visible;
+
+        var aboutHeader = UpdateAvailability.IsUpdateAvailable
+            ? "About PejPass  ●"
+            : "About PejPass";
+
+        if (MoreActionsAboutMenuItem is not null)
+            MoreActionsAboutMenuItem.Header = aboutHeader;
+
+        if (MoreActionsPopupAboutMenuItem is not null)
+            MoreActionsPopupAboutMenuItem.Header = aboutHeader;
+
+        if (LoginAboutMenuItem is not null)
+            LoginAboutMenuItem.Header = aboutHeader;
+
+        if (UpdateAvailability.IsUpdateAvailable)
+        {
+            if (MoreActionsButton is not null)
+                MoreActionsButton.ToolTip = "More actions — update available";
+            if (LoginMoreButton is not null)
+                LoginMoreButton.ToolTip = "More — update available";
+        }
+        else
+        {
+            if (MoreActionsButton is not null)
+                MoreActionsButton.ToolTip = "More actions";
+            if (LoginMoreButton is not null)
+                LoginMoreButton.ToolTip = "More";
+        }
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
@@ -225,10 +283,7 @@ public partial class AppTitleBar : UserControl
         return IntPtr.Zero;
     }
 
-    private static bool IsOnCaption()
-    {
-        return true;
-    }
+    private static bool IsOnCaption() => true;
 
     private void OpenSystemMenu()
     {
