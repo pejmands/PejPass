@@ -4,8 +4,9 @@ using PejPass.Wpf.Services;
 namespace PejPass.Wpf.Data;
 
 /// <summary>
-/// Single source of truth for the in-app changelog.
-/// Keep this in sync with GitHub Releases when you publish a new version.
+/// Offline in-app changelog (What's New window).
+/// Independent of the remote update.json — always available without network.
+/// Keep this list honest and short; users read it after upgrades.
 /// </summary>
 public static class ReleaseNotes
 {
@@ -20,8 +21,9 @@ public static class ReleaseNotes
 
             Added =
             [
-                "About window with version info and manual update check",
-                "What's New changelog window",
+                "Manual update check via update.json",
+                "About window with clear update status",
+                "What's New changelog",
                 "TOTP support",
                 "Vault Health dashboard",
                 "Trash and restore workflow"

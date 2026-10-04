@@ -9,13 +9,26 @@ public partial class AboutWindow : Window
     {
         InitializeComponent();
 
-        var viewModel = new AboutViewModel();
-        DataContext = viewModel;
-        VersionText.Text = viewModel.Version;
+        // Prefer DI when available; fall back for designer / simple new().
+        AboutViewModel vm;
+        try
+        {
+            vm = App.Services.GetService(typeof(AboutViewModel)) as AboutViewModel
+                 ?? new AboutViewModel();
+        }
+        catch
+        {
+            vm = new AboutViewModel();
+        }
+
+        DataContext = vm;
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
+        if (DataContext is AboutViewModel vm)
+            vm.CancelPendingCheck();
+
         Close();
     }
 }

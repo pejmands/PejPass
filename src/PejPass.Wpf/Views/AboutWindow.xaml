@@ -4,9 +4,9 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	Title="About PejPass"
 	Width="460"
-	Height="620"
+	Height="640"
 	MinWidth="460"
-	MinHeight="600"
+	MinHeight="620"
 	Background="{DynamicResource BgBrush}"
 	ResizeMode="NoResize"
 	ShowInTaskbar="False"
@@ -36,37 +36,46 @@
 				FontSize="{DynamicResource AppFontSize24}"
 				FontWeight="Bold"
 				Foreground="{DynamicResource TextBrush}"
-				Text="PejPass" />
+				Text="{Binding AppName}" />
 
 			<TextBlock
-				x:Name="VersionText"
 				Margin="0,4,0,0"
 				HorizontalAlignment="Center"
 				FontSize="{DynamicResource AppFontSize12}"
-				Foreground="{DynamicResource MutedBrush}" />
+				Foreground="{DynamicResource MutedBrush}"
+				Text="{Binding VersionDisplay}" />
 
 			<TextBlock
-				Margin="0,8,0,0"
+				Margin="0,10,0,0"
 				HorizontalAlignment="Center"
 				FontSize="{DynamicResource AppFontSize11}"
 				Foreground="{DynamicResource MutedBrush}"
-				Text="{Binding UpdateStatus}"
+				Text="{Binding StatusMessage}"
 				TextAlignment="Center"
 				TextWrapping="Wrap" />
 
-			<!-- Actions -->
+			<!-- Progress while checking -->
+			<ProgressBar
+				Width="180"
+				Height="3"
+				Margin="0,10,0,0"
+				IsIndeterminate="True"
+				Visibility="{Binding IsChecking, Converter={StaticResource BoolToVis}}" />
+
+			<!-- Primary actions -->
 			<StackPanel
-				Margin="0,14,0,0"
+				Margin="0,16,0,0"
 				HorizontalAlignment="Center"
 				Orientation="Horizontal">
 
 				<Button
-					Width="140"
+					Width="150"
 					Margin="0,0,8,0"
 					Command="{Binding CheckForUpdatesCommand}"
 					Content="Check for Updates"
+					IsEnabled="{Binding IsChecking, Converter={StaticResource InvertBool}}"
 					Style="{StaticResource SecondaryButton}"
-					ToolTip="Opens the GitHub Releases page (no automatic network check)" />
+					ToolTip="Fetches update.json only when you click (no background checks)" />
 
 				<Button
 					Width="120"
@@ -76,10 +85,20 @@
 
 			</StackPanel>
 
+			<!-- Shown only when an update is available -->
+			<Button
+				Width="180"
+				Margin="0,10,0,0"
+				HorizontalAlignment="Center"
+				Command="{Binding OpenDownloadCommand}"
+				Content="Open Download Page"
+				Style="{StaticResource PrimaryButton}"
+				Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVis}}" />
+
 		</StackPanel>
 
 
-		<!-- Main content -->
+		<!-- Body -->
 
 		<StackPanel Grid.Row="1" Margin="0,22,0,18">
 
@@ -100,81 +119,57 @@
 				TextAlignment="Center"
 				TextWrapping="Wrap" />
 
-
-			<!-- Security -->
-
 			<Border
 				Margin="0,0,0,8"
 				Padding="12"
 				Background="{DynamicResource SurfaceBrush}"
 				CornerRadius="8">
-
 				<StackPanel>
-
 					<TextBlock
 						FontWeight="SemiBold"
 						Foreground="{DynamicResource TextBrush}"
 						Text="Security" />
-
 					<TextBlock
 						Margin="0,4,0,0"
 						FontSize="{DynamicResource AppFontSize11}"
 						Foreground="{DynamicResource MutedBrush}"
 						Text="Argon2id key derivation&#10;AES-256-GCM vault encryption" />
-
 				</StackPanel>
-
 			</Border>
-
-
-			<!-- Local First -->
 
 			<Border
 				Margin="0,0,0,8"
 				Padding="12"
 				Background="{DynamicResource SurfaceBrush}"
 				CornerRadius="8">
-
 				<StackPanel>
-
 					<TextBlock
 						FontWeight="SemiBold"
 						Foreground="{DynamicResource TextBrush}"
 						Text="Local First" />
-
 					<TextBlock
 						Margin="0,4,0,0"
 						FontSize="{DynamicResource AppFontSize11}"
 						Foreground="{DynamicResource MutedBrush}"
-						Text="No account. No cloud dependency.&#10;Your data remains on your device." />
-
+						Text="No account. No cloud dependency.&#10;Update checks happen only when you ask." />
 				</StackPanel>
-
 			</Border>
-
-
-			<!-- Built With -->
 
 			<Border
 				Padding="12"
 				Background="{DynamicResource SurfaceBrush}"
 				CornerRadius="8">
-
 				<StackPanel>
-
 					<TextBlock
 						FontWeight="SemiBold"
 						Foreground="{DynamicResource TextBrush}"
 						Text="Built With" />
-
 					<TextBlock
 						Margin="0,4,0,0"
 						FontSize="{DynamicResource AppFontSize11}"
 						Foreground="{DynamicResource MutedBrush}"
 						Text=".NET 10 • WPF • CommunityToolkit.Mvvm" />
-
 				</StackPanel>
-
 			</Border>
 
 		</StackPanel>
