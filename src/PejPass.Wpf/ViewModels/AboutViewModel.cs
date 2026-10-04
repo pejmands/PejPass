@@ -3,7 +3,6 @@ using CommunityToolkit.Mvvm.Input;
 using PejPass.Wpf.Records;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
-using System.Windows;
 
 namespace PejPass.Wpf.ViewModels;
 
@@ -164,7 +163,8 @@ public partial class AboutViewModel : ObservableObject
     {
         var window = new WhatsNewWindow
         {
-            Owner = Application.Current.MainWindow
+            // Fully qualify: PejPass.Application is a project namespace and shadows System.Windows.Application
+            Owner = System.Windows.Application.Current.MainWindow
         };
 
         window.ShowDialog();

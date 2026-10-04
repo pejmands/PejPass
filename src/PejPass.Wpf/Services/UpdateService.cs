@@ -71,7 +71,7 @@ public sealed class UpdateService : IDisposable
 
             return UpdateCheckResult.Available(CurrentVersion, manifest);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             return new UpdateCheckResult
             {
@@ -80,13 +80,15 @@ public sealed class UpdateService : IDisposable
                 Message = "Update check cancelled."
             };
         }
+        catch (OperationCanceledException)
+        {
+            // HttpClient timeout surfaces as TaskCanceledException → OperationCanceledException
+            // without the caller's token being cancelled.
+            return UpdateCheckResult.NetworkError("Request timed out.");
+        }
         catch (HttpRequestException ex)
         {
             return UpdateCheckResult.NetworkError(ex.Message);
-        }
-        catch (TaskCanceledException)
-        {
-            return UpdateCheckResult.NetworkError("Request timed out.");
         }
         catch (JsonException ex)
         {
@@ -153,15 +155,12 @@ public sealed class UpdateService : IDisposable
         var improved = manifest.Notes?.Improved ?? [];
         var fixedItems = manifest.Notes?.Fixed ?? [];
 
-        // PejTools-style plain notes string
+        // PejTools-style plain string notes (converter stores text on PlainText)
         if (added.Count == 0 && improved.Count == 0 && fixedItems.Count == 0
-            && !string.IsNullOrWhiteSpace(manifest.NotesText))
+            && !string.IsNullOrWhiteSpace(manifest.Notes?.PlainText))
         {
-            improved = [manifest.NotesText!];
+            improved = [manifest.Notes!.PlainText!];
         }
-
-        // System.Text.Json may bind a JSON string "notes" into neither field;
-        // we already prefer structured. Empty is ok — UI can hide sections.
 
         return new ReleaseNote
         {
