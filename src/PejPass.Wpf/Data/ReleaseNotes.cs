@@ -4,9 +4,8 @@ using PejPass.Wpf.Services;
 namespace PejPass.Wpf.Data;
 
 /// <summary>
-/// Offline in-app changelog (What's New window).
-/// Independent of the remote update.json — always available without network.
-/// Keep this list honest and short; users read it after upgrades.
+/// Offline fallback for What's New when update.json is unreachable.
+/// Prefer publishing structured notes in update.json for the live changelog.
 /// </summary>
 public static class ReleaseNotes
 {
@@ -16,14 +15,14 @@ public static class ReleaseNotes
     [
         new ReleaseNote
         {
-            Version = AppInfoService.Version,
-            Date = "October 2026",
+            Version = $"v{AppInfoService.Version}",
+            Date = AppInfoService.ReleaseDate,
 
             Added =
             [
-                "Manual update check via update.json",
-                "About window with clear update status",
-                "What's New changelog",
+                "Manual update check and download (PejTools-style update.json)",
+                "About window with version and release date",
+                "What's New (from update.json when online)",
                 "TOTP support",
                 "Vault Health dashboard",
                 "Trash and restore workflow"

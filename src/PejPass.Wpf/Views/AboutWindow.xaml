@@ -15,16 +15,13 @@
 	<Grid Margin="28,20,28,20">
 
 		<Grid.RowDefinitions>
-			<!-- Header + actions (fixed) -->
 			<RowDefinition Height="Auto" />
-			<!-- Scrollable body -->
 			<RowDefinition Height="*" />
-			<!-- Footer (fixed) -->
 			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
 
 
-		<!-- ========== Header ========== -->
+		<!-- Header -->
 
 		<StackPanel>
 
@@ -43,15 +40,18 @@
 					Foreground="{DynamicResource TextBrush}"
 					Text="{Binding AppName}" />
 
+				<!-- Installed build: Version + release date (PejTools-style line) -->
 				<TextBlock
-					Margin="0,2,0,0"
+					Margin="0,4,0,0"
 					HorizontalAlignment="Center"
 					FontSize="{DynamicResource AppFontSize12}"
 					Foreground="{DynamicResource MutedBrush}"
-					Text="{Binding VersionDisplay}" />
+					Text="{Binding VersionDisplay}"
+					TextAlignment="Center"
+					TextWrapping="Wrap" />
 
 				<TextBlock
-					Margin="0,8,0,0"
+					Margin="0,10,0,0"
 					HorizontalAlignment="Center"
 					FontSize="{DynamicResource AppFontSize11}"
 					Foreground="{DynamicResource MutedBrush}"
@@ -70,12 +70,11 @@
 
 			</StackPanel>
 
-			<!-- Actions: always reserved space -->
 			<StackPanel
 				Margin="0,14,0,4"
 				HorizontalAlignment="Center">
 
-				<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+				<StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
 
 					<Button
 						Width="148"
@@ -83,7 +82,7 @@
 						Command="{Binding CheckForUpdatesCommand}"
 						Content="Check for Updates"
 						Style="{StaticResource SecondaryButton}"
-						ToolTip="Fetches update.json only when you click" />
+						ToolTip="Reads update.json (same idea as PejTools)" />
 
 					<Button
 						Width="120"
@@ -93,7 +92,6 @@
 
 				</StackPanel>
 
-				<!-- Download: reserved height so layout does not jump -->
 				<Button
 					Width="180"
 					Margin="0,10,0,0"
@@ -101,15 +99,15 @@
 					Command="{Binding DownloadUpdateCommand}"
 					Content="Download Update"
 					Style="{StaticResource PrimaryButton}"
-					Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVis}}"
-					ToolTip="Downloads the package to your Downloads folder" />
+					ToolTip="Downloads the zip to your Downloads folder"
+					Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVis}}" />
 
 			</StackPanel>
 
 		</StackPanel>
 
 
-		<!-- ========== Body (scrollable) ========== -->
+		<!-- Body -->
 
 		<ScrollViewer
 			Grid.Row="1"
@@ -194,7 +192,7 @@
 		</ScrollViewer>
 
 
-		<!-- ========== Footer ========== -->
+		<!-- Footer -->
 
 		<Grid Grid.Row="2">
 
@@ -224,8 +222,8 @@
 				Width="100"
 				Click="CloseButton_Click"
 				Content="Close"
-				IsDefault="True"
 				IsCancel="True"
+				IsDefault="True"
 				Style="{StaticResource SecondaryButton}" />
 
 		</Grid>

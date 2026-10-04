@@ -10,7 +10,7 @@ public enum UpdateCheckStatus
 }
 
 /// <summary>
-/// Result of a single manual update check.
+/// Result of a single manual update check against update.json.
 /// </summary>
 public sealed class UpdateCheckResult
 {
@@ -33,26 +33,34 @@ public sealed class UpdateCheckResult
         Status = UpdateCheckStatus.UpToDate,
         CurrentVersion = current,
         LatestVersion = current,
-        Message = $"You are using the latest version (v{current})."
+        Message = $"You have the latest version (v{current})."
     };
 
     public static UpdateCheckResult Available(
         string current,
-        UpdateManifest manifest) => new()
+        UpdateManifest manifest)
     {
-        Status = UpdateCheckStatus.UpdateAvailable,
-        CurrentVersion = current,
-        LatestVersion = manifest.Version,
-        DownloadUrl = manifest.DownloadUrl,
-        Released = manifest.Released,
-        Notes = manifest.Notes,
-        Message = $"Version {manifest.Version} is available."
-    };
+        var ver = manifest.Version.TrimStart('v', 'V');
+        var msg = string.IsNullOrWhiteSpace(manifest.Released)
+            ? $"Version {ver} is available."
+            : $"Version {ver} is available ({manifest.Released}).";
+
+        return new UpdateCheckResult
+        {
+            Status = UpdateCheckStatus.UpdateAvailable,
+            CurrentVersion = current,
+            LatestVersion = ver,
+            DownloadUrl = manifest.DownloadUrl,
+            Released = manifest.Released,
+            Notes = manifest.Notes,
+            Message = msg
+        };
+    }
 
     public static UpdateCheckResult NetworkError(string detail) => new()
     {
         Status = UpdateCheckStatus.NetworkError,
-        Message = $"Could not reach the update server. {detail}"
+        Message = $"Could not check for updates. {detail}"
     };
 
     public static UpdateCheckResult InvalidManifest(string detail) => new()

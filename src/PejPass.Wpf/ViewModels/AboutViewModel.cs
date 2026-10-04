@@ -31,6 +31,9 @@ public partial class AboutViewModel : ObservableObject
     private string? latestVersion;
 
     [ObservableProperty]
+    private string? latestReleased;
+
+    [ObservableProperty]
     private double downloadProgress;
 
     [ObservableProperty]
@@ -38,7 +41,12 @@ public partial class AboutViewModel : ObservableObject
 
     public string AppName => AppInfoService.Name;
 
-    public string VersionDisplay => $"v{AppInfoService.Version}";
+    /// <summary>
+    /// Installed build line — same spirit as PejTools:
+    /// "Version 1.0.4 · Updated September 17, 2026"
+    /// </summary>
+    public string VersionDisplay =>
+        $"Version {AppInfoService.Version} · {AppInfoService.ReleaseDate}";
 
     public bool IsBusy => IsChecking || IsDownloading;
 
@@ -62,6 +70,7 @@ public partial class AboutViewModel : ObservableObject
         HasUpdate = false;
         DownloadUrl = null;
         LatestVersion = null;
+        LatestReleased = null;
         DownloadedPath = null;
         DownloadProgress = 0;
         StatusMessage = "Checking for updates…";
@@ -89,9 +98,14 @@ public partial class AboutViewModel : ObservableObject
         StatusMessage = result.Message;
         HasUpdate = result.Status == UpdateCheckStatus.UpdateAvailable;
         LatestVersion = result.LatestVersion;
+        LatestReleased = result.Released;
         DownloadUrl = result.DownloadUrl;
     }
 
+    /// <summary>
+    /// PejTools-style: download the package. User installs (unzip / run) themselves.
+    /// We never replace the running password-manager process.
+    /// </summary>
     [RelayCommand(CanExecute = nameof(CanDownloadUpdate))]
     private async Task DownloadUpdateAsync()
     {
@@ -123,7 +137,8 @@ public partial class AboutViewModel : ObservableObject
                 .ConfigureAwait(true);
 
             DownloadedPath = path;
-            StatusMessage = $"Downloaded to Downloads folder.";
+            StatusMessage =
+                "Download complete. Open the file in Downloads to install.";
             _updateService.OpenFolder(path);
         }
         catch (OperationCanceledException)
