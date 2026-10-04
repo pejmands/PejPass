@@ -271,6 +271,44 @@
 						ToolTip="Settings (Ctrl+S)" />
 				</StackPanel>
 
+				<!-- Pre-login: More menu (Settings / About / What's New) -->
+				<StackPanel
+					x:Name="LoginActionsPanel"
+					Orientation="Horizontal"
+					Visibility="Collapsed">
+					<Button
+						x:Name="LoginMoreButton"
+						Width="40"
+						Height="40"
+						Margin="2,0"
+						shell:WindowChrome.IsHitTestVisibleInChrome="True"
+						Click="LoginMoreButton_Click"
+						Content="&#xE712;"
+						PreviewMouseRightButtonDown="LoginMoreButton_PreviewMouseRightButtonDown"
+						Style="{StaticResource ToolbarIconButton}"
+						ToolTip="More">
+						<Button.ContextMenu>
+							<ContextMenu
+								Placement="Bottom"
+								Style="{StaticResource PejPassContextMenu}"
+								VerticalOffset="6">
+								<MenuItem
+									Click="LoginSettings_Click"
+									Header="Settings"
+									Style="{StaticResource PejPassContextMenuItem}" />
+								<MenuItem
+									Click="LoginWhatsNew_Click"
+									Header="What's New"
+									Style="{StaticResource PejPassContextMenuItem}" />
+								<MenuItem
+									Click="LoginAbout_Click"
+									Header="About PejPass"
+									Style="{StaticResource PejPassContextMenuItem}" />
+							</ContextMenu>
+						</Button.ContextMenu>
+					</Button>
+				</StackPanel>
+
 				<Border
 					x:Name="MainActionsSeparator"
 					Width="1"
