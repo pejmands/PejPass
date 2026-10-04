@@ -63,7 +63,6 @@ public static class SettingsStore
         }
         catch
         {
-            // Best effort cleanup.
         }
     }
 
@@ -86,8 +85,6 @@ public static class SettingsStore
         }
         catch
         {
-            // Best effort only.
-            // If backup fails, recovery should still continue.
         }
     }
 
@@ -202,6 +199,14 @@ public static class SettingsStore
 
         settings.OnlineFaviconFetchingEnabled = onlineFaviconFetchingEnabled;
 
+        if (!TryGetBool(root, "autoCheckForUpdates", out var autoCheckForUpdates))
+        {
+            autoCheckForUpdates = defaults.AutoCheckForUpdates;
+            needsSave = true;
+        }
+
+        settings.AutoCheckForUpdates = autoCheckForUpdates;
+
         if (!TryGetBool(root, "hasSeenFastDragScrollTip", out var hasSeenFastDragScrollTip))
         {
             hasSeenFastDragScrollTip = defaults.HasSeenFastDragScrollTip;
@@ -288,9 +293,7 @@ public static class SettingsStore
                     continue;
 
                 if (now - createdAt > CorruptSettingsRetention)
-                {
                     file.Delete();
-                }
             }
 
             files = [.. Directory.GetFiles(
@@ -308,19 +311,16 @@ public static class SettingsStore
                 .ToList();
 
             foreach (var file in remaining.Skip(MaxCorruptSettingsFiles))
-            {
                 file.Delete();
-            }
         }
         catch
         {
-            // Best effort cleanup.
         }
     }
 
     private static bool TryGetCorruptFileDate(
-    string fileName,
-    out DateTime date)
+        string fileName,
+        out DateTime date)
     {
         date = default;
 
