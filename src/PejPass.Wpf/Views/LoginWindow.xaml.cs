@@ -66,6 +66,16 @@ public partial class LoginWindow : Window
     }
 
     /// <summary>
+    /// Theme, font, zoom, and other app settings — no vault required.
+    /// </summary>
+    private void SettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        var window = App.Services.GetRequiredService<SettingsWindow>();
+        window.Owner = this;
+        window.ShowDialog();
+    }
+
+    /// <summary>
     /// About / updates / changelog — available before unlock (no vault access).
     /// </summary>
     private void AboutButton_Click(object sender, RoutedEventArgs e)
