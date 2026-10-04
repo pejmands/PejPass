@@ -66,12 +66,17 @@ public partial class LoginWindow : Window
     }
 
     /// <summary>
-    /// Theme, font, zoom, and other app settings — no vault required.
+    /// Pre-login: Theme, font size, and zoom only.
     /// </summary>
     private void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
         var window = App.Services.GetRequiredService<SettingsWindow>();
+        if (window.DataContext is SettingsViewModel vm)
+            vm.ConfigureAppearanceOnly(true);
+
         window.Owner = this;
+        window.Title = "Appearance";
+        window.Height = 420;
         window.ShowDialog();
     }
 
