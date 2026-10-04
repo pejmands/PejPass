@@ -1,7 +1,7 @@
+using PejPass.Wpf.Services;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
-using PejPass.Wpf.Services;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -202,38 +202,29 @@ public partial class AppTitleBar : UserControl
             ? Visibility.Visible
             : Visibility.Collapsed;
 
-        if (MoreActionsUpdateBadge is not null)
-            MoreActionsUpdateBadge.Visibility = visible;
+        MoreActionsUpdateBadge?.Visibility = visible;
 
-        if (LoginMoreUpdateBadge is not null)
-            LoginMoreUpdateBadge.Visibility = visible;
+        LoginMoreUpdateBadge?.Visibility = visible;
 
         var aboutHeader = UpdateAvailability.IsUpdateAvailable
             ? "About PejPass  ●"
             : "About PejPass";
 
-        if (MoreActionsAboutMenuItem is not null)
-            MoreActionsAboutMenuItem.Header = aboutHeader;
+        MoreActionsAboutMenuItem?.Header = aboutHeader;
 
-        if (MoreActionsPopupAboutMenuItem is not null)
-            MoreActionsPopupAboutMenuItem.Header = aboutHeader;
+        MoreActionsPopupAboutMenuItem?.Header = aboutHeader;
 
-        if (LoginAboutMenuItem is not null)
-            LoginAboutMenuItem.Header = aboutHeader;
+        LoginAboutMenuItem?.Header = aboutHeader;
 
         if (UpdateAvailability.IsUpdateAvailable)
         {
-            if (MoreActionsButton is not null)
-                MoreActionsButton.ToolTip = "More actions — update available";
-            if (LoginMoreButton is not null)
-                LoginMoreButton.ToolTip = "More — update available";
+            MoreActionsButton?.ToolTip = "More actions — update available";
+            LoginMoreButton?.ToolTip = "More — update available";
         }
         else
         {
-            if (MoreActionsButton is not null)
-                MoreActionsButton.ToolTip = "More actions";
-            if (LoginMoreButton is not null)
-                LoginMoreButton.ToolTip = "More";
+            MoreActionsButton?.ToolTip = "More actions";
+            LoginMoreButton?.ToolTip = "More";
         }
     }
 

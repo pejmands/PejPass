@@ -117,7 +117,7 @@ public partial class App : System.Windows.Application
                 .CheckForUpdatesAsync()
                 .ConfigureAwait(false);
 
-            var hasUpdate = result.Status == PejPass.Wpf.Records.UpdateCheckStatus.UpdateAvailable;
+            var hasUpdate = result.Status == Records.UpdateCheckStatus.UpdateAvailable;
 
             await Current.Dispatcher.InvokeAsync(() =>
                 UpdateAvailability.Set(hasUpdate));
