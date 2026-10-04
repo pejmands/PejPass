@@ -9,4 +9,10 @@ public sealed class AppSettingsTests
     {
         Assert.False(new AppSettings().OnlineFaviconFetchingEnabled);
     }
+
+    [Fact]
+    public void FastDragScrollTip_IsUnseenByDefault()
+    {
+        Assert.False(new AppSettings().HasSeenFastDragScrollTip);
+    }
 }
