@@ -493,6 +493,24 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        var sourceName = sourceSortMode switch
+        {
+            EntrySortMode.TitleAsc => "A → Z",
+            EntrySortMode.TitleDesc => "Z → A",
+            EntrySortMode.NewestFirst => "Newest",
+            EntrySortMode.OldestFirst => "Oldest",
+            _ => "the selected order"
+        };
+
+        if (!DialogService.Confirm(
+                $"Reset the manual order to {sourceName}?\\n\\nYour current manual order will be replaced.",
+                "Reset Manual Order",
+                yesText: "Reset",
+                noText: "Cancel"))
+        {
+            return;
+        }
+
         if (!await EnsureVaultWritableAsync())
             return;
 
