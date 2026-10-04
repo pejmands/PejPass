@@ -326,6 +326,7 @@
 							BorderThickness="0"
 							IsSynchronizedWithCurrentItem="False"
 							ItemsSource="{Binding FilteredEntries}"
+							AllowDrop="True"
 							ScrollViewer.HorizontalScrollBarVisibility="Disabled"
 							ScrollViewer.VerticalScrollBarVisibility="Auto"
 							SelectedItem="{Binding SelectedEntry}"
