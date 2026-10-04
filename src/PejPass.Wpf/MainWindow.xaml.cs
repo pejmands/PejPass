@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private readonly VaultSession _vaultSession;
     private readonly DispatcherTimer _snackbarTimer;
     private readonly AppSettings _settings;
+    private bool _fastDragScrollHintShown;
     private Point _dragStartPoint;
     private VaultEntry? _dragStartEntry;
 
@@ -233,8 +234,17 @@ public partial class MainWindow : Window
             return;
 
         var data = new DataObject(typeof(List<VaultEntry>), draggedEntries);
-        DragDrop.DoDragDrop(EntryList, data, DragDropEffects.Move);
-        _dragStartEntry = null;
+
+        try
+        {
+            DragDrop.DoDragDrop(EntryList, data, DragDropEffects.Move);
+        }
+        finally
+        {
+            HideFastDragScrollHint();
+            _fastDragScrollHintShown = false;
+            _dragStartEntry = null;
+        }
     }
 
     private void EntryList_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
@@ -367,20 +377,63 @@ public partial class MainWindow : Window
 
         var position = e.GetPosition(scrollViewer);
         const double edgeSize = 40;
-        var scrollStep = Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt) ? 100 : 20;
+        var altPressed = Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt);
+        var isNearTop = position.Y < edgeSize;
+        var isNearBottom = position.Y > scrollViewer.ViewportHeight - edgeSize;
+        var canScrollUp = scrollViewer.VerticalOffset > 0;
+        var canScrollDown = scrollViewer.VerticalOffset < scrollViewer.ScrollableHeight;
 
-        if (position.Y < edgeSize && scrollViewer.VerticalOffset > 0)
+        var isInScrollableEdge =
+            (isNearTop && canScrollUp) ||
+            (isNearBottom && canScrollDown);
+
+        if (isInScrollableEdge && !_settings.HasSeenFastDragScrollTip)
+            ShowFastDragScrollHint();
+
+        var previousOffset = scrollViewer.VerticalOffset;
+        var scrollStep = altPressed ? 100 : 20;
+
+        if (isNearTop && canScrollUp)
         {
             scrollViewer.ScrollToVerticalOffset(
-                Math.Max(0, scrollViewer.VerticalOffset - scrollStep));
+                Math.Max(0, previousOffset - scrollStep));
         }
-        else if (position.Y > scrollViewer.ViewportHeight - edgeSize &&
-                 scrollViewer.VerticalOffset < scrollViewer.ScrollableHeight)
+        else if (isNearBottom && canScrollDown)
         {
             scrollViewer.ScrollToVerticalOffset(
                 Math.Min(scrollViewer.ScrollableHeight,
-                    scrollViewer.VerticalOffset + scrollStep));
+                    previousOffset + scrollStep));
         }
+
+        var didScroll = Math.Abs(scrollViewer.VerticalOffset - previousOffset) > 0.01;
+
+        if (didScroll && altPressed && _fastDragScrollHintShown)
+            MarkFastDragScrollTipSeen();
+    }
+
+    private void ShowFastDragScrollHint()
+    {
+        if (_fastDragScrollHintShown)
+            return;
+
+        FastDragScrollHintBorder.Visibility = Visibility.Visible;
+        FastDragScrollHintBorder.UpdateLayout();
+        _fastDragScrollHintShown = true;
+    }
+
+    private void HideFastDragScrollHint()
+    {
+        FastDragScrollHintBorder.Visibility = Visibility.Collapsed;
+    }
+
+    private void MarkFastDragScrollTipSeen()
+    {
+        if (_settings.HasSeenFastDragScrollTip)
+            return;
+
+        _settings.HasSeenFastDragScrollTip = true;
+        SettingsStore.TrySave(_settings);
+        HideFastDragScrollHint();
     }
 
     private async void EntryList_Drop(object sender, DragEventArgs e)
