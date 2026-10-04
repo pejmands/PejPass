@@ -484,6 +484,66 @@ public partial class MainViewModel : ObservableObject
         ResetAutoLockTimer();
     }
 
+    public async Task MoveEntriesToEdgeAsync(
+        IReadOnlyList<VaultEntry> movingEntries,
+        bool isFavorite,
+        bool moveToTop)
+    {
+        if (_settings.SortMode != EntrySortMode.Manual || movingEntries.Count == 0)
+            return;
+
+        var movingIds = movingEntries
+            .Select(entry => entry.Id)
+            .ToHashSet();
+
+        if (movingIds.Count == 0 ||
+            movingEntries.Any(entry => entry.IsFavorite != isFavorite) ||
+            movingEntries.Any(entry => !Entries.Any(active => active.Id == entry.Id)))
+        {
+            return;
+        }
+
+        if (!await EnsureVaultWritableAsync())
+            return;
+
+        var vault = _vaultSession.Vault!;
+        var snapshot = vault.CreateSnapshot();
+
+        var group = Entries
+            .Where(entry => entry.IsFavorite == isFavorite)
+            .OrderBy(entry => entry.SortOrder)
+            .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var movingInOrder = group
+            .Where(entry => movingIds.Contains(entry.Id))
+            .ToList();
+
+        if (movingInOrder.Count != movingIds.Count)
+            return;
+
+        group.RemoveAll(entry => movingIds.Contains(entry.Id));
+
+        if (moveToTop)
+            group.InsertRange(0, movingInOrder);
+        else
+            group.AddRange(movingInOrder);
+
+        for (var index = 0; index < group.Count; index++)
+            group[index].SortOrder = index * 10;
+
+        ApplyFilter(preserveSelectionId: SelectedEntry?.Id);
+
+        if (!await SaveVaultAsync())
+        {
+            RestoreVaultSnapshot(snapshot, SelectedEntry?.Id);
+            return;
+        }
+
+        SnackbarService.Show(moveToTop ? "Entries moved to top." : "Entries moved to bottom.");
+        ResetAutoLockTimer();
+    }
+
     private IEnumerable<VaultEntry> SortEntries(IEnumerable<VaultEntry> source)
     {
         var mode = _settings.SortMode;
