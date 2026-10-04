@@ -224,7 +224,7 @@ public partial class MainWindow : Window
                 ? EntryList.SelectedItems.Cast<VaultEntry>()
                     .OrderBy(entry => EntryList.Items.IndexOf(entry))
                     .ToList()
-                : new List<VaultEntry> { _dragStartEntry };
+                : [_dragStartEntry];
 
         if (draggedEntries.Count == 0)
             return;
@@ -242,10 +242,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        var item = ItemsControl.ContainerFromElement(
-            EntryList, e.OriginalSource as DependencyObject) as ListBoxItem;
 
-        if (item is null)
+        if (ItemsControl.ContainerFromElement(
+            EntryList, e.OriginalSource as DependencyObject) is not ListBoxItem item)
             return;
 
         if (!item.IsSelected)
@@ -298,7 +297,7 @@ public partial class MainWindow : Window
             .OrderBy(entry => EntryList.Items.IndexOf(entry))
             .ToList();
 
-        return selected.Count > 0 ? selected : new List<VaultEntry> { contextEntry };
+        return selected.Count > 0 ? selected : [contextEntry];
     }
 
     private void EntryList_DragOver(object sender, DragEventArgs e)
@@ -334,7 +333,7 @@ public partial class MainWindow : Window
 
         var position = e.GetPosition(scrollViewer);
         const double edgeSize = 40;
-        var scrollStep = Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt) ? 50 : 18;
+        var scrollStep = Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt) ? 100 : 20;
 
         if (position.Y < edgeSize && scrollViewer.VerticalOffset > 0)
         {
@@ -403,7 +402,7 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel vm)
             return;
 
-        var selected = EntryList.SelectedItems.Cast<Domain.Entities.VaultEntry>().ToArray();
+        var selected = EntryList.SelectedItems.Cast<VaultEntry>().ToArray();
         if (vm.DeleteSelectedEntriesCommand.CanExecute(selected))
             vm.DeleteSelectedEntriesCommand.Execute(selected);
     }

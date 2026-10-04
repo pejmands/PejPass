@@ -503,7 +503,7 @@ public partial class MainViewModel : ObservableObject
         };
 
         if (!DialogService.Confirm(
-                $"Reset the manual order to {sourceName}?\\n\\nYour current manual order will be replaced.",
+                $"Reset the manual order to {sourceName}?\n\nYour current manual order will be replaced.",
                 "Reset Manual Order",
                 yesText: "Reset",
                 noText: "Cancel"))
