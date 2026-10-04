@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using PejPass.Wpf.Dialogs;
+using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using System.IO;
 using System.Windows;
@@ -66,6 +67,20 @@ public partial class LoginWindow : Window
                 System.Windows.Threading.DispatcherPriority.Input);
 
             await viewModel.RefreshWindowsHelloVisibilityAsync();
+
+            // After a portable self-update, greet the user with What's New once.
+            if (UpdateService.HasPendingWhatsNew())
+            {
+                try
+                {
+                    var whatsNew = new WhatsNewWindow { Owner = this };
+                    whatsNew.ShowDialog();
+                }
+                finally
+                {
+                    UpdateService.ClearPendingWhatsNew();
+                }
+            }
         };
     }
 
