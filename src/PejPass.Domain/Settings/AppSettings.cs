@@ -34,6 +34,12 @@ public sealed class AppSettings
 
     public bool OnlineFaviconFetchingEnabled { get; set; }
 
+    /// <summary>
+    /// When true, PejPass checks for updates once at startup (manual install still required).
+    /// Default: off.
+    /// </summary>
+    public bool AutoCheckForUpdates { get; set; }
+
     public bool HasSeenFastDragScrollTip { get; set; }
 
     public static string SettingsFilePath =>
