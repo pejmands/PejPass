@@ -92,15 +92,25 @@
 
 				</StackPanel>
 
-				<Button
-					Width="180"
+				<StackPanel
 					Margin="0,10,0,0"
 					HorizontalAlignment="Center"
-					Command="{Binding DownloadUpdateCommand}"
-					Content="Download Update"
-					Style="{StaticResource PrimaryButton}"
-					ToolTip="Downloads the zip to your Downloads folder"
-					Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVis}}" />
+					Orientation="Horizontal"
+					Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVis}}">
+					<Button
+						Width="148"
+						Margin="0,0,8,0"
+						Command="{Binding DownloadUpdateCommand}"
+						Content="Download & Install"
+						Style="{StaticResource PrimaryButton}"
+						ToolTip="Download the update package and install it" />
+					<Button
+						Width="148"
+						Command="{Binding OpenDownloadPageCommand}"
+						Content="Open Download Link"
+						Style="{StaticResource SecondaryButton}"
+						ToolTip="Open the download URL in your browser" />
+				</StackPanel>
 
 			</StackPanel>
 
