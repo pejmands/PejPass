@@ -16,6 +16,10 @@ public partial class LoginWindow : Window
         InitializeComponent();
         DataContext = viewModel;
 
+        TitleBar.SettingsRequested += (_, _) => OpenSettings();
+        TitleBar.AboutRequested += (_, _) => OpenAbout();
+        TitleBar.WhatsNewRequested += (_, _) => OpenWhatsNew();
+
         viewModel.RecentVaultSelected += (_, _) =>
         {
             ClearPasswordInputs();
@@ -65,10 +69,7 @@ public partial class LoginWindow : Window
         };
     }
 
-    /// <summary>
-    /// Pre-login: Theme, font size, and zoom only.
-    /// </summary>
-    private void SettingsButton_Click(object sender, RoutedEventArgs e)
+    private void OpenSettings()
     {
         var window = App.Services.GetRequiredService<SettingsWindow>();
         if (window.DataContext is SettingsViewModel vm)
@@ -80,16 +81,15 @@ public partial class LoginWindow : Window
         window.ShowDialog();
     }
 
-    /// <summary>
-    /// About / updates / changelog — available before unlock (no vault access).
-    /// </summary>
-    private void AboutButton_Click(object sender, RoutedEventArgs e)
+    private void OpenAbout()
     {
-        var window = new AboutWindow
-        {
-            Owner = this
-        };
+        var window = new AboutWindow { Owner = this };
+        window.ShowDialog();
+    }
 
+    private void OpenWhatsNew()
+    {
+        var window = new WhatsNewWindow { Owner = this };
         window.ShowDialog();
     }
 
