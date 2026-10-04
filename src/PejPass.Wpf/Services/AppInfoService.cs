@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Reflection;
 
 namespace PejPass.Wpf.Services;
@@ -103,12 +104,12 @@ public static class AppInfoService
         if (v.StartsWith('v') || v.StartsWith('V'))
             v = v[1..];
 
-        // Display 0.1.0.0 as 0.1.0 when revision is zero
-        if (Version.TryParse(v, out var parsed)
-            && parsed.Build >= 0
+        // Display 0.1.0.0 as 0.1.0 when revision is zero.
+        // Fully qualify System.Version — property "Version" would shadow it.
+        if (System.Version.TryParse(v, out var parsed)
             && parsed.Revision == 0)
         {
-            return parsed.Build == 0
+            return parsed.Build <= 0
                 ? $"{parsed.Major}.{parsed.Minor}"
                 : $"{parsed.Major}.{parsed.Minor}.{parsed.Build}";
         }
