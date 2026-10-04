@@ -1060,6 +1060,25 @@
 		</Border>
 
 		<Border
+			x:Name="FastDragScrollHintBorder"
+			Panel.ZIndex="90"
+			Margin="24,0,0,24"
+			Padding="14,9"
+			HorizontalAlignment="Left"
+			VerticalAlignment="Bottom"
+			Background="{DynamicResource SurfaceBrush}"
+			BorderBrush="{DynamicResource BorderBrush}"
+			BorderThickness="1"
+			CornerRadius="7"
+			IsHitTestVisible="False"
+			Visibility="Collapsed">
+			<TextBlock
+				FontSize="{DynamicResource AppFontSize12}"
+				Foreground="{DynamicResource TextBrush}"
+				Text="Tip: Hold Alt while dragging for faster scrolling" />
+		</Border>
+
+		<Border
 			x:Name="SnackbarBorder"
 			Width="360"
 			MinHeight="54"
