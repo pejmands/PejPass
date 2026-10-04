@@ -103,6 +103,29 @@ public partial class App : System.Windows.Application
         }
 
         login.Show();
+
+        if (settings.AutoCheckForUpdates)
+            _ = CheckForUpdatesInBackgroundAsync();
+    }
+
+    private static async Task CheckForUpdatesInBackgroundAsync()
+    {
+        try
+        {
+            var updateService = Services.GetRequiredService<UpdateService>();
+            var result = await updateService
+                .CheckForUpdatesAsync()
+                .ConfigureAwait(false);
+
+            var hasUpdate = result.Status == PejPass.Wpf.Records.UpdateCheckStatus.UpdateAvailable;
+
+            await Current.Dispatcher.InvokeAsync(() =>
+                UpdateAvailability.Set(hasUpdate));
+        }
+        catch
+        {
+            // Silent — startup must not fail because of update check.
+        }
     }
 
     private static void OnGlobalZoomChanged(object? sender, double zoom)
@@ -202,9 +225,6 @@ public partial class App : System.Windows.Application
         return null;
     }
 
-    /// <summary>
-    /// Applies the custom window chrome before the window is shown.
-    /// </summary>
     public static void ApplyFontSize(FontSizeMode mode)
     {
         var scale = mode switch
@@ -280,7 +300,6 @@ public partial class App : System.Windows.Application
             UseAeroCaptionButtons = false
         });
 
-        // Native system menu conflicts with the themed AppTitleBar menu (esp. Login / prompts).
         var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
         if (hwnd != IntPtr.Zero)
             StripNativeSystemMenu(hwnd);
@@ -319,9 +338,6 @@ public partial class App : System.Windows.Application
     private static IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong) =>
         IntPtr.Size == 8 ? SetWindowLongPtr64(hWnd, nIndex, dwNewLong) : SetWindowLongPtr32(hWnd, nIndex, dwNewLong);
 
-    /// <summary>
-    /// Outer rounded frame + 1px themed border; inject title bar when missing.
-    /// </summary>
     private static void EnsureChromeShell(Window window)
     {
         if (window.Content is not UIElement body)
