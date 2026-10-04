@@ -1,4 +1,4 @@
-using PejPass.Wpf.Data;
+using PejPass.Domain.Settings;
 using PejPass.Wpf.Records;
 using System.Diagnostics;
 using System.IO;
@@ -51,6 +51,17 @@ public sealed class UpdateService : IDisposable
     public static string DefaultStatusMessage =>
         $"You are running v{CurrentVersion}.";
 
+    /// <summary>
+    /// Disk cache path (LocalAppData\PejPass\update-manifest.json).
+    /// </summary>
+    public static string ManifestCachePath =>
+        Path.Combine(
+            Path.GetDirectoryName(AppSettings.SettingsFilePath)
+                ?? Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PejPass"),
+            "update-manifest.json");
+
     public async Task<UpdateCheckResult> CheckForUpdatesAsync(
         CancellationToken cancellationToken = default)
     {
@@ -65,6 +76,7 @@ public sealed class UpdateService : IDisposable
             }
 
             LastManifest = manifest;
+            TrySaveManifestCache(manifest);
 
             if (!IsNewerVersion(manifest.Version, CurrentVersion))
                 return UpdateCheckResult.UpToDate(CurrentVersion);
@@ -99,32 +111,84 @@ public sealed class UpdateService : IDisposable
     }
 
     /// <summary>
-    /// Loads the changelog for What's New.
-    /// Prefers remote update.json (releases[] or root notes);
-    /// falls back to embedded offline notes.
+    /// Instant notes from memory or disk cache (no network).
+    /// </summary>
+    public IReadOnlyList<ReleaseNote> GetCachedReleaseNotes()
+    {
+        var manifest = LastManifest ?? TryLoadManifestCache();
+        if (manifest is null)
+            return [];
+
+        LastManifest = manifest;
+        return ToReleaseNotes(manifest, CurrentVersion);
+    }
+
+    /// <summary>
+    /// Cache-first changelog for What's New.
+    /// Prefer GetCachedReleaseNotes() for an immediate UI paint, then call this
+    /// to refresh from the network and update the on-disk cache.
     /// </summary>
     public async Task<IReadOnlyList<ReleaseNote>> LoadReleaseNotesAsync(
         CancellationToken cancellationToken = default)
     {
+        var cachedNotes = GetCachedReleaseNotes();
+
         try
         {
-            var manifest = LastManifest
-                ?? await FetchManifestAsync(cancellationToken).ConfigureAwait(false);
-
-            if (manifest is not null)
+            var remote = await FetchManifestAsync(cancellationToken).ConfigureAwait(false);
+            if (remote is not null && !string.IsNullOrWhiteSpace(remote.Version))
             {
-                LastManifest = manifest;
-                var notes = ToReleaseNotes(manifest, CurrentVersion);
+                LastManifest = remote;
+                TrySaveManifestCache(remote);
+
+                var notes = ToReleaseNotes(remote, CurrentVersion);
                 if (notes.Count > 0)
                     return notes;
             }
         }
         catch
         {
-            // Offline / error → embedded notes.
+            // Offline / error — keep cache.
         }
 
-        return ReleaseNotes.All;
+        return cachedNotes;
+    }
+
+    private static UpdateManifest? TryLoadManifestCache()
+    {
+        try
+        {
+            var path = ManifestCachePath;
+            if (!File.Exists(path))
+                return null;
+
+            var json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize<UpdateManifest>(json, JsonOptions);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static void TrySaveManifestCache(UpdateManifest manifest)
+    {
+        try
+        {
+            var path = ManifestCachePath;
+            var dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+
+            var json = JsonSerializer.Serialize(manifest, JsonOptions);
+            var tmp = path + ".tmp";
+            File.WriteAllText(tmp, json);
+            File.Move(tmp, path, overwrite: true);
+        }
+        catch
+        {
+            // Best-effort cache; never fail the UX on disk errors.
+        }
     }
 
     private async Task<UpdateManifest?> FetchManifestAsync(CancellationToken cancellationToken)
@@ -180,7 +244,6 @@ public sealed class UpdateService : IDisposable
                 entries.Insert(0, (rootVer, manifest.Released, manifest.Notes));
             else if (manifest.Notes is not null)
             {
-                // Prefer richer root notes if the matching release had empty notes.
                 var idx = entries.FindIndex(e =>
                     string.Equals(
                         Normalize(e.Version),
@@ -197,7 +260,6 @@ public sealed class UpdateService : IDisposable
         if (entries.Count == 0)
             return [];
 
-        // Sort newest first by semantic version when possible.
         entries.Sort((a, b) => CompareVersionsDesc(a.Version, b.Version));
 
         var latestNorm = Normalize(entries[0].Version);
