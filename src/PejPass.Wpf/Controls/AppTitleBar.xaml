@@ -70,6 +70,8 @@
 					FontWeight="SemiBold"
 					Foreground="{DynamicResource TextBrush}"
 					PreviewMouseLeftButtonDown="TitleText_PreviewMouseLeftButtonDown"
+					PreviewMouseRightButtonDown="TitleText_PreviewMouseRightButtonDown"
+					PreviewMouseRightButtonUp="TitleText_PreviewMouseRightButtonUp"
 					Text="{Binding Title, RelativeSource={RelativeSource AncestorType=UserControl}}"
 					TextTrimming="CharacterEllipsis"
 					ToolTipService.IsEnabled="{Binding ShowFilePathToolTip, RelativeSource={RelativeSource AncestorType=UserControl}}"

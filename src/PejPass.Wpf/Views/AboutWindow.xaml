@@ -99,7 +99,7 @@
 						Cursor="Hand"
 						FontSize="{DynamicResource AppFontSize11}"
 						Foreground="{DynamicResource AccentBrush}"
-						Text="Open download link"
+						Text="Open download in browser"
 						TextAlignment="Center"
 						ToolTip="Open the download URL in your browser">
 						<TextBlock.InputBindings>

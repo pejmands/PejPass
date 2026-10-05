@@ -1,6 +1,7 @@
 using PejPass.Wpf.Services;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -131,6 +132,14 @@ public partial class AppTitleBar : UserControl
         InitializeComponent();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+
+        TitleBarContextMenu.Closed += (_, _) =>
+        {
+            TitleBarContextMenu.Placement = PlacementMode.MousePoint;
+            TitleBarContextMenu.HorizontalOffset = 0;
+            TitleBarContextMenu.VerticalOffset = 0;
+            TitleBarContextMenu.PlacementTarget = null;
+        };
     }
 
     private static void OnFilePathChanged(
@@ -156,20 +165,26 @@ public partial class AppTitleBar : UserControl
         UpdateAvailability.Changed += OnUpdateAvailabilityChanged;
         ApplyUpdateBadge();
 
+        var w = Host;
+        if (w is null) return;
+
+        if (string.IsNullOrEmpty(Title))
+            Title = w.Title;
+
+        if (w.ResizeMode is ResizeMode.NoResize or ResizeMode.CanMinimize)
+            ShowMaximize = false;
+        if (w.ResizeMode is ResizeMode.NoResize)
+            ShowMinimize = false;
+
         ApplyChromeFlags();
-        UpdateFileActionsVisibility();
 
-        if (Host is { } window)
-        {
-            window.StateChanged += OnHostStateChanged;
-            UpdateMaxIcon();
+        w.StateChanged -= OnHostStateChanged;
+        w.StateChanged += OnHostStateChanged;
+        UpdateMaxIcon();
 
-            var helper = new WindowInteropHelper(window);
-            if (helper.Handle != IntPtr.Zero)
-                AttachHook(helper.Handle);
-            else
-                window.SourceInitialized += OnSourceInitialized;
-        }
+        // Caption drag / double-click maximize: owned by WindowChrome (CaptionHeight).
+        // Intercept caption right-click so we show the themed custom menu instead of the system menu.
+        AttachCaptionMenuHook(w);
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -183,6 +198,42 @@ public partial class AppTitleBar : UserControl
         }
 
         DetachHook();
+    }
+
+    private void AttachCaptionMenuHook(Window window)
+    {
+        DetachCaptionMenuHook();
+
+        void Attach()
+        {
+            var helper = new WindowInteropHelper(window);
+            helper.EnsureHandle();
+            // Remove WS_SYSMENU so the OS never shows the native system menu
+            // (fixes Login / PasswordPrompt where NC messages alone were not enough).
+            StripSystemMenu(helper.Handle);
+            _hwndSource = HwndSource.FromHwnd(helper.Handle);
+            _hwndSource?.AddHook(WndProc);
+        }
+
+        if (new WindowInteropHelper(window).Handle != IntPtr.Zero)
+            Attach();
+        else
+            window.SourceInitialized += (_, _) => Attach();
+    }
+
+    private static void StripSystemMenu(IntPtr hwnd)
+    {
+        var style = GetWindowLongPtr(hwnd, GwlStyle).ToInt64();
+        SetWindowLongPtr(hwnd, GwlStyle, checked((IntPtr)(style & ~WsSysMenu)));
+    }
+
+    private void DetachCaptionMenuHook()
+    {
+        if (_hwndSource is null)
+            return;
+
+        _hwndSource.RemoveHook(WndProc);
+        _hwndSource = null;
     }
 
     private void OnUpdateAvailabilityChanged()
@@ -253,36 +304,148 @@ public partial class AppTitleBar : UserControl
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == WmSysCommand)
+        // Caption right-click → themed menu only (never the system menu).
+        if (msg is WmNcRButtonUp or WmNcRButtonDown)
         {
-            var command = wParam.ToInt32() & 0xFFF0;
-            if (command is ScKeyMenu or ScMouseMenu)
+            if (wParam.ToInt32() == HtCaption)
             {
-                OpenSystemMenu();
+                if (msg == WmNcRButtonUp)
+                {
+                    GetCursorPos(out var pt);
+                    var screenX = pt.X;
+                    var screenY = pt.Y;
+                    Dispatcher.BeginInvoke(() => OpenTitleBarMenuAtScreenPoint(screenX, screenY));
+                }
+
                 handled = true;
+                return IntPtr.Zero;
             }
         }
-        else if (msg is WmNcRButtonUp or WmNcRButtonDown or WmContextMenu)
+
+        // Alt+Space → themed menu at window top-left (like the classic system menu).
+        // SC_MOUSEMENU → themed menu at cursor.
+        if (msg == WmSysCommand)
         {
-            if (IsOnCaption())
+            var cmd = wParam.ToInt32() & 0xFFF0;
+            if (cmd == ScKeyMenu)
             {
-                OpenSystemMenu();
+                Dispatcher.BeginInvoke(OpenTitleBarMenuAtWindowTopLeft);
                 handled = true;
+                return IntPtr.Zero;
+            }
+
+            if (cmd == ScMouseMenu)
+            {
+                GetCursorPos(out var pt);
+                var screenX = pt.X;
+                var screenY = pt.Y;
+                Dispatcher.BeginInvoke(() => OpenTitleBarMenuAtScreenPoint(screenX, screenY));
+                handled = true;
+                return IntPtr.Zero;
+            }
+        }
+
+        // Context menu only when the hit-test is the caption (do not steal client menus).
+        if (msg == WmContextMenu)
+        {
+            GetCursorPos(out var pt);
+            var hit = (int)SendMessage(
+                hwnd,
+                WmNcHitTest,
+                IntPtr.Zero,
+                MakeLParam(pt.X, pt.Y));
+
+            if (hit == HtCaption)
+            {
+                Dispatcher.BeginInvoke(() => OpenTitleBarMenuAtScreenPoint(pt.X, pt.Y));
+                handled = true;
+                return IntPtr.Zero;
             }
         }
 
         return IntPtr.Zero;
     }
 
-    private static bool IsOnCaption() => true;
+    private static IntPtr MakeLParam(int lo, int hi) =>
+        (hi << 16) | (lo & 0xFFFF);
 
-    private void OpenSystemMenu()
+    [LibraryImport("user32.dll", EntryPoint = "SendMessageW")]
+    private static partial IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+    [LibraryImport("user32.dll", EntryPoint = "GetWindowLong")]
+    private static partial IntPtr GetWindowLongPtr32(IntPtr hWnd, int nIndex);
+
+    [LibraryImport("user32.dll", EntryPoint = "GetWindowLongPtrA")]
+    private static partial IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
+
+    [LibraryImport("user32.dll", EntryPoint = "SetWindowLong")]
+    private static partial IntPtr SetWindowLongPtr32(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+    [LibraryImport("user32.dll", EntryPoint = "SetWindowLongPtrA")]
+    private static partial IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+    private static IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex) =>
+        IntPtr.Size == 8 ? GetWindowLongPtr64(hWnd, nIndex) : GetWindowLongPtr32(hWnd, nIndex);
+
+    private static IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong) =>
+        IntPtr.Size == 8 ? SetWindowLongPtr64(hWnd, nIndex, dwNewLong) : SetWindowLongPtr32(hWnd, nIndex, dwNewLong);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetCursorPos(out PointNative lpPoint);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PointNative
+    {
+        public int X;
+        public int Y;
+    }
+
+    private void OpenTitleBarMenuAtWindowTopLeft()
+    {
+        if (TitleBarContextMenu is null || Host is not { } w)
+            return;
+
+        if (TitleBarContextMenu.IsOpen)
+            TitleBarContextMenu.IsOpen = false;
+
+        // Anchor at the window's top-left (classic system-menu position), not under the cursor.
+        TitleBarContextMenu.CustomPopupPlacementCallback = null;
+        TitleBarContextMenu.PlacementTarget = w;
+        TitleBarContextMenu.Placement = PlacementMode.Relative;
+        TitleBarContextMenu.HorizontalOffset = 0;
+        TitleBarContextMenu.VerticalOffset = 0;
+        TitleBarContextMenu.IsOpen = true;
+    }
+
+    private void OpenTitleBarMenuAtScreenPoint(int screenX, int screenY)
     {
         if (TitleBarContextMenu is null)
             return;
 
-        UpdateSystemMenuItems();
+        if (TitleBarContextMenu.IsOpen)
+            TitleBarContextMenu.IsOpen = false;
+
+        var dip = DevicePixelsToDip(screenX, screenY);
+
+        TitleBarContextMenu.CustomPopupPlacementCallback = null;
+        TitleBarContextMenu.PlacementTarget = null;
+        TitleBarContextMenu.Placement = PlacementMode.Absolute;
+        TitleBarContextMenu.HorizontalOffset = dip.X;
+        TitleBarContextMenu.VerticalOffset = dip.Y;
         TitleBarContextMenu.IsOpen = true;
+    }
+
+    private Point DevicePixelsToDip(int screenX, int screenY)
+    {
+        var source = PresentationSource.FromVisual(this)
+                     ?? (Host is { } w ? PresentationSource.FromVisual(w) : null);
+
+        if (source?.CompositionTarget is { } ct)
+            return ct.TransformFromDevice.Transform(new Point(screenX, screenY));
+
+        // Fallback: assume 96 DPI
+        return new Point(screenX, screenY);
     }
 
     private void TitleBarContextMenu_Opened(object sender, RoutedEventArgs e)
@@ -360,6 +523,18 @@ public partial class AppTitleBar : UserControl
     private void LoginWhatsNew_Click(object sender, RoutedEventArgs e)
     {
         WhatsNewRequested?.Invoke(this, EventArgs.Empty);
+        e.Handled = true;
+    }
+
+    private void TitleText_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+    }
+
+    private void TitleText_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        GetCursorPos(out var pt);
+        OpenTitleBarMenuAtScreenPoint(pt.X, pt.Y);
         e.Handled = true;
     }
 
