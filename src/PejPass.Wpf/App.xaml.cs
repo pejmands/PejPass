@@ -367,6 +367,7 @@ public partial class App : System.Windows.Application
             {
                 Title = window.Title,
                 ShowMainActions = window is MainWindow,
+                ShowFileActions = window is MainWindow,
                 ShowMinimize = window is MainWindow && window.ResizeMode is not ResizeMode.NoResize,
                 ShowMaximize = window.ResizeMode is ResizeMode.CanResize
                     or ResizeMode.CanResizeWithGrip

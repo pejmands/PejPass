@@ -484,16 +484,21 @@ public partial class AppTitleBar : UserControl
         try
         {
             Clipboard.SetText(FilePath);
+            SnackbarService.Show("File path copied");
         }
         catch
         {
+            SnackbarService.Show("Could not copy file path");
         }
     }
 
     private void OpenFileLocationMenuItem_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(FilePath) || !File.Exists(FilePath))
+        {
+            SnackbarService.Show("Vault file not found");
             return;
+        }
 
         try
         {
@@ -503,9 +508,12 @@ public partial class AppTitleBar : UserControl
                 Arguments = $"/select,\"{FilePath}\"",
                 UseShellExecute = true
             });
+
+            SnackbarService.Show("Opened file location");
         }
         catch
         {
+            SnackbarService.Show("Could not open file location");
         }
     }
 
