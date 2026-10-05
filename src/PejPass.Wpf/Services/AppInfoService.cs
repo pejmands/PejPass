@@ -22,7 +22,7 @@ public static class AppInfoService
     /// Local test: http://localhost/update.json
     /// </summary>
     public const string UpdateManifestUrl =
-        "http://localhost/update.json";
+        "https://pejmands.github.io/PejPass/update.json";
 
     private static readonly Lazy<(string Version, string ReleaseDate)> FileInfo =
         new(ReadFromExecutable);
