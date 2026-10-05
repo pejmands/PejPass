@@ -27,6 +27,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ThemeService _themeService;
     private readonly VaultSession _vaultSession;
 
+    private static readonly TimeSpan AutoLockActivityThrottle = TimeSpan.FromMilliseconds(500);
     private System.Timers.Timer? _autoLockTimer;
     private DispatcherTimer? _totpTimer;
     private bool _isPasswordVisible;
@@ -190,7 +191,6 @@ public partial class MainViewModel : ObservableObject
         UpdatePasswordDisplay();
         RebuildDisplayCustomFields();
         RefreshTotp();
-        ResetAutoLockTimer();
     }
 
     partial void OnSelectedSortIndexChanged(int value)
@@ -481,7 +481,6 @@ public partial class MainViewModel : ObservableObject
         }
 
         SnackbarService.Show("Entry order updated.");
-        ResetAutoLockTimer();
     }
 
     public async Task ResetManualOrderAsync(EntrySortMode sourceSortMode)
@@ -547,7 +546,6 @@ public partial class MainViewModel : ObservableObject
         }
 
         SnackbarService.Show("Manual order reset.");
-        ResetAutoLockTimer();
     }
 
     public async Task MoveEntriesToEdgeAsync(
@@ -607,7 +605,6 @@ public partial class MainViewModel : ObservableObject
         }
 
         SnackbarService.Show(moveToTop ? "Entries moved to top." : "Entries moved to bottom.");
-        ResetAutoLockTimer();
     }
 
     private IEnumerable<VaultEntry> SortEntries(IEnumerable<VaultEntry> source)
@@ -658,24 +655,28 @@ public partial class MainViewModel : ObservableObject
             return;
 
         var now = DateTime.UtcNow;
-        if (now - _lastAutoLockActivityUtc < TimeSpan.FromMilliseconds(250))
+        if (now - _lastAutoLockActivityUtc < AutoLockActivityThrottle)
             return;
 
-        _lastAutoLockActivityUtc = now;
         ResetAutoLockTimer();
     }
 
     private void StartAutoLockTimer()
     {
-        if (_settings.AutoLockMinutes <= 0) return;
+        if (_settings.AutoLockMinutes <= 0)
+            return;
 
-        _lastAutoLockActivityUtc = DateTime.UtcNow;
-        _autoLockTimer = new System.Timers.Timer(_settings.AutoLockMinutes * 60_000);
+        _autoLockTimer = new System.Timers.Timer
+        {
+            Interval = _settings.AutoLockMinutes * 60_000,
+            AutoReset = false
+        };
+
         _autoLockTimer.Elapsed += (_, _) =>
         {
-            System.Windows.Application.Current?.Dispatcher.Invoke(() => Lock());
+            System.Windows.Application.Current?.Dispatcher.Invoke(Lock);
         };
-        _autoLockTimer.AutoReset = false;
+
         _autoLockTimer.Start();
     }
 
@@ -685,14 +686,9 @@ public partial class MainViewModel : ObservableObject
             return;
 
         _lastAutoLockActivityUtc = DateTime.UtcNow;
-        _autoLockTimer?.Stop();
 
-        if (_settings.AutoLockMinutes > 0)
-        {
-            _autoLockTimer ??= new System.Timers.Timer();
-            _autoLockTimer.Interval = _settings.AutoLockMinutes * 60_000;
-            _autoLockTimer.Start();
-        }
+        _autoLockTimer?.Stop();
+        _autoLockTimer?.Start();
     }
 
     private static Window? GetOwnerWindow()
@@ -740,12 +736,10 @@ public partial class MainViewModel : ObservableObject
         SnackbarService.Show(isFavorite
             ? "Added to favorites."
             : "Removed from favorites.");
-
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
-    private void OpenAbout()
+    private static void OpenAbout()
     {
         var window = new AboutWindow
         {
@@ -753,11 +747,10 @@ public partial class MainViewModel : ObservableObject
         };
 
         window.ShowDialog();
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
-    private void OpenWhatsNew()
+    private static void OpenWhatsNew()
     {
         var window = new WhatsNewWindow
         {
@@ -765,7 +758,6 @@ public partial class MainViewModel : ObservableObject
         };
 
         window.ShowDialog();
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
@@ -782,7 +774,6 @@ public partial class MainViewModel : ObservableObject
 
         _autoLockTimer?.Stop();
         StartAutoLockTimer();
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
@@ -805,7 +796,6 @@ public partial class MainViewModel : ObservableObject
         }
 
         UpdatePasswordDisplay();
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
@@ -818,8 +808,6 @@ public partial class MainViewModel : ObservableObject
             item.Hide();
         else
             item.Reveal(_settings.RevealSecretSeconds);
-
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
@@ -831,7 +819,6 @@ public partial class MainViewModel : ObservableObject
         _clipboard.CopyWithTimeout(item.Value, timeout);
 
         SnackbarService.Show($"\"{item.Name}\" copied. Clears in {_settings.ClipboardClearSeconds}s.");
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
@@ -844,7 +831,6 @@ public partial class MainViewModel : ObservableObject
         _clipboard.CopyWithTimeout(SelectedEntry.Username, timeout);
 
         SnackbarService.Show($"Username copied. Clears in {_settings.ClipboardClearSeconds}s.");
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
@@ -857,7 +843,6 @@ public partial class MainViewModel : ObservableObject
         _clipboard.CopyWithTimeout(SelectedEntry.Url, timeout);
 
         SnackbarService.Show($"URL copied. Clears in {_settings.ClipboardClearSeconds}s.");
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
@@ -870,7 +855,6 @@ public partial class MainViewModel : ObservableObject
         _clipboard.CopyWithTimeout(TotpCode, timeout);
 
         SnackbarService.Show($"TOTP code copied. Clears in {_settings.ClipboardClearSeconds}s.");
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
@@ -896,7 +880,6 @@ public partial class MainViewModel : ObservableObject
             });
 
             SnackbarService.Show("Opened in browser");
-            ResetAutoLockTimer();
         }
         catch (Exception ex)
         {
@@ -928,7 +911,6 @@ public partial class MainViewModel : ObservableObject
         _clipboard.CopyWithTimeout(entry.Password, timeout);
 
         SnackbarService.Show($"Password copied. Clears in {_settings.ClipboardClearSeconds}s.");
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
@@ -972,7 +954,6 @@ public partial class MainViewModel : ObservableObject
             }
 
             SnackbarService.Show("Entry added.");
-            ResetAutoLockTimer();
         }
     }
 
@@ -1058,7 +1039,6 @@ public partial class MainViewModel : ObservableObject
         }
 
         SnackbarService.Show("Entry updated.");
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
@@ -1105,7 +1085,6 @@ public partial class MainViewModel : ObservableObject
         SnackbarService.Show(count == 1
             ? "Moved 1 entry to Trash."
             : $"Moved {count} entries to Trash.");
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
@@ -1152,7 +1131,6 @@ public partial class MainViewModel : ObservableObject
 
         UpdateEntryStatus($"moved {selected.Count} to trash");
         SnackbarService.Show($"Moved {selected.Count} entries to Trash.");
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
@@ -1189,7 +1167,6 @@ public partial class MainViewModel : ObservableObject
 
         UpdateEntryStatus("moved to trash");
         SnackbarService.Show("Moved entry to Trash.");
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
@@ -1256,7 +1233,6 @@ public partial class MainViewModel : ObservableObject
                 $"Vault now: {vault.Entries.Count} entries · {vault.Trash.Count} in trash\n\n" +
                 $"Saved to:\n{_vaultSession.VaultPath}",
                 "Import complete");
-            ResetAutoLockTimer();
         }
         catch (Exception ex)
         {
@@ -1296,8 +1272,6 @@ public partial class MainViewModel : ObservableObject
             if (SelectedEntry is not null)
                 RequestScrollToEntry?.Invoke(this, EventArgs.Empty);
         }
-
-        ResetAutoLockTimer();
     }
 
     [RelayCommand]
@@ -1333,7 +1307,6 @@ public partial class MainViewModel : ObservableObject
         }
 
         RefreshEntriesFromVault();
-        ResetAutoLockTimer();
     }
 
     private void OnTrashChanged(object? sender, EventArgs e)
@@ -1392,8 +1365,6 @@ public partial class MainViewModel : ObservableObject
                 _vaultSession.Vault!);
 
             SnackbarService.Show("Encrypted backup exported.");
-
-            ResetAutoLockTimer();
         }
         catch (Exception ex)
         {
