@@ -63,7 +63,7 @@
 
 							<StackPanel>
 
-								<!-- Version row + badges -->
+								<!--  Version row + badges  -->
 								<Grid>
 									<Grid.ColumnDefinitions>
 										<ColumnDefinition Width="*" />
@@ -77,9 +77,7 @@
 										Foreground="{DynamicResource TextBrush}"
 										Text="{Binding Version}" />
 
-									<StackPanel
-										Grid.Column="1"
-										Orientation="Horizontal">
+									<StackPanel Grid.Column="1" Orientation="Horizontal">
 
 										<Border
 											Margin="6,0,0,0"
@@ -123,16 +121,15 @@
 									</StackPanel>
 
 								</Grid>
-
 								<TextBlock
-									Margin="0,4,0,12"
+									Margin="0,4,0,0"
 									FontSize="{DynamicResource AppFontSize11}"
-										Foreground="{DynamicResource MutedBrush}"
-										Text="{Binding Date}"
-										Visibility="{Binding Date, Converter={StaticResource NullOrEmptyToVis}}" />
+									Foreground="{DynamicResource MutedBrush}"
+									Text="{Binding Date}"
+									Visibility="{Binding Date, Converter={StaticResource NullOrEmptyToVis}}" />
 
-								<!-- Added -->
-								<StackPanel Visibility="{Binding Added, Converter={StaticResource NullOrEmptyToVis}}">
+								<!--  Added  -->
+								<StackPanel Margin="0,12,0,0" Visibility="{Binding Added, Converter={StaticResource NullOrEmptyToVis}}">
 									<TextBlock
 										FontWeight="SemiBold"
 										Foreground="{DynamicResource TextBrush}"
@@ -150,7 +147,7 @@
 									</ItemsControl>
 								</StackPanel>
 
-								<!-- Improved -->
+								<!--  Improved  -->
 								<StackPanel Margin="0,12,0,0" Visibility="{Binding Improved, Converter={StaticResource NullOrEmptyToVis}}">
 									<TextBlock
 										FontWeight="SemiBold"
@@ -169,7 +166,7 @@
 									</ItemsControl>
 								</StackPanel>
 
-								<!-- Fixed -->
+								<!--  Fixed  -->
 								<StackPanel Margin="0,12,0,0" Visibility="{Binding Fixed, Converter={StaticResource NullOrEmptyToVis}}">
 									<TextBlock
 										FontWeight="SemiBold"
