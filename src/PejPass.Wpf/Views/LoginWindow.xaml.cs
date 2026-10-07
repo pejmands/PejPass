@@ -73,7 +73,7 @@ public partial class LoginWindow : Window
             if (_allowClose)
                 return;
 
-            if (_settings.MinimizeToSystemTray)
+            if (_settings.CloseToSystemTray)
             {
                 var tray = App.Services.GetRequiredService<SystemTrayService>();
 
