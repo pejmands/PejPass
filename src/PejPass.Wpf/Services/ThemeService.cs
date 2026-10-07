@@ -89,7 +89,9 @@ public sealed class ThemeService(AppSettings settings) : IDisposable
         if (existingTheme is not null)
             dictionaries.Remove(existingTheme);
 
-        var themeSource = dark ? "Themes/DarkTheme.xaml" : "Themes/LightTheme.xaml";
+        var themeSource = dark
+            ? "/PejPass;component/Themes/DarkTheme.xaml"
+            : "/PejPass;component/Themes/LightTheme.xaml";
         dictionaries.Insert(0, new System.Windows.ResourceDictionary
         {
             Source = new Uri(themeSource, UriKind.Relative)
