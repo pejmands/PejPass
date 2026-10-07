@@ -40,6 +40,13 @@ public sealed class AppSettings
     /// </summary>
     public bool AutoCheckForUpdates { get; set; }
 
+    /// <summary>
+    /// When true, closing or minimizing the main window hides it to the system tray
+    /// instead of exiting. Real exit only via tray menu or explicit Exit.
+    /// Default: off (opt-in).
+    /// </summary>
+    public bool MinimizeToSystemTray { get; set; }
+
     public bool HasSeenFastDragScrollTip { get; set; }
 
     public static string SettingsFilePath =>
