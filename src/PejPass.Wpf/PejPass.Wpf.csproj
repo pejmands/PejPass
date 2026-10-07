@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <None Remove="Assets\PejPass.ico" />
+    <None Remove="Assets\PejPassLocked.ico" />
   </ItemGroup>
 
   <ItemGroup>
@@ -42,6 +43,9 @@
 
   <ItemGroup>
     <Resource Include="Assets\PejPass.ico">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Assets\PejPassLocked.ico">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Resource>
   </ItemGroup>
