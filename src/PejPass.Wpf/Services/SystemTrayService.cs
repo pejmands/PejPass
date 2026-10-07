@@ -1,11 +1,11 @@
+using H.NotifyIcon;
+using H.NotifyIcon.Core;
+using PejPass.Domain.Settings;
 using System.ComponentModel;
 using System.Drawing;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using H.NotifyIcon;
-using PejPass.Domain.Settings;
-using Application = System.Windows.Application;
 using Media = System.Windows.Media;
 
 namespace PejPass.Wpf.Services;
@@ -13,19 +13,14 @@ namespace PejPass.Wpf.Services;
 /// <summary>
 /// System-tray via H.NotifyIcon.Wpf. Opt-in: <see cref="AppSettings.MinimizeToSystemTray"/>.
 /// </summary>
-public sealed class SystemTrayService : IDisposable
+public sealed class SystemTrayService(AppSettings settings) : IDisposable
 {
-    private readonly AppSettings _settings;
+    private readonly AppSettings _settings = settings;
     private TaskbarIcon? _taskbarIcon;
     private Window? _hostWindow;
     private Icon? _ownedIcon;
     private bool _isExiting;
     private bool _disposed;
-
-    public SystemTrayService(AppSettings settings)
-    {
-        _settings = settings;
-    }
 
     public bool IsEnabled => _settings.MinimizeToSystemTray;
 
@@ -92,7 +87,7 @@ public sealed class SystemTrayService : IDisposable
         if (!IsEnabled)
             return;
 
-        var app = Application.Current;
+        var app = System.Windows.Application.Current;
         if (app is not null && !app.Dispatcher.CheckAccess())
         {
             app.Dispatcher.Invoke(Show);
@@ -117,8 +112,7 @@ public sealed class SystemTrayService : IDisposable
 
     public void Hide()
     {
-        if (_taskbarIcon is not null)
-            _taskbarIcon.Visibility = Visibility.Collapsed;
+        _taskbarIcon?.Visibility = Visibility.Collapsed;
     }
 
     public void Exit()
@@ -130,9 +124,9 @@ public sealed class SystemTrayService : IDisposable
         Hide();
         Dispose();
 
-        Application.Current?.Dispatcher.Invoke(() =>
+        System.Windows.Application.Current?.Dispatcher.Invoke(() =>
         {
-            Application.Current.Shutdown();
+            System.Windows.Application.Current.Shutdown();
         });
     }
 
@@ -149,7 +143,7 @@ public sealed class SystemTrayService : IDisposable
 
     private static void EnsureUiThread()
     {
-        var app = Application.Current;
+        var app = System.Windows.Application.Current;
         if (app is null)
             return;
 
@@ -169,7 +163,7 @@ public sealed class SystemTrayService : IDisposable
         try
         {
             var uri = new Uri("pack://application:,,,/Assets/PejPass.ico", UriKind.Absolute);
-            var streamInfo = Application.GetResourceStream(uri);
+            var streamInfo = System.Windows.Application.GetResourceStream(uri);
             if (streamInfo?.Stream is not null)
             {
                 using var ms = new MemoryStream();

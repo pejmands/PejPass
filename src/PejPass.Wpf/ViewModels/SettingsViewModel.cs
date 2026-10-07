@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.DependencyInjection;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using PejPass.Application.Services;
 using PejPass.Domain.Settings;
 using PejPass.Wpf.Controls;
@@ -222,7 +222,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.MinimizeToSystemTray = MinimizeToSystemTray;
 
         // Apply ShutdownMode immediately so tray behaviour matches the new setting.
-        Application.Current.ShutdownMode = MinimizeToSystemTray
+        System.Windows.Application.Current.ShutdownMode = MinimizeToSystemTray
             ? ShutdownMode.OnExplicitShutdown
             : ShutdownMode.OnMainWindowClose;
 

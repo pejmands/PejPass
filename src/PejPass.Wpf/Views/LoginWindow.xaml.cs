@@ -74,7 +74,7 @@ public partial class LoginWindow : Window
             var tray = App.Services.GetService<SystemTrayService>();
             tray?.Hide();
             tray?.Dispose();
-            Application.Current.Shutdown();
+            System.Windows.Application.Current.Shutdown();
         };
 
         Loaded += async (_, _) =>
