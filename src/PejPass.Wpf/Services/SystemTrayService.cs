@@ -34,10 +34,19 @@ public sealed class SystemTrayService : IDisposable
 
         EnsureUiThread();
 
-        var menu = new ContextMenu();
+        var menu = new ContextMenu
+        {
+            Style = GetContextMenuStyle()
+        };
+
         menu.Items.Add(CreateMenuItem("Show", () => ShowRequested?.Invoke(this, EventArgs.Empty)));
         menu.Items.Add(CreateMenuItem("Lock vault", () => LockRequested?.Invoke(this, EventArgs.Empty)));
-        menu.Items.Add(new Separator());
+
+        menu.Items.Add(new Separator
+        {
+            Style = GetSeparatorStyle()
+        });
+
         menu.Items.Add(CreateMenuItem("Exit", Exit));
 
         // H.NotifyIcon opens the menu with an absolute screen point.
@@ -145,10 +154,24 @@ public sealed class SystemTrayService : IDisposable
 
     private static MenuItem CreateMenuItem(string header, Action action)
     {
-        var item = new MenuItem { Header = header };
+        var item = new MenuItem
+        {
+            Header = header,
+            Style = GetMenuItemStyle()
+        };
+
         item.Click += (_, _) => action();
         return item;
     }
+
+    private static Style? GetContextMenuStyle() =>
+        Application.Current?.TryFindResource("PejPassContextMenu") as Style;
+
+    private static Style? GetMenuItemStyle() =>
+        Application.Current?.TryFindResource("PejPassContextMenuItem") as Style;
+
+    private static Style? GetSeparatorStyle() =>
+        Application.Current?.TryFindResource("PejPassContextMenuSeparator") as Style;
 
     private static Icon LoadAppIcon()
     {
