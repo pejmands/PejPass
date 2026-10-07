@@ -5,7 +5,6 @@ using PejPass.Domain.Settings;
 using PejPass.Infrastructure.Crypto;
 using PejPass.Infrastructure.Import;
 using PejPass.Infrastructure.Storage;
-using PejPass.Wpf;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
@@ -17,7 +16,7 @@ namespace PejPass.Wpf.Tests;
 
 internal sealed class WpfTestHost : IDisposable
 {
-    private static readonly object SyncRoot = new();
+    private static readonly Lock SyncRoot = new();
     private static readonly ManualResetEventSlim Ready = new(false);
     private static Thread? _uiThread;
     private static Dispatcher? _dispatcher;
