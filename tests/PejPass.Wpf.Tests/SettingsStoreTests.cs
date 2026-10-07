@@ -39,6 +39,12 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void StartWithWindows_IsDisabledByDefault()
+    {
+        Assert.False(new AppSettings().StartWithWindows);
+    }
+
+    [Fact]
     public async Task OlderSettings_MigrateCloseToSystemTrayFromMinimizeSetting()
     {
         await SettingsFileLock.WaitAsync(TestContext.Current.CancellationToken);

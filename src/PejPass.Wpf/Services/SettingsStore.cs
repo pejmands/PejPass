@@ -224,6 +224,14 @@ public static class SettingsStore
 
         settings.CloseToSystemTray = closeToSystemTray;
 
+        if (!TryGetBool(root, "startWithWindows", out var startWithWindows))
+        {
+            startWithWindows = defaults.StartWithWindows;
+            needsSave = true;
+        }
+
+        settings.StartWithWindows = startWithWindows;
+
         if (!TryGetBool(root, "hasSeenFastDragScrollTip", out var hasSeenFastDragScrollTip))
         {
             hasSeenFastDragScrollTip = defaults.HasSeenFastDragScrollTip;
