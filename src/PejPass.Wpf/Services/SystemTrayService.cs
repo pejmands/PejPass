@@ -37,8 +37,6 @@ public sealed class SystemTrayService : IDisposable
 
     public void Initialize()
     {
-        _themeService.ThemeChanged -= OnThemeChanged;
-
         if (_taskbarIcon is not null)
             return;
 
@@ -184,7 +182,7 @@ public sealed class SystemTrayService : IDisposable
         var app = Application.Current;
         if (app is not null && !app.Dispatcher.CheckAccess())
         {
-            app.Dispatcher.Invoke(OnThemeChanged);
+            app.Dispatcher.Invoke(() => OnThemeChanged(this, EventArgs.Empty));
             return;
         }
 
@@ -260,6 +258,7 @@ public sealed class SystemTrayService : IDisposable
             return;
 
         _disposed = true;
+        _themeService.ThemeChanged -= OnThemeChanged;
 
         if (_taskbarIcon is not null)
         {
