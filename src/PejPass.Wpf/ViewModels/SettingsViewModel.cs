@@ -267,7 +267,7 @@ public partial class SettingsViewModel : ObservableObject
             RevertPreview();
 
             DialogService.Error(
-                $"Windows startup could not be updated.\\n\\n{startupError}",
+                $"Windows startup could not be updated.\n\n{startupError}",
                 "Startup setting unavailable");
 
             return;
