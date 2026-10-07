@@ -104,7 +104,7 @@
 							Margin="0,4,12,0"
 							FontSize="{DynamicResource AppFontSize11}"
 							Foreground="{DynamicResource MutedBrush}"
-							Text="Close or minimize hides the window to the tray. Exit only from the tray menu."
+							Text="When minimized, hide the window to the tray instead of leaving it minimized."
 							TextWrapping="Wrap" />
 					</StackPanel>
 					<CheckBox
@@ -112,6 +112,30 @@
 						HorizontalAlignment="Left"
 						VerticalAlignment="Center"
 						IsChecked="{Binding MinimizeToSystemTray}" />
+				</Grid>
+
+				<Grid Margin="0,0,0,20">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*" />
+						<ColumnDefinition Width="180" />
+					</Grid.ColumnDefinitions>
+					<StackPanel VerticalAlignment="Center">
+						<TextBlock
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"
+							Text="Close to system tray" />
+						<TextBlock
+							Margin="0,4,12,0"
+							FontSize="{DynamicResource AppFontSize11}"
+							Foreground="{DynamicResource MutedBrush}"
+							Text="When closed, hide the window to the tray instead of exiting."
+							TextWrapping="Wrap" />
+					</StackPanel>
+					<CheckBox
+						Grid.Column="1"
+						HorizontalAlignment="Left"
+						VerticalAlignment="Center"
+						IsChecked="{Binding CloseToSystemTray}" />
 				</Grid>
 
 				<!-- Advanced: favicon (hidden pre-login) -->
