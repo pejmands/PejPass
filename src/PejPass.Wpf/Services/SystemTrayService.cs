@@ -97,17 +97,7 @@ public sealed class SystemTrayService(AppSettings settings) : IDisposable
         Initialize();
 
         if (_taskbarIcon is not null)
-        {
             _taskbarIcon.Visibility = Visibility.Visible;
-            try
-            {
-                _taskbarIcon.ForceCreate(enablesEfficiencyMode: false);
-            }
-            catch
-            {
-                // Best-effort; icon may already exist.
-            }
-        }
     }
 
     public void Hide()
