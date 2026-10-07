@@ -24,6 +24,7 @@ public partial class App : System.Windows.Application
     public static IServiceProvider Services { get; private set; } = null!;
 
     private static AppSettings? _settings;
+    private static WindowsSecurityService? _windowsSecurityService;
 
     private const double WindowCornerRadius = 10;
 
@@ -78,6 +79,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<VaultSession>();
         services.AddSingleton<UpdateService>();
         services.AddSingleton<SystemTrayService>();
+        services.AddSingleton<WindowsSecurityService>();
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<MainViewModel>();
@@ -102,6 +104,10 @@ public partial class App : System.Windows.Application
         tray.LockRequested += OnTrayLockRequested;
 
         tray.Show();
+
+        _windowsSecurityService = Services.GetRequiredService<WindowsSecurityService>();
+        _windowsSecurityService.SecurityLockRequested += OnWindowsSecurityLockRequested;
+        _windowsSecurityService.Start();
 
         var login = Services.GetRequiredService<LoginWindow>();
         MainWindow = login;
@@ -146,6 +152,22 @@ public partial class App : System.Windows.Application
         Current.Dispatcher.Invoke(() =>
         {
             // Preserve the current visibility of the main window.
+            if (Current.MainWindow is MainWindow main &&
+                main.DataContext is MainViewModel vm)
+            {
+                vm.Lock(
+                    main.IsVisible &&
+                    main.WindowState != WindowState.Minimized);
+            }
+        });
+    }
+
+    private static void OnWindowsSecurityLockRequested(object? sender, EventArgs e)
+    {
+        Current.Dispatcher.Invoke(() =>
+        {
+            // Lock immediately when Windows locks or suspends the system.
+            // A minimized or hidden main window keeps the login screen hidden.
             if (Current.MainWindow is MainWindow main &&
                 main.DataContext is MainViewModel vm)
             {
@@ -489,6 +511,12 @@ public partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         SingleInstance.Activated -= OnSecondInstanceActivated;
+        if (_windowsSecurityService is not null)
+        {
+            _windowsSecurityService.SecurityLockRequested -= OnWindowsSecurityLockRequested;
+            _windowsSecurityService.Dispose();
+            _windowsSecurityService = null;
+        }
         ZoomBehavior.GlobalZoomChanged -= OnGlobalZoomChanged;
         SingleInstance.Release();
         PendingVaultOpen.ReadAndClear();
