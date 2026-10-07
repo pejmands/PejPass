@@ -12,6 +12,8 @@ public sealed class ThemeService(AppSettings settings) : IDisposable
     private readonly AppSettings _settings = settings;
     private bool _watching;
 
+    public event EventHandler? ThemeChanged;
+
     /// <summary>Apply the saved theme from settings.</summary>
     public void Apply()
     {
@@ -20,12 +22,12 @@ public sealed class ThemeService(AppSettings settings) : IDisposable
     }
 
     /// <summary>Preview a theme without writing it to settings (for Settings dialog live preview).</summary>
-    public static void Preview(ThemeMode mode)
+    public void Preview(ThemeMode mode)
     {
         ApplyMode(mode);
     }
 
-    private static void ApplyMode(ThemeMode mode)
+    private void ApplyMode(ThemeMode mode)
     {
         var useDark = mode switch
         {
@@ -35,6 +37,7 @@ public sealed class ThemeService(AppSettings settings) : IDisposable
         };
 
         ApplyThemeDictionary(useDark);
+        ThemeChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void UpdateSystemWatch()
@@ -114,6 +117,7 @@ public sealed class ThemeService(AppSettings settings) : IDisposable
     public void Dispose()
     {
         StopWatch();
+        ThemeChanged = null;
         GC.SuppressFinalize(this);
     }
 }
