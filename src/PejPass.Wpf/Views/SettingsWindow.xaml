@@ -66,101 +66,105 @@
 						SelectedIndex="{Binding SelectedThemeIndex}" />
 				</Grid>
 
-				<Grid Margin="0,0,0,20">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="*" />
-						<ColumnDefinition Width="180" />
-					</Grid.ColumnDefinitions>
-					<StackPanel VerticalAlignment="Center">
-						<TextBlock
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"
-							Text="Check for updates at startup" />
-						<TextBlock
-							Margin="0,4,12,0"
-							FontSize="{DynamicResource AppFontSize11}"
-							Foreground="{DynamicResource MutedBrush}"
-							Text="When enabled, PejPass checks once when the app starts. Install still requires your confirmation."
-							TextWrapping="Wrap" />
-					</StackPanel>
-					<CheckBox
-						Grid.Column="1"
-						HorizontalAlignment="Left"
-						VerticalAlignment="Center"
-						IsChecked="{Binding AutoCheckForUpdates}" />
-				</Grid>
+				<!-- Advanced: startup and tray behavior (hidden pre-login) -->
+				<StackPanel Visibility="{Binding ShowAdvancedSettings, Converter={StaticResource BoolToVis}}">
+					<Grid Margin="0,0,0,20">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="180" />
+						</Grid.ColumnDefinitions>
+						<StackPanel VerticalAlignment="Center">
+							<TextBlock
+								FontSize="{DynamicResource AppFontSize12}"
+								Foreground="{DynamicResource TextBrush}"
+								Text="Check for updates at startup" />
+							<TextBlock
+								Margin="0,4,12,0"
+								FontSize="{DynamicResource AppFontSize11}"
+								Foreground="{DynamicResource MutedBrush}"
+								Text="When enabled, PejPass checks once when the app starts. Install still requires your confirmation."
+								TextWrapping="Wrap" />
+						</StackPanel>
+						<CheckBox
+							Grid.Column="1"
+							HorizontalAlignment="Left"
+							VerticalAlignment="Center"
+							IsChecked="{Binding AutoCheckForUpdates}" />
+					</Grid>
 
-				<Grid Margin="0,0,0,20">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="*" />
-						<ColumnDefinition Width="180" />
-					</Grid.ColumnDefinitions>
-					<StackPanel VerticalAlignment="Center">
-						<TextBlock
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"
-							Text="Start with Windows" />
-						<TextBlock
-							Margin="0,4,12,0"
-							FontSize="{DynamicResource AppFontSize11}"
-							Foreground="{DynamicResource MutedBrush}"
-							Text="Start PejPass in the background when you sign in to Windows. The vault remains locked."
-							TextWrapping="Wrap" />
-					</StackPanel>
-					<CheckBox
-						Grid.Column="1"
-						HorizontalAlignment="Left"
-						VerticalAlignment="Center"
-						IsChecked="{Binding StartWithWindows}" />
-				</Grid>
+					<Grid Margin="0,0,0,20">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="180" />
+						</Grid.ColumnDefinitions>
+						<StackPanel VerticalAlignment="Center">
+							<TextBlock
+								FontSize="{DynamicResource AppFontSize12}"
+								Foreground="{DynamicResource TextBrush}"
+								Text="Start with Windows" />
+							<TextBlock
+								Margin="0,4,12,0"
+								FontSize="{DynamicResource AppFontSize11}"
+								Foreground="{DynamicResource MutedBrush}"
+								Text="Start PejPass in the background when you sign in to Windows. The vault remains locked."
+								TextWrapping="Wrap" />
+						</StackPanel>
+						<CheckBox
+							Grid.Column="1"
+							HorizontalAlignment="Left"
+							VerticalAlignment="Center"
+							IsChecked="{Binding StartWithWindows}" />
+					</Grid>
 
-				<Grid Margin="0,0,0,20">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="*" />
-						<ColumnDefinition Width="180" />
-					</Grid.ColumnDefinitions>
-					<StackPanel VerticalAlignment="Center">
-						<TextBlock
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"
-							Text="Minimize to system tray" />
-						<TextBlock
-							Margin="0,4,12,0"
-							FontSize="{DynamicResource AppFontSize11}"
-							Foreground="{DynamicResource MutedBrush}"
-							Text="When minimized, hide the window to the tray instead of leaving it minimized."
-							TextWrapping="Wrap" />
-					</StackPanel>
-					<CheckBox
-						Grid.Column="1"
-						HorizontalAlignment="Left"
-						VerticalAlignment="Center"
-						IsChecked="{Binding MinimizeToSystemTray}" />
-				</Grid>
+					<Grid Margin="0,0,0,20">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="180" />
+						</Grid.ColumnDefinitions>
+						<StackPanel VerticalAlignment="Center">
+							<TextBlock
+								FontSize="{DynamicResource AppFontSize12}"
+								Foreground="{DynamicResource TextBrush}"
+								Text="Minimize to system tray" />
+							<TextBlock
+								Margin="0,4,12,0"
+								FontSize="{DynamicResource AppFontSize11}"
+								Foreground="{DynamicResource MutedBrush}"
+								Text="When minimized, hide the window to the tray instead of leaving it minimized."
+								TextWrapping="Wrap" />
+						</StackPanel>
+						<CheckBox
+							Grid.Column="1"
+							HorizontalAlignment="Left"
+							VerticalAlignment="Center"
+							IsChecked="{Binding MinimizeToSystemTray}" />
+					</Grid>
 
-				<Grid Margin="0,0,0,20">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="*" />
-						<ColumnDefinition Width="180" />
-					</Grid.ColumnDefinitions>
-					<StackPanel VerticalAlignment="Center">
-						<TextBlock
-							FontSize="{DynamicResource AppFontSize12}"
-							Foreground="{DynamicResource TextBrush}"
-							Text="Close to system tray" />
-						<TextBlock
-							Margin="0,4,12,0"
-							FontSize="{DynamicResource AppFontSize11}"
-							Foreground="{DynamicResource MutedBrush}"
-							Text="When closed, hide the window to the tray instead of exiting."
-							TextWrapping="Wrap" />
-					</StackPanel>
-					<CheckBox
-						Grid.Column="1"
-						HorizontalAlignment="Left"
-						VerticalAlignment="Center"
-						IsChecked="{Binding CloseToSystemTray}" />
-				</Grid>
+					<Grid Margin="0,0,0,20">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="180" />
+						</Grid.ColumnDefinitions>
+						<StackPanel VerticalAlignment="Center">
+							<TextBlock
+								FontSize="{DynamicResource AppFontSize12}"
+								Foreground="{DynamicResource TextBrush}"
+								Text="Close to system tray" />
+							<TextBlock
+								Margin="0,4,12,0"
+								FontSize="{DynamicResource AppFontSize11}"
+								Foreground="{DynamicResource MutedBrush}"
+								Text="When closed, hide the window to the tray instead of exiting."
+								TextWrapping="Wrap" />
+						</StackPanel>
+						<CheckBox
+							Grid.Column="1"
+							HorizontalAlignment="Left"
+							VerticalAlignment="Center"
+							IsChecked="{Binding CloseToSystemTray}" />
+					</Grid>
+
+				</StackPanel>
 
 				<!-- Advanced: favicon (hidden pre-login) -->
 				<StackPanel Visibility="{Binding ShowAdvancedSettings, Converter={StaticResource BoolToVis}}">
