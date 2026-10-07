@@ -40,6 +40,17 @@ public sealed class SystemTrayService : IDisposable
         menu.Items.Add(new Separator());
         menu.Items.Add(CreateMenuItem("Exit", Exit));
 
+        // H.NotifyIcon opens the menu with an absolute screen point.
+        // Reapply mouse-point placement after WPF has created the popup so
+        // the first opening uses WPF's actual cursor position as well.
+        menu.Opened += (_, _) =>
+        {
+            menu.PlacementTarget = null;
+            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            menu.HorizontalOffset = 0;
+            menu.VerticalOffset = 0;
+        };
+
         _ownedIcon = LoadAppIcon();
 
         _taskbarIcon = new TaskbarIcon
