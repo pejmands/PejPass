@@ -204,7 +204,9 @@ public sealed class SystemTrayService : IDisposable
         if (_taskbarIcon is null)
             return;
 
-        _contextMenu?.IsOpen = false;
+        if (_contextMenu is not null)
+            _contextMenu.IsOpen = false;
+
         SetContextMenu(CreateContextMenu());
     }
 
