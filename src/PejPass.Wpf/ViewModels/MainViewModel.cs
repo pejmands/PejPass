@@ -687,8 +687,7 @@ public partial class MainViewModel : ObservableObject
         var window = app?.MainWindow;
 
         return window is not null &&
-               window.IsVisible &&
-               window.WindowState != WindowState.Minimized;
+               window.IsVisible;
     }
 
     private void ResetAutoLockTimer()
