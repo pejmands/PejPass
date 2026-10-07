@@ -90,8 +90,7 @@ public sealed class SystemTrayService : IDisposable
 
         Initialize();
 
-        if (_taskbarIcon is not null)
-            _taskbarIcon.Visibility = Visibility.Visible;
+        _taskbarIcon?.Visibility = Visibility.Visible;
     }
 
     public void Hide()
@@ -194,7 +193,7 @@ public sealed class SystemTrayService : IDisposable
         if (_disposed)
             return;
 
-        var app = Application.Current;
+        var app = System.Windows.Application.Current;
         if (app is not null && !app.Dispatcher.CheckAccess())
         {
             app.Dispatcher.Invoke(() => OnThemeChanged(this, EventArgs.Empty));
@@ -204,20 +203,19 @@ public sealed class SystemTrayService : IDisposable
         if (_taskbarIcon is null)
             return;
 
-        if (_contextMenu is not null)
-            _contextMenu.IsOpen = false;
+        _contextMenu?.IsOpen = false;
 
         SetContextMenu(CreateContextMenu());
     }
 
     private static Style? GetContextMenuStyle() =>
-        Application.Current?.TryFindResource("PejPassContextMenu") as Style;
+        System.Windows.Application.Current?.TryFindResource("PejPassContextMenu") as Style;
 
     private static Style? GetMenuItemStyle() =>
-        Application.Current?.TryFindResource("PejPassContextMenuItem") as Style;
+        System.Windows.Application.Current?.TryFindResource("PejPassContextMenuItem") as Style;
 
     private static Style? GetSeparatorStyle() =>
-        Application.Current?.TryFindResource("PejPassContextMenuSeparator") as Style;
+        System.Windows.Application.Current?.TryFindResource("PejPassContextMenuSeparator") as Style;
 
     private static Icon LoadAppIcon()
     {
