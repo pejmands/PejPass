@@ -92,9 +92,12 @@ internal sealed class WpfTestHost : IDisposable
         return _services.GetRequiredService<LoginWindow>();
     }
 
-    public static void Run(Action<WpfTestHost> action)
+    public static void Run(
+        Action<WpfTestHost> action,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(action);
+        cancellationToken.ThrowIfCancellationRequested();
 
         Exception? failure = null;
 
@@ -103,7 +106,9 @@ internal sealed class WpfTestHost : IDisposable
             try
             {
                 using var host = new WpfTestHost();
+                cancellationToken.ThrowIfCancellationRequested();
                 action(host);
+                cancellationToken.ThrowIfCancellationRequested();
             }
             catch (Exception ex)
             {
@@ -117,8 +122,11 @@ internal sealed class WpfTestHost : IDisposable
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
 
-        if (!thread.Join(TimeSpan.FromSeconds(15)))
-            throw new TimeoutException("The WPF test thread did not finish within 15 seconds.");
+        while (thread.IsAlive)
+        {
+            if (cancellationToken.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(50)))
+                throw new OperationCanceledException(cancellationToken);
+        }
 
         if (failure is not null)
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
@@ -153,13 +161,12 @@ internal sealed class WpfTestHost : IDisposable
 
         try
         {
-            _services.Dispose();
+            if (_services is IDisposable disposable)
+                disposable.Dispose();
         }
         catch
         {
         }
-
-        _themeService.Dispose();
 
         SetAppServices(null);
     }
