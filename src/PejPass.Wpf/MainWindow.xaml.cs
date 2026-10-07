@@ -86,7 +86,7 @@ public partial class MainWindow : Window
 
             // Only redirect close to the tray when the user enabled the setting.
             var tray = App.Services.GetRequiredService<SystemTrayService>();
-            if (_settings.MinimizeToSystemTray && tray.TryMinimizeToTray(this, e))
+            if (_settings.MinimizeToSystemTray && tray.TryHideToTray(this, e))
                 return;
         };
 
