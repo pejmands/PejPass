@@ -1,3 +1,5 @@
+using PejPass.Wpf.ViewModels;
+
 namespace PejPass.Wpf.Tests;
 
 public sealed class WindowTrayBehaviorTests
