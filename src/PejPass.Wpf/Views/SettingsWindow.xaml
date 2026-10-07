@@ -99,6 +99,30 @@
 						<TextBlock
 							FontSize="{DynamicResource AppFontSize12}"
 							Foreground="{DynamicResource TextBrush}"
+							Text="Start with Windows" />
+						<TextBlock
+							Margin="0,4,12,0"
+							FontSize="{DynamicResource AppFontSize11}"
+							Foreground="{DynamicResource MutedBrush}"
+							Text="Start PejPass in the background when you sign in to Windows. The vault remains locked."
+							TextWrapping="Wrap" />
+					</StackPanel>
+					<CheckBox
+						Grid.Column="1"
+						HorizontalAlignment="Left"
+						VerticalAlignment="Center"
+						IsChecked="{Binding StartWithWindows}" />
+				</Grid>
+
+				<Grid Margin="0,0,0,20">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*" />
+						<ColumnDefinition Width="180" />
+					</Grid.ColumnDefinitions>
+					<StackPanel VerticalAlignment="Center">
+						<TextBlock
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"
 							Text="Minimize to system tray" />
 						<TextBlock
 							Margin="0,4,12,0"
