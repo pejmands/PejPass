@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using PejPass.Domain.Settings;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
@@ -12,12 +13,15 @@ namespace PejPass.Wpf.Views;
 
 public partial class LoginWindow : Window
 {
+    private readonly AppSettings _settings;
     private bool _allowClose;
 
     public LoginWindow(LoginViewModel viewModel)
     {
         InitializeComponent();
         DataContext = viewModel;
+
+        _settings = App.Services.GetRequiredService<AppSettings>();
 
         TitleBar.SettingsRequested += (_, _) => OpenSettings();
         TitleBar.AboutRequested += (_, _) => OpenAbout();
@@ -69,12 +73,33 @@ public partial class LoginWindow : Window
             if (_allowClose)
                 return;
 
-            // Login is the lock screen. Closing it means real exit
-            // (even when MinimizeToSystemTray is on — no unlocked session to keep).
-            var tray = App.Services.GetService<SystemTrayService>();
-            tray?.Hide();
-            tray?.Dispose();
+            if (_settings.MinimizeToSystemTray)
+            {
+                var tray = App.Services.GetRequiredService<SystemTrayService>();
+
+                e.Cancel = true;
+                Hide();
+                tray.Show();
+                return;
+            }
+
+            var trayForExit = App.Services.GetService<SystemTrayService>();
+            trayForExit?.Hide();
+            trayForExit?.Dispose();
             System.Windows.Application.Current.Shutdown();
+        };
+
+        StateChanged += (_, _) =>
+        {
+            if (WindowState != WindowState.Minimized ||
+                !_settings.MinimizeToSystemTray)
+            {
+                return;
+            }
+
+            var tray = App.Services.GetRequiredService<SystemTrayService>();
+            Hide();
+            tray.Show();
         };
 
         Loaded += async (_, _) =>
