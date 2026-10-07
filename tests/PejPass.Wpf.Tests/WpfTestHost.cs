@@ -11,22 +11,25 @@ using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace PejPass.Wpf.Tests;
 
 internal sealed class WpfTestHost : IDisposable
 {
-    private readonly App _app;
+    private static readonly object SyncRoot = new();
+    private static readonly ManualResetEventSlim Ready = new(false);
+    private static Thread? _uiThread;
+    private static Dispatcher? _dispatcher;
+    private static App? _app;
+
     private readonly IServiceProvider _services;
     private readonly AppSettings _settings;
-    private readonly ThemeService _themeService;
     private bool _disposed;
 
     private WpfTestHost()
     {
-        _app = new App();
-        _app.InitializeComponent();
-        _app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        _app = GetApplication();
 
         _settings = new AppSettings
         {
@@ -35,8 +38,8 @@ internal sealed class WpfTestHost : IDisposable
             CloseToSystemTray = false
         };
 
-        _themeService = new ThemeService(_settings);
-        _themeService.Apply();
+        var themeService = new ThemeService(_settings);
+        themeService.Apply();
 
         var vaultSession = new VaultSession();
         var crypto = new CryptoService();
@@ -50,13 +53,13 @@ internal sealed class WpfTestHost : IDisposable
             uiDispatcher);
         var importService = new BrowserImportService();
         var tray = new SystemTrayService(
-            _themeService,
+            themeService,
             vaultSession);
 
         var services = new ServiceCollection();
 
         services.AddSingleton(_settings);
-        services.AddSingleton(_themeService);
+        services.AddSingleton(themeService);
         services.AddSingleton(vaultSession);
         services.AddSingleton(crypto);
         services.AddSingleton(fileMover);
@@ -82,15 +85,11 @@ internal sealed class WpfTestHost : IDisposable
     public SystemTrayService Tray =>
         _services.GetRequiredService<SystemTrayService>();
 
-    public MainWindow CreateMainWindow()
-    {
-        return _services.GetRequiredService<MainWindow>();
-    }
+    public MainWindow CreateMainWindow() =>
+        _services.GetRequiredService<MainWindow>();
 
-    public LoginWindow CreateLoginWindow()
-    {
-        return _services.GetRequiredService<LoginWindow>();
-    }
+    public LoginWindow CreateLoginWindow() =>
+        _services.GetRequiredService<LoginWindow>();
 
     public static void Run(
         Action<WpfTestHost> action,
@@ -99,9 +98,11 @@ internal sealed class WpfTestHost : IDisposable
         ArgumentNullException.ThrowIfNull(action);
         cancellationToken.ThrowIfCancellationRequested();
 
+        EnsureApplication();
+
         Exception? failure = null;
 
-        var thread = new Thread(() =>
+        _dispatcher!.Invoke(() =>
         {
             try
             {
@@ -114,23 +115,44 @@ internal sealed class WpfTestHost : IDisposable
             {
                 failure = ex;
             }
-        })
-        {
-            IsBackground = true
-        };
-
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-
-        while (thread.IsAlive)
-        {
-            if (cancellationToken.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(50)))
-                throw new OperationCanceledException(cancellationToken);
-        }
+        });
 
         if (failure is not null)
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
+
+    private static void EnsureApplication()
+    {
+        lock (SyncRoot)
+        {
+            if (_dispatcher is not null && _app is not null)
+                return;
+
+            _uiThread = new Thread(() =>
+            {
+                _app = new App();
+                _app.InitializeComponent();
+                _app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+                _dispatcher = _app.Dispatcher;
+                Ready.Set();
+
+                Dispatcher.Run();
+            })
+            {
+                IsBackground = true
+            };
+
+            _uiThread.SetApartmentState(ApartmentState.STA);
+            _uiThread.Start();
+        }
+
+        Ready.Wait();
+    }
+
+    private static App GetApplication() =>
+        _app ?? throw new InvalidOperationException(
+            "The WPF test application has not been initialized.");
 
     public void Dispose()
     {
@@ -144,7 +166,7 @@ internal sealed class WpfTestHost : IDisposable
 
         try
         {
-            foreach (var window in _app.Windows.OfType<MainWindow>())
+            foreach (var window in _app!.Windows.OfType<MainWindow>())
             {
                 if (window.DataContext is MainViewModel vm)
                     vm.StopBackgroundTimers();
@@ -152,8 +174,6 @@ internal sealed class WpfTestHost : IDisposable
 
             foreach (var window in _app.Windows.OfType<Window>())
                 window.Hide();
-
-            _app.Shutdown();
         }
         catch
         {
