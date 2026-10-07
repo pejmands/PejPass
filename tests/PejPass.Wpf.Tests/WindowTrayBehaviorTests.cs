@@ -137,4 +137,52 @@ public sealed class WindowTrayBehaviorTests
             Assert.True(window.IsVisible);
         });
     }
+    [Fact(Timeout = 15000)]
+    public void AutoLock_MinimizedMainWindowStillRequestsLoginWhenTrayMinimizeIsDisabled()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Settings.MinimizeToSystemTray = false;
+
+            var window = host.CreateMainWindow();
+            System.Windows.Application.Current!.MainWindow = window;
+            window.Show();
+            window.WindowState = System.Windows.WindowState.Minimized;
+
+            var method = typeof(MainViewModel).GetMethod(
+                "ShouldShowLoginAfterAutoLock",
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Static);
+
+            Assert.NotNull(method);
+
+            var showLogin = (bool)method!.Invoke(null, null)!;
+
+            Assert.True(showLogin);
+        });
+    }
+
+    [Fact(Timeout = 15000)]
+    public void AutoLock_HiddenMainWindowDoesNotRequestLogin()
+    {
+        WpfTestHost.Run(host =>
+        {
+            var window = host.CreateMainWindow();
+            System.Windows.Application.Current!.MainWindow = window;
+            window.Show();
+            window.Hide();
+
+            var method = typeof(MainViewModel).GetMethod(
+                "ShouldShowLoginAfterAutoLock",
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Static);
+
+            Assert.NotNull(method);
+
+            var showLogin = (bool)method!.Invoke(null, null)!;
+
+            Assert.False(showLogin);
+        });
+    }
+
 }
