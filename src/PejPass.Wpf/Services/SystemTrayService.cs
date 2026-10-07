@@ -47,7 +47,8 @@ public sealed class SystemTrayService : IDisposable
 
         EnsureUiThread();
 
-        _unlockedIcon = LoadAppIcon("Assets/PejPass.ico");
+        _unlockedIcon = LoadAppIcon("Assets/PejPass.ico") ??
+            LoadFallbackIcon();
         _lockedIcon = LoadAppIcon("Assets/PejPassLocked.ico") ??
             (Icon)_unlockedIcon.Clone();
 
@@ -299,6 +300,26 @@ public sealed class SystemTrayService : IDisposable
         }
 
         return null;
+    }
+
+    private static Icon LoadFallbackIcon()
+    {
+        try
+        {
+            var exe = Environment.ProcessPath;
+            if (!string.IsNullOrEmpty(exe) && File.Exists(exe))
+            {
+                var extracted = Icon.ExtractAssociatedIcon(exe);
+                if (extracted is not null)
+                    return extracted;
+            }
+        }
+        catch
+        {
+            // Fall through.
+        }
+
+        return (Icon)SystemIcons.Application.Clone();
     }
 
     public void Dispose()
