@@ -47,7 +47,7 @@ public sealed class SystemTrayService : IDisposable
             ToolTipText = "PejPass",
             Icon = _ownedIcon,
             ContextMenu = menu,
-            MenuActivation = PopupActivationMode.LeftOrRightClick,
+            MenuActivation = PopupActivationMode.RightClick,
             Visibility = Visibility.Visible
         };
 
@@ -71,9 +71,7 @@ public sealed class SystemTrayService : IDisposable
         _hostWindow.Show();
         _taskbarIcon.ForceCreate(enablesEfficiencyMode: false);
 
-        _taskbarIcon.TrayLeftMouseUp += (_, _) =>
-            ShowRequested?.Invoke(this, EventArgs.Empty);
-
+        // Single left click does nothing. Double left click shows the window.
         _taskbarIcon.TrayMouseDoubleClick += (_, _) =>
             ShowRequested?.Invoke(this, EventArgs.Empty);
     }
