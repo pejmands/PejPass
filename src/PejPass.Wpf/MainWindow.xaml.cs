@@ -122,7 +122,7 @@ public partial class MainWindow : Window
             // If we are still running because of tray mode, do not clear the session
             // or force shutdown — the window was merely hidden.
             var tray = App.Services.GetService<SystemTrayService>();
-            if (tray is { IsEnabled: true, IsVisible: true })
+            if (_settings.MinimizeToSystemTray && tray is { IsVisible: true })
                 return;
 
             _vaultSession.Clear();
