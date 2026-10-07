@@ -74,6 +74,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<VaultService>();
         services.AddSingleton<VaultSession>();
         services.AddSingleton<UpdateService>();
+        services.AddSingleton<SystemTrayService>();
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<MainViewModel>();
@@ -89,6 +90,14 @@ public partial class App : System.Windows.Application
         services.AddTransient<AboutWindow>();
 
         Services = services.BuildServiceProvider();
+
+        // When tray is enabled we must not shut down on main-window close.
+        if (settings.MinimizeToSystemTray)
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        var tray = Services.GetRequiredService<SystemTrayService>();
+        tray.ShowRequested += OnTrayShowRequested;
+        tray.LockRequested += OnTrayLockRequested;
 
         var login = Services.GetRequiredService<LoginWindow>();
         MainWindow = login;
@@ -106,6 +115,40 @@ public partial class App : System.Windows.Application
 
         if (settings.AutoCheckForUpdates)
             _ = CheckForUpdatesInBackgroundAsync();
+    }
+
+    private static void OnTrayShowRequested(object? sender, EventArgs e)
+    {
+        Current.Dispatcher.Invoke(() =>
+        {
+            var win = Current.MainWindow;
+            if (win is null)
+                return;
+
+            if (!win.IsVisible)
+                win.Show();
+
+            if (win.WindowState == WindowState.Minimized)
+                win.WindowState = WindowState.Normal;
+
+            win.Activate();
+            win.Focus();
+        });
+    }
+
+    private static void OnTrayLockRequested(object? sender, EventArgs e)
+    {
+        Current.Dispatcher.Invoke(() =>
+        {
+            // Only meaningful when MainWindow (unlocked vault) is current.
+            if (Current.MainWindow is MainWindow main &&
+                main.DataContext is MainViewModel vm)
+            {
+                // RequestLock is already wired in MainWindow to switch to LoginWindow.
+                // Raise it the same way the UI lock button does.
+                vm.LockCommand.Execute(null);
+            }
+        });
     }
 
     private static async Task CheckForUpdatesInBackgroundAsync()
@@ -439,7 +482,15 @@ public partial class App : System.Windows.Application
         SingleInstance.Release();
         PendingVaultOpen.ReadAndClear();
 
-        Services?.GetRequiredService<IClipboardService>().ClearIfOwned();
+        try
+        {
+            Services?.GetRequiredService<IClipboardService>().ClearIfOwned();
+            Services?.GetRequiredService<SystemTrayService>().Dispose();
+        }
+        catch
+        {
+            // Best-effort cleanup on exit.
+        }
 
         base.OnExit(e);
     }
