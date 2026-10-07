@@ -30,6 +30,8 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         var launchVaultPath = ParseVaultPathArg(e.Args);
+        var startInBackground = IsStartupLaunch(e.Args) &&
+            string.IsNullOrWhiteSpace(launchVaultPath);
 
         if (!SingleInstance.TryAcquire(launchVaultPath))
         {
@@ -113,7 +115,8 @@ public partial class App : System.Windows.Application
             loginVm.ApplyExternalVaultPath(launchVaultPath);
         }
 
-        login.Show();
+        if (!startInBackground)
+            login.Show();
 
         if (settings.AutoCheckForUpdates)
             _ = CheckForUpdatesInBackgroundAsync();
@@ -244,6 +247,12 @@ public partial class App : System.Windows.Application
             }
         }
     }
+
+    private static bool IsStartupLaunch(string[] args) =>
+        args.Any(arg => string.Equals(
+            arg.Trim(),
+            "--startup",
+            StringComparison.OrdinalIgnoreCase));
 
     private static string? ParseVaultPathArg(string[] args)
     {
