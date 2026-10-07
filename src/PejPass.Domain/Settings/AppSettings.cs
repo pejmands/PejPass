@@ -1,9 +1,9 @@
 namespace PejPass.Domain.Settings;
 
-/// <summary>
+///
 /// Application-level settings (not encrypted).
-/// Stored under LocalAppData\PejPass\settings.json
-/// </summary>
+/// Stored under LocalAppData\\PejPass\\settings.json
+///
 public sealed class AppSettings
 {
     public List<string> RecentVaultPaths { get; set; } = [];
@@ -51,6 +51,12 @@ public sealed class AppSettings
     /// Default: off (opt-in).
     /// </summary>
     public bool CloseToSystemTray { get; set; }
+
+    /// <summary>
+    /// When true, PejPass starts automatically when the user signs in to Windows.
+    /// Default: off (opt-in).
+    /// </summary>
+    public bool StartWithWindows { get; set; }
 
     public bool HasSeenFastDragScrollTip { get; set; }
 
