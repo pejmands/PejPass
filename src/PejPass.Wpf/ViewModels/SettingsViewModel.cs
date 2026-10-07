@@ -29,6 +29,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly double _savedZoom;
     private readonly bool _savedOnlineFaviconFetching;
     private readonly bool _savedAutoCheckForUpdates;
+    private readonly bool _savedMinimizeToSystemTray;
 
     private bool _suppressThemePreview;
     private bool _suppressZoomPreview;
@@ -59,6 +60,9 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool AutoCheckForUpdates { get; set; }
+
+    [ObservableProperty]
+    public partial bool MinimizeToSystemTray { get; set; }
 
     [ObservableProperty]
     public partial int SelectedFontSizeIndex { get; set; }
@@ -117,6 +121,7 @@ public partial class SettingsViewModel : ObservableObject
         _savedZoom = settings.Zoom;
         _savedOnlineFaviconFetching = settings.OnlineFaviconFetchingEnabled;
         _savedAutoCheckForUpdates = settings.AutoCheckForUpdates;
+        _savedMinimizeToSystemTray = settings.MinimizeToSystemTray;
 
         _suppressThemePreview = true;
         _suppressZoomPreview = true;
@@ -127,6 +132,7 @@ public partial class SettingsViewModel : ObservableObject
         WindowsHelloEnabled = settings.WindowsHelloEnabled;
         OnlineFaviconFetchingEnabled = settings.OnlineFaviconFetchingEnabled;
         AutoCheckForUpdates = settings.AutoCheckForUpdates;
+        MinimizeToSystemTray = settings.MinimizeToSystemTray;
         SelectedFontSizeIndex = (int)settings.FontSize;
         SelectedZoomIndex = GetZoomIndex(settings.Zoom);
         SelectedRevealSecretIndex = GetRevealSecretIndex(settings.RevealSecretSeconds);
@@ -212,6 +218,12 @@ public partial class SettingsViewModel : ObservableObject
         _settings.FontSize = (FontSizeMode)SelectedFontSizeIndex;
         _settings.Zoom = ZoomBehavior.ZoomLevels[SelectedZoomIndex];
         _settings.AutoCheckForUpdates = AutoCheckForUpdates;
+        _settings.MinimizeToSystemTray = MinimizeToSystemTray;
+
+        // Apply ShutdownMode immediately so tray behaviour matches the new setting.
+        Application.Current.ShutdownMode = MinimizeToSystemTray
+            ? ShutdownMode.OnExplicitShutdown
+            : ShutdownMode.OnMainWindowClose;
 
         if (!AppearanceOnly)
         {
@@ -261,6 +273,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.Zoom = _savedZoom;
         _settings.OnlineFaviconFetchingEnabled = _savedOnlineFaviconFetching;
         _settings.AutoCheckForUpdates = _savedAutoCheckForUpdates;
+        _settings.MinimizeToSystemTray = _savedMinimizeToSystemTray;
 
         _suppressThemePreview = true;
         try
@@ -272,6 +285,7 @@ public partial class SettingsViewModel : ObservableObject
             WindowsHelloEnabled = _savedWindowsHello;
             OnlineFaviconFetchingEnabled = _savedOnlineFaviconFetching;
             AutoCheckForUpdates = _savedAutoCheckForUpdates;
+            MinimizeToSystemTray = _savedMinimizeToSystemTray;
             SelectedFontSizeIndex = (int)_savedFontSize;
             SelectedRevealSecretIndex = GetRevealSecretIndex(_savedRevealSecret);
 
