@@ -5,7 +5,7 @@ namespace PejPass.Wpf.Tests;
 public sealed class WindowTrayBehaviorTests
 {
     [Fact(Timeout = 15000)]
-    public void SystemTray_ShowHide_ChangesTrayVisibility(CancellationToken cancellationToken)
+    public void SystemTray_ShowHide_ChangesTrayVisibility()
     {
         WpfTestHost.Run(host =>
         {
@@ -17,11 +17,11 @@ public sealed class WindowTrayBehaviorTests
 
             host.Tray.Show();
             Assert.True(host.Tray.IsVisible);
-        }, cancellationToken);
+        }, TestContext.Current.CancellationToken);
     }
 
     [Fact(Timeout = 15000)]
-    public void MainWindow_CloseToSystemTray_HidesInsteadOfClosing(CancellationToken cancellationToken)
+    public void MainWindow_CloseToSystemTray_HidesInsteadOfClosing()
     {
         WpfTestHost.Run(host =>
         {
@@ -36,11 +36,11 @@ public sealed class WindowTrayBehaviorTests
             Assert.False(window.IsVisible);
             Assert.True(window.IsLoaded);
             Assert.True(host.Tray.IsVisible);
-        }, cancellationToken);
+        }, TestContext.Current.CancellationToken);
     }
 
     [Fact(Timeout = 15000)]
-    public void MainWindow_MinimizeToSystemTray_HidesWhenEnabled(CancellationToken cancellationToken)
+    public void MainWindow_MinimizeToSystemTray_HidesWhenEnabled()
     {
         WpfTestHost.Run(host =>
         {
@@ -57,11 +57,11 @@ public sealed class WindowTrayBehaviorTests
                 window.WindowState);
             Assert.False(window.IsVisible);
             Assert.True(host.Tray.IsVisible);
-        }, cancellationToken);
+        }, TestContext.Current.CancellationToken);
     }
 
     [Fact(Timeout = 15000)]
-    public void MainWindow_MinimizeToSystemTrayFalse_RemainsVisibleWhenMinimized(CancellationToken cancellationToken)
+    public void MainWindow_MinimizeToSystemTrayFalse_RemainsVisibleWhenMinimized()
     {
         WpfTestHost.Run(host =>
         {
@@ -77,11 +77,11 @@ public sealed class WindowTrayBehaviorTests
                 System.Windows.WindowState.Minimized,
                 window.WindowState);
             Assert.True(window.IsVisible);
-        }, cancellationToken);
+        }, TestContext.Current.CancellationToken);
     }
 
     [Fact(Timeout = 15000)]
-    public void LoginWindow_CloseToSystemTray_HidesInsteadOfClosing(CancellationToken cancellationToken)
+    public void LoginWindow_CloseToSystemTray_HidesInsteadOfClosing()
     {
         WpfTestHost.Run(host =>
         {
@@ -96,11 +96,11 @@ public sealed class WindowTrayBehaviorTests
             Assert.False(window.IsVisible);
             Assert.True(window.IsLoaded);
             Assert.True(host.Tray.IsVisible);
-        }, cancellationToken);
+        }, TestContext.Current.CancellationToken);
     }
 
     [Fact(Timeout = 15000)]
-    public void LoginWindow_MinimizeToSystemTray_HidesWhenEnabled(CancellationToken cancellationToken)
+    public void LoginWindow_MinimizeToSystemTray_HidesWhenEnabled()
     {
         WpfTestHost.Run(host =>
         {
@@ -117,11 +117,11 @@ public sealed class WindowTrayBehaviorTests
                 window.WindowState);
             Assert.False(window.IsVisible);
             Assert.True(host.Tray.IsVisible);
-        }, cancellationToken);
+        }, TestContext.Current.CancellationToken);
     }
 
     [Fact(Timeout = 15000)]
-    public void LoginWindow_MinimizeToSystemTrayFalse_RemainsVisibleWhenMinimized(CancellationToken cancellationToken)
+    public void LoginWindow_MinimizeToSystemTrayFalse_RemainsVisibleWhenMinimized()
     {
         WpfTestHost.Run(host =>
         {
@@ -137,10 +137,11 @@ public sealed class WindowTrayBehaviorTests
                 System.Windows.WindowState.Minimized,
                 window.WindowState);
             Assert.True(window.IsVisible);
-        }, cancellationToken);
+        }, TestContext.Current.CancellationToken);
     }
+
     [Fact(Timeout = 15000)]
-    public void AutoLock_MinimizedMainWindowStillRequestsLoginWhenTrayMinimizeIsDisabled(CancellationToken cancellationToken)
+    public void AutoLock_MinimizedMainWindowStillRequestsLoginWhenTrayMinimizeIsDisabled()
     {
         WpfTestHost.Run(host =>
         {
@@ -161,11 +162,11 @@ public sealed class WindowTrayBehaviorTests
             var showLogin = (bool)method!.Invoke(null, null)!;
 
             Assert.True(showLogin);
-        }, cancellationToken);
+        }, TestContext.Current.CancellationToken);
     }
 
     [Fact(Timeout = 15000)]
-    public void AutoLock_HiddenMainWindowDoesNotRequestLogin(CancellationToken cancellationToken)
+    public void AutoLock_HiddenMainWindowDoesNotRequestLogin()
     {
         WpfTestHost.Run(host =>
         {
@@ -184,7 +185,7 @@ public sealed class WindowTrayBehaviorTests
             var showLogin = (bool)method!.Invoke(null, null)!;
 
             Assert.False(showLogin);
-        }, cancellationToken);
+        }, TestContext.Current.CancellationToken);
     }
 
 }
