@@ -42,44 +42,17 @@ public sealed class SystemTrayService : IDisposable
 
         EnsureUiThread();
 
-        var menu = new ContextMenu
-        {
-            Style = GetContextMenuStyle()
-        };
-
-        _contextMenu = menu;
-
-        menu.Items.Add(CreateMenuItem("Show", () => ShowRequested?.Invoke(this, EventArgs.Empty)));
-        menu.Items.Add(CreateMenuItem("Lock vault", () => LockRequested?.Invoke(this, EventArgs.Empty)));
-
-        menu.Items.Add(new Separator
-        {
-            Style = GetSeparatorStyle()
-        });
-
-        menu.Items.Add(CreateMenuItem("Exit", Exit));
-
-        // H.NotifyIcon opens the menu with an absolute screen point.
-        // Reapply mouse-point placement after WPF has created the popup so
-        // the first opening uses WPF's actual cursor position as well.
-        menu.Opened += (_, _) =>
-        {
-            menu.PlacementTarget = null;
-            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
-            menu.HorizontalOffset = 0;
-            menu.VerticalOffset = 0;
-        };
-
         _ownedIcon = LoadAppIcon();
 
         _taskbarIcon = new TaskbarIcon
         {
             ToolTipText = "PejPass",
             Icon = _ownedIcon,
-            ContextMenu = menu,
             MenuActivation = PopupActivationMode.RightClick,
             Visibility = Visibility.Visible
         };
+
+        SetContextMenu(CreateContextMenu());
 
         // Parent into a zero-size host so Loaded/ForceCreate run reliably
         // (code-only TaskbarIcon never gets Loaded without a visual parent).
@@ -162,6 +135,48 @@ public sealed class SystemTrayService : IDisposable
             throw new InvalidOperationException("SystemTrayService must be used on the UI thread.");
     }
 
+    private ContextMenu CreateContextMenu()
+    {
+        var menu = new ContextMenu
+        {
+            Style = GetContextMenuStyle()
+        };
+
+        menu.Items.Add(CreateMenuItem("Show", () => ShowRequested?.Invoke(this, EventArgs.Empty)));
+        menu.Items.Add(CreateMenuItem("Lock vault", () => LockRequested?.Invoke(this, EventArgs.Empty)));
+        menu.Items.Add(new Separator
+        {
+            Style = GetSeparatorStyle()
+        });
+        menu.Items.Add(CreateMenuItem("Exit", Exit));
+
+        // H.NotifyIcon opens the menu with an absolute screen point.
+        // Reapply mouse-point placement after WPF has created the popup so
+        // the first opening uses WPF's actual cursor position as well.
+        menu.Opened += (_, _) =>
+        {
+            menu.PlacementTarget = null;
+            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            menu.HorizontalOffset = 0;
+            menu.VerticalOffset = 0;
+        };
+
+        return menu;
+    }
+
+    private void SetContextMenu(ContextMenu menu)
+    {
+        if (_taskbarIcon is null)
+            return;
+
+        var oldMenu = _contextMenu;
+        _contextMenu = menu;
+        _taskbarIcon.ContextMenu = menu;
+
+        oldMenu?.IsOpen = false;
+        oldMenu?.ClearValue(ContextMenu.PlacementTargetProperty);
+    }
+
     private static MenuItem CreateMenuItem(string header, Action action)
     {
         var item = new MenuItem
@@ -186,23 +201,11 @@ public sealed class SystemTrayService : IDisposable
             return;
         }
 
-        if (_contextMenu is null)
+        if (_taskbarIcon is null)
             return;
 
-        _contextMenu.Style = GetContextMenuStyle();
-
-        foreach (var item in _contextMenu.Items)
-        {
-            switch (item)
-            {
-                case MenuItem menuItem:
-                    menuItem.Style = GetMenuItemStyle();
-                    break;
-                case Separator separator:
-                    separator.Style = GetSeparatorStyle();
-                    break;
-            }
-        }
+        _contextMenu?.IsOpen = false;
+        SetContextMenu(CreateContextMenu());
     }
 
     private static Style? GetContextMenuStyle() =>
