@@ -145,7 +145,9 @@ public partial class App : System.Windows.Application
             if (Current.MainWindow is MainWindow main &&
                 main.DataContext is MainViewModel vm)
             {
-                vm.Lock(main.IsVisible);
+                vm.Lock(
+                    main.IsVisible &&
+                    main.WindowState != WindowState.Minimized);
             }
         });
     }
