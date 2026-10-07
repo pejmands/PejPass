@@ -9,6 +9,8 @@ public sealed class VaultSession : IDisposable
 {
     private byte[]? _secret;
 
+    public event EventHandler? StateChanged;
+
     public Vault? Vault { get; private set; }
 
     public string? VaultPath { get; private set; }
@@ -27,11 +29,13 @@ public sealed class VaultSession : IDisposable
         ArgumentException.ThrowIfNullOrEmpty(vaultPath);
         ArgumentException.ThrowIfNullOrEmpty(secret);
 
-        Clear();
+        ClearSecret();
 
         Vault = vault;
         VaultPath = Path.GetFullPath(vaultPath);
         _secret = Encoding.UTF8.GetBytes(secret);
+
+        StateChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public void ReplaceVault(Vault vault)
@@ -59,14 +63,20 @@ public sealed class VaultSession : IDisposable
 
     public void Clear()
     {
+        if (!IsActive)
+            return;
+
         ClearSecret();
         Vault = null;
         VaultPath = null;
+
+        StateChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public void Dispose()
     {
         Clear();
+        StateChanged = null;
         GC.SuppressFinalize(this);
     }
 
