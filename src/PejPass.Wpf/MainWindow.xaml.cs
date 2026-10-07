@@ -79,10 +79,9 @@ public partial class MainWindow : Window
             if (_allowClose)
                 return;
 
-            // Opt-in minimize-to-tray: cancel close, hide window, show tray icon.
-            // Real exit only via tray "Exit" (which sets _isExiting and calls Shutdown).
+            // Only redirect close to the tray when the user enabled the setting.
             var tray = App.Services.GetRequiredService<SystemTrayService>();
-            if (tray.TryMinimizeToTray(this, e))
+            if (_settings.MinimizeToSystemTray && tray.TryMinimizeToTray(this, e))
                 return;
         };
 
@@ -91,11 +90,11 @@ public partial class MainWindow : Window
             if (WindowState != WindowState.Minimized)
                 return;
 
-            var tray = App.Services.GetRequiredService<SystemTrayService>();
-            if (!tray.IsEnabled)
+            // Minimize button → tray only when the user enabled the setting.
+            if (!_settings.MinimizeToSystemTray)
                 return;
 
-            // Minimize button → tray (same as close when setting is on).
+            var tray = App.Services.GetRequiredService<SystemTrayService>();
             Hide();
             tray.Show();
         };
