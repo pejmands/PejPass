@@ -674,10 +674,21 @@ public partial class MainViewModel : ObservableObject
 
         _autoLockTimer.Elapsed += (_, _) =>
         {
-            System.Windows.Application.Current?.Dispatcher.Invoke(() => Lock(false));
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+                Lock(ShouldShowLoginAfterAutoLock()));
         };
 
         _autoLockTimer.Start();
+    }
+
+    private static bool ShouldShowLoginAfterAutoLock()
+    {
+        var app = System.Windows.Application.Current;
+        var window = app?.MainWindow;
+
+        return window is not null &&
+               window.IsVisible &&
+               window.WindowState != WindowState.Minimized;
     }
 
     private void ResetAutoLockTimer()
