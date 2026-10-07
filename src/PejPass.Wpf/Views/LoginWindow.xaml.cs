@@ -12,6 +12,8 @@ namespace PejPass.Wpf.Views;
 
 public partial class LoginWindow : Window
 {
+    private bool _allowClose;
+
     public LoginWindow(LoginViewModel viewModel)
     {
         InitializeComponent();
@@ -56,8 +58,23 @@ public partial class LoginWindow : Window
 
             System.Windows.Application.Current.MainWindow = main;
 
+            // Transition to main: allow close without triggering tray minimize.
+            _allowClose = true;
             main.Show();
             Close();
+        };
+
+        Closing += (_, e) =>
+        {
+            if (_allowClose)
+                return;
+
+            // Login is the lock screen. Closing it means real exit
+            // (even when MinimizeToSystemTray is on — no unlocked session to keep).
+            var tray = App.Services.GetService<SystemTrayService>();
+            tray?.Hide();
+            tray?.Dispose();
+            Application.Current.Shutdown();
         };
 
         Loaded += async (_, _) =>
