@@ -121,7 +121,7 @@ public sealed class SystemTrayService : IDisposable
         });
     }
 
-    public bool TryMinimizeToTray(Window window, CancelEventArgs e)
+    public bool TryHideToTray(Window window, CancelEventArgs e)
     {
         if (_isExiting)
             return false;
