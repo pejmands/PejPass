@@ -31,6 +31,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly bool _savedOnlineFaviconFetching;
     private readonly bool _savedAutoCheckForUpdates;
     private readonly bool _savedMinimizeToSystemTray;
+    private readonly bool _savedCloseToSystemTray;
 
     private bool _suppressThemePreview;
     private bool _suppressZoomPreview;
@@ -64,6 +65,9 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool MinimizeToSystemTray { get; set; }
+
+    [ObservableProperty]
+    public partial bool CloseToSystemTray { get; set; }
 
     [ObservableProperty]
     public partial int SelectedFontSizeIndex { get; set; }
@@ -124,6 +128,7 @@ public partial class SettingsViewModel : ObservableObject
         _savedOnlineFaviconFetching = settings.OnlineFaviconFetchingEnabled;
         _savedAutoCheckForUpdates = settings.AutoCheckForUpdates;
         _savedMinimizeToSystemTray = settings.MinimizeToSystemTray;
+        _savedCloseToSystemTray = settings.CloseToSystemTray;
 
         _suppressThemePreview = true;
         _suppressZoomPreview = true;
@@ -135,6 +140,7 @@ public partial class SettingsViewModel : ObservableObject
         OnlineFaviconFetchingEnabled = settings.OnlineFaviconFetchingEnabled;
         AutoCheckForUpdates = settings.AutoCheckForUpdates;
         MinimizeToSystemTray = settings.MinimizeToSystemTray;
+        CloseToSystemTray = settings.CloseToSystemTray;
         SelectedFontSizeIndex = (int)settings.FontSize;
         SelectedZoomIndex = GetZoomIndex(settings.Zoom);
         SelectedRevealSecretIndex = GetRevealSecretIndex(settings.RevealSecretSeconds);
@@ -221,6 +227,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.Zoom = ZoomBehavior.ZoomLevels[SelectedZoomIndex];
         _settings.AutoCheckForUpdates = AutoCheckForUpdates;
         _settings.MinimizeToSystemTray = MinimizeToSystemTray;
+        _settings.CloseToSystemTray = CloseToSystemTray;
 
         // The tray icon is always available. This setting only controls
         // whether closing or minimizing the main window hides it to the tray.
@@ -275,6 +282,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.OnlineFaviconFetchingEnabled = _savedOnlineFaviconFetching;
         _settings.AutoCheckForUpdates = _savedAutoCheckForUpdates;
         _settings.MinimizeToSystemTray = _savedMinimizeToSystemTray;
+        _settings.CloseToSystemTray = _savedCloseToSystemTray;
 
         _suppressThemePreview = true;
         try
@@ -287,6 +295,7 @@ public partial class SettingsViewModel : ObservableObject
             OnlineFaviconFetchingEnabled = _savedOnlineFaviconFetching;
             AutoCheckForUpdates = _savedAutoCheckForUpdates;
             MinimizeToSystemTray = _savedMinimizeToSystemTray;
+            CloseToSystemTray = _savedCloseToSystemTray;
             SelectedFontSizeIndex = (int)_savedFontSize;
             SelectedRevealSecretIndex = GetRevealSecretIndex(_savedRevealSecret);
 
