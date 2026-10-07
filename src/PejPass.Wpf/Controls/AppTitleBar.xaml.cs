@@ -19,6 +19,7 @@ public partial class AppTitleBar : UserControl
     private const int WmContextMenu = 0x007B;
     private const int WmNcHitTest = 0x0084;
     private const int ScKeyMenu = 0xF100;
+    private const int VkSpace = 0x20;
     private const int ScMouseMenu = 0xF090;
     private const int HtCaption = 2;
     private const int GwlStyle = -16;
@@ -327,7 +328,7 @@ public partial class AppTitleBar : UserControl
         if (msg == WmSysCommand)
         {
             var cmd = wParam.ToInt32() & 0xFFF0;
-            if (cmd == ScKeyMenu)
+            if (cmd == ScKeyMenu && (lParam.ToInt64() & 0xFFFF) == VkSpace)
             {
                 Dispatcher.BeginInvoke(OpenTitleBarMenuAtWindowTopLeft);
                 handled = true;
