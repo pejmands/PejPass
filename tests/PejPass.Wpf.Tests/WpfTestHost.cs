@@ -5,6 +5,7 @@ using PejPass.Domain.Settings;
 using PejPass.Infrastructure.Crypto;
 using PejPass.Infrastructure.Import;
 using PejPass.Infrastructure.Storage;
+using PejPass.Wpf;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
