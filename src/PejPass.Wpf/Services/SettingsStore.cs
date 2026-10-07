@@ -215,6 +215,15 @@ public static class SettingsStore
 
         settings.MinimizeToSystemTray = minimizeToSystemTray;
 
+        // Migrate the old combined tray setting to the new independent close setting.
+        if (!TryGetBool(root, "closeToSystemTray", out var closeToSystemTray))
+        {
+            closeToSystemTray = minimizeToSystemTray;
+            needsSave = true;
+        }
+
+        settings.CloseToSystemTray = closeToSystemTray;
+
         if (!TryGetBool(root, "hasSeenFastDragScrollTip", out var hasSeenFastDragScrollTip))
         {
             hasSeenFastDragScrollTip = defaults.HasSeenFastDragScrollTip;
