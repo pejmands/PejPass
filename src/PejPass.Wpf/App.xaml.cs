@@ -99,6 +99,9 @@ public partial class App : System.Windows.Application
         tray.ShowRequested += OnTrayShowRequested;
         tray.LockRequested += OnTrayLockRequested;
 
+        if (settings.MinimizeToSystemTray)
+            tray.Show();
+
         var login = Services.GetRequiredService<LoginWindow>();
         MainWindow = login;
 
