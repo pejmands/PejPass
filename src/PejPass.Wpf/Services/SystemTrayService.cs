@@ -22,8 +22,6 @@ public sealed class SystemTrayService(AppSettings settings) : IDisposable
     private bool _isExiting;
     private bool _disposed;
 
-    public bool IsEnabled => _settings.MinimizeToSystemTray;
-
     public bool IsVisible =>
         _taskbarIcon is not null &&
         _taskbarIcon.Visibility == Visibility.Visible;
@@ -84,9 +82,6 @@ public sealed class SystemTrayService(AppSettings settings) : IDisposable
 
     public void Show()
     {
-        if (!IsEnabled)
-            return;
-
         var app = System.Windows.Application.Current;
         if (app is not null && !app.Dispatcher.CheckAccess())
         {
@@ -122,7 +117,7 @@ public sealed class SystemTrayService(AppSettings settings) : IDisposable
 
     public bool TryMinimizeToTray(Window window, CancelEventArgs e)
     {
-        if (_isExiting || !IsEnabled)
+        if (_isExiting)
             return false;
 
         e.Cancel = true;
