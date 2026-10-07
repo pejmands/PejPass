@@ -182,7 +182,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (_suppressThemePreview) return;
         if (value < 0 || value > 2) return;
-        ThemeService.Preview((ThemeMode)value);
+        _themeService.Preview((ThemeMode)value);
     }
 
     [RelayCommand]
