@@ -14,9 +14,11 @@ namespace PejPass.Wpf.Services;
 /// </summary>
 public sealed class SystemTrayService : IDisposable
 {
+    private readonly ThemeService _themeService;
     private TaskbarIcon? _taskbarIcon;
     private Window? _hostWindow;
     private Icon? _ownedIcon;
+    private ContextMenu? _contextMenu;
     private bool _isExiting;
     private bool _disposed;
 
@@ -27,8 +29,16 @@ public sealed class SystemTrayService : IDisposable
     public event EventHandler? LockRequested;
     public event EventHandler? ShowRequested;
 
+    public SystemTrayService(ThemeService themeService)
+    {
+        _themeService = themeService;
+        _themeService.ThemeChanged += OnThemeChanged;
+    }
+
     public void Initialize()
     {
+        _themeService.ThemeChanged -= OnThemeChanged;
+
         if (_taskbarIcon is not null)
             return;
 
@@ -38,6 +48,8 @@ public sealed class SystemTrayService : IDisposable
         {
             Style = GetContextMenuStyle()
         };
+
+        _contextMenu = menu;
 
         menu.Items.Add(CreateMenuItem("Show", () => ShowRequested?.Invoke(this, EventArgs.Empty)));
         menu.Items.Add(CreateMenuItem("Lock vault", () => LockRequested?.Invoke(this, EventArgs.Empty)));
@@ -164,6 +176,37 @@ public sealed class SystemTrayService : IDisposable
         return item;
     }
 
+    private void OnThemeChanged(object? sender, EventArgs e)
+    {
+        if (_disposed)
+            return;
+
+        var app = Application.Current;
+        if (app is not null && !app.Dispatcher.CheckAccess())
+        {
+            app.Dispatcher.Invoke(OnThemeChanged);
+            return;
+        }
+
+        if (_contextMenu is null)
+            return;
+
+        _contextMenu.Style = GetContextMenuStyle();
+
+        foreach (var item in _contextMenu.Items)
+        {
+            switch (item)
+            {
+                case MenuItem menuItem:
+                    menuItem.Style = GetMenuItemStyle();
+                    break;
+                case Separator separator:
+                    separator.Style = GetSeparatorStyle();
+                    break;
+            }
+        }
+    }
+
     private static Style? GetContextMenuStyle() =>
         Application.Current?.TryFindResource("PejPassContextMenu") as Style;
 
@@ -231,6 +274,8 @@ public sealed class SystemTrayService : IDisposable
             }
             _taskbarIcon = null;
         }
+
+        _contextMenu = null;
 
         if (_hostWindow is not null)
         {
