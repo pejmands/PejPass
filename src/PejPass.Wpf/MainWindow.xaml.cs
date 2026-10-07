@@ -63,14 +63,19 @@ public partial class MainWindow : Window
             }
         };
 
-        viewModel.RequestLock += (_, _) =>
+        viewModel.RequestLock += (_, e) =>
         {
             _allowClose = true;
             var login = App.Services.GetRequiredService<LoginWindow>();
             App.PrepareCustomChrome(login);
 
             System.Windows.Application.Current.MainWindow = login;
-            login.Show();
+
+            if (e.ShowLogin)
+                login.Show();
+            else
+                login.Hide();
+
             Close();
         };
 
