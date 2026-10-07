@@ -38,7 +38,7 @@ public static class WindowsStartupService
 
             key.SetValue(
                 ValueName,
-                $"\"{executablePath}\"",
+                $"\"{executablePath}\" --startup",
                 RegistryValueKind.String);
 
             error = null;
