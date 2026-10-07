@@ -141,13 +141,11 @@ public partial class App : System.Windows.Application
     {
         Current.Dispatcher.Invoke(() =>
         {
-            // Only meaningful when MainWindow (unlocked vault) is current.
+            // Preserve the current visibility of the main window.
             if (Current.MainWindow is MainWindow main &&
                 main.DataContext is MainViewModel vm)
             {
-                // RequestLock is already wired in MainWindow to switch to LoginWindow.
-                // Raise it the same way the UI lock button does.
-                vm.LockCommand.Execute(null);
+                vm.Lock(main.IsVisible);
             }
         });
     }
