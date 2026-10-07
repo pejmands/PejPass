@@ -207,6 +207,14 @@ public static class SettingsStore
 
         settings.AutoCheckForUpdates = autoCheckForUpdates;
 
+        if (!TryGetBool(root, "minimizeToSystemTray", out var minimizeToSystemTray))
+        {
+            minimizeToSystemTray = defaults.MinimizeToSystemTray;
+            needsSave = true;
+        }
+
+        settings.MinimizeToSystemTray = minimizeToSystemTray;
+
         if (!TryGetBool(root, "hasSeenFastDragScrollTip", out var hasSeenFastDragScrollTip))
         {
             hasSeenFastDragScrollTip = defaults.HasSeenFastDragScrollTip;
