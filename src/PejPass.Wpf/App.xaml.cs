@@ -91,16 +91,14 @@ public partial class App : System.Windows.Application
 
         Services = services.BuildServiceProvider();
 
-        // When tray is enabled we must not shut down on main-window close.
-        if (settings.MinimizeToSystemTray)
-            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        // Keep the application alive independently of the minimize-to-tray preference.
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         var tray = Services.GetRequiredService<SystemTrayService>();
         tray.ShowRequested += OnTrayShowRequested;
         tray.LockRequested += OnTrayLockRequested;
 
-        if (settings.MinimizeToSystemTray)
-            tray.Show();
+        tray.Show();
 
         var login = Services.GetRequiredService<LoginWindow>();
         MainWindow = login;
