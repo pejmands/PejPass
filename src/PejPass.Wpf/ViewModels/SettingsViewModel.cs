@@ -93,8 +93,8 @@ public partial class SettingsViewModel : ObservableObject
     public int[] RevealSecretValues { get; } = [0, 5, 10, 30, 60];
 
     /// <summary>
-    /// When true (login screen), appearance options, update checking, and tray behavior
-    /// settings are shown and saved. Vault/security options stay hidden and are not
+    /// When true (login screen), only appearance options are shown and saved. Startup,
+    /// tray, update, and vault/security settings stay hidden and are not
     /// written back on Save.
     /// </summary>
     public bool AppearanceOnly { get; private set; }
