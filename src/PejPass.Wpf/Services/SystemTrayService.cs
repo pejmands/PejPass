@@ -1,6 +1,5 @@
 using H.NotifyIcon;
 using H.NotifyIcon.Core;
-using PejPass.Domain.Settings;
 using System.ComponentModel;
 using System.Drawing;
 using System.IO;
@@ -11,11 +10,10 @@ using Media = System.Windows.Media;
 namespace PejPass.Wpf.Services;
 
 /// <summary>
-/// System-tray via H.NotifyIcon.Wpf. Opt-in: <see cref="AppSettings.MinimizeToSystemTray"/>.
+/// System-tray via H.NotifyIcon.Wpf. The tray icon is always available.
 /// </summary>
-public sealed class SystemTrayService(AppSettings settings) : IDisposable
+public sealed class SystemTrayService : IDisposable
 {
-    private readonly AppSettings _settings = settings;
     private TaskbarIcon? _taskbarIcon;
     private Window? _hostWindow;
     private Icon? _ownedIcon;
