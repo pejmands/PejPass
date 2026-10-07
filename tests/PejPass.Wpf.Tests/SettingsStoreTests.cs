@@ -29,6 +29,54 @@ public sealed class SettingsStoreTests : IDisposable
         Assert.False(new AppSettings().OnlineFaviconFetchingEnabled);
     }
 
+    [Fact]
+    public void TraySettings_AreDisabledByDefault()
+    {
+        var settings = new AppSettings();
+
+        Assert.False(settings.MinimizeToSystemTray);
+        Assert.False(settings.CloseToSystemTray);
+    }
+
+    [Fact]
+    public async Task OlderSettings_MigrateCloseToSystemTrayFromMinimizeSetting()
+    {
+        await SettingsFileLock.WaitAsync(TestContext.Current.CancellationToken);
+
+        try
+        {
+            var path = SettingsStore.SettingsPath;
+
+            const string json = """
+            {
+              "autoLockMinutes": 10,
+              "clipboardClearSeconds": 30,
+              "revealSecretSeconds": 10,
+              "theme": 0,
+              "fontSize": 1,
+              "zoom": 1,
+              "windowsHelloEnabled": true,
+              "minimizeToSystemTray": true
+            }
+            """;
+
+            await File.WriteAllTextAsync(
+                path,
+                json,
+                Encoding.UTF8,
+                TestContext.Current.CancellationToken);
+
+            var settings = SettingsStore.Load();
+
+            Assert.True(settings.MinimizeToSystemTray);
+            Assert.True(settings.CloseToSystemTray);
+        }
+        finally
+        {
+            SettingsFileLock.Release();
+        }
+    }
+
     private static readonly SemaphoreSlim SettingsFileLock = new(1, 1);
 
     [Fact]

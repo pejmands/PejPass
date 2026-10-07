@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using PejPass.Domain.Settings;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
@@ -12,10 +13,15 @@ namespace PejPass.Wpf.Views;
 
 public partial class LoginWindow : Window
 {
+    private readonly AppSettings _settings;
+    private bool _allowClose;
+
     public LoginWindow(LoginViewModel viewModel)
     {
         InitializeComponent();
         DataContext = viewModel;
+
+        _settings = App.Services.GetRequiredService<AppSettings>();
 
         TitleBar.SettingsRequested += (_, _) => OpenSettings();
         TitleBar.AboutRequested += (_, _) => OpenAbout();
@@ -56,8 +62,44 @@ public partial class LoginWindow : Window
 
             System.Windows.Application.Current.MainWindow = main;
 
+            // Transition to main: allow close without triggering tray minimize.
+            _allowClose = true;
             main.Show();
             Close();
+        };
+
+        Closing += (_, e) =>
+        {
+            if (_allowClose)
+                return;
+
+            if (_settings.CloseToSystemTray)
+            {
+                var tray = App.Services.GetRequiredService<SystemTrayService>();
+
+                e.Cancel = true;
+                Hide();
+                tray.Show();
+                return;
+            }
+
+            var trayForExit = App.Services.GetService<SystemTrayService>();
+            trayForExit?.Hide();
+            trayForExit?.Dispose();
+            System.Windows.Application.Current.Shutdown();
+        };
+
+        StateChanged += (_, _) =>
+        {
+            if (WindowState != WindowState.Minimized ||
+                !_settings.MinimizeToSystemTray)
+            {
+                return;
+            }
+
+            var tray = App.Services.GetRequiredService<SystemTrayService>();
+            Hide();
+            tray.Show();
         };
 
         Loaded += async (_, _) =>

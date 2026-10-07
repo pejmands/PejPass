@@ -34,7 +34,7 @@ public partial class MainViewModel : ObservableObject
     private readonly SecretRevealTimer _passwordRevealTimer = new();
     private DateTime _lastAutoLockActivityUtc;
 
-    public event EventHandler? RequestLock;
+    public event EventHandler<LockRequestedEventArgs>? RequestLock;
     public event EventHandler? RequestScrollToEntry;
 
     [ObservableProperty]
@@ -674,10 +674,20 @@ public partial class MainViewModel : ObservableObject
 
         _autoLockTimer.Elapsed += (_, _) =>
         {
-            System.Windows.Application.Current?.Dispatcher.Invoke(Lock);
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+                Lock(ShouldShowLoginAfterAutoLock()));
         };
 
         _autoLockTimer.Start();
+    }
+
+    private static bool ShouldShowLoginAfterAutoLock()
+    {
+        var app = System.Windows.Application.Current;
+        var window = app?.MainWindow;
+
+        return window is not null &&
+               window.IsVisible;
     }
 
     private void ResetAutoLockTimer()
@@ -890,13 +900,23 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void Lock()
     {
+        Lock(true);
+    }
+
+    public void Lock(bool showLogin)
+    {
+        if (!_vaultSession.IsActive)
+            return;
+
         _autoLockTimer?.Stop();
         _totpTimer?.Stop();
         _clipboard.ClearIfOwned();
         _vaultSession.Clear();
 
         StatusMessage = "Vault locked.";
-        RequestLock?.Invoke(this, EventArgs.Empty);
+        RequestLock?.Invoke(
+            this,
+            new LockRequestedEventArgs(showLogin));
     }
 
     [RelayCommand]
@@ -1550,4 +1570,10 @@ public partial class CustomFieldDisplayItem(CustomField field) : ObservableObjec
         OnPropertyChanged(nameof(DisplayValue));
         OnPropertyChanged(nameof(RevealButtonText));
     }
+}
+
+
+public sealed class LockRequestedEventArgs(bool showLogin) : EventArgs
+{
+    public bool ShowLogin { get; } = showLogin;
 }

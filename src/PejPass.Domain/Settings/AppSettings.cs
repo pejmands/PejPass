@@ -40,6 +40,18 @@ public sealed class AppSettings
     /// </summary>
     public bool AutoCheckForUpdates { get; set; }
 
+    /// <summary>
+    /// When true, minimizing a window hides it to the system tray.
+    /// Default: off (opt-in).
+    /// </summary>
+    public bool MinimizeToSystemTray { get; set; }
+
+    /// <summary>
+    /// When true, closing a window hides it to the system tray instead of exiting.
+    /// Default: off (opt-in).
+    /// </summary>
+    public bool CloseToSystemTray { get; set; }
+
     public bool HasSeenFastDragScrollTip { get; set; }
 
     public static string SettingsFilePath =>

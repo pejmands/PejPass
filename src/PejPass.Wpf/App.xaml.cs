@@ -74,6 +74,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<VaultService>();
         services.AddSingleton<VaultSession>();
         services.AddSingleton<UpdateService>();
+        services.AddSingleton<SystemTrayService>();
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<MainViewModel>();
@@ -89,6 +90,15 @@ public partial class App : System.Windows.Application
         services.AddTransient<AboutWindow>();
 
         Services = services.BuildServiceProvider();
+
+        // Keep the application alive independently of the minimize-to-tray preference.
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        var tray = Services.GetRequiredService<SystemTrayService>();
+        tray.ShowRequested += OnTrayShowRequested;
+        tray.LockRequested += OnTrayLockRequested;
+
+        tray.Show();
 
         var login = Services.GetRequiredService<LoginWindow>();
         MainWindow = login;
@@ -106,6 +116,40 @@ public partial class App : System.Windows.Application
 
         if (settings.AutoCheckForUpdates)
             _ = CheckForUpdatesInBackgroundAsync();
+    }
+
+    private static void OnTrayShowRequested(object? sender, EventArgs e)
+    {
+        Current.Dispatcher.Invoke(() =>
+        {
+            var win = Current.MainWindow;
+            if (win is null)
+                return;
+
+            if (!win.IsVisible)
+                win.Show();
+
+            if (win.WindowState == WindowState.Minimized)
+                win.WindowState = WindowState.Normal;
+
+            win.Activate();
+            win.Focus();
+        });
+    }
+
+    private static void OnTrayLockRequested(object? sender, EventArgs e)
+    {
+        Current.Dispatcher.Invoke(() =>
+        {
+            // Preserve the current visibility of the main window.
+            if (Current.MainWindow is MainWindow main &&
+                main.DataContext is MainViewModel vm)
+            {
+                vm.Lock(
+                    main.IsVisible &&
+                    main.WindowState != WindowState.Minimized);
+            }
+        });
     }
 
     private static async Task CheckForUpdatesInBackgroundAsync()
@@ -439,7 +483,15 @@ public partial class App : System.Windows.Application
         SingleInstance.Release();
         PendingVaultOpen.ReadAndClear();
 
-        Services?.GetRequiredService<IClipboardService>().ClearIfOwned();
+        try
+        {
+            Services?.GetRequiredService<IClipboardService>().ClearIfOwned();
+            Services?.GetRequiredService<SystemTrayService>().Dispose();
+        }
+        catch
+        {
+            // Best-effort cleanup on exit.
+        }
 
         base.OnExit(e);
     }

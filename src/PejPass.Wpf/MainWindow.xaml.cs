@@ -27,6 +27,12 @@ public partial class MainWindow : Window
     private VaultEntry? _lastDropTarget;
     private bool _lastDropInsertAfter;
 
+    /// <summary>
+    /// Set when we intentionally close MainWindow to switch to LoginWindow (lock).
+    /// Prevents minimize-to-tray from cancelling that transition.
+    /// </summary>
+    private bool _allowClose;
+
     public MainWindow(MainViewModel viewModel, VaultSession vaultSession)
     {
         InitializeComponent();
@@ -57,14 +63,45 @@ public partial class MainWindow : Window
             }
         };
 
-        viewModel.RequestLock += (_, _) =>
+        viewModel.RequestLock += (_, e) =>
         {
+            _allowClose = true;
             var login = App.Services.GetRequiredService<LoginWindow>();
             App.PrepareCustomChrome(login);
 
             System.Windows.Application.Current.MainWindow = login;
-            login.Show();
+
+            if (e.ShowLogin)
+                login.Show();
+            else
+                login.Hide();
+
             Close();
+        };
+
+        Closing += (_, e) =>
+        {
+            if (_allowClose)
+                return;
+
+            // Only redirect close to the tray when the user enabled the setting.
+            var tray = App.Services.GetRequiredService<SystemTrayService>();
+            if (_settings.CloseToSystemTray && tray.TryHideToTray(this, e))
+                return;
+        };
+
+        StateChanged += (_, _) =>
+        {
+            if (WindowState != WindowState.Minimized)
+                return;
+
+            // Minimize button → tray only when the user enabled the setting.
+            if (!_settings.MinimizeToSystemTray)
+                return;
+
+            var tray = App.Services.GetRequiredService<SystemTrayService>();
+            Hide();
+            tray.Show();
         };
 
         Closed += (_, _) =>
@@ -84,7 +121,18 @@ public partial class MainWindow : Window
 
             viewModel.StopBackgroundTimers();
 
+            // Lock transitions close this window intentionally. Keep the application
+            // alive even when the login window remains hidden after auto-lock.
+            if (_allowClose)
+                return;
+
             if (System.Windows.Application.Current?.Windows.OfType<LoginWindow>().Any(w => w.IsVisible) == true)
+                return;
+
+            // If we are still running because of tray mode, do not clear the session
+            // or force shutdown — the window was merely hidden.
+            var tray = App.Services.GetService<SystemTrayService>();
+            if (_settings.CloseToSystemTray && tray is { IsVisible: true })
                 return;
 
             _vaultSession.Clear();

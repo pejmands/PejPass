@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using PejPass.Application.Services;
 using PejPass.Domain.Settings;
 using PejPass.Wpf.Controls;
@@ -29,6 +30,8 @@ public partial class SettingsViewModel : ObservableObject
     private readonly double _savedZoom;
     private readonly bool _savedOnlineFaviconFetching;
     private readonly bool _savedAutoCheckForUpdates;
+    private readonly bool _savedMinimizeToSystemTray;
+    private readonly bool _savedCloseToSystemTray;
 
     private bool _suppressThemePreview;
     private bool _suppressZoomPreview;
@@ -61,6 +64,12 @@ public partial class SettingsViewModel : ObservableObject
     public partial bool AutoCheckForUpdates { get; set; }
 
     [ObservableProperty]
+    public partial bool MinimizeToSystemTray { get; set; }
+
+    [ObservableProperty]
+    public partial bool CloseToSystemTray { get; set; }
+
+    [ObservableProperty]
     public partial int SelectedFontSizeIndex { get; set; }
 
     [ObservableProperty]
@@ -80,8 +89,9 @@ public partial class SettingsViewModel : ObservableObject
     public int[] RevealSecretValues { get; } = [0, 5, 10, 30, 60];
 
     /// <summary>
-    /// When true (login screen), appearance options and auto-update check are shown and saved.
-    /// Vault/security options stay hidden and are not written back on Save.
+    /// When true (login screen), appearance options, update checking, and tray behavior
+    /// settings are shown and saved. Vault/security options stay hidden and are not
+    /// written back on Save.
     /// </summary>
     public bool AppearanceOnly { get; private set; }
 
@@ -117,6 +127,8 @@ public partial class SettingsViewModel : ObservableObject
         _savedZoom = settings.Zoom;
         _savedOnlineFaviconFetching = settings.OnlineFaviconFetchingEnabled;
         _savedAutoCheckForUpdates = settings.AutoCheckForUpdates;
+        _savedMinimizeToSystemTray = settings.MinimizeToSystemTray;
+        _savedCloseToSystemTray = settings.CloseToSystemTray;
 
         _suppressThemePreview = true;
         _suppressZoomPreview = true;
@@ -127,6 +139,8 @@ public partial class SettingsViewModel : ObservableObject
         WindowsHelloEnabled = settings.WindowsHelloEnabled;
         OnlineFaviconFetchingEnabled = settings.OnlineFaviconFetchingEnabled;
         AutoCheckForUpdates = settings.AutoCheckForUpdates;
+        MinimizeToSystemTray = settings.MinimizeToSystemTray;
+        CloseToSystemTray = settings.CloseToSystemTray;
         SelectedFontSizeIndex = (int)settings.FontSize;
         SelectedZoomIndex = GetZoomIndex(settings.Zoom);
         SelectedRevealSecretIndex = GetRevealSecretIndex(settings.RevealSecretSeconds);
@@ -175,7 +189,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (_suppressThemePreview) return;
         if (value < 0 || value > 2) return;
-        ThemeService.Preview((ThemeMode)value);
+        _themeService.Preview((ThemeMode)value);
     }
 
     [RelayCommand]
@@ -212,6 +226,12 @@ public partial class SettingsViewModel : ObservableObject
         _settings.FontSize = (FontSizeMode)SelectedFontSizeIndex;
         _settings.Zoom = ZoomBehavior.ZoomLevels[SelectedZoomIndex];
         _settings.AutoCheckForUpdates = AutoCheckForUpdates;
+        _settings.MinimizeToSystemTray = MinimizeToSystemTray;
+        _settings.CloseToSystemTray = CloseToSystemTray;
+
+        // The tray icon is always available. This setting only controls
+        // whether closing or minimizing the main window hides it to the tray.
+        System.Windows.Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         if (!AppearanceOnly)
         {
@@ -261,6 +281,8 @@ public partial class SettingsViewModel : ObservableObject
         _settings.Zoom = _savedZoom;
         _settings.OnlineFaviconFetchingEnabled = _savedOnlineFaviconFetching;
         _settings.AutoCheckForUpdates = _savedAutoCheckForUpdates;
+        _settings.MinimizeToSystemTray = _savedMinimizeToSystemTray;
+        _settings.CloseToSystemTray = _savedCloseToSystemTray;
 
         _suppressThemePreview = true;
         try
@@ -272,6 +294,8 @@ public partial class SettingsViewModel : ObservableObject
             WindowsHelloEnabled = _savedWindowsHello;
             OnlineFaviconFetchingEnabled = _savedOnlineFaviconFetching;
             AutoCheckForUpdates = _savedAutoCheckForUpdates;
+            MinimizeToSystemTray = _savedMinimizeToSystemTray;
+            CloseToSystemTray = _savedCloseToSystemTray;
             SelectedFontSizeIndex = (int)_savedFontSize;
             SelectedRevealSecretIndex = GetRevealSecretIndex(_savedRevealSecret);
 

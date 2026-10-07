@@ -307,7 +307,7 @@ public sealed class FaviconServiceTests
     [Fact]
     public async Task DisabledOnlineFetching_DoesNotQueueNetworkDownload()
     {
-        FaviconService.ConfigureOnlineFetching(false);
+        ConfigureOnlineFetching(false);
         ClearPendingDownloads();
 
         ImageSource? image = null;
@@ -334,7 +334,7 @@ public sealed class FaviconServiceTests
     {
         const string host = "example.com";
 
-        FaviconService.ConfigureOnlineFetching(false);
+        ConfigureOnlineFetching(false);
         ClearPendingDownloads();
 
         var cacheDir = (string)CacheDirField.GetValue(null)!;
@@ -370,7 +370,7 @@ public sealed class FaviconServiceTests
     [Fact]
     public void DisabledOnlineFetching_PreservesLetterAvatarFallback()
     {
-        FaviconService.ConfigureOnlineFetching(false);
+        ConfigureOnlineFetching(false);
         ClearPendingDownloads();
 
         ImageSource? image = null;
@@ -498,7 +498,7 @@ public sealed class FaviconServiceTests
         Directory.CreateDirectory(cacheDir);
         await File.WriteAllBytesAsync(cachePath, TinyPng, TestContext.Current.CancellationToken);
         memory.TryRemove(host, out _);
-        FaviconService.ConfigureOnlineFetching(true);
+        ConfigureOnlineFetching(true);
         StartupCleanupTaskField.SetValue(null, cleanupReleased.Task);
 
         try
@@ -520,7 +520,7 @@ public sealed class FaviconServiceTests
             memory.TryRemove(host, out _);
             pathCache.TryRemove(host, out _);
             File.Delete(cachePath);
-            FaviconService.ConfigureOnlineFetching(false);
+            ConfigureOnlineFetching(false);
         }
     }
 
@@ -529,7 +529,7 @@ public sealed class FaviconServiceTests
     {
         const string host = "disk-success.example";
 
-        FaviconService.ConfigureOnlineFetching(true);
+        ConfigureOnlineFetching(true);
         ClearPendingDownloads();
 
         var cacheDir = (string)CacheDirField.GetValue(null)!;
@@ -557,9 +557,14 @@ public sealed class FaviconServiceTests
             GetFailed().TryRemove(host, out _);
             pathCache.TryRemove(host, out _);
             File.Delete(cachePath);
-            FaviconService.ConfigureOnlineFetching(false);
+            ConfigureOnlineFetching(false);
         }
     }
+
+    private static void ConfigureOnlineFetching(bool enabled) =>
+        WpfTestHost.Run(
+            _ => FaviconService.ConfigureOnlineFetching(enabled),
+            TestContext.Current.CancellationToken);
 
     private static void RunOnSta(Action action)
     {
