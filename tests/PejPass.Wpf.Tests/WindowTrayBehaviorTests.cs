@@ -1,0 +1,140 @@
+namespace PejPass.Wpf.Tests;
+
+public sealed class WindowTrayBehaviorTests
+{
+    [Fact(Timeout = 15000)]
+    public void SystemTray_ShowHide_ChangesTrayVisibility()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Tray.Show();
+            Assert.True(host.Tray.IsVisible);
+
+            host.Tray.Hide();
+            Assert.False(host.Tray.IsVisible);
+
+            host.Tray.Show();
+            Assert.True(host.Tray.IsVisible);
+        });
+    }
+
+    [Fact(Timeout = 15000)]
+    public void MainWindow_CloseToSystemTray_HidesInsteadOfClosing()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Settings.CloseToSystemTray = true;
+
+            var window = host.CreateMainWindow();
+            System.Windows.Application.Current!.MainWindow = window;
+            window.Show();
+
+            window.Close();
+
+            Assert.False(window.IsVisible);
+            Assert.True(window.IsLoaded);
+            Assert.True(host.Tray.IsVisible);
+        });
+    }
+
+    [Fact(Timeout = 15000)]
+    public void MainWindow_MinimizeToSystemTray_HidesWhenEnabled()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Settings.MinimizeToSystemTray = true;
+
+            var window = host.CreateMainWindow();
+            System.Windows.Application.Current!.MainWindow = window;
+            window.Show();
+
+            window.WindowState = System.Windows.WindowState.Minimized;
+
+            Assert.Equal(
+                System.Windows.WindowState.Minimized,
+                window.WindowState);
+            Assert.False(window.IsVisible);
+            Assert.True(host.Tray.IsVisible);
+        });
+    }
+
+    [Fact(Timeout = 15000)]
+    public void MainWindow_MinimizeToSystemTrayFalse_RemainsVisibleWhenMinimized()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Settings.MinimizeToSystemTray = false;
+
+            var window = host.CreateMainWindow();
+            System.Windows.Application.Current!.MainWindow = window;
+            window.Show();
+
+            window.WindowState = System.Windows.WindowState.Minimized;
+
+            Assert.Equal(
+                System.Windows.WindowState.Minimized,
+                window.WindowState);
+            Assert.True(window.IsVisible);
+        });
+    }
+
+    [Fact(Timeout = 15000)]
+    public void LoginWindow_CloseToSystemTray_HidesInsteadOfClosing()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Settings.CloseToSystemTray = true;
+
+            var window = host.CreateLoginWindow();
+            System.Windows.Application.Current!.MainWindow = window;
+            window.Show();
+
+            window.Close();
+
+            Assert.False(window.IsVisible);
+            Assert.True(window.IsLoaded);
+            Assert.True(host.Tray.IsVisible);
+        });
+    }
+
+    [Fact(Timeout = 15000)]
+    public void LoginWindow_MinimizeToSystemTray_HidesWhenEnabled()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Settings.MinimizeToSystemTray = true;
+
+            var window = host.CreateLoginWindow();
+            System.Windows.Application.Current!.MainWindow = window;
+            window.Show();
+
+            window.WindowState = System.Windows.WindowState.Minimized;
+
+            Assert.Equal(
+                System.Windows.WindowState.Minimized,
+                window.WindowState);
+            Assert.False(window.IsVisible);
+            Assert.True(host.Tray.IsVisible);
+        });
+    }
+
+    [Fact(Timeout = 15000)]
+    public void LoginWindow_MinimizeToSystemTrayFalse_RemainsVisibleWhenMinimized()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Settings.MinimizeToSystemTray = false;
+
+            var window = host.CreateLoginWindow();
+            System.Windows.Application.Current!.MainWindow = window;
+            window.Show();
+
+            window.WindowState = System.Windows.WindowState.Minimized;
+
+            Assert.Equal(
+                System.Windows.WindowState.Minimized,
+                window.WindowState);
+            Assert.True(window.IsVisible);
+        });
+    }
+}
