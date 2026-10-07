@@ -221,25 +221,9 @@ public partial class SettingsViewModel : ObservableObject
         _settings.AutoCheckForUpdates = AutoCheckForUpdates;
         _settings.MinimizeToSystemTray = MinimizeToSystemTray;
 
-        // Apply ShutdownMode immediately so tray behaviour matches the new setting.
-        System.Windows.Application.Current.ShutdownMode = MinimizeToSystemTray
-            ? ShutdownMode.OnExplicitShutdown
-            : ShutdownMode.OnMainWindowClose;
-
-        // Show tray icon right away when enabling so the user can confirm it works
-        // without having to close the main window first.
-        try
-        {
-            var tray = App.Services.GetService<SystemTrayService>();
-            if (MinimizeToSystemTray)
-                tray?.Show();
-            else
-                tray?.Hide();
-        }
-        catch
-        {
-            // Non-fatal: tray will still activate on next minimize/close.
-        }
+        // The tray icon is always available. This setting only controls
+        // whether closing or minimizing the main window hides it to the tray.
+        System.Windows.Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         if (!AppearanceOnly)
         {
