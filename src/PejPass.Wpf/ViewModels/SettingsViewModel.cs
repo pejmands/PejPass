@@ -32,6 +32,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly bool _savedAutoCheckForUpdates;
     private readonly bool _savedMinimizeToSystemTray;
     private readonly bool _savedCloseToSystemTray;
+    private readonly bool _savedStartWithWindows;
 
     private bool _suppressThemePreview;
     private bool _suppressZoomPreview;
@@ -68,6 +69,9 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool CloseToSystemTray { get; set; }
+
+    [ObservableProperty]
+    public partial bool StartWithWindows { get; set; }
 
     [ObservableProperty]
     public partial int SelectedFontSizeIndex { get; set; }
@@ -129,6 +133,7 @@ public partial class SettingsViewModel : ObservableObject
         _savedAutoCheckForUpdates = settings.AutoCheckForUpdates;
         _savedMinimizeToSystemTray = settings.MinimizeToSystemTray;
         _savedCloseToSystemTray = settings.CloseToSystemTray;
+        _savedStartWithWindows = settings.StartWithWindows;
 
         _suppressThemePreview = true;
         _suppressZoomPreview = true;
@@ -141,6 +146,7 @@ public partial class SettingsViewModel : ObservableObject
         AutoCheckForUpdates = settings.AutoCheckForUpdates;
         MinimizeToSystemTray = settings.MinimizeToSystemTray;
         CloseToSystemTray = settings.CloseToSystemTray;
+        StartWithWindows = settings.StartWithWindows;
         SelectedFontSizeIndex = (int)settings.FontSize;
         SelectedZoomIndex = GetZoomIndex(settings.Zoom);
         SelectedRevealSecretIndex = GetRevealSecretIndex(settings.RevealSecretSeconds);
@@ -228,6 +234,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.AutoCheckForUpdates = AutoCheckForUpdates;
         _settings.MinimizeToSystemTray = MinimizeToSystemTray;
         _settings.CloseToSystemTray = CloseToSystemTray;
+        _settings.StartWithWindows = StartWithWindows;
 
         // The tray icon is always available. This setting only controls
         // whether closing or minimizing the main window hides it to the tray.
@@ -249,6 +256,19 @@ public partial class SettingsViewModel : ObservableObject
             DialogService.Error(
                 "Failed to save settings. The changes were not applied.",
                 "Save failed");
+
+            return;
+        }
+
+        if (!WindowsStartupService.TrySetEnabled(StartWithWindows, out var startupError))
+        {
+            _settings.StartWithWindows = _savedStartWithWindows;
+            SettingsStore.TrySave(_settings);
+            RevertPreview();
+
+            DialogService.Error(
+                $"Windows startup could not be updated.\\n\\n{startupError}",
+                "Startup setting unavailable");
 
             return;
         }
@@ -283,6 +303,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.AutoCheckForUpdates = _savedAutoCheckForUpdates;
         _settings.MinimizeToSystemTray = _savedMinimizeToSystemTray;
         _settings.CloseToSystemTray = _savedCloseToSystemTray;
+        _settings.StartWithWindows = _savedStartWithWindows;
 
         _suppressThemePreview = true;
         try
@@ -296,6 +317,7 @@ public partial class SettingsViewModel : ObservableObject
             AutoCheckForUpdates = _savedAutoCheckForUpdates;
             MinimizeToSystemTray = _savedMinimizeToSystemTray;
             CloseToSystemTray = _savedCloseToSystemTray;
+            StartWithWindows = _savedStartWithWindows;
             SelectedFontSizeIndex = (int)_savedFontSize;
             SelectedRevealSecretIndex = GetRevealSecretIndex(_savedRevealSecret);
 
