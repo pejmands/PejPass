@@ -15,9 +15,11 @@ namespace PejPass.Wpf.Services;
 public sealed class SystemTrayService : IDisposable
 {
     private readonly ThemeService _themeService;
+    private readonly VaultSession _vaultSession;
     private TaskbarIcon? _taskbarIcon;
     private Window? _hostWindow;
-    private Icon? _ownedIcon;
+    private Icon? _unlockedIcon;
+    private Icon? _lockedIcon;
     private ContextMenu? _contextMenu;
     private bool _isExiting;
     private bool _disposed;
@@ -29,10 +31,13 @@ public sealed class SystemTrayService : IDisposable
     public event EventHandler? LockRequested;
     public event EventHandler? ShowRequested;
 
-    public SystemTrayService(ThemeService themeService)
+    public SystemTrayService(ThemeService themeService, VaultSession vaultSession)
     {
         _themeService = themeService;
+        _vaultSession = vaultSession;
+
         _themeService.ThemeChanged += OnThemeChanged;
+        _vaultSession.StateChanged += OnVaultSessionStateChanged;
     }
 
     public void Initialize()
@@ -42,12 +47,14 @@ public sealed class SystemTrayService : IDisposable
 
         EnsureUiThread();
 
-        _ownedIcon = LoadAppIcon();
+        _unlockedIcon = LoadAppIcon("Assets/PejPass.ico");
+        _lockedIcon = LoadAppIcon("Assets/PejPassLocked.ico") ??
+            (Icon)_unlockedIcon.Clone();
 
         _taskbarIcon = new TaskbarIcon
         {
-            ToolTipText = "PejPass",
-            Icon = _ownedIcon,
+            ToolTipText = GetTrayToolTip(),
+            Icon = GetTrayIcon(),
             MenuActivation = PopupActivationMode.RightClick,
             Visibility = Visibility.Visible
         };
@@ -142,7 +149,10 @@ public sealed class SystemTrayService : IDisposable
         };
 
         menu.Items.Add(CreateMenuItem("Show", () => ShowRequested?.Invoke(this, EventArgs.Empty)));
-        menu.Items.Add(CreateMenuItem("Lock vault", () => LockRequested?.Invoke(this, EventArgs.Empty)));
+
+        if (_vaultSession.IsActive)
+            menu.Items.Add(CreateMenuItem("Lock vault", () => LockRequested?.Invoke(this, EventArgs.Empty)));
+
         menu.Items.Add(new Separator
         {
             Style = GetSeparatorStyle()
@@ -188,6 +198,40 @@ public sealed class SystemTrayService : IDisposable
         return item;
     }
 
+    private void OnVaultSessionStateChanged(object? sender, EventArgs e)
+    {
+        if (_disposed)
+            return;
+
+        var app = System.Windows.Application.Current;
+        if (app is not null && !app.Dispatcher.CheckAccess())
+        {
+            app.Dispatcher.Invoke(() => OnVaultSessionStateChanged(this, EventArgs.Empty));
+            return;
+        }
+
+        if (_taskbarIcon is null)
+            return;
+
+        _taskbarIcon.ToolTipText = GetTrayToolTip();
+        _taskbarIcon.Icon = GetTrayIcon();
+
+        if (_contextMenu is not null)
+            _contextMenu.IsOpen = false;
+
+        SetContextMenu(CreateContextMenu());
+    }
+
+    private string GetTrayToolTip() =>
+        _vaultSession.IsActive
+            ? "PejPass — Unlocked"
+            : "PejPass — Locked";
+
+    private Icon GetTrayIcon() =>
+        _vaultSession.IsActive
+            ? _unlockedIcon!
+            : _lockedIcon!;
+
     private void OnThemeChanged(object? sender, EventArgs e)
     {
         if (_disposed)
@@ -217,11 +261,13 @@ public sealed class SystemTrayService : IDisposable
     private static Style? GetSeparatorStyle() =>
         System.Windows.Application.Current?.TryFindResource("PejPassContextMenuSeparator") as Style;
 
-    private static Icon LoadAppIcon()
+    private static Icon? LoadAppIcon(string resourcePath)
     {
         try
         {
-            var uri = new Uri("pack://application:,,,/Assets/PejPass.ico", UriKind.Absolute);
+            var uri = new Uri(
+                $"pack://application:,,,/{resourcePath}",
+                UriKind.Absolute);
             var streamInfo = System.Windows.Application.GetResourceStream(uri);
             if (streamInfo?.Stream is not null)
             {
@@ -252,7 +298,7 @@ public sealed class SystemTrayService : IDisposable
             // Fall through.
         }
 
-        return (Icon)SystemIcons.Application.Clone();
+        return null;
     }
 
     public void Dispose()
@@ -262,6 +308,7 @@ public sealed class SystemTrayService : IDisposable
 
         _disposed = true;
         _themeService.ThemeChanged -= OnThemeChanged;
+        _vaultSession.StateChanged -= OnVaultSessionStateChanged;
 
         if (_taskbarIcon is not null)
         {
@@ -292,7 +339,10 @@ public sealed class SystemTrayService : IDisposable
             _hostWindow = null;
         }
 
-        _ownedIcon?.Dispose();
-        _ownedIcon = null;
+        _unlockedIcon?.Dispose();
+        _unlockedIcon = null;
+
+        _lockedIcon?.Dispose();
+        _lockedIcon = null;
     }
 }
