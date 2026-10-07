@@ -55,7 +55,7 @@ public sealed class SystemTrayService : IDisposable
         _taskbarIcon = new TaskbarIcon
         {
             ToolTipText = GetTrayToolTip(),
-            Icon = GetTrayIcon(),
+            Icon = CreateTrayIcon(),
             MenuActivation = PopupActivationMode.RightClick,
             Visibility = Visibility.Visible
         };
@@ -215,7 +215,7 @@ public sealed class SystemTrayService : IDisposable
             return;
 
         _taskbarIcon.ToolTipText = GetTrayToolTip();
-        _taskbarIcon.Icon = GetTrayIcon();
+        _taskbarIcon.Icon = CreateTrayIcon();
 
         if (_contextMenu is not null)
             _contextMenu.IsOpen = false;
@@ -228,10 +228,10 @@ public sealed class SystemTrayService : IDisposable
             ? "PejPass — Unlocked"
             : "PejPass — Locked";
 
-    private Icon GetTrayIcon() =>
-        _vaultSession.IsActive
+    private Icon CreateTrayIcon() =>
+        (Icon)(_vaultSession.IsActive
             ? _unlockedIcon!
-            : _lockedIcon!;
+            : _lockedIcon!).Clone();
 
     private void OnThemeChanged(object? sender, EventArgs e)
     {
