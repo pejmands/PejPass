@@ -6,18 +6,18 @@ using System.Windows.Controls;
 using H.NotifyIcon;
 using PejPass.Domain.Settings;
 using Application = System.Windows.Application;
+using Media = System.Windows.Media;
 
 namespace PejPass.Wpf.Services;
 
 /// <summary>
-/// Lightweight system-tray integration via H.NotifyIcon.Wpf (pure WPF, no WinForms).
-/// Opt-in via <see cref="AppSettings.MinimizeToSystemTray"/>.
-/// No sensitive actions from the tray menu.
+/// System-tray via H.NotifyIcon.Wpf. Opt-in: <see cref="AppSettings.MinimizeToSystemTray"/>.
 /// </summary>
 public sealed class SystemTrayService : IDisposable
 {
     private readonly AppSettings _settings;
     private TaskbarIcon? _taskbarIcon;
+    private Window? _hostWindow;
     private Icon? _ownedIcon;
     private bool _isExiting;
     private bool _disposed;
@@ -33,16 +33,15 @@ public sealed class SystemTrayService : IDisposable
         _taskbarIcon is not null &&
         _taskbarIcon.Visibility == Visibility.Visible;
 
-    /// <summary>Raised when the user chooses Lock from the tray menu.</summary>
     public event EventHandler? LockRequested;
-
-    /// <summary>Raised when the user chooses Show / activates the icon.</summary>
     public event EventHandler? ShowRequested;
 
     public void Initialize()
     {
         if (_taskbarIcon is not null)
             return;
+
+        EnsureUiThread();
 
         var menu = new ContextMenu();
         menu.Items.Add(CreateMenuItem("Show", () => ShowRequested?.Invoke(this, EventArgs.Empty)));
@@ -52,17 +51,33 @@ public sealed class SystemTrayService : IDisposable
 
         _ownedIcon = LoadAppIcon();
 
-        // Created in code (not in the visual tree) — must ForceCreate so the native
-        // shell icon is registered. Loaded never fires without a parent.
         _taskbarIcon = new TaskbarIcon
         {
             ToolTipText = "PejPass",
             Icon = _ownedIcon,
             ContextMenu = menu,
-            MenuActivation = PopupActivationMode.RightClick,
+            MenuActivation = PopupActivationMode.LeftOrRightClick,
             Visibility = Visibility.Visible
         };
 
+        // Parent into a zero-size host so Loaded/ForceCreate run reliably
+        // (code-only TaskbarIcon never gets Loaded without a visual parent).
+        _hostWindow = new Window
+        {
+            Width = 0,
+            Height = 0,
+            WindowStyle = WindowStyle.None,
+            ShowInTaskbar = false,
+            ShowActivated = false,
+            AllowsTransparency = true,
+            Background = Media.Brushes.Transparent,
+            Opacity = 0,
+            ResizeMode = ResizeMode.NoResize,
+            Title = "PejPass Tray Host",
+            Content = _taskbarIcon
+        };
+
+        _hostWindow.Show();
         _taskbarIcon.ForceCreate(enablesEfficiencyMode: false);
 
         _taskbarIcon.TrayLeftMouseUp += (_, _) =>
@@ -77,19 +92,26 @@ public sealed class SystemTrayService : IDisposable
         if (!IsEnabled)
             return;
 
-        // Must run on the UI thread (Closing/StateChanged already are).
-        if (Application.Current?.Dispatcher.CheckAccess() == false)
+        var app = Application.Current;
+        if (app is not null && !app.Dispatcher.CheckAccess())
         {
-            Application.Current.Dispatcher.Invoke(Show);
+            app.Dispatcher.Invoke(Show);
             return;
         }
 
         Initialize();
+
         if (_taskbarIcon is not null)
         {
             _taskbarIcon.Visibility = Visibility.Visible;
-            // Re-assert native icon in case shell dropped it after hide.
-            _taskbarIcon.ForceCreate(enablesEfficiencyMode: false);
+            try
+            {
+                _taskbarIcon.ForceCreate(enablesEfficiencyMode: false);
+            }
+            catch
+            {
+                // Best-effort; icon may already exist.
+            }
         }
     }
 
@@ -114,10 +136,6 @@ public sealed class SystemTrayService : IDisposable
         });
     }
 
-    /// <summary>
-    /// Call from window Closing handlers.
-    /// Returns true if the close should be cancelled (window hidden to tray instead).
-    /// </summary>
     public bool TryMinimizeToTray(Window window, CancelEventArgs e)
     {
         if (_isExiting || !IsEnabled)
@@ -129,6 +147,16 @@ public sealed class SystemTrayService : IDisposable
         return true;
     }
 
+    private static void EnsureUiThread()
+    {
+        var app = Application.Current;
+        if (app is null)
+            return;
+
+        if (!app.Dispatcher.CheckAccess())
+            throw new InvalidOperationException("SystemTrayService must be used on the UI thread.");
+    }
+
     private static MenuItem CreateMenuItem(string header, Action action)
     {
         var item = new MenuItem { Header = header };
@@ -136,11 +164,7 @@ public sealed class SystemTrayService : IDisposable
         return item;
     }
 
-    /// <summary>
-    /// Load the app .ico as System.Drawing.Icon (what the shell tray expects).
-    /// BitmapImage + IconSource is unreliable for .ico in pure code paths.
-    /// </summary>
-    private static Icon? LoadAppIcon()
+    private static Icon LoadAppIcon()
     {
         try
         {
@@ -148,7 +172,6 @@ public sealed class SystemTrayService : IDisposable
             var streamInfo = Application.GetResourceStream(uri);
             if (streamInfo?.Stream is not null)
             {
-                // Icon must outlive the stream — clone after reading.
                 using var ms = new MemoryStream();
                 streamInfo.Stream.CopyTo(ms);
                 ms.Position = 0;
@@ -163,17 +186,20 @@ public sealed class SystemTrayService : IDisposable
 
         try
         {
-            // Fallback: executable icon / system default.
             var exe = Environment.ProcessPath;
             if (!string.IsNullOrEmpty(exe) && File.Exists(exe))
-                return Icon.ExtractAssociatedIcon(exe);
+            {
+                var extracted = Icon.ExtractAssociatedIcon(exe);
+                if (extracted is not null)
+                    return extracted;
+            }
         }
         catch
         {
             // Fall through.
         }
 
-        return SystemIcons.Application;
+        return (Icon)SystemIcons.Application.Clone();
     }
 
     public void Dispose()
@@ -185,9 +211,29 @@ public sealed class SystemTrayService : IDisposable
 
         if (_taskbarIcon is not null)
         {
-            _taskbarIcon.Visibility = Visibility.Collapsed;
-            _taskbarIcon.Dispose();
+            try
+            {
+                _taskbarIcon.Visibility = Visibility.Collapsed;
+                _taskbarIcon.Dispose();
+            }
+            catch
+            {
+                // ignore
+            }
             _taskbarIcon = null;
+        }
+
+        if (_hostWindow is not null)
+        {
+            try
+            {
+                _hostWindow.Close();
+            }
+            catch
+            {
+                // ignore
+            }
+            _hostWindow = null;
         }
 
         _ownedIcon?.Dispose();

@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.DependencyInjection;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Application.Services;
 using PejPass.Domain.Settings;
@@ -224,6 +225,21 @@ public partial class SettingsViewModel : ObservableObject
         Application.Current.ShutdownMode = MinimizeToSystemTray
             ? ShutdownMode.OnExplicitShutdown
             : ShutdownMode.OnMainWindowClose;
+
+        // Show tray icon right away when enabling so the user can confirm it works
+        // without having to close the main window first.
+        try
+        {
+            var tray = App.Services.GetService<SystemTrayService>();
+            if (MinimizeToSystemTray)
+                tray?.Show();
+            else
+                tray?.Hide();
+        }
+        catch
+        {
+            // Non-fatal: tray will still activate on next minimize/close.
+        }
 
         if (!AppearanceOnly)
         {
