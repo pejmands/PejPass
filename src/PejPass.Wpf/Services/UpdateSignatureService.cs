@@ -11,7 +11,7 @@ public static class UpdateSignatureService
 {
     private const string PayloadSchema = "PejPass.UpdateSignature.v1";
 
-    internal const string TrustedPublicKeyBase64 =
+    private const string TrustedPublicKeyBase64 =
         "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExWfWThPa8RrjVMZbubArG4H7vwym/rXR3HcXdl2lajZ7lfT0HfnNYItF7JEQmdPB/3Frhx2t42H8VosD+QrvoA==";
 
     internal static byte[] BuildSigningPayload(UpdateManifest manifest)
