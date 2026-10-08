@@ -79,6 +79,9 @@ public sealed class UpdateService : IDisposable
                     "Missing or empty version field.");
             }
 
+            if (!IsTrustedManifest(manifest))
+                return UpdateCheckResult.InvalidManifest("Update signature verification failed.");
+
             LastManifest = manifest;
             TrySaveManifestCache(manifest);
 
@@ -126,7 +129,7 @@ public sealed class UpdateService : IDisposable
     public IReadOnlyList<ReleaseNote> GetCachedReleaseNotes()
     {
         var manifest = LastManifest ?? TryLoadManifestCache();
-        if (manifest is null)
+        if (manifest is null || !IsTrustedManifest(manifest))
             return [];
 
         LastManifest = manifest;
@@ -141,7 +144,9 @@ public sealed class UpdateService : IDisposable
         try
         {
             var remote = await FetchManifestAsync(cancellationToken).ConfigureAwait(false);
-            if (remote is not null && !string.IsNullOrWhiteSpace(remote.Version))
+            if (remote is not null
+                && !string.IsNullOrWhiteSpace(remote.Version)
+                && IsTrustedManifest(remote))
             {
                 LastManifest = remote;
                 TrySaveManifestCache(remote);
@@ -563,6 +568,9 @@ public sealed class UpdateService : IDisposable
         {
         }
     }
+
+    private static bool IsTrustedManifest(UpdateManifest manifest) =>
+        UpdateSignatureService.VerifyManifestSignature(manifest);
 
     private static bool TryValidateHttpsUrl(string? value)
     {

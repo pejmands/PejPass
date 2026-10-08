@@ -7,7 +7,7 @@ namespace PejPass.Wpf.Records;
 /// Remote update.json.
 ///
 /// Root fields drive update check + download:
-///   version, downloadUrl, optional released, optional notes
+///   version, downloadUrl, sha256, signature, optional released, optional notes
 ///
 /// Optional releases[] drives the full What's New changelog:
 ///   each item has version, released, notes
@@ -27,6 +27,12 @@ public sealed class UpdateManifest
 
     [JsonPropertyName("sha256")]
     public string? Sha256 { get; init; }
+
+    /// <summary>
+    /// Base64-encoded ECDSA P-256 signature over the authenticated manifest payload.
+    /// </summary>
+    [JsonPropertyName("signature")]
+    public string? Signature { get; init; }
 
     /// <summary>
     /// Notes for the latest (root) version when releases[] is not used.
