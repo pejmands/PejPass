@@ -36,11 +36,15 @@ public partial class PasswordGeneratorWindow : Window
         DataContext = viewModel;
 
         viewModel.RequestAccept += OnRequestAccept;
-        viewModel.RequestCancel += (_, _) =>
-        {
+        viewModel.RequestCancel += OnRequestCancel;
+    }
+
+    private void OnRequestCancel(object? sender, EventArgs e)
+    {
+        if (!_standalone)
             DialogResult = false;
-            Close();
-        };
+
+        Close();
     }
 
     private async void OnRequestAccept(object? sender, EventArgs e)
