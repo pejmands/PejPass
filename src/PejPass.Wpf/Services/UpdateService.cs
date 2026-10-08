@@ -85,6 +85,9 @@ public sealed class UpdateService : IDisposable
             if (!IsNewerVersion(manifest.Version, CurrentVersion))
                 return UpdateCheckResult.UpToDate(CurrentVersion);
 
+            if (!UpdateSignatureService.VerifyManifestSignature(manifest))
+                return UpdateCheckResult.InvalidManifest("Update signature verification failed.");
+
             if (string.IsNullOrWhiteSpace(manifest.DownloadUrl))
                 return UpdateCheckResult.InvalidManifest("Missing download URL.");
 
