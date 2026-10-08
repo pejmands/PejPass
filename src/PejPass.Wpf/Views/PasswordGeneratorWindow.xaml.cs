@@ -28,6 +28,7 @@ public partial class PasswordGeneratorWindow : Window
         {
             Title = "Password Generator";
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            ShowInTaskbar = true;
             CancelButton.Content = "Close";
             UseButton.Content = "Copy";
         }
