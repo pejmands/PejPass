@@ -30,6 +30,7 @@ public sealed class SystemTrayService : IDisposable
 
     public event EventHandler? LockRequested;
     public event EventHandler? ShowRequested;
+    public event EventHandler? PasswordGeneratorRequested;
 
     public SystemTrayService(ThemeService themeService, VaultSession vaultSession)
     {
@@ -150,6 +151,7 @@ public sealed class SystemTrayService : IDisposable
         };
 
         menu.Items.Add(CreateMenuItem("Show", () => ShowRequested?.Invoke(this, EventArgs.Empty)));
+        menu.Items.Add(CreateMenuItem("Password Generator", () => PasswordGeneratorRequested?.Invoke(this, EventArgs.Empty)));
 
         if (_vaultSession.IsActive)
             menu.Items.Add(CreateMenuItem("Lock vault", () => LockRequested?.Invoke(this, EventArgs.Empty)));
