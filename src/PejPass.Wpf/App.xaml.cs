@@ -25,6 +25,7 @@ public partial class App : System.Windows.Application
 
     private static AppSettings? _settings;
     private static WindowsSecurityService? _windowsSecurityService;
+    private static PasswordGeneratorWindow? _passwordGeneratorWindow;
 
     private const double WindowCornerRadius = 10;
 
@@ -152,6 +153,16 @@ public partial class App : System.Windows.Application
     {
         Current.Dispatcher.Invoke(() =>
         {
+            if (_passwordGeneratorWindow is not null)
+            {
+                if (_passwordGeneratorWindow.WindowState == WindowState.Minimized)
+                    _passwordGeneratorWindow.WindowState = WindowState.Normal;
+
+                _passwordGeneratorWindow.Activate();
+                _passwordGeneratorWindow.Focus();
+                return;
+            }
+
             var clipboard = Services.GetRequiredService<IClipboardService>();
             var settings = Services.GetRequiredService<AppSettings>();
             var window = new PasswordGeneratorWindow(
@@ -159,6 +170,9 @@ public partial class App : System.Windows.Application
                 standalone: true,
                 clipboard: clipboard,
                 clipboardTimeout: TimeSpan.FromSeconds(settings.ClipboardClearSeconds));
+
+            _passwordGeneratorWindow = window;
+            window.Closed += (_, _) => _passwordGeneratorWindow = null;
 
             window.Show();
             window.Activate();
