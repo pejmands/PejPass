@@ -25,6 +25,9 @@ public sealed class UpdateManifest
     [JsonPropertyName("downloadUrl")]
     public string? DownloadUrl { get; init; }
 
+    [JsonPropertyName("sha256")]
+    public string? Sha256 { get; init; }
+
     /// <summary>
     /// Notes for the latest (root) version when releases[] is not used.
     /// </summary>

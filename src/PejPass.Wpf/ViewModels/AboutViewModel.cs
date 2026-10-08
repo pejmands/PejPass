@@ -28,6 +28,9 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
     public partial string? DownloadUrl { get; set; }
 
     [ObservableProperty]
+    public partial string? DownloadSha256 { get; set; }
+
+    [ObservableProperty]
     public partial string? LatestVersion { get; set; }
 
     [ObservableProperty]
@@ -63,6 +66,7 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
         IsChecking = true;
         HasUpdate = false;
         DownloadUrl = null;
+        DownloadSha256 = null;
         LatestVersion = null;
         LatestReleased = null;
         DownloadedPath = null;
@@ -94,6 +98,7 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
         LatestVersion = result.LatestVersion;
         LatestReleased = result.Released;
         DownloadUrl = result.DownloadUrl;
+        DownloadSha256 = result.Sha256;
         UpdateAvailability.Set(HasUpdate);
     }
 
@@ -146,7 +151,7 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
             });
 
             var path = await _updateService
-                .DownloadUpdateAsync(DownloadUrl, progress, _cts.Token)
+                .DownloadUpdateAsync(DownloadUrl, DownloadSha256!, progress, _cts.Token)
                 .ConfigureAwait(true);
 
             DownloadedPath = path;

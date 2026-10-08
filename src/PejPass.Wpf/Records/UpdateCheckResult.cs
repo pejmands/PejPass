@@ -22,6 +22,8 @@ public sealed class UpdateCheckResult
 
     public string? DownloadUrl { get; init; }
 
+    public string? Sha256 { get; init; }
+
     public string? Released { get; init; }
 
     public UpdateNotes? Notes { get; init; }
@@ -51,6 +53,7 @@ public sealed class UpdateCheckResult
             CurrentVersion = current,
             LatestVersion = ver,
             DownloadUrl = manifest.DownloadUrl,
+            Sha256 = manifest.Sha256,
             Released = manifest.Released,
             Notes = manifest.Notes,
             Message = msg
