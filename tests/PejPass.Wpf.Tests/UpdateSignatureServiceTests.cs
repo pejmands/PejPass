@@ -32,6 +32,20 @@ public sealed class UpdateSignatureServiceTests
     }
 
     [Fact]
+    public void VerifyManifestSignature_WithDifferentPublicKey_ReturnsFalse()
+    {
+        using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using var otherKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+
+        var signed = CreateSignedManifest(signingKey);
+
+        Assert.False(
+            UpdateSignatureService.VerifyManifestSignature(
+                signed,
+                ExportPublicKey(otherKey)));
+    }
+
+    [Fact]
     public void VerifyManifestSignature_WhenVersionChanges_ReturnsFalse()
     {
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -82,6 +96,26 @@ public sealed class UpdateSignatureServiceTests
             Released = signed.Released,
             DownloadUrl = signed.DownloadUrl,
             Sha256 = new string('0', 64),
+            Signature = signed.Signature
+        };
+
+        Assert.False(
+            UpdateSignatureService.VerifyManifestSignature(
+                tampered,
+                ExportPublicKey(key)));
+    }
+
+    [Fact]
+    public void VerifyManifestSignature_WhenReleasedChanges_ReturnsFalse()
+    {
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var signed = CreateSignedManifest(key);
+        var tampered = new UpdateManifest
+        {
+            Version = signed.Version,
+            Released = "October 9, 2026",
+            DownloadUrl = signed.DownloadUrl,
+            Sha256 = signed.Sha256,
             Signature = signed.Signature
         };
 
