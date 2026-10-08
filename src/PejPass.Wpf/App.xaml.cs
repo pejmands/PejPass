@@ -102,6 +102,7 @@ public partial class App : System.Windows.Application
         var tray = Services.GetRequiredService<SystemTrayService>();
         tray.ShowRequested += OnTrayShowRequested;
         tray.LockRequested += OnTrayLockRequested;
+        tray.PasswordGeneratorRequested += OnTrayPasswordGeneratorRequested;
 
         tray.Show();
 
@@ -144,6 +145,24 @@ public partial class App : System.Windows.Application
 
             win.Activate();
             win.Focus();
+        });
+    }
+
+    private static void OnTrayPasswordGeneratorRequested(object? sender, EventArgs e)
+    {
+        Current.Dispatcher.Invoke(() =>
+        {
+            var clipboard = Services.GetRequiredService<IClipboardService>();
+            var settings = Services.GetRequiredService<AppSettings>();
+            var window = new PasswordGeneratorWindow(
+                new PasswordGeneratorViewModel(),
+                standalone: true,
+                clipboard: clipboard,
+                clipboardTimeout: TimeSpan.FromSeconds(settings.ClipboardClearSeconds));
+
+            window.Show();
+            window.Activate();
+            window.Focus();
         });
     }
 
