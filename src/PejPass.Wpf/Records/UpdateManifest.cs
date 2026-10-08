@@ -28,12 +28,11 @@ public sealed class UpdateManifest
     [JsonPropertyName("sha256")]
     public string? Sha256 { get; init; }
 
-    [JsonPropertyName("signature")]
-    public string? Signature { get; init; }
-
     /// <summary>
     /// Base64-encoded ECDSA P-256 signature over the authenticated manifest payload.
     /// </summary>
+    [JsonPropertyName("signature")]
+    public string? Signature { get; init; }
 
     /// <summary>
     /// Notes for the latest (root) version when releases[] is not used.
