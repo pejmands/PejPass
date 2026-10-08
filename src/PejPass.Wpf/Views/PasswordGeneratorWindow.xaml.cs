@@ -27,6 +27,7 @@ public partial class PasswordGeneratorWindow : Window
         if (_standalone)
         {
             Title = "Password Generator";
+            WindowStartupLocation = WindowStartupLocation.CenterScreen;
             CancelButton.Content = "Close";
             UseButton.Content = "Copy";
         }
@@ -62,6 +63,7 @@ public partial class PasswordGeneratorWindow : Window
 
         try
         {
+            UseButton.IsEnabled = false;
             _clipboard.CopyWithTimeout(password, _clipboardTimeout);
             UseButton.Content = "✓ Copied";
             await Task.Delay(500);
@@ -70,6 +72,7 @@ public partial class PasswordGeneratorWindow : Window
         catch
         {
             UseButton.Content = "Copy";
+            UseButton.IsEnabled = true;
         }
     }
 }
