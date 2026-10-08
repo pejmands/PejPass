@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace PejPass.Wpf.Services;
@@ -83,6 +84,15 @@ public sealed class UpdateService : IDisposable
 
             if (!IsNewerVersion(manifest.Version, CurrentVersion))
                 return UpdateCheckResult.UpToDate(CurrentVersion);
+
+            if (string.IsNullOrWhiteSpace(manifest.DownloadUrl))
+                return UpdateCheckResult.InvalidManifest("Missing download URL.");
+
+            if (!TryValidateHttpsUrl(manifest.DownloadUrl))
+                return UpdateCheckResult.InvalidManifest("Download URL must use HTTPS.");
+
+            if (!IsValidSha256(manifest.Sha256))
+                return UpdateCheckResult.InvalidManifest("Missing or invalid SHA-256 package hash.");
 
             return UpdateCheckResult.Available(CurrentVersion, manifest);
         }
@@ -463,11 +473,15 @@ public sealed class UpdateService : IDisposable
 
     public async Task<string> DownloadUpdateAsync(
         string downloadUrl,
+        string expectedSha256,
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(downloadUrl))
-            throw new ArgumentException("Download URL is empty.", nameof(downloadUrl));
+        if (!TryValidateHttpsUrl(downloadUrl))
+            throw new ArgumentException("Download URL must use HTTPS.", nameof(downloadUrl));
+
+        if (!IsValidSha256(expectedSha256))
+            throw new ArgumentException("Expected SHA-256 hash is missing or invalid.", nameof(expectedSha256));
 
         using var response = await _http
             .GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
@@ -498,20 +512,70 @@ public sealed class UpdateService : IDisposable
         long readTotal = 0;
         int read;
 
-        while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)
-                   .ConfigureAwait(false)) > 0)
+        using var hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+
+        try
         {
-            await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken)
-                .ConfigureAwait(false);
+            while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)
+                       .ConfigureAwait(false)) > 0)
+            {
+                hasher.AppendData(buffer, 0, read);
 
-            readTotal += read;
+                await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken)
+                    .ConfigureAwait(false);
 
-            if (total > 0 && progress is not null)
-                progress.Report(readTotal / (double)total);
+                readTotal += read;
+
+                if (total > 0 && progress is not null)
+                    progress.Report(readTotal / (double)total);
+            }
+
+            await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+
+            var actualSha256 = Convert.ToHexString(hasher.GetHashAndReset());
+
+            if (!CryptographicOperations.FixedTimeEquals(
+                    Convert.FromHexString(actualSha256),
+                    Convert.FromHexString(expectedSha256)))
+            {
+                TryDeleteFile(destPath);
+                throw new InvalidDataException("Update package SHA-256 hash does not match the manifest.");
+            }
+
+            progress?.Report(1.0);
+            return destPath;
         }
+        catch
+        {
+            TryDeleteFile(destPath);
+            throw;
+        }
+    }
 
-        progress?.Report(1.0);
-        return destPath;
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch
+        {
+        }
+    }
+
+    private static bool TryValidateHttpsUrl(string? value)
+    {
+        return Uri.TryCreate(value, UriKind.Absolute, out var uri)
+               && uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static bool IsValidSha256(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length != 64)
+            return false;
+
+        return value.All(Uri.IsHexDigit);
     }
 
     private static string ResolveFileName(string url, HttpResponseMessage response)
