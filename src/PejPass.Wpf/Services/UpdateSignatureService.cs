@@ -1,3 +1,4 @@
+using System.IO;
 using PejPass.Wpf.Records;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -32,6 +33,9 @@ public static class UpdateSignatureService
 
         return stream.ToArray();
     }
+
+    public static bool VerifyManifestSignature(UpdateManifest manifest) =>
+        VerifyManifestSignature(manifest, TrustedPublicKeyBase64);
 
     public static bool VerifyManifestSignature(
         UpdateManifest manifest,
