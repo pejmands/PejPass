@@ -28,6 +28,9 @@ public sealed class UpdateManifest
     [JsonPropertyName("sha256")]
     public string? Sha256 { get; init; }
 
+    [JsonPropertyName("signature")]
+    public string? Signature { get; init; }
+
     /// <summary>
     /// Notes for the latest (root) version when releases[] is not used.
     /// </summary>
