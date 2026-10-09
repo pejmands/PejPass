@@ -124,11 +124,11 @@ public partial class ChangeMasterPasswordViewModel(
         }
         catch (System.Security.Cryptography.AuthenticationTagMismatchException)
         {
-            CurrentPasswordError = VaultErrorMessages.ForChangeMasterPassword(new System.Security.Cryptography.AuthenticationTagMismatchException());
+            CurrentPasswordError = VaultErrorMessages.ForChangeMasterPassword(authenticationFailed: true);
         }
         catch (Exception)
         {
-            CurrentPasswordError = VaultErrorMessages.ForChangeMasterPassword(new Exception());
+            CurrentPasswordError = VaultErrorMessages.ForChangeMasterPassword(authenticationFailed: false);
         }
         finally
         {
