@@ -15,6 +15,8 @@ public static partial class SingleInstance
 
     private const int SwRestore = 9;
 
+    // Mutex ownership is thread-affine: App acquires it in OnStartup and releases it in OnExit,
+    // both on the WPF dispatcher thread. Keep those lifecycle calls on the same thread.
     private static Mutex? _mutex;
     private static EventWaitHandle? _activateEvent;
     private static CancellationTokenSource? _listenCts;
