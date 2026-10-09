@@ -1017,13 +1017,15 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        var sensitive = editorVm.GetSensitiveChanges();
+        var sensitiveFieldNames = editorVm.GetSensitiveChanges()
+            .Select(change => change.FieldName)
+            .ToList();
         editor.ClearSensitiveResult();
         editorVm.ClearSensitiveInputs();
 
-        if (sensitive.Count > 0)
+        if (sensitiveFieldNames.Count > 0)
         {
-            var summary = string.Join("\n", sensitive.Select(c => $"• {c.FieldName}"));
+            var summary = string.Join("\n", sensitiveFieldNames.Select(fieldName => $"• {fieldName}"));
 
             var proceed = DialogService.Confirm(
                 $"These sensitive fields will change:\n\n{summary}\n\nContinue?",
