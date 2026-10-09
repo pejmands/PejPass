@@ -1,39 +1,63 @@
-﻿using PejPass.Domain.Entities;
+using PejPass.Application.Security;
+using PejPass.Domain.Entities;
 using System.IO;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace PejPass.Wpf.Services;
 
 public sealed class VaultSession : IDisposable
 {
-    private byte[]? _secret;
+    private readonly object _sync = new();
+    private VaultKeyMaterial? _keyMaterial;
+    private Vault? _vault;
+    private string? _vaultPath;
+    private bool _disposed;
 
     public event EventHandler? StateChanged;
 
-    public Vault? Vault { get; private set; }
+    public Vault? Vault
+    {
+        get { lock (_sync) return _vault; }
+        private set { lock (_sync) _vault = value; }
+    }
 
-    public string? VaultPath { get; private set; }
+    public string? VaultPath
+    {
+        get { lock (_sync) return _vaultPath; }
+        private set { lock (_sync) _vaultPath = value; }
+    }
 
-    public bool IsActive =>
-        Vault is not null &&
-        !string.IsNullOrEmpty(VaultPath) &&
-        _secret is { Length: > 0 };
+    public bool IsActive
+    {
+        get
+        {
+            lock (_sync)
+                return !_disposed &&
+                    _vault is not null &&
+                    !string.IsNullOrEmpty(_vaultPath) &&
+                    _keyMaterial is not null;
+        }
+    }
 
     public void Open(
         Vault vault,
         string vaultPath,
-        string secret)
+        VaultKeyMaterial keyMaterial)
     {
         ArgumentNullException.ThrowIfNull(vault);
-        ArgumentException.ThrowIfNullOrEmpty(vaultPath);
-        ArgumentException.ThrowIfNullOrEmpty(secret);
+        ArgumentException.ThrowIfNullOrWhiteSpace(vaultPath);
+        ArgumentNullException.ThrowIfNull(keyMaterial);
 
-        ClearSecret();
+        var fullPath = Path.GetFullPath(vaultPath);
+        var materialCopy = keyMaterial.Clone();
 
-        Vault = vault;
-        VaultPath = Path.GetFullPath(vaultPath);
-        _secret = Encoding.UTF8.GetBytes(secret);
+        lock (_sync)
+        {
+            ThrowIfDisposed();
+            ClearKeyMaterialCore();
+            _vault = vault;
+            _vaultPath = fullPath;
+            _keyMaterial = materialCopy;
+        }
 
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -42,50 +66,85 @@ public sealed class VaultSession : IDisposable
     {
         ArgumentNullException.ThrowIfNull(vault);
 
-        Vault = vault;
+        lock (_sync)
+        {
+            ThrowIfDisposed();
+            _vault = vault;
+        }
     }
 
-    public string GetSecret()
+    public VaultKeyMaterial CopyKeyMaterial()
     {
-        if (_secret is not { Length: > 0 })
-            throw new InvalidOperationException("No active vault session.");
+        lock (_sync)
+        {
+            ThrowIfDisposed();
 
-        return Encoding.UTF8.GetString(_secret);
+            if (_keyMaterial is null)
+                throw new InvalidOperationException("No active vault session.");
+
+            return _keyMaterial.Clone();
+        }
     }
 
-    public void UpdateSecret(string secret)
+    public void UpdateKeyMaterial(VaultKeyMaterial keyMaterial)
     {
-        ArgumentException.ThrowIfNullOrEmpty(secret);
+        ArgumentNullException.ThrowIfNull(keyMaterial);
+        var materialCopy = keyMaterial.Clone();
 
-        ClearSecret();
-        _secret = Encoding.UTF8.GetBytes(secret);
-    }
-
-    public void Clear()
-    {
-        if (!IsActive)
-            return;
-
-        ClearSecret();
-        Vault = null;
-        VaultPath = null;
+        lock (_sync)
+        {
+            ThrowIfDisposed();
+            ClearKeyMaterialCore();
+            _keyMaterial = materialCopy;
+        }
 
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    public void Clear()
+    {
+        var changed = false;
+
+        lock (_sync)
+        {
+            if (_vault is null && _vaultPath is null && _keyMaterial is null)
+                return;
+
+            ClearKeyMaterialCore();
+            _vault = null;
+            _vaultPath = null;
+            changed = true;
+        }
+
+        if (changed)
+            StateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public void Dispose()
     {
-        Clear();
-        StateChanged = null;
+        lock (_sync)
+        {
+            if (_disposed)
+                return;
+
+            ClearKeyMaterialCore();
+            _vault = null;
+            _vaultPath = null;
+            _disposed = true;
+            StateChanged = null;
+        }
+
         GC.SuppressFinalize(this);
     }
 
-    private void ClearSecret()
+    private void ClearKeyMaterialCore()
     {
-        if (_secret is null)
-            return;
+        _keyMaterial?.Dispose();
+        _keyMaterial = null;
+    }
 
-        CryptographicOperations.ZeroMemory(_secret);
-        _secret = null;
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }
