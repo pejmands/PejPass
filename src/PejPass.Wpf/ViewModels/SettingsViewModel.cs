@@ -260,6 +260,7 @@ public partial class SettingsViewModel : ObservableObject
             _settings.ClipboardClearSeconds = ClipboardClearSeconds;
             _settings.RevealSecretSeconds = RevealSecretSeconds;
             _settings.WindowsHelloEnabled = WindowsHelloEnabled;
+            _settings.WindowsHelloTimeoutMinutes = WindowsHelloTimeoutValues[SelectedWindowsHelloTimeoutIndex];
             _settings.OnlineFaviconFetchingEnabled = OnlineFaviconFetchingEnabled;
         }
 
@@ -287,8 +288,13 @@ public partial class SettingsViewModel : ObservableObject
             return;
         }
 
-        if (!AppearanceOnly && !WindowsHelloEnabled)
-            SessionPasswordCache.Clear();
+        if (!AppearanceOnly)
+        {
+            if (!WindowsHelloEnabled)
+                _sessionPasswordCache.Clear();
+            else
+                _sessionPasswordCache.RefreshExpiry();
+        }
 
         _themeService.Apply();
         if (!AppearanceOnly)
@@ -311,6 +317,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.ClipboardClearSeconds = _savedClipboard;
         _settings.RevealSecretSeconds = _savedRevealSecret;
         _settings.WindowsHelloEnabled = _savedWindowsHello;
+        _settings.WindowsHelloTimeoutMinutes = _savedWindowsHelloTimeout;
         _settings.FontSize = _savedFontSize;
         _settings.Zoom = _savedZoom;
         _settings.OnlineFaviconFetchingEnabled = _savedOnlineFaviconFetching;
@@ -327,6 +334,8 @@ public partial class SettingsViewModel : ObservableObject
             RevealSecretSeconds = _savedRevealSecret;
             SelectedThemeIndex = (int)_savedTheme;
             WindowsHelloEnabled = _savedWindowsHello;
+            SelectedWindowsHelloTimeoutIndex = Array.IndexOf(WindowsHelloTimeoutValues, _savedWindowsHelloTimeout);
+            if (SelectedWindowsHelloTimeoutIndex < 0) SelectedWindowsHelloTimeoutIndex = 2;
             OnlineFaviconFetchingEnabled = _savedOnlineFaviconFetching;
             AutoCheckForUpdates = _savedAutoCheckForUpdates;
             MinimizeToSystemTray = _savedMinimizeToSystemTray;
