@@ -163,7 +163,7 @@ public partial class MainViewModel
                 ApplyFilter(preserveSelectionId: null);
                 if (!await SaveVaultAsync(currentVault, operationGeneration))
                 {
-                    RestoreVaultSnapshot(snapshot, currentVault);
+                    RestoreVaultSnapshot(snapshot, currentVault, operationGeneration);
                     return;
                 }
 
