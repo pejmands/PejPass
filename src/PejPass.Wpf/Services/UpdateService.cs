@@ -672,14 +672,6 @@ public sealed class UpdateService : IDisposable
             .ReadAsStreamAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        await using var output = new FileStream(
-            destPath,
-            FileMode.CreateNew,
-            FileAccess.Write,
-            FileShare.None,
-            81920,
-            useAsync: true);
-
         var buffer = new byte[81920];
         long readTotal = 0;
         int read;
@@ -688,24 +680,36 @@ public sealed class UpdateService : IDisposable
 
         try
         {
-            while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)
-                       .ConfigureAwait(false)) > 0)
+            // Dispose the file before cleanup so Windows can delete partial downloads reliably.
+            await using (var output = new FileStream(
+                destPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                81920,
+                useAsync: true))
             {
-                if (readTotal > MaxUpdatePackageBytes - read)
-                    throw new InvalidDataException("Update package exceeds the maximum supported size.");
+                while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)
+                           .ConfigureAwait(false)) > 0)
+                {
+                    if (readTotal > MaxUpdatePackageBytes - read)
+                        throw new InvalidDataException("Update package exceeds the maximum supported size.");
 
-                hasher.AppendData(buffer, 0, read);
+                    hasher.AppendData(buffer, 0, read);
 
-                await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken)
-                    .ConfigureAwait(false);
+                    await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken)
+                        .ConfigureAwait(false);
 
-                readTotal += read;
+                    readTotal += read;
 
-                if (total > 0 && progress is not null)
-                    progress.Report(readTotal / (double)total);
+                    if (total > 0 && progress is not null)
+                        progress.Report(readTotal / (double)total);
+                }
+
+                await output.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
 
             var actualSha256 = Convert.ToHexString(hasher.GetHashAndReset());
 
@@ -713,7 +717,6 @@ public sealed class UpdateService : IDisposable
                     Convert.FromHexString(actualSha256),
                     Convert.FromHexString(expectedSha256)))
             {
-                TryDeleteFile(destPath);
                 throw new InvalidDataException("Update package SHA-256 hash does not match the manifest.");
             }
 
