@@ -131,6 +131,7 @@ public static class FaviconService
             _startupCleanupStarted = true;
             _startupCleanupTask = Task.Run(() =>
             {
+                PruneLegacyDiskCache(CacheDir);
                 PruneExpiredDiskCacheOncePerDay(
                     CacheDir,
                     DateTime.UtcNow,
@@ -368,7 +369,15 @@ public static class FaviconService
                 try
                 {
                     Directory.CreateDirectory(CacheDir);
-                    File.WriteAllBytes(CachePath(host), bytes);
+                    var encryptedBytes = EncryptCacheBytes(host, bytes, CacheMasterKey.Value);
+                    try
+                    {
+                        File.WriteAllBytes(CachePath(host), encryptedBytes);
+                    }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(encryptedBytes);
+                    }
                     PruneDiskCache(CacheDir);
                 }
                 catch
@@ -719,11 +728,19 @@ public static class FaviconService
             if (!File.Exists(path))
                 return null;
 
-            var bytes = File.ReadAllBytes(path);
-            if (bytes.Length < 16)
+            var storedBytes = File.ReadAllBytes(path);
+            var bytes = TryDecryptCacheBytes(host, storedBytes, CacheMasterKey.Value);
+            if (bytes is null || bytes.Length < 16)
                 return null;
 
-            return CreateBitmap(bytes);
+            try
+            {
+                return CreateBitmap(bytes);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(bytes);
+            }
         }
         catch
         {
