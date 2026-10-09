@@ -14,6 +14,7 @@ public partial class ChangeMasterPasswordViewModel(
 {
     private readonly VaultService _vaultService = vaultService;
     private readonly VaultSession _vaultSession = vaultSession;
+    private readonly SessionPasswordCache cache = sessionPasswordCache;
 
     [ObservableProperty]
     public partial string CurrentPassword { get; set; } = string.Empty;
