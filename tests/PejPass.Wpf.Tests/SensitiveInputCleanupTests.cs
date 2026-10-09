@@ -31,6 +31,10 @@ public sealed class SensitiveInputCleanupTests
             Assert.Equal(string.Empty, viewModel.ConfirmMasterPassword);
             Assert.False(passwordBox.IsRevealed);
             Assert.False(confirmPasswordBox.IsRevealed);
+            Assert.Equal(string.Empty, viewModel.MasterPasswordStrengthLabel);
+            Assert.Equal(0d, viewModel.MasterPasswordStrengthProgress);
+            Assert.Equal(0, viewModel.MasterPasswordStrengthLevel);
+            Assert.False(viewModel.ShowMasterPasswordStrength);
         }, TestContext.Current.CancellationToken);
     }
 
@@ -58,11 +62,25 @@ public sealed class SensitiveInputCleanupTests
             Assert.Equal(string.Empty, viewModel.NewPassword);
             Assert.Equal(string.Empty, viewModel.ConfirmPassword);
             Assert.Equal(string.Empty, viewModel.NewPasswordStrengthLabel);
-            Assert.Equal(0, viewModel.NewPasswordStrengthProgress);
+            Assert.Equal(0d, viewModel.NewPasswordStrengthProgress);
             Assert.Equal(0, viewModel.NewPasswordStrengthLevel);
             Assert.False(viewModel.ShowNewPasswordStrength);
             Assert.Null(window.DataContext);
         }, TestContext.Current.CancellationToken);
+    }
+
+    private static IEnumerable<T> FindVisualChildren<T>(System.Windows.DependencyObject parent)
+        where T : System.Windows.DependencyObject
+    {
+        for (var index = 0; index < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); index++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, index);
+            if (child is T match)
+                yield return match;
+
+            foreach (var nested in FindVisualChildren<T>(child))
+                yield return nested;
+        }
     }
 
     [Fact(Timeout = 15000)]
@@ -105,6 +123,9 @@ public sealed class SensitiveInputCleanupTests
 
             Assert.Equal(string.Empty, passwordBox.Password);
             Assert.Equal(string.Empty, totpSecretBox.Password);
+            Assert.All(
+                FindVisualChildren<PasswordRevealBox>(window),
+                control => Assert.Equal(string.Empty, control.Password));
             Assert.Null(window.DataContext);
 
             Assert.Equal("new-password", viewModel.Password);
