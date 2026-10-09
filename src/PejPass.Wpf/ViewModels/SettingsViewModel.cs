@@ -217,12 +217,12 @@ public partial class SettingsViewModel : ObservableObject
         {
             SettingsStore.EnsureWritable();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             RevertPreview();
 
             DialogService.Error(
-                $"The settings cannot be modified right now.\n\n{ex.Message}",
+                "The settings cannot be modified right now. Check file permissions and try again.",
                 "Settings unavailable");
 
             return;
@@ -417,9 +417,9 @@ public partial class SettingsViewModel : ObservableObject
             FaviconService.ClearCache();
             SnackbarService.Show("Favicon cache cleared.");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DialogService.Error(ex.Message, "Clear cache failed");
+            DialogService.Error("Could not clear the cache. Please try again.", "Clear cache failed");
         }
     }
 
