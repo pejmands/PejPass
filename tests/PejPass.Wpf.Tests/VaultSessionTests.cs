@@ -1,5 +1,6 @@
 using PejPass.Application.Security;
 using PejPass.Domain.Entities;
+using System.Security.Cryptography;
 using PejPass.Wpf.Services;
 
 namespace PejPass.Wpf.Tests;
