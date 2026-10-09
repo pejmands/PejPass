@@ -32,9 +32,9 @@ public static class QrTotpImport
 
             return true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            error = ex.Message;
+            error = "Could not read a valid TOTP QR code.";
             return false;
         }
     }

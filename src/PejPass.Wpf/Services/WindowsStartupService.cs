@@ -44,9 +44,9 @@ public static class WindowsStartupService
             error = null;
             return true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            error = ex.Message;
+            error = "Could not update the Windows startup setting.";
             return false;
         }
     }

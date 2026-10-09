@@ -458,13 +458,13 @@ public partial class HistoryViewModel : ObservableObject
                 _vaultSession.GetSecret(),
                 vault);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             _vaultSession.Vault!.RestoreSnapshot(snapshot);
             Load();
 
             DialogService.Error(
-                $"Failed to save the restored fields.\n\n{ex.Message}",
+                "Failed to save the restored fields. Please try again.",
                 "Restore history");
 
             return;
@@ -581,10 +581,10 @@ public partial class HistoryViewModel : ObservableObject
             await _vaultService.EnsureVaultWritableAsync(path);
             return true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             DialogService.Error(
-                $"The vault cannot be modified right now.\n\n{ex.Message}",
+                "The vault cannot be modified right now. Check file permissions and try again.",
                 "Vault unavailable");
 
             return false;
@@ -607,13 +607,13 @@ public partial class HistoryViewModel : ObservableObject
 
             return true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             _vaultSession.Vault!.RestoreSnapshot(snapshot);
             Load();
 
             DialogService.Error(
-                $"Failed to save the history changes.\n\n{ex.Message}",
+                "Failed to save the history changes. Please try again.",
                 actionTitle);
 
             return false;

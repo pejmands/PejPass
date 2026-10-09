@@ -63,10 +63,10 @@ public partial class PasswordGeneratorViewModel : ObservableObject
                 ExcludeAmbiguous = ExcludeAmbiguous
             });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             Preview = string.Empty;
-            Error = ex.Message;
+            Error = "Could not generate a password with the current settings.";
         }
     }
 

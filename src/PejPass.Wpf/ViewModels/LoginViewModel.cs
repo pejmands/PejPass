@@ -518,9 +518,14 @@ public partial class LoginViewModel : ObservableObject
             StatusMessage = "Vault unlocked.";
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
-        catch (Exception ex)
+        catch (System.Security.Cryptography.AuthenticationTagMismatchException)
         {
-            PasswordError = ex.Message;
+            PasswordError = VaultErrorMessages.ForWindowsHelloUnlock(authenticationFailed: true);
+            StatusMessage = string.Empty;
+        }
+        catch (Exception)
+        {
+            PasswordError = VaultErrorMessages.ForWindowsHelloUnlock(authenticationFailed: false);
             StatusMessage = string.Empty;
         }
         finally
@@ -639,9 +644,14 @@ public partial class LoginViewModel : ObservableObject
 
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
-        catch (Exception ex)
+        catch (System.Security.Cryptography.AuthenticationTagMismatchException)
         {
-            PasswordError = ex.Message;
+            PasswordError = VaultErrorMessages.ForUnlock(authenticationFailed: true);
+            StatusMessage = string.Empty;
+        }
+        catch (Exception)
+        {
+            PasswordError = VaultErrorMessages.ForUnlock(authenticationFailed: false);
             StatusMessage = string.Empty;
         }
         finally

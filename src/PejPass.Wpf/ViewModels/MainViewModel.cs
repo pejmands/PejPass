@@ -316,10 +316,10 @@ public partial class MainViewModel : ObservableObject
                 _vaultSession.GetSecret(),
                 vault);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             DialogService.Error(
-                $"Failed to save expired trash cleanup.\n\n{ex.Message}",
+                "Failed to save expired trash cleanup. Please try again.",
                 "Save failed");
         }
         finally
@@ -1255,10 +1255,10 @@ public partial class MainViewModel : ObservableObject
                 $"Saved to:\n{_vaultSession.VaultPath}",
                 "Import complete");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             DialogService.Error(
-                $"Import failed:\n{ex.Message}",
+                "Import failed. Check the file format and try again.",
                 "Import Error");
 
             StatusMessage = "Import failed.";
@@ -1387,10 +1387,10 @@ public partial class MainViewModel : ObservableObject
 
             SnackbarService.Show("Encrypted backup exported.");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             DialogService.Error(
-                $"Backup failed:\n{ex.Message}",
+                "Backup export failed. Check the destination and try again.",
                 "Export Backup");
 
             StatusMessage = "Backup failed.";
@@ -1470,10 +1470,10 @@ public partial class MainViewModel : ObservableObject
             await _vaultService.EnsureVaultWritableAsync(path);
             return true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             DialogService.Error(
-                $"The vault cannot be modified right now.\n\n{ex.Message}",
+                "The vault cannot be modified right now. Check file permissions and try again.",
                 "Vault unavailable");
 
             return false;
@@ -1499,7 +1499,7 @@ public partial class MainViewModel : ObservableObject
 
             return true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             try
             {
@@ -1517,7 +1517,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             DialogService.Error(
-                $"Failed to save the vault.\n\n{ex.Message}",
+                "Failed to save the vault. Check disk space and file permissions, then try again.",
                 "Save failed");
 
             return false;

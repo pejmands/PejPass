@@ -66,9 +66,13 @@ public partial class MainViewModel
 
                 return null;
             }
-            catch (Exception ex)
+            catch (System.Security.Cryptography.AuthenticationTagMismatchException)
             {
-                return $"Could not open backup: {ex.Message}";
+                return VaultErrorMessages.ForBackupOpen(authenticationFailed: true);
+            }
+            catch (Exception)
+            {
+                return VaultErrorMessages.ForBackupOpen(authenticationFailed: false);
             }
         };
 
@@ -297,9 +301,9 @@ public partial class MainViewModel
 
             ResetAutoLockTimer();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DialogService.Error($"Restore failed:\n{ex.Message}", "Restore Backup");
+            DialogService.Error("Restore failed. The backup may be damaged or incompatible.", "Restore Backup");
             StatusMessage = "Restore failed.";
         }
         finally
