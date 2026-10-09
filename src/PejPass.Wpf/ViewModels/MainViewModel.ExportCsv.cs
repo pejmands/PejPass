@@ -57,9 +57,9 @@ public partial class MainViewModel
                 "CSV exported");
             ResetAutoLockTimer();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DialogService.Error($"CSV export failed:\n{ex.Message}", "Export CSV");
+            DialogService.Error("CSV export failed. Check the destination and try again.", "Export CSV");
             StatusMessage = "CSV export failed.";
         }
     }
@@ -104,9 +104,9 @@ public partial class MainViewModel
                 "PejPass CSV exported");
             ResetAutoLockTimer();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DialogService.Error($"PejPass CSV export failed:\n{ex.Message}", "Export PejPass CSV");
+            DialogService.Error("PejPass CSV export failed. Check the destination and try again.", "Export PejPass CSV");
             StatusMessage = "PejPass CSV export failed.";
         }
     }
