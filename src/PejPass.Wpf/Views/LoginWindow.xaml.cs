@@ -46,8 +46,7 @@ public partial class LoginWindow : Window
 
         viewModel.RequestClose += (_, _) =>
         {
-            MasterPasswordBox.Clear();
-            ConfirmMasterPasswordBox.Clear();
+            ClearPasswordInputs();
 
             var main = App.Services.GetRequiredService<MainWindow>();
 
