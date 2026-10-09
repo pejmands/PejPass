@@ -126,7 +126,7 @@ public sealed class ClipboardService(
             // Expected when a new copy replaces the current clipboard value.
         }
         catch (Exception ex) when (
-            ex is InvalidOperationException or ObjectDisposedException or TaskCanceledException)
+            ex is InvalidOperationException or TaskCanceledException)
         {
             // The dispatcher may be shutting down; do not let a background task fault.
             lock (_sync)
