@@ -16,11 +16,11 @@ namespace PejPass.Wpf.Services;
 public sealed class UpdateService : IDisposable
 {
     private const long MaxUpdatePackageBytes = 512L * 1024 * 1024;
-    private const int MaxUpdateManifestBytes = 2 * 1024 * 1024;
+    private const int MaxUpdateManifestBytes = 4 * 1024 * 1024;
     private const int MaxManifestReleases = 1_000;
     private const int MaxReleaseNoteItemsPerCategory = 100;
     private const int MaxReleaseNoteItemCharacters = 4_096;
-    private const int MaxManifestTextCharacters = 1_000_000;
+    private const int MaxManifestTextCharacters = 2_000_000;
     private const int MaxUpdateArchiveEntries = 4096;
     private const long MaxUpdateUncompressedBytes = 1024L * 1024 * 1024;
     private const long MaxUpdateEntryBytes = 256L * 1024 * 1024;
