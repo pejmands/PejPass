@@ -1,4 +1,5 @@
 ﻿using PejPass.Application.Interfaces;
+using PejPass.Domain.Entities;
 using PejPass.Infrastructure.Storage;
 using System.IO;
 
@@ -109,7 +110,7 @@ public sealed class VaultStoreValidationTests
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var path = CreateVaultFile(
-            version: 3,
+            version: 4,
             saltLength: 16);
 
         try
@@ -126,6 +127,41 @@ public sealed class VaultStoreValidationTests
         {
             File.Delete(path);
         }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenArgon2MemoryExceedsLimit_ThrowsInvalidDataException()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var path = CreateV3VaultFile(memorySizeKiB: 262145);
+
+        try
+        {
+            var store = CreateStore();
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                store.OpenAsync(path, "password", cancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    private static string CreateV3VaultFile(int memorySizeKiB)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+
+        stream.Write("PEJP"u8);
+        stream.WriteByte(3);
+        stream.WriteByte(1);
+        stream.Write(BitConverter.GetBytes(memorySizeKiB));
+        stream.Write(BitConverter.GetBytes(3));
+        stream.Write(BitConverter.GetBytes(4));
+        stream.Write(BitConverter.GetBytes((ushort)16));
+        stream.Write(new byte[16 + 12 + 16 + 1]);
+
+        return path;
     }
 
     private static VaultStore CreateStore()
@@ -174,7 +210,8 @@ public sealed class VaultStoreValidationTests
     {
         public byte[] DeriveKey(
             string masterPassword,
-            byte[] salt)
+            byte[] salt,
+            Argon2Parameters? parameters = null)
         {
             return new byte[32];
         }

@@ -242,10 +242,12 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
 
         public byte[] DeriveKey(
             string masterPassword,
-            byte[] salt) =>
+            byte[] salt,
+            Argon2Parameters? parameters = null) =>
             Inner.DeriveKey(
                 masterPassword,
-                salt);
+                salt,
+                parameters);
 
         public (byte[] Ciphertext, byte[] Nonce, byte[] Tag) Encrypt(
             byte[] plaintext,

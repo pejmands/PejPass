@@ -1,5 +1,6 @@
 using Konscious.Security.Cryptography;
 using PejPass.Application.Interfaces;
+using PejPass.Domain.Entities;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -11,20 +12,22 @@ namespace PejPass.Infrastructure.Crypto;
 /// </summary>
 public sealed class CryptoService : ICryptoService
 {
-    // Conservative but strong defaults (adjustable later via settings)
-    private const int Argon2MemorySizeKb = 65536;   // 64 MiB
-    private const int Argon2Iterations = 3;
-    private const int Argon2DegreeOfParallelism = 4;
     private const int KeySizeBytes = 32;             // 256-bit
     private const int NonceSizeBytes = 12;           // GCM standard
     private const int TagSizeBytes = 16;
 
-    public byte[] DeriveKey(string masterPassword, byte[] salt)
+    public byte[] DeriveKey(
+        string masterPassword,
+        byte[] salt,
+        Argon2Parameters? parameters = null)
     {
         if (string.IsNullOrEmpty(masterPassword))
             throw new ArgumentException("Master password cannot be empty.", nameof(masterPassword));
         if (salt is null || salt.Length < 8)
             throw new ArgumentException("Salt must be at least 8 bytes.", nameof(salt));
+
+        parameters ??= Argon2Parameters.Default;
+        parameters.Validate();
 
         var passwordBytes = Encoding.UTF8.GetBytes(masterPassword);
 
@@ -33,9 +36,9 @@ public sealed class CryptoService : ICryptoService
             using var argon2 = new Argon2id(passwordBytes)
             {
                 Salt = salt,
-                DegreeOfParallelism = Argon2DegreeOfParallelism,
-                MemorySize = Argon2MemorySizeKb,
-                Iterations = Argon2Iterations
+                DegreeOfParallelism = parameters.DegreeOfParallelism,
+                MemorySize = parameters.MemorySizeKiB,
+                Iterations = parameters.Iterations
             };
 
             return argon2.GetBytes(KeySizeBytes);

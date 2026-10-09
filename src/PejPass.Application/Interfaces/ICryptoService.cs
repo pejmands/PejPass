@@ -1,3 +1,5 @@
+using PejPass.Domain.Entities;
+
 namespace PejPass.Application.Interfaces;
 
 /// <summary>
@@ -8,7 +10,10 @@ public interface ICryptoService
     /// <summary>
     /// Derives a 256-bit key from the master password using Argon2id.
     /// </summary>
-    byte[] DeriveKey(string masterPassword, byte[] salt);
+    byte[] DeriveKey(
+        string masterPassword,
+        byte[] salt,
+        Argon2Parameters? parameters = null);
 
     /// <summary>
     /// Encrypts plaintext with AES-256-GCM. Returns (ciphertext, nonce, tag).
