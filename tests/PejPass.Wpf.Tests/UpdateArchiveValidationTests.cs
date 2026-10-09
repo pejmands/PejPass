@@ -1,4 +1,5 @@
 using PejPass.Wpf.Services;
+using System.IO;
 using System.IO.Compression;
 
 namespace PejPass.Wpf.Tests;
