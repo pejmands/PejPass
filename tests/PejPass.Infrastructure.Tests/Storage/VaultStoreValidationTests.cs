@@ -202,6 +202,33 @@ public sealed class VaultStoreValidationTests
         }
     }
 
+    [Fact]
+    public async Task CreateSessionAsync_WhenEntryFieldExceedsLimit_DoesNotCreateVaultFile()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        var vault = new Vault
+        {
+            Entries = [new VaultEntry { Title = new string('x', 1_048_577) }]
+        };
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                CreateStore().CreateSessionAsync(
+                    path,
+                    "password",
+                    vault,
+                    TestContext.Current.CancellationToken));
+
+            Assert.False(File.Exists(path));
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
     private static string CreateV2VaultFile(string json)
     {
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
