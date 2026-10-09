@@ -27,6 +27,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly int _savedClipboard;
     private readonly int _savedRevealSecret;
     private readonly bool _savedWindowsHello;
+    private readonly int _savedWindowsHelloTimeout;
     private readonly FontSizeMode _savedFontSize;
     private readonly double _savedZoom;
     private readonly bool _savedOnlineFaviconFetching;
@@ -58,6 +59,9 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool WindowsHelloEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial int SelectedWindowsHelloTimeoutIndex { get; set; }
 
     [ObservableProperty]
     public partial bool OnlineFaviconFetchingEnabled { get; set; }
@@ -93,6 +97,10 @@ public partial class SettingsViewModel : ObservableObject
 
     public int[] RevealSecretValues { get; } = [0, 5, 10, 30, 60];
 
+    public string[] WindowsHelloTimeoutOptions { get; } = ["15 minutes", "1 hour", "4 hours (recommended)", "Until app closes"];
+
+    public int[] WindowsHelloTimeoutValues { get; } = [15, 60, 240, 0];
+
     /// <summary>
     /// When true (login screen), only appearance options are shown and saved. Startup,
     /// tray, update, and vault/security settings stay hidden and are not
@@ -116,18 +124,21 @@ public partial class SettingsViewModel : ObservableObject
         AppSettings settings,
         ThemeService themeService,
         VaultService vaultService,
-        VaultSession vaultSession)
+        VaultSession vaultSession,
+        SessionPasswordCache sessionPasswordCache)
     {
         _settings = settings;
         _themeService = themeService;
         _vaultService = vaultService;
         _vaultSession = vaultSession;
+        _sessionPasswordCache = sessionPasswordCache;
 
         _savedTheme = settings.Theme;
         _savedAutoLock = settings.AutoLockMinutes;
         _savedClipboard = settings.ClipboardClearSeconds;
         _savedRevealSecret = settings.RevealSecretSeconds;
         _savedWindowsHello = settings.WindowsHelloEnabled;
+        _savedWindowsHelloTimeout = settings.WindowsHelloTimeoutMinutes;
         _savedFontSize = settings.FontSize;
         _savedZoom = settings.Zoom;
         _savedOnlineFaviconFetching = settings.OnlineFaviconFetchingEnabled;
@@ -143,6 +154,8 @@ public partial class SettingsViewModel : ObservableObject
         RevealSecretSeconds = settings.RevealSecretSeconds;
         SelectedThemeIndex = (int)settings.Theme;
         WindowsHelloEnabled = settings.WindowsHelloEnabled;
+        SelectedWindowsHelloTimeoutIndex = Array.IndexOf(WindowsHelloTimeoutValues, settings.WindowsHelloTimeoutMinutes);
+        if (SelectedWindowsHelloTimeoutIndex < 0) SelectedWindowsHelloTimeoutIndex = 2;
         OnlineFaviconFetchingEnabled = settings.OnlineFaviconFetchingEnabled;
         AutoCheckForUpdates = settings.AutoCheckForUpdates;
         MinimizeToSystemTray = settings.MinimizeToSystemTray;
