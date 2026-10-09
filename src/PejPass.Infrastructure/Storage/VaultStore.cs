@@ -205,10 +205,11 @@ public sealed class VaultStore(
         kdfParameters.Validate();
 
         var salt = _crypto.GenerateSalt(SaltLength);
-        var key = _crypto.DeriveKey(masterPassword, salt, kdfParameters);
+        byte[]? key = null;
 
         try
         {
+            key = _crypto.DeriveKey(masterPassword, salt, kdfParameters);
             using var material = new VaultKeyMaterial(key, salt, kdfParameters);
             var encrypted = EncryptVault(vault, material);
             var headerSalt = material.CopySalt();
@@ -243,7 +244,8 @@ public sealed class VaultStore(
         }
         finally
         {
-            _crypto.ZeroMemory(key);
+            if (key is not null)
+                _crypto.ZeroMemory(key);
             _crypto.ZeroMemory(salt);
         }
     }
@@ -512,17 +514,19 @@ public sealed class VaultStore(
             throw new ArgumentException("KDF parameters must match the vault metadata.", nameof(kdfParameters));
 
         var salt = _crypto.GenerateSalt(SaltLength);
-        var key = _crypto.DeriveKey(masterPassword, salt, kdfParameters);
+        byte[]? key = null;
 
         try
         {
+            key = _crypto.DeriveKey(masterPassword, salt, kdfParameters);
             using var material = new VaultKeyMaterial(key, salt, kdfParameters);
             await SaveAsync(path, material, vault, ct);
             return material.Clone();
         }
         finally
         {
-            _crypto.ZeroMemory(key);
+            if (key is not null)
+                _crypto.ZeroMemory(key);
             _crypto.ZeroMemory(salt);
         }
     }
@@ -551,10 +555,12 @@ public sealed class VaultStore(
             $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
 
         var salt = keyMaterial.CopySalt();
-        var encrypted = EncryptVault(vault, keyMaterial);
+        (byte[] Ciphertext, byte[] Nonce, byte[] Tag)? encrypted = null;
 
         try
         {
+            encrypted = EncryptVault(vault, keyMaterial);
+
             await using (var fs = new FileStream(
                 tempPath,
                 FileMode.CreateNew,
@@ -565,9 +571,9 @@ public sealed class VaultStore(
                     fs,
                     salt,
                     kdfParameters,
-                    encrypted.Nonce,
-                    encrypted.Tag,
-                    encrypted.Ciphertext,
+                    encrypted.Value.Nonce,
+                    encrypted.Value.Tag,
+                    encrypted.Value.Ciphertext,
                     ct);
 
                 await fs.FlushAsync(ct);
@@ -579,7 +585,8 @@ public sealed class VaultStore(
         finally
         {
             _crypto.ZeroMemory(salt);
-            ClearEncryptedPayload(encrypted);
+            if (encrypted is not null)
+                ClearEncryptedPayload(encrypted.Value);
 
             try
             {
@@ -599,22 +606,27 @@ public sealed class VaultStore(
     {
         ValidateVaultStructure(vault);
 
-        var key = keyMaterial.CopyKey();
-        var salt = keyMaterial.CopySalt();
-        var json = JsonSerializer.SerializeToUtf8Bytes(vault);
+        byte[]? key = null;
+        byte[]? salt = null;
+        byte[]? json = null;
         byte[]? associatedData = null;
 
         try
         {
+            key = keyMaterial.CopyKey();
+            salt = keyMaterial.CopySalt();
+            json = JsonSerializer.SerializeToUtf8Bytes(vault);
             associatedData = BuildAssociatedDataV3(keyMaterial.KdfParameters, salt);
             return _crypto.Encrypt(json, key, associatedData);
         }
         finally
         {
-            _crypto.ZeroMemory(key);
-            _crypto.ZeroMemory(salt);
-            _crypto.ZeroMemory(json);
-
+            if (key is not null)
+                _crypto.ZeroMemory(key);
+            if (salt is not null)
+                _crypto.ZeroMemory(salt);
+            if (json is not null)
+                _crypto.ZeroMemory(json);
             if (associatedData is not null)
                 _crypto.ZeroMemory(associatedData);
         }
