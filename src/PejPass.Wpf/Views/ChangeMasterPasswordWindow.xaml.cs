@@ -20,6 +20,19 @@ public partial class ChangeMasterPasswordWindow : Window
         Loaded += (_, _) => CurrentPasswordBox.Focus();
     }
 
+    protected override void OnClosed(EventArgs e)
+    {
+        CurrentPasswordBox.Clear();
+        NewPasswordBox.Clear();
+        ConfirmPasswordBox.Clear();
+
+        if (DataContext is ChangeMasterPasswordViewModel viewModel)
+            viewModel.ClearSensitiveInputs();
+
+        DataContext = null;
+        base.OnClosed(e);
+    }
+
     private void CurrentPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
         if (DataContext is ChangeMasterPasswordViewModel vm &&
