@@ -57,7 +57,7 @@ public partial class EntryEditorViewModel : ObservableObject
     [ObservableProperty]
     public partial int PasswordStrengthLevel { get; set; }
 
-    public VaultEntry? Original { get; }
+    public VaultEntry? Original { get; private set; }
 
     public ObservableCollection<CustomFieldItem> CustomFields { get; } = [];
 
@@ -382,6 +382,21 @@ public partial class EntryEditorViewModel : ObservableObject
     {
         MoveCustomFieldUpCommand.NotifyCanExecuteChanged();
         MoveCustomFieldDownCommand.NotifyCanExecuteChanged();
+    }
+
+    public void ClearSensitiveInputs()
+    {
+        Password = string.Empty;
+        TotpSecret = string.Empty;
+
+        foreach (var field in CustomFields.Where(field => field.IsSecret))
+            field.Value = string.Empty;
+
+        PasswordStrengthLabel = string.Empty;
+        PasswordStrengthProgress = 0;
+        PasswordStrengthLevel = 0;
+        TotpErrorMessage = null;
+        Original = null;
     }
 
     public List<SensitiveChange> GetSensitiveChanges()
