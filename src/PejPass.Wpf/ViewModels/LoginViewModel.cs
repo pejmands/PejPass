@@ -518,9 +518,14 @@ public partial class LoginViewModel : ObservableObject
             StatusMessage = "Vault unlocked.";
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
-        catch (Exception ex)
+        catch (System.Security.Cryptography.AuthenticationTagMismatchException)
         {
-            PasswordError = ex.Message;
+            PasswordError = "Could not unlock the vault with Windows Hello. Enter your master password.";
+            StatusMessage = string.Empty;
+        }
+        catch (Exception)
+        {
+            PasswordError = "Could not unlock the vault. Please try again.";
             StatusMessage = string.Empty;
         }
         finally
@@ -639,9 +644,14 @@ public partial class LoginViewModel : ObservableObject
 
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
-        catch (Exception ex)
+        catch (System.Security.Cryptography.AuthenticationTagMismatchException)
         {
-            PasswordError = ex.Message;
+            PasswordError = "The master password is incorrect, or the vault file is damaged.";
+            StatusMessage = string.Empty;
+        }
+        catch (Exception)
+        {
+            PasswordError = "Could not unlock or create the vault. Check the file and try again.";
             StatusMessage = string.Empty;
         }
         finally
