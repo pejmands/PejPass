@@ -441,8 +441,11 @@ public sealed class VaultStore(
                 }
                 finally
                 {
-                    _crypto.ZeroMemory(key);
-                    key = null;
+                    if (key is not null)
+                    {
+                        _crypto.ZeroMemory(key);
+                        key = null;
+                    }
 
                     if (plaintext is not null)
                     {
