@@ -112,8 +112,7 @@
 						FontSize="{DynamicResource AppFontSize11}"
 						TextAlignment="Center"
 						ToolTip="Open the download URL in your browser">
-						<Hyperlink
-							Command="{Binding OpenDownloadPageCommand}">
+						<Hyperlink Command="{Binding OpenDownloadPageCommand}">
 							Open download in browser
 						</Hyperlink>
 					</TextBlock>
@@ -215,8 +214,7 @@
 				HorizontalAlignment="Left"
 				VerticalAlignment="Center"
 				FontSize="{DynamicResource AppFontSize11}">
-				<Hyperlink
-					Command="{Binding OpenGitHubCommand}">
+				<Hyperlink Command="{Binding OpenGitHubCommand}">
 					GitHub
 				</Hyperlink>
 			</TextBlock>

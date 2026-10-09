@@ -1,6 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.DependencyInjection;
 using PejPass.Application.Services;
 using PejPass.Domain.Settings;
 using PejPass.Wpf.Controls;

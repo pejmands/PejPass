@@ -66,7 +66,7 @@
 						SelectedIndex="{Binding SelectedThemeIndex}" />
 				</Grid>
 
-				<!-- Advanced: startup and tray behavior (hidden pre-login) -->
+				<!--  Advanced: startup and tray behavior (hidden pre-login)  -->
 				<StackPanel Visibility="{Binding ShowAdvancedSettings, Converter={StaticResource BoolToVis}}">
 					<Grid Margin="0,0,0,20">
 						<Grid.ColumnDefinitions>
@@ -166,7 +166,7 @@
 
 				</StackPanel>
 
-				<!-- Advanced: favicon (hidden pre-login) -->
+				<!--  Advanced: favicon (hidden pre-login)  -->
 				<StackPanel Visibility="{Binding ShowAdvancedSettings, Converter={StaticResource BoolToVis}}">
 					<Grid Margin="0,0,0,20">
 						<Grid.ColumnDefinitions>
@@ -273,7 +273,7 @@
 						SelectedIndex="{Binding SelectedZoomIndex}" />
 				</Grid>
 
-				<!-- Advanced: Security + Clipboard (hidden pre-login) -->
+				<!--  Advanced: Security + Clipboard (hidden pre-login)  -->
 				<StackPanel Visibility="{Binding ShowAdvancedSettings, Converter={StaticResource BoolToVis}}">
 					<!--  Security  -->
 					<Border
@@ -503,19 +503,71 @@
 					Background="{DynamicResource SurfaceBrush}"
 					CornerRadius="8">
 					<StackPanel>
-						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+N" /><Run Foreground="{DynamicResource MutedBrush}" Text="  New entry" /></TextBlock>
-						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+E" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Edit entry" /></TextBlock>
-						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Enter" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Edit selected entry" /></TextBlock>
-						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Delete" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Move selected entry to trash" /></TextBlock>
-						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+K" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Search" /></TextBlock>
-						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+C" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Copy password" /></TextBlock>
-						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+Shift+C" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Copy username" /></TextBlock>
-						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+T" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Copy TOTP" /></TextBlock>
-						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+L" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Lock vault" /></TextBlock>
-						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+B" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Backup" /></TextBlock>
-						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+H" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Vault Health" /></TextBlock>
-						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+Shift+T" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Trash" /></TextBlock>
-						<TextBlock Margin="0,0,0,6" FontFamily="Consolas" FontSize="{DynamicResource AppFontSize12}" Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+S" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Settings" /></TextBlock>
+						<TextBlock
+							Margin="0,0,0,6"
+							FontFamily="Consolas"
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+N" /><Run Foreground="{DynamicResource MutedBrush}" Text="  New entry" /></TextBlock>
+						<TextBlock
+							Margin="0,0,0,6"
+							FontFamily="Consolas"
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+E" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Edit entry" /></TextBlock>
+						<TextBlock
+							Margin="0,0,0,6"
+							FontFamily="Consolas"
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Enter" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Edit selected entry" /></TextBlock>
+						<TextBlock
+							Margin="0,0,0,6"
+							FontFamily="Consolas"
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Delete" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Move selected entry to trash" /></TextBlock>
+						<TextBlock
+							Margin="0,0,0,6"
+							FontFamily="Consolas"
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+K" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Search" /></TextBlock>
+						<TextBlock
+							Margin="0,0,0,6"
+							FontFamily="Consolas"
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+C" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Copy password" /></TextBlock>
+						<TextBlock
+							Margin="0,0,0,6"
+							FontFamily="Consolas"
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+Shift+C" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Copy username" /></TextBlock>
+						<TextBlock
+							Margin="0,0,0,6"
+							FontFamily="Consolas"
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+T" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Copy TOTP" /></TextBlock>
+						<TextBlock
+							Margin="0,0,0,6"
+							FontFamily="Consolas"
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+L" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Lock vault" /></TextBlock>
+						<TextBlock
+							Margin="0,0,0,6"
+							FontFamily="Consolas"
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+B" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Backup" /></TextBlock>
+						<TextBlock
+							Margin="0,0,0,6"
+							FontFamily="Consolas"
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+H" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Vault Health" /></TextBlock>
+						<TextBlock
+							Margin="0,0,0,6"
+							FontFamily="Consolas"
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+Shift+T" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Trash" /></TextBlock>
+						<TextBlock
+							Margin="0,0,0,6"
+							FontFamily="Consolas"
+							FontSize="{DynamicResource AppFontSize12}"
+							Foreground="{DynamicResource TextBrush}"><Run FontWeight="SemiBold" Text="Ctrl+S" /><Run Foreground="{DynamicResource MutedBrush}" Text="  Settings" /></TextBlock>
 					</StackPanel>
 				</Border>
 

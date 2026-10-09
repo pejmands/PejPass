@@ -14,24 +14,18 @@ namespace PejPass.Wpf.Services;
 /// ZeroMemory clears buffers owned by this service, but managed password strings and other
 /// copies may remain in process memory until the runtime reclaims them.
 /// </remarks>
-public sealed class SessionPasswordCache : IDisposable
+public sealed class SessionPasswordCache(AppSettings settings, TimeProvider timeProvider) : IDisposable
 {
     private const int MaxConsecutiveHelloFailures = 3;
-    private readonly object _sync = new();
-    private readonly AppSettings _settings;
-    private readonly TimeProvider _timeProvider;
+    private readonly Lock _sync = new();
+    private readonly AppSettings _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+    private readonly TimeProvider _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     private byte[]? _protected;
     private string? _vaultPath;
     private DateTimeOffset? _cachedAt;
     private ITimer? _expiryTimer;
     private int _consecutiveHelloFailures;
     private bool _disposed;
-
-    public SessionPasswordCache(AppSettings settings, TimeProvider timeProvider)
-    {
-        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
-        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
-    }
 
     public int ConsecutiveHelloFailures
     {
