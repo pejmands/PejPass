@@ -499,6 +499,8 @@ public partial class LoginViewModel : ObservableObject
                 return;
             }
 
+            _sessionPasswordCache.ResetHelloFailures();
+
             if (!_sessionPasswordCache.TryRestore(
                     VaultPath,
                     out var password))
