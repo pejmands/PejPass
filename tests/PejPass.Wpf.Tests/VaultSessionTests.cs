@@ -90,3 +90,39 @@ public sealed class VaultSessionTests
         }
     }
 }
+
+    [Fact]
+    public async Task DelayedOperationCannotTreatReplacementSessionAsCurrent()
+    {
+        using var session = new VaultSession();
+        using var keyMaterial = CreateMaterial();
+        var originalVault = new Vault();
+        var replacementVault = new Vault();
+
+        session.Open(
+            originalVault,
+            Path.Combine(Path.GetTempPath(), $"\u007bGuid.NewGuid():N\u007d.pejpass"),
+            keyMaterial);
+
+        var capturedGeneration = session.Generation;
+        var operationStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var continueOperation = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var delayedOperation = Task.Run(async () =>
+        {
+            operationStarted.SetResult();
+            await continueOperation.Task;
+
+            // Match the guard used by production continuations after asynchronous work.
+            return session.IsCurrent(capturedGeneration, originalVault);
+        });
+
+        await operationStarted.Task;
+        session.ReplaceVault(replacementVault);
+        continueOperation.SetResult();
+
+        Assert.False(await delayedOperation);
+        Assert.Same(replacementVault, session.Vault);
+        Assert.False(session.IsCurrent(capturedGeneration, originalVault));
+        Assert.True(session.IsCurrent(session.Generation, replacementVault));
+    }
