@@ -16,6 +16,11 @@ namespace PejPass.Wpf.Services;
 public sealed class UpdateService : IDisposable
 {
     private const long MaxUpdatePackageBytes = 512L * 1024 * 1024;
+    private const int MaxUpdateManifestBytes = 4 * 1024 * 1024;
+    private const int MaxManifestReleases = 1_000;
+    private const int MaxReleaseNoteItemsPerCategory = 100;
+    private const int MaxReleaseNoteItemCharacters = 4_096;
+    private const int MaxManifestTextCharacters = 2_000_000;
     private const int MaxUpdateArchiveEntries = 4096;
     private const long MaxUpdateUncompressedBytes = 1024L * 1024 * 1024;
     private const long MaxUpdateEntryBytes = 256L * 1024 * 1024;
@@ -360,8 +365,17 @@ public sealed class UpdateService : IDisposable
             if (!File.Exists(path))
                 return null;
 
+            var fileInfo = new FileInfo(path);
+            if (fileInfo.Length <= 0 || fileInfo.Length > MaxUpdateManifestBytes)
+                return null;
+
             var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<UpdateManifest>(json, JsonOptions);
+            var manifest = JsonSerializer.Deserialize<UpdateManifest>(json, JsonOptions);
+            if (manifest is null)
+                return null;
+
+            ValidateUpdateManifest(manifest);
+            return manifest;
         }
         catch
         {
@@ -378,7 +392,11 @@ public sealed class UpdateService : IDisposable
             if (!string.IsNullOrEmpty(dir))
                 Directory.CreateDirectory(dir);
 
+            ValidateUpdateManifest(manifest);
             var json = JsonSerializer.Serialize(manifest, JsonOptions);
+            if (System.Text.Encoding.UTF8.GetByteCount(json) > MaxUpdateManifestBytes)
+                return;
+
             var tmp = path + ".tmp";
             File.WriteAllText(tmp, json);
             File.Move(tmp, path, overwrite: true);
@@ -391,19 +409,111 @@ public sealed class UpdateService : IDisposable
     private async Task<UpdateManifest?> FetchManifestAsync(CancellationToken cancellationToken)
     {
         using var response = await _http
-            .GetAsync(_manifestUrl, cancellationToken)
+            .GetAsync(_manifestUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
             .ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
             return null;
 
+        var contentLength = response.Content.Headers.ContentLength;
+        if (contentLength is <= 0 or > MaxUpdateManifestBytes)
+            throw new InvalidDataException("Update manifest exceeds the maximum supported size.");
+
         await using var stream = await response.Content
             .ReadAsStreamAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        return await JsonSerializer
-            .DeserializeAsync<UpdateManifest>(stream, JsonOptions, cancellationToken)
-            .ConfigureAwait(false);
+        using var buffer = new MemoryStream();
+        var chunk = new byte[16 * 1024];
+        int read;
+
+        while ((read = await stream.ReadAsync(chunk.AsMemory(), cancellationToken)
+                   .ConfigureAwait(false)) > 0)
+        {
+            if (buffer.Length > MaxUpdateManifestBytes - read)
+                throw new InvalidDataException("Update manifest exceeds the maximum supported size.");
+
+            await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var manifest = JsonSerializer.Deserialize<UpdateManifest>(
+            buffer.GetBuffer().AsSpan(0, checked((int)buffer.Length)),
+            JsonOptions);
+
+        if (manifest is not null)
+            ValidateUpdateManifest(manifest);
+
+        return manifest;
+    }
+
+    internal static void ValidateUpdateManifest(UpdateManifest manifest)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+
+        if (string.IsNullOrWhiteSpace(manifest.Version))
+            throw new InvalidDataException("Update manifest is missing its version.");
+
+        if (manifest.Releases is null || manifest.Releases.Count > MaxManifestReleases)
+            throw new InvalidDataException("Update manifest contains too many releases.");
+
+        var totalTextCharacters = 0;
+
+        void ValidateText(string? value, string fieldName, int maxCharacters)
+        {
+            if (value is null)
+                return;
+
+            if (value.Length > maxCharacters)
+                throw new InvalidDataException($"Update manifest {fieldName} exceeds its maximum length.");
+
+            totalTextCharacters = checked(totalTextCharacters + value.Length);
+            if (totalTextCharacters > MaxManifestTextCharacters)
+                throw new InvalidDataException("Update manifest contains too much text.");
+        }
+
+        void ValidateNotes(UpdateNotes? notes, string fieldName)
+        {
+            if (notes is null)
+                return;
+
+            ValidateText(notes.PlainText, $"{fieldName} plain text", MaxReleaseNoteItemCharacters);
+
+            ValidateList(notes.Added, $"{fieldName} added notes");
+            ValidateList(notes.Improved, $"{fieldName} improved notes");
+            ValidateList(notes.Fixed, $"{fieldName} fixed notes");
+        }
+
+        void ValidateList(List<string>? values, string fieldName)
+        {
+            if (values is null || values.Count > MaxReleaseNoteItemsPerCategory)
+                throw new InvalidDataException($"Update manifest {fieldName} contains too many items.");
+
+            foreach (var value in values)
+            {
+                if (value is null)
+                    throw new InvalidDataException($"Update manifest {fieldName} contains a null item.");
+
+                ValidateText(value, fieldName, MaxReleaseNoteItemCharacters);
+            }
+        }
+
+        ValidateText(manifest.Version, "version", 128);
+        ValidateText(manifest.Released, "release date", 128);
+        ValidateText(manifest.DownloadUrl, "download URL", 2_048);
+        ValidateText(manifest.Sha256, "SHA-256 hash", 64);
+        ValidateText(manifest.Signature, "signature", 256);
+        ValidateNotes(manifest.Notes, "root notes");
+
+        foreach (var release in manifest.Releases)
+        {
+            if (release is null)
+                throw new InvalidDataException("Update manifest contains an invalid release.");
+
+            ValidateText(release.Version, "release version", 128);
+            ValidateText(release.Released, "release date", 128);
+            ValidateNotes(release.Notes, $"release {release.Version} notes");
+        }
     }
 
     internal static IReadOnlyList<ReleaseNote> ToReleaseNotes(
