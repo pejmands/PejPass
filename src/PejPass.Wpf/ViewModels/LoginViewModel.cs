@@ -506,6 +506,7 @@ public partial class LoginViewModel : ObservableObject
                     out var password))
             {
                 _sessionPasswordCache.Clear();
+                ShowWindowsHello = false;
                 PasswordError =
                     "The cached session expired or could not be restored. Enter your master password.";
                 StatusMessage = string.Empty;
