@@ -8,6 +8,7 @@ namespace PejPass.Wpf.Services;
 public static class SettingsStore
 {
     private const int MaxAutoLockMinutes = 1440;
+    private const long MaxSettingsFileBytes = 1024 * 1024;
     private const int MaxCorruptSettingsFiles = 5;
     private static readonly TimeSpan CorruptSettingsRetention = TimeSpan.FromDays(90);
 
@@ -32,6 +33,9 @@ public static class SettingsStore
 
         try
         {
+            if (new FileInfo(path).Length > MaxSettingsFileBytes)
+                throw new InvalidDataException("Settings file exceeds the maximum supported size.");
+
             var json = File.ReadAllText(path);
             using var document = JsonDocument.Parse(json);
 
