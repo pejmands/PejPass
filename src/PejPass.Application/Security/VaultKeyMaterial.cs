@@ -101,8 +101,8 @@ public sealed class VaultKeyMaterial : IDisposable
             BinaryPrimitives.WriteInt32LittleEndian(payload.AsSpan(9, 4), KdfParameters.Iterations);
             BinaryPrimitives.WriteInt32LittleEndian(payload.AsSpan(13, 4), KdfParameters.DegreeOfParallelism);
             BinaryPrimitives.WriteUInt16LittleEndian(payload.AsSpan(17, 2), checked((ushort)salt.Length));
-            salt.CopyTo(payload.AsSpan(HeaderSize));
-            key.CopyTo(payload.AsSpan(HeaderSize + salt.Length));
+            salt.AsSpan().CopyTo(payload.AsSpan(HeaderSize));
+            key.AsSpan().CopyTo(payload.AsSpan(HeaderSize + salt.Length));
             return payload;
         }
     }
