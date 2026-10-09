@@ -276,7 +276,8 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
 
             return Inner.Encrypt(
                 plaintext,
-                key);
+                key,
+                associatedData);
         }
 
         public byte[] Decrypt(
@@ -289,7 +290,8 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
                 ciphertext,
                 nonce,
                 tag,
-                key);
+                key,
+                associatedData);
 
         public byte[] GenerateSalt(int length = 16) =>
             Inner.GenerateSalt(length);

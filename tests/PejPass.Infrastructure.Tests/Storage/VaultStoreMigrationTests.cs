@@ -69,6 +69,31 @@ public sealed class VaultStoreMigrationTests
     }
 
     [Fact]
+    public async Task OpenSessionAsync_WhenMigrationSaveFails_StillOpensLegacyVault()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+
+        try
+        {
+            var crypto = new CryptoService();
+            await CreateLegacyV1VaultAsync(path, "password", new Vault { Name = "Legacy V1" }, cancellationToken);
+
+            var store = new VaultStore(crypto, new FailingFileMover());
+            using var session = await store.OpenSessionAsync(path, "password", cancellationToken);
+
+            Assert.Equal("Legacy V1", session.Vault.Name);
+            var data = await File.ReadAllBytesAsync(path, cancellationToken);
+            Assert.Equal(1, data[4]);
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
+    [Fact]
     public async Task OpenAsync_WhenVaultUsesCustomArgon2Parameters_PreservesThemAcrossSave()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -94,6 +119,14 @@ public sealed class VaultStoreMigrationTests
         {
             if (File.Exists(path))
                 File.Delete(path);
+        }
+    }
+
+    private sealed class FailingFileMover : IFileMover
+    {
+        public void Move(string sourcePath, string destinationPath, bool overwrite)
+        {
+            throw new IOException("Simulated migration save failure.");
         }
     }
 
