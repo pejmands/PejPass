@@ -9,18 +9,23 @@ namespace PejPass.Infrastructure.Import;
 
 /// <summary>
 /// Imports passwords from common browser CSV exports (Chrome, Edge, Firefox, etc.).
-/// No external CSV library — simple and robust enough for these formats.
 /// </summary>
 public sealed partial class BrowserImportService : IBrowserImportService
 {
+    private const long MaxCsvFileBytes = 64L * 1024 * 1024;
+    private const int MaxCsvRecords = 100_000;
+    private const int MaxCsvColumns = 128;
+    private const int MaxCsvFieldCharacters = 1_048_576;
+
     public async Task<IReadOnlyList<VaultEntry>> ImportFromCsvAsync(
-    string filePath,
-    CancellationToken ct = default)
+        string filePath,
+        CancellationToken ct = default)
     {
         if (!File.Exists(filePath))
             throw new FileNotFoundException("Import file not found.", filePath);
 
         await using var stream = File.OpenRead(filePath);
+        ValidateCsvFileSize(stream);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
         using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -30,10 +35,13 @@ public sealed partial class BrowserImportService : IBrowserImportService
             BadDataFound = null
         });
 
-        await csv.ReadAsync();
-        csv.ReadHeader();
+        ct.ThrowIfCancellationRequested();
+        if (!await csv.ReadAsync())
+            throw new InvalidDataException("The CSV file is empty.");
 
+        csv.ReadHeader();
         var header = csv.HeaderRecord?.ToList() ?? [];
+        ValidateCsvRecord(header, "header");
 
         var map = BuildColumnMap(header);
 
@@ -41,12 +49,17 @@ public sealed partial class BrowserImportService : IBrowserImportService
             throw new InvalidDataException("Could not find a password column in the CSV header.");
 
         var entries = new List<VaultEntry>();
+        var recordCount = 0;
 
         while (await csv.ReadAsync())
         {
             ct.ThrowIfCancellationRequested();
 
+            if (++recordCount > MaxCsvRecords)
+                throw new InvalidDataException($"CSV import exceeds the limit of {MaxCsvRecords} records.");
+
             var cols = csv.Parser.Record?.ToList() ?? [];
+            ValidateCsvRecord(cols, $"record {recordCount}");
 
             if (cols.Count == 0)
                 continue;
@@ -90,6 +103,25 @@ public sealed partial class BrowserImportService : IBrowserImportService
         return entries;
     }
 
+    private static void ValidateCsvFileSize(FileStream stream)
+    {
+        if (stream.Length > MaxCsvFileBytes)
+            throw new InvalidDataException($"CSV file exceeds the {MaxCsvFileBytes / (1024 * 1024)} MiB size limit.");
+    }
+
+    private static void ValidateCsvRecord(IReadOnlyList<string> fields, string recordDescription)
+    {
+        if (fields.Count > MaxCsvColumns)
+            throw new InvalidDataException($"{recordDescription} exceeds the {MaxCsvColumns}-column limit.");
+
+        for (var i = 0; i < fields.Count; i++)
+        {
+            if (fields[i].Length > MaxCsvFieldCharacters)
+                throw new InvalidDataException(
+                    $"{recordDescription} contains a field exceeding the {MaxCsvFieldCharacters}-character limit.");
+        }
+    }
+
     private static ColumnMap BuildColumnMap(List<string> header)
     {
         var map = new ColumnMap();
@@ -118,9 +150,6 @@ public sealed partial class BrowserImportService : IBrowserImportService
             if (map.NotesIndex < 0 && (h is "note" or "notes" or "comment" or "extra"))
                 map.NotesIndex = i;
         }
-
-        // Chrome/Edge often use "name" for title and "url" for url
-        // Firefox uses "url", "username", "password"
 
         return map;
     }

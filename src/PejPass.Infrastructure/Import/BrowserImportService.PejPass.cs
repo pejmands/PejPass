@@ -18,10 +18,12 @@ public sealed partial class BrowserImportService
         using (reader)
         using (csv)
         {
-            var header = csv.HeaderRecord?
+            var headerFields = csv.HeaderRecord?.ToList() ?? [];
+            ValidateCsvRecord(headerFields, "header");
+
+            var header = headerFields
                 .Select((name, index) => (Name: name.Trim().ToLowerInvariant(), Index: index))
-                .ToDictionary(x => x.Name, x => x.Index, StringComparer.Ordinal)
-                ?? new Dictionary<string, int>(StringComparer.Ordinal);
+                .ToDictionary(x => x.Name, x => x.Index, StringComparer.Ordinal);
 
             var required = new[]
             {
@@ -35,11 +37,17 @@ public sealed partial class BrowserImportService
                     "This is not a PejPass CSV file. Missing columns: " + string.Join(", ", missing));
 
             var entries = new List<VaultEntry>();
+            var recordCount = 0;
 
             while (await csv.ReadAsync())
             {
                 ct.ThrowIfCancellationRequested();
+
+                if (++recordCount > MaxCsvRecords)
+                    throw new InvalidDataException($"CSV import exceeds the limit of {MaxCsvRecords} records.");
+
                 var cols = csv.Parser.Record?.ToList() ?? [];
+                ValidateCsvRecord(cols, $"record {recordCount}");
                 if (cols.Count == 0)
                     continue;
 
@@ -96,26 +104,34 @@ public sealed partial class BrowserImportService
             throw new FileNotFoundException("Import file not found.", filePath);
 
         var stream = File.OpenRead(filePath);
-        var reader = new StreamReader(stream, Encoding.UTF8);
-        var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
-        {
-            HasHeaderRecord = true,
-            IgnoreBlankLines = true,
-            BadDataFound = null
-        });
-
         try
         {
-            if (!await csv.ReadAsync())
-                throw new InvalidDataException("The CSV file is empty.");
+            ValidateCsvFileSize(stream);
+            var reader = new StreamReader(stream, Encoding.UTF8);
+            var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                HasHeaderRecord = true,
+                IgnoreBlankLines = true,
+                BadDataFound = null
+            });
 
-            csv.ReadHeader();
-            return (csv, reader, stream);
+            try
+            {
+                if (!await csv.ReadAsync())
+                    throw new InvalidDataException("The CSV file is empty.");
+
+                csv.ReadHeader();
+                return (csv, reader, stream);
+            }
+            catch
+            {
+                csv.Dispose();
+                reader.Dispose();
+                throw;
+            }
         }
         catch
         {
-            csv.Dispose();
-            reader.Dispose();
             await stream.DisposeAsync();
             throw;
         }
