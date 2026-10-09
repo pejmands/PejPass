@@ -201,6 +201,9 @@ public partial class App : System.Windows.Application
     {
         Current.Dispatcher.Invoke(() =>
         {
+            // Clear the Hello cache before locking for Windows lock or system suspend.
+            Services.GetRequiredService<SessionPasswordCache>().Clear();
+
             // Lock immediately when Windows locks or suspends the system.
             // A minimized or hidden main window keeps the login screen hidden.
             if (Current.MainWindow is MainWindow main &&
