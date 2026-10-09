@@ -11,7 +11,13 @@ using System.Windows.Media.Imaging;
 
 namespace PejPass.Wpf.Tests;
 
-[TestClass(DisableParallelization = true)]
+[CollectionDefinition("FaviconService", DisableParallelization = true)]
+public sealed class FaviconServiceCollection
+{
+    public const string Name = "FaviconService";
+}
+
+[Collection(FaviconServiceCollection.Name)]
 public sealed class FaviconServiceTests
 {
     private static readonly FieldInfo DownloadQueueField =
