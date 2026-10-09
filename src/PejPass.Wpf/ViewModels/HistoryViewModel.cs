@@ -446,6 +446,9 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         if (!await EnsureVaultWritableAsync())
             return;
 
+        if (!_vaultSession.IsCurrent(sessionGeneration, vault))
+            return;
+
         var snapshot = vault.CreateSnapshot();
 
         if (!vault.RestoreHistoryFields(
@@ -531,7 +534,12 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         if (vault is null)
             return;
 
+        var sessionGeneration = _vaultSession.Generation;
+
         if (!await EnsureVaultWritableAsync())
+            return;
+
+        if (!_vaultSession.IsCurrent(sessionGeneration, vault))
             return;
 
         var snapshot = vault.CreateSnapshot();
@@ -544,7 +552,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             IsBusy = true;
             BusyMessage = "Deleting history...";
 
-            if (!await SaveAsync(snapshot, "Delete history"))
+            if (!await SaveAsync(vault, sessionGeneration, snapshot, "Delete history"))
                 return;
         }
         finally
@@ -565,6 +573,8 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         if (vault is null || vault.History.Count == 0)
             return;
 
+        var sessionGeneration = _vaultSession.Generation;
+
         var confirmed = DialogService.Confirm(
             "Delete all history snapshots?\n\nThis action cannot be undone.",
             "Delete all history",
@@ -577,6 +587,9 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         if (!await EnsureVaultWritableAsync())
             return;
 
+        if (!_vaultSession.IsCurrent(sessionGeneration, vault))
+            return;
+
         var snapshot = vault.CreateSnapshot();
         vault.ClearHistory();
 
@@ -585,7 +598,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             IsBusy = true;
             BusyMessage = "Deleting all history...";
 
-            if (!await SaveAsync(snapshot, "Delete all history"))
+            if (!await SaveAsync(vault, sessionGeneration, snapshot, "Delete all history"))
                 return;
         }
         finally
@@ -620,14 +633,19 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         }
     }
 
-    private async Task<bool> SaveAsync(Vault snapshot, string actionTitle)
+    private async Task<bool> SaveAsync(
+        Vault vault,
+        long sessionGeneration,
+        Vault snapshot,
+        string actionTitle)
     {
         var path = _vaultSession.VaultPath;
-        var vault = _vaultSession.Vault;
-        var sessionGeneration = _vaultSession.Generation;
 
-        if (string.IsNullOrEmpty(path) || vault is null)
+        if (string.IsNullOrEmpty(path) ||
+            !_vaultSession.IsCurrent(sessionGeneration, vault))
+        {
             return false;
+        }
 
         try
         {
