@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PejPass.Application.Services;
+using PejPass.Application.Security;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Policies;
 using PejPass.Domain.Security;
@@ -516,7 +517,8 @@ public partial class LoginViewModel : ObservableObject
 
             if (!_sessionPasswordCache.TryRestore(
                     VaultPath,
-                    out var password))
+                    out var keyMaterial) ||
+                keyMaterial is null)
             {
                 _sessionPasswordCache.Clear();
                 ShowWindowsHello = false;
@@ -526,17 +528,20 @@ public partial class LoginViewModel : ObservableObject
                 return;
             }
 
-            StatusMessage = "Unlocking vault…";
+            using (keyMaterial)
+            {
+                StatusMessage = "Unlocking vault…";
 
-            var vault =
-                await _vaultService.OpenVaultAsync(
+                var vault =
+                    await _vaultService.OpenVaultWithKeyAsync(
+                        VaultPath,
+                        keyMaterial);
+
+                _vaultSession.Open(
+                    vault,
                     VaultPath,
-                    password);
-
-            _vaultSession.Open(
-                vault,
-                VaultPath,
-                password);
+                    keyMaterial);
+            }
 
             RecordRecentVault(VaultPath);
 
@@ -621,15 +626,15 @@ public partial class LoginViewModel : ObservableObject
 
         try
         {
-            Vault vault;
+            VaultSessionData sessionData;
 
             if (IsCreateMode)
             {
                 StatusMessage =
                     "Creating vault (Argon2id key derivation may take a moment)...";
 
-                vault =
-                    await _vaultService.CreateVaultAsync(
+                sessionData =
+                    await _vaultService.CreateVaultSessionAsync(
                         VaultPath,
                         MasterPassword);
 
@@ -639,29 +644,32 @@ public partial class LoginViewModel : ObservableObject
             {
                 StatusMessage = "Unlocking vault...";
 
-                vault =
-                    await _vaultService.OpenVaultAsync(
+                sessionData =
+                    await _vaultService.OpenVaultSessionAsync(
                         VaultPath,
                         MasterPassword);
 
                 StatusMessage = "Vault unlocked.";
             }
 
-            _vaultSession.Open(
-                vault,
-                VaultPath,
-                MasterPassword);
-
-            _sessionPasswordCache.ResetHelloFailures();
-            if (_settings.WindowsHelloEnabled)
+            using (sessionData)
             {
-                _sessionPasswordCache.Store(
+                _vaultSession.Open(
+                    sessionData.Vault,
                     VaultPath,
-                    MasterPassword);
-            }
-            else
-            {
-                _sessionPasswordCache.Clear();
+                    sessionData.KeyMaterial);
+
+                _sessionPasswordCache.ResetHelloFailures();
+                if (_settings.WindowsHelloEnabled)
+                {
+                    _sessionPasswordCache.Store(
+                        VaultPath,
+                        sessionData.KeyMaterial);
+                }
+                else
+                {
+                    _sessionPasswordCache.Clear();
+                }
             }
 
             RecordRecentVault(VaultPath);
