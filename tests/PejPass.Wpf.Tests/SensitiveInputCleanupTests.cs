@@ -121,7 +121,7 @@ public sealed class SensitiveInputCleanupTests
             Assert.Equal(string.Empty, viewModel.Password);
             Assert.Equal(string.Empty, viewModel.TotpSecret);
             Assert.Equal(string.Empty, viewModel.CustomFields[0].Value);
-            Assert.Equal("non-secret-value", viewModel.CustomFields[1].Value);
+            Assert.Equal(string.Empty, viewModel.CustomFields[1].Value);
             Assert.Null(viewModel.Original);
         }, TestContext.Current.CancellationToken);
     }
