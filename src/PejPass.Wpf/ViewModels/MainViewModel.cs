@@ -1301,12 +1301,20 @@ public partial class MainViewModel : ObservableObject
         if (dlg.ShowDialog() != true)
             return;
 
+        var initialVault = _vaultSession.Vault;
+        var operationGeneration = _vaultSession.Generation;
+        if (initialVault is null || !_vaultSession.IsCurrent(operationGeneration, initialVault))
+            return;
+
         try
         {
             IsBusy = true;
             BusyMessage = "Importing...";
             StatusMessage = "Importing...";
             var imported = await _importService.ImportFromCsvAsync(dlg.FileName);
+
+            if (!_vaultSession.IsCurrent(operationGeneration, initialVault))
+                return;
 
             if (imported.Count == 0)
             {
@@ -1324,15 +1332,13 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            if (!await EnsureVaultWritableAsync())
+            if (!_vaultSession.IsCurrent(operationGeneration, initialVault) ||
+                !await EnsureVaultWritableAsync() ||
+                !_vaultSession.IsCurrent(operationGeneration, initialVault))
                 return;
 
-            var vault = _vaultSession.Vault!;
-            var operationGeneration = _vaultSession.Generation;
-        if (!_vaultSession.IsCurrent(operationGeneration, vault))
-            return;
-
-        var snapshot = vault.CreateSnapshot();
+            var vault = initialVault;
+            var snapshot = vault.CreateSnapshot();
             var result = MergeImportedEntries(vault, imported, includeTags: false);
 
             Entries.Clear();
