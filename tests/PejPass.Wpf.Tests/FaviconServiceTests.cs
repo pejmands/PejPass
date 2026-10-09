@@ -347,6 +347,30 @@ public sealed class FaviconServiceTests
     }
 
     [Fact]
+    public void EnabledOnlineFetching_GetImageDoesNotQueueNetworkDownload()
+    {
+        ConfigureOnlineFetching(true);
+        ClearPendingDownloads();
+
+        try
+        {
+            ImageSource? image = null;
+            RunOnSta(() => image = FaviconService.GetImage(
+                "https://side-effect-check.example",
+                "Example"));
+
+            Assert.IsType<RenderTargetBitmap>(image);
+            Assert.Empty(GetDownloadQueue());
+            Assert.Empty(GetInFlight());
+        }
+        finally
+        {
+            ConfigureOnlineFetching(false);
+            ClearPendingDownloads();
+        }
+    }
+
+    [Fact]
     public async Task DisabledOnlineFetching_StillLoadsExistingDiskCache()
     {
         const string host = "example.com";
