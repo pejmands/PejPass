@@ -71,25 +71,6 @@ public sealed class VaultSessionTests
         Assert.True(session.IsCurrent(session.Generation, vault));
     }
 
-    private static VaultKeyMaterial CreateMaterial()
-    {
-        var key = new byte[32];
-        var salt = new byte[16];
-
-        RandomNumberGenerator.Fill(key);
-        RandomNumberGenerator.Fill(salt);
-
-        try
-        {
-            return new VaultKeyMaterial(key, salt, Argon2Parameters.Default);
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(key);
-            CryptographicOperations.ZeroMemory(salt);
-        }
-    }
-}
 
     [Fact]
     public async Task DelayedOperationCannotTreatReplacementSessionAsCurrent()
@@ -101,7 +82,7 @@ public sealed class VaultSessionTests
 
         session.Open(
             originalVault,
-            Path.Combine(Path.GetTempPath(), $"\u007bGuid.NewGuid():N\u007d.pejpass"),
+            Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"),
             keyMaterial);
 
         var capturedGeneration = session.Generation;
@@ -126,3 +107,23 @@ public sealed class VaultSessionTests
         Assert.False(session.IsCurrent(capturedGeneration, originalVault));
         Assert.True(session.IsCurrent(session.Generation, replacementVault));
     }
+
+    private static VaultKeyMaterial CreateMaterial()
+    {
+        var key = new byte[32];
+        var salt = new byte[16];
+
+        RandomNumberGenerator.Fill(key);
+        RandomNumberGenerator.Fill(salt);
+
+        try
+        {
+            return new VaultKeyMaterial(key, salt, Argon2Parameters.Default);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+            CryptographicOperations.ZeroMemory(salt);
+        }
+    }
+}
