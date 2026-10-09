@@ -11,30 +11,39 @@ public sealed partial class CsvExportService
         IEnumerable<VaultEntry> entries,
         CancellationToken ct = default)
     {
-        var sb = new StringBuilder();
-        sb.AppendLine("name,url,username,password,note,totp_secret,tags,custom_fields,favorite,pejpass_format");
+        // CSV is unencrypted; UTF-8 with BOM helps Excel display non-ASCII text.
+        using var writer = new StreamWriter(
+            filePath,
+            append: false,
+            encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+
+        await writer.WriteLineAsync(
+            "name,url,username,password,note,totp_secret,tags,custom_fields,favorite,pejpass_format".AsMemory(),
+            ct).ConfigureAwait(false);
 
         foreach (var entry in entries)
         {
             ct.ThrowIfCancellationRequested();
-            sb.Append(Escape(entry.Title)).Append(',')
-              .Append(Escape(entry.Url)).Append(',')
-              .Append(Escape(entry.Username)).Append(',')
-              .Append(Escape(entry.Password)).Append(',')
-              .Append(Escape(entry.Notes)).Append(',')
-              .Append(Escape(entry.TotpSecret)).Append(',')
-              .Append(Escape(JsonSerializer.Serialize(entry.Tags))).Append(',')
-              .Append(Escape(JsonSerializer.Serialize(entry.CustomFields))).Append(',')
-              .Append(entry.IsFavorite ? "1" : "0").Append(',')
-              .Append('2')
-              .AppendLine();
+            await WriteFieldAsync(writer, entry.Title, ct).ConfigureAwait(false);
+            await WriteCommaAsync(writer, ct).ConfigureAwait(false);
+            await WriteFieldAsync(writer, entry.Url, ct).ConfigureAwait(false);
+            await WriteCommaAsync(writer, ct).ConfigureAwait(false);
+            await WriteFieldAsync(writer, entry.Username, ct).ConfigureAwait(false);
+            await WriteCommaAsync(writer, ct).ConfigureAwait(false);
+            await WriteFieldAsync(writer, entry.Password, ct).ConfigureAwait(false);
+            await WriteCommaAsync(writer, ct).ConfigureAwait(false);
+            await WriteFieldAsync(writer, entry.Notes, ct).ConfigureAwait(false);
+            await WriteCommaAsync(writer, ct).ConfigureAwait(false);
+            await WriteFieldAsync(writer, entry.TotpSecret, ct).ConfigureAwait(false);
+            await WriteCommaAsync(writer, ct).ConfigureAwait(false);
+            await WriteFieldAsync(writer, JsonSerializer.Serialize(entry.Tags), ct).ConfigureAwait(false);
+            await WriteCommaAsync(writer, ct).ConfigureAwait(false);
+            await WriteFieldAsync(writer, JsonSerializer.Serialize(entry.CustomFields), ct).ConfigureAwait(false);
+            await WriteCommaAsync(writer, ct).ConfigureAwait(false);
+            await writer.WriteAsync((entry.IsFavorite ? "1" : "0").AsMemory(), ct).ConfigureAwait(false);
+            await WriteCommaAsync(writer, ct).ConfigureAwait(false);
+            await writer.WriteAsync("2".AsMemory(), ct).ConfigureAwait(false);
+            await writer.WriteLineAsync(ct).ConfigureAwait(false);
         }
-
-        // CSV is unencrypted; UTF-8 with BOM helps Excel display non-ASCII text.
-        await File.WriteAllTextAsync(
-            filePath,
-            sb.ToString(),
-            new UTF8Encoding(encoderShouldEmitUTF8Identifier: true),
-            ct).ConfigureAwait(false);
     }
 }
