@@ -119,7 +119,7 @@ public partial class ChangeMasterPasswordViewModel(
                 vault);
 
             _vaultSession.UpdateSecret(NewPassword);
-            SessionPasswordCache.Store(path, NewPassword);
+            cache.Clear();
 
             Success = true;
             RequestClose?.Invoke(this, EventArgs.Empty);
