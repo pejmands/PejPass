@@ -242,6 +242,27 @@ public sealed class VaultStoreValidationTests
     }
 
     [Fact]
+    public async Task OpenAsync_WhenKeyDerivationFails_ClearsReadSalt()
+    {
+        var path = CreateV2VaultFile("{}");
+        var crypto = new FakeCryptoService { ThrowOnDeriveKey = true };
+        var store = new VaultStore(crypto, new FakeFileMover());
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                store.OpenAsync(path, "password", TestContext.Current.CancellationToken));
+
+            Assert.NotNull(crypto.LastDerivedSalt);
+            Assert.All(crypto.LastDerivedSalt!, value => Assert.Equal(0, value));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public async Task CreateSessionAsync_WhenKeyDerivationFails_ClearsGeneratedSalt()
     {
         var crypto = new FakeCryptoService { ThrowOnDeriveKey = true };
@@ -363,12 +384,15 @@ public sealed class VaultStoreValidationTests
 
         public byte[]? LastGeneratedSalt { get; private set; }
 
+        public byte[]? LastDerivedSalt { get; private set; }
+
         public byte[] DeriveKey(
             string masterPassword,
             byte[] salt,
             Argon2Parameters? parameters = null)
         {
             DeriveKeyCallCount++;
+            LastDerivedSalt = salt;
             if (ThrowOnDeriveKey)
                 throw new InvalidOperationException("Simulated key derivation failure.");
 
