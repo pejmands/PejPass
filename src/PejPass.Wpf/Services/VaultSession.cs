@@ -50,13 +50,21 @@ public sealed class VaultSession : IDisposable
         var fullPath = Path.GetFullPath(vaultPath);
         var materialCopy = keyMaterial.Clone();
 
-        lock (_sync)
+        try
         {
-            ThrowIfDisposed();
-            ClearKeyMaterialCore();
-            _vault = vault;
-            _vaultPath = fullPath;
-            _keyMaterial = materialCopy;
+            lock (_sync)
+            {
+                ThrowIfDisposed();
+                ClearKeyMaterialCore();
+                _vault = vault;
+                _vaultPath = fullPath;
+                _keyMaterial = materialCopy;
+            }
+        }
+        catch
+        {
+            materialCopy.Dispose();
+            throw;
         }
 
         StateChanged?.Invoke(this, EventArgs.Empty);
@@ -91,11 +99,19 @@ public sealed class VaultSession : IDisposable
         ArgumentNullException.ThrowIfNull(keyMaterial);
         var materialCopy = keyMaterial.Clone();
 
-        lock (_sync)
+        try
         {
-            ThrowIfDisposed();
-            ClearKeyMaterialCore();
-            _keyMaterial = materialCopy;
+            lock (_sync)
+            {
+                ThrowIfDisposed();
+                ClearKeyMaterialCore();
+                _keyMaterial = materialCopy;
+            }
+        }
+        catch
+        {
+            materialCopy.Dispose();
+            throw;
         }
 
         StateChanged?.Invoke(this, EventArgs.Empty);
