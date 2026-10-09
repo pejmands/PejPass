@@ -15,13 +15,16 @@ public sealed partial class CsvExportService : ICsvExportService
         IEnumerable<VaultEntry> entries,
         CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
+
         // UTF-8 with BOM helps Excel open non-ASCII correctly.
         using var writer = new StreamWriter(
             filePath,
             append: false,
             encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
 
-        await writer.WriteLineAsync("name,url,username,password,note".AsMemory(), ct).ConfigureAwait(false);
+        await writer.WriteAsync("name,url,username,password,note".AsMemory(), ct).ConfigureAwait(false);
+        await writer.WriteLineAsync().ConfigureAwait(false);
 
         foreach (var entry in entries)
         {
@@ -35,7 +38,7 @@ public sealed partial class CsvExportService : ICsvExportService
             await WriteFieldAsync(writer, entry.Password, ct).ConfigureAwait(false);
             await WriteCommaAsync(writer, ct).ConfigureAwait(false);
             await WriteFieldAsync(writer, entry.Notes, ct).ConfigureAwait(false);
-            await writer.WriteLineAsync(ct).ConfigureAwait(false);
+            await writer.WriteLineAsync().ConfigureAwait(false);
         }
     }
 
@@ -46,7 +49,7 @@ public sealed partial class CsvExportService : ICsvExportService
     }
 
     private static Task WriteCommaAsync(StreamWriter writer, CancellationToken ct) =>
-        writer.WriteAsync(",".AsMemory(), ct).AsTask();
+        writer.WriteAsync(",".AsMemory(), ct);
 
     private static string Escape(string? value)
     {
