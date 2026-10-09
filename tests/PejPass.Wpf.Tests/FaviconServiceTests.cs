@@ -53,6 +53,9 @@ public sealed class FaviconServiceTests
     private static readonly MethodInfo CreateCachePathMethod =
         typeof(FaviconService).GetMethod("CreateCachePath", BindingFlags.NonPublic | BindingFlags.Static)!;
 
+    private static readonly MethodInfo PruneLegacyDiskCacheMethod =
+        typeof(FaviconService).GetMethod("PruneLegacyDiskCache", BindingFlags.NonPublic | BindingFlags.Static)!;
+
     private static readonly FieldInfo FailedField =
         typeof(FaviconService).GetField("Failed", BindingFlags.NonPublic | BindingFlags.Static)!;
 
@@ -436,6 +439,29 @@ public sealed class FaviconServiceTests
         Assert.Equal(first, second);
         Assert.StartsWith("v2-", Path.GetFileName(first));
         Assert.DoesNotContain(plainHash, first, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DiskCacheMigration_DeletesLegacyNamesAndKeepsVersionedFiles()
+    {
+        var directory = CreateTempDirectory();
+        var legacyPath = Path.Combine(directory, new string('a', 64) + ".bin");
+        var currentPath = Path.Combine(directory, "v2-" + new string('b', 64) + ".bin");
+
+        try
+        {
+            File.WriteAllBytes(legacyPath, [1, 2, 3]);
+            File.WriteAllBytes(currentPath, [4, 5, 6]);
+
+            PruneLegacyDiskCacheMethod.Invoke(null, [directory]);
+
+            Assert.False(File.Exists(legacyPath));
+            Assert.True(File.Exists(currentPath));
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
     }
 
     [Fact]
