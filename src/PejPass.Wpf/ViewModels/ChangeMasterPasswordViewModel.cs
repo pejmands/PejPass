@@ -73,6 +73,17 @@ public partial class ChangeMasterPasswordViewModel(
         ShowNewPasswordStrength = level != PasswordStrengthLevel.Empty;
     }
 
+    public void ClearSensitiveInputs()
+    {
+        CurrentPassword = string.Empty;
+        NewPassword = string.Empty;
+        ConfirmPassword = string.Empty;
+        NewPasswordStrengthLabel = string.Empty;
+        NewPasswordStrengthProgress = 0;
+        NewPasswordStrengthLevel = 0;
+        ShowNewPasswordStrength = false;
+    }
+
     [RelayCommand]
     private async Task ChangeAsync()
     {
