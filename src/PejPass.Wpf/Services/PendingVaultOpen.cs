@@ -78,12 +78,17 @@ internal static class PendingVaultOpen
                     TokenImpersonationLevel.Identification);
 
                 client.Connect(200);
-                client.Write(length);
-                client.Write(payload);
-                client.Flush();
+
+                using var writeCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                client.WriteAsync(length, writeCts.Token).AsTask().GetAwaiter().GetResult();
+                client.WriteAsync(payload, writeCts.Token).AsTask().GetAwaiter().GetResult();
+                client.FlushAsync(writeCts.Token).GetAwaiter().GetResult();
 
                 var acknowledgement = new byte[1];
-                client.ReadExactly(acknowledgement);
+                client.ReadExactlyAsync(acknowledgement, writeCts.Token)
+                    .AsTask()
+                    .GetAwaiter()
+                    .GetResult();
                 return acknowledgement[0] == 1;
             }
             catch (TimeoutException)
@@ -95,6 +100,10 @@ internal static class PendingVaultOpen
                 Thread.Sleep(50);
             }
             catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+            catch (OperationCanceledException)
             {
                 return false;
             }
