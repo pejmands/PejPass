@@ -314,9 +314,10 @@ public partial class MainViewModel : ObservableObject
                 BusyMessage = "Saving vault...";
             }
 
+            using var keyMaterial = _vaultSession.CopyKeyMaterial();
             await _vaultService.SaveVaultAsync(
                 _vaultSession.VaultPath,
-                _vaultSession.GetSecret(),
+                keyMaterial,
                 vault);
         }
         catch (Exception)
@@ -1400,9 +1401,10 @@ public partial class MainViewModel : ObservableObject
             IsBusy = true;
             BusyMessage = "Exporting backup...";
 
+            using var keyMaterial = _vaultSession.CopyKeyMaterial();
             await _vaultService.SaveVaultAsync(
                 dlg.FileName,
-                _vaultSession.GetSecret(),
+                keyMaterial,
                 _vaultSession.Vault!);
 
             SnackbarService.Show("Encrypted backup exported.");
@@ -1510,11 +1512,13 @@ public partial class MainViewModel : ObservableObject
             BusyMessage = "Saving vault...";
         }
 
+        using var keyMaterial = _vaultSession.CopyKeyMaterial();
+
         try
         {
             await _vaultService.SaveVaultAsync(
                 _vaultSession.VaultPath!,
-                _vaultSession.GetSecret(),
+                keyMaterial,
                 _vaultSession.Vault!);
 
             return true;
@@ -1523,9 +1527,9 @@ public partial class MainViewModel : ObservableObject
         {
             try
             {
-                var vault = await _vaultService.OpenVaultAsync(
+                var vault = await _vaultService.OpenVaultWithKeyAsync(
                     _vaultSession.VaultPath!,
-                    _vaultSession.GetSecret());
+                    keyMaterial);
 
                 _vaultSession.ReplaceVault(vault);
                 await LoadVaultAsync();
