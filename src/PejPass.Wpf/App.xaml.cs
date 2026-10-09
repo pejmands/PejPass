@@ -259,14 +259,10 @@ public partial class App : System.Windows.Application
 
     public static void HandleExternalVaultPath(string path)
     {
-        try
-        {
-            path = Path.GetFullPath(path.Trim().Trim('"'));
-        }
-        catch
-        {
+        if (!ExternalVaultPathValidator.TryValidate(path, out var validatedPath))
             return;
-        }
+
+        path = validatedPath;
 
         var vaultSession = Services.GetRequiredService<VaultSession>();
 
@@ -559,7 +555,6 @@ public partial class App : System.Windows.Application
         }
         ZoomBehavior.GlobalZoomChanged -= OnGlobalZoomChanged;
         SingleInstance.Release();
-        PendingVaultOpen.ReadAndClear();
 
         try
         {
