@@ -20,6 +20,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ThemeService _themeService;
     private readonly VaultService _vaultService;
     private readonly VaultSession _vaultSession;
+    private readonly SessionPasswordCache _sessionPasswordCache;
 
     private readonly ThemeMode _savedTheme;
     private readonly int _savedAutoLock;
