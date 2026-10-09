@@ -12,6 +12,19 @@
 	ShowInTaskbar="False"
 	WindowStartupLocation="CenterOwner">
 
+	<Window.Resources>
+		<Style TargetType="{x:Type Hyperlink}">
+			<Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+			<Setter Property="TextDecorations" Value="Underline" />
+			<Setter Property="Cursor" Value="Hand" />
+			<Style.Triggers>
+				<Trigger Property="IsMouseOver" Value="True">
+					<Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+				</Trigger>
+			</Style.Triggers>
+		</Style>
+	</Window.Resources>
+
 	<Grid Margin="28,20,28,20">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
@@ -96,15 +109,13 @@
 					<TextBlock
 						Margin="0,8,0,0"
 						HorizontalAlignment="Center"
-						Cursor="Hand"
 						FontSize="{DynamicResource AppFontSize11}"
-						Foreground="{DynamicResource AccentBrush}"
-						Text="Open download in browser"
 						TextAlignment="Center"
 						ToolTip="Open the download URL in your browser">
-						<TextBlock.InputBindings>
-							<MouseBinding Command="{Binding OpenDownloadPageCommand}" MouseAction="LeftClick" />
-						</TextBlock.InputBindings>
+						<Hyperlink
+							Command="{Binding OpenDownloadPageCommand}">
+							Open download in browser
+						</Hyperlink>
 					</TextBlock>
 				</StackPanel>
 			</StackPanel>
@@ -203,13 +214,11 @@
 				Grid.Column="0"
 				HorizontalAlignment="Left"
 				VerticalAlignment="Center"
-				Cursor="Hand"
-				FontSize="{DynamicResource AppFontSize11}"
-				Foreground="{DynamicResource AccentBrush}"
-				Text="GitHub">
-				<TextBlock.InputBindings>
-					<MouseBinding Command="{Binding OpenGitHubCommand}" MouseAction="LeftClick" />
-				</TextBlock.InputBindings>
+				FontSize="{DynamicResource AppFontSize11}">
+				<Hyperlink
+					Command="{Binding OpenGitHubCommand}">
+					GitHub
+				</Hyperlink>
 			</TextBlock>
 
 			<Button

@@ -134,10 +134,17 @@
 					Text="URL" />
 
 				<TextBox
-					Margin="0,0,0,20"
+					x:Name="UrlTextBox"
+					Margin="0,0,0,0"
 					Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}"
 					TextWrapping="NoWrap"
 					VerticalScrollBarVisibility="Disabled" />
+
+				<TextBlock
+					Margin="0,4,0,12"
+					Style="{StaticResource ValidationErrorText}"
+					Text="{Binding UrlErrorMessage, StringFormat=⚠ {0}}"
+					Visibility="{Binding UrlErrorMessage, Converter={StaticResource NullOrEmptyToVis}}" />
 
 				<!--  Password  -->
 				<Border

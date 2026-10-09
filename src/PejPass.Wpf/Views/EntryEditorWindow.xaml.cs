@@ -170,7 +170,7 @@ public partial class EntryEditorWindow : Window
         base.OnClosed(e);
     }
 
-    private void Save_Click(object sender, RoutedEventArgs e)
+ private void Save_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not EntryEditorViewModel vm)
             return;
@@ -180,6 +180,13 @@ public partial class EntryEditorWindow : Window
             if (!string.IsNullOrEmpty(vm.TitleErrorMessage))
             {
                 TitleTextBox.Focus();
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(vm.UrlErrorMessage))
+            {
+                UrlTextBox.BringIntoView();
+                UrlTextBox.Focus();
                 return;
             }
 
@@ -207,7 +214,7 @@ public partial class EntryEditorWindow : Window
         DialogResult = true;
         Close();
     }
-
+ 
     private void FocusTotpSecret()
     {
         Dispatcher.BeginInvoke(

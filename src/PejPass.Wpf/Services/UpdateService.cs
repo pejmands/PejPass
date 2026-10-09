@@ -623,47 +623,24 @@ public sealed class UpdateService : IDisposable
         return v;
     }
 
-    public static void OpenUrl(string? url)
+
+
+    public static bool OpenUrl(string? url)
     {
-        if (string.IsNullOrWhiteSpace(url))
-            return;
+        if (!WebUrlValidator.TryNormalize(url, out var normalizedUrl))
+            return false;
 
         Process.Start(new ProcessStartInfo
         {
-            FileName = url,
+            FileName = normalizedUrl,
             UseShellExecute = true
         });
-    }
 
-    public static void OpenFolder(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-            return;
-
-        if (File.Exists(path))
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                Arguments = $"/select,\"{path}\"",
-                UseShellExecute = true
-            });
-            return;
-        }
-
-        var dir = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = dir,
-                UseShellExecute = true
-            });
-        }
+        return true;
     }
 
     public static void OpenRepositoryPage() =>
-        OpenUrl(AppInfoService.RepositoryUrl);
+       OpenUrl(AppInfoService.RepositoryUrl);
 
     public static void OpenReleasesPage() =>
         OpenUrl($"{AppInfoService.RepositoryUrl.TrimEnd('/')}/releases");

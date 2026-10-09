@@ -11,7 +11,6 @@ using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -868,32 +867,34 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+
+
     private void OpenUrl()
     {
-        if (SelectedEntry is null || string.IsNullOrWhiteSpace(SelectedEntry.Url))
+        if (SelectedEntry is null ||
+            string.IsNullOrWhiteSpace(SelectedEntry.Url))
+        {
             return;
+        }
 
         try
         {
-            var url = SelectedEntry.Url.Trim();
-
-            if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
-                !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            if (!UpdateService.OpenUrl(SelectedEntry.Url))
             {
-                url = "https://" + url;
+                DialogService.Warning(
+                    "The URL is invalid or uses an unsupported scheme.",
+                    "Open URL");
+
+                return;
             }
-
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = url,
-                UseShellExecute = true
-            });
 
             SnackbarService.Show("Opened in browser");
         }
-        catch (Exception ex)
+        catch
         {
-            DialogService.Warning($"Could not open URL:\n{ex.Message}", "Open URL");
+            DialogService.Warning(
+                "Could not open the URL.",
+                "Open URL");
         }
     }
 

@@ -23,6 +23,8 @@ public partial class EntryEditorViewModel : ObservableObject
 
     [ObservableProperty]
     public partial string? TitleErrorMessage { get; set; }
+    [ObservableProperty]
+    public partial string? UrlErrorMessage { get; set; }
 
     [ObservableProperty]
     public partial string Password { get; set; } = string.Empty;
@@ -95,6 +97,16 @@ public partial class EntryEditorViewModel : ObservableObject
             : null;
     }
 
+    partial void OnUrlChanged(string value) => ValidateUrl();
+
+    private void ValidateUrl()
+    {
+        UrlErrorMessage = string.IsNullOrWhiteSpace(Url) ||
+                          WebUrlValidator.TryNormalize(Url, out _)
+            ? null
+            : "Enter a valid HTTP or HTTPS URL.";
+    }
+
     partial void OnPasswordChanged(string value) => UpdatePasswordStrength();
 
     partial void OnTotpSecretChanged(string value) => ValidateTotpSecret();
@@ -121,12 +133,14 @@ public partial class EntryEditorViewModel : ObservableObject
 
     public bool IsValid()
     {
+        ValidateUrl();
         OnTitleChanged(Title);
         ValidateTotpSecret();
 
         var customFieldsValid = ValidateCustomFields();
 
-        return string.IsNullOrEmpty(TitleErrorMessage) &&
+        return string.IsNullOrEmpty(UrlErrorMessage) &&
+               string.IsNullOrEmpty(TitleErrorMessage) &&
                string.IsNullOrEmpty(TotpErrorMessage) &&
                customFieldsValid;
     }
