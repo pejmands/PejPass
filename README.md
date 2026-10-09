@@ -122,9 +122,14 @@ notes
 
 ### CSV Export
 
-- [x] Export entries to a plain-text CSV (Chrome/Edge-style columns)
+- [x] Export entries as browser-compatible CSV (Chrome/Edge-style columns)
+- [x] Export entries in PejPass-specific CSV format
 
-> Export is for migration convenience — it is **not** an encrypted backup. Prefer copying your `.pejpass` vault file for backups.
+Both CSV formats are **unencrypted plain text** intended for data portability, not secure backups. Anyone who can read an exported CSV may be able to access its credentials. Export only when needed, store the file securely, and delete it when finished.
+
+### Encrypted Backup
+
+Use **Backup** from the title-bar menu (shortcut: **Ctrl+B**) to export an encrypted `.pejpass` vault backup. Prefer this over CSV export for routine backups. Store backup copies separately from the active vault and keep your master password safe.
 
 ## User Interface
 
@@ -165,9 +170,7 @@ git clone https://github.com/pejmands/PejPass.git
 cd PejPass
 
 dotnet restore
-
 dotnet build
-
 dotnet run --project src/PejPass.Wpf
 ```
 
