@@ -398,8 +398,9 @@ public sealed class VaultStoreValidationTests
 
         public byte[] GenerateSalt(int length = 16)
         {
-            LastGeneratedSalt = Enumerable.Repeat((byte)0x5A, length).ToArray();
-            return LastGeneratedSalt;
+            var salt = Enumerable.Repeat((byte)0x5A, length).ToArray();
+            LastGeneratedSalt = salt;
+            return salt;
         }
 
         public void ZeroMemory(byte[] data)
