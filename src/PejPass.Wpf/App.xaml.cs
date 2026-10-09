@@ -67,6 +67,8 @@ public partial class App : System.Windows.Application
 
         services.AddSingleton(settings);
         services.AddSingleton(themeService);
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<SessionPasswordCache>();
 
         services.AddSingleton<ICryptoService, CryptoService>();
         services.AddSingleton<IFileMover, FileMover>();
