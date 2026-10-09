@@ -165,14 +165,24 @@ public partial class EntryEditorWindow : Window
     {
         _isClosing = true;
 
-        if (DataContext is EntryEditorViewModel vm)
-            vm.PropertyChanged -= ViewModel_PropertyChanged;
+        var viewModel = DataContext as EntryEditorViewModel;
+        var secretCustomFieldValues = viewModel?.CustomFields
+            .Where(field => field.IsSecret)
+            .Select(field => (Field: field, Value: field.Value))
+            .ToArray() ?? [];
+
+        if (viewModel is not null)
+            viewModel.PropertyChanged -= ViewModel_PropertyChanged;
 
         foreach (var passwordBox in FindVisualChildren<PasswordRevealBox>(this))
         {
             BindingOperations.ClearBinding(passwordBox, PasswordRevealBox.PasswordProperty);
             passwordBox.Clear();
         }
+
+        // Keep the view-model values until the caller completes the sensitive-change audit.
+        foreach (var (field, value) in secretCustomFieldValues)
+            field.Value = value;
 
         DataContext = null;
 
