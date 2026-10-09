@@ -21,6 +21,11 @@ public partial class MainViewModel
         if (dlg.ShowDialog() != true)
             return;
 
+        var initialVault = _vaultSession.Vault;
+        var operationGeneration = _vaultSession.Generation;
+        if (initialVault is null || !_vaultSession.IsCurrent(operationGeneration, initialVault))
+            return;
+
         try
         {
             IsBusy = true;
@@ -28,6 +33,9 @@ public partial class MainViewModel
             StatusMessage = "Importing PejPass CSV...";
             var service = App.Services.GetRequiredService<IBrowserImportService>();
             var imported = await service.ImportPejPassCsvAsync(dlg.FileName);
+
+            if (!_vaultSession.IsCurrent(operationGeneration, initialVault))
+                return;
 
             if (imported.Count == 0)
             {
@@ -45,10 +53,12 @@ public partial class MainViewModel
                 return;
             }
 
-            if (!await EnsureVaultWritableAsync())
+            if (!_vaultSession.IsCurrent(operationGeneration, initialVault) ||
+                !await EnsureVaultWritableAsync() ||
+                !_vaultSession.IsCurrent(operationGeneration, initialVault))
                 return;
 
-            var vault = _vaultSession.Vault!;
+            var vault = initialVault;
             var snapshot = vault.CreateSnapshot();
             var result = MergeImportedEntries(vault, imported);
 
@@ -59,9 +69,9 @@ public partial class MainViewModel
             RebuildTagFilters();
             ApplyFilter();
 
-            if (!await SaveVaultAsync())
+            if (!await SaveVaultAsync(vault, operationGeneration))
             {
-                RestoreVaultSnapshot(snapshot);
+                RestoreVaultSnapshot(snapshot, vault);
                 return;
             }
 
