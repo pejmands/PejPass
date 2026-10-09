@@ -447,8 +447,8 @@ public sealed class FaviconServiceTests
         var second = (byte[])EncryptCacheBytesMethod.Invoke(null, [host, TinyPng, masterKey])!;
         var decrypted = (byte[]?)TryDecryptCacheBytesMethod.Invoke(null, [host, first, masterKey]);
 
-        Assert.NotEqual(TinyPng, first);
-        Assert.NotEqual(first, second);
+        Assert.False(TinyPng.SequenceEqual(first));
+        Assert.False(first.SequenceEqual(second));
         Assert.Equal(TinyPng, decrypted);
     }
 
@@ -468,9 +468,7 @@ public sealed class FaviconServiceTests
     private static byte[] GetCacheMasterKey()
     {
         var lazy = CacheMasterKeyField.GetValue(null)!;
-        return (byte)lazy.GetType().GetProperty("IsValueCreated")!.GetValue(lazy)! == 1
-            ? (byte[])lazy.GetType().GetProperty("Value")!.GetValue(lazy)!
-            : (byte[])lazy.GetType().GetProperty("Value")!.GetValue(lazy)!;
+        return (byte[])lazy.GetType().GetProperty("Value")!.GetValue(lazy)!;
     }
 
     private static async Task WriteEncryptedCacheFileAsync(string host, string path)
