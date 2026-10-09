@@ -26,7 +26,17 @@ internal static class PendingVaultOpen
 
         _serverCts = new CancellationTokenSource();
         var token = _serverCts.Token;
-        _serverThread = new Thread(() => RunServerAsync(token).GetAwaiter().GetResult())
+        _serverThread = new Thread(() =>
+        {
+            try
+            {
+                RunServerAsync(token).GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // IPC failure must not crash the primary application.
+            }
+        })
         {
             IsBackground = true,
             Name = "PejPass.PendingVaultOpen.Pipe"
