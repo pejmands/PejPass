@@ -6,8 +6,8 @@ using PejPass.Wpf.ViewModels;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -168,11 +168,10 @@ public partial class EntryEditorWindow : Window
         var viewModel = DataContext as EntryEditorViewModel;
         var secretCustomFieldValues = viewModel?.CustomFields
             .Where(field => field.IsSecret)
-            .Select(field => (Field: field, Value: field.Value))
+            .Select(field => (Field: field, field.Value))
             .ToArray() ?? [];
 
-        if (viewModel is not null)
-            viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        viewModel?.PropertyChanged -= ViewModel_PropertyChanged;
 
         foreach (var passwordBox in FindVisualChildren<PasswordRevealBox>(this))
         {
