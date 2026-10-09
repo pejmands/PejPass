@@ -11,59 +11,96 @@ public sealed class ClipboardService(
 {
     private readonly IClipboardProvider _clipboard = clipboard;
     private readonly IUiDispatcher _dispatcher = dispatcher;
+    private readonly object _sync = new();
     private CancellationTokenSource? _cts;
     private string? _copiedText;
 
     public void CopyWithTimeout(string text, TimeSpan timeout)
     {
-        _cts?.Cancel();
-        _cts = new CancellationTokenSource();
-        _copiedText = text;
+        CancellationTokenSource cts;
 
-        _clipboard.SetText(text);
+        lock (_sync)
+        {
+            _cts?.Cancel();
+            _cts?.Dispose();
+            cts = new CancellationTokenSource();
+            _cts = cts;
+            _copiedText = text;
+        }
 
-        _ = ClearAfterAsync(
-            timeout,
-            text,
-            _cts.Token);
+        try
+        {
+            _clipboard.SetText(text);
+        }
+        catch
+        {
+            lock (_sync)
+            {
+                if (ReferenceEquals(_cts, cts))
+                {
+                    _copiedText = null;
+                    _cts = null;
+                }
+            }
+
+            cts.Dispose();
+            throw;
+        }
+
+        _ = ClearAfterAsync(timeout, text, cts);
     }
 
     public void ClearIfOwned()
     {
-        _cts?.Cancel();
+        string? copiedText;
+        CancellationTokenSource? cts;
+
+        lock (_sync)
+        {
+            cts = _cts;
+            _cts = null;
+            copiedText = _copiedText;
+            _copiedText = null;
+            cts?.Cancel();
+        }
+
+        cts?.Dispose();
 
         try
         {
-            if (_copiedText is not null &&
+            if (copiedText is not null &&
                 _clipboard.ContainsText() &&
-                _clipboard.GetText() == _copiedText)
+                _clipboard.GetText() == copiedText)
             {
                 _clipboard.Clear();
             }
         }
         catch
         {
-            // Clipboard may be locked by another process; ignore.
-        }
-        finally
-        {
-            _copiedText = null;
+            // Clipboard may be locked by another process or unavailable during shutdown.
         }
     }
 
     private async Task ClearAfterAsync(
         TimeSpan timeout,
         string copiedText,
-        CancellationToken ct)
+        CancellationTokenSource cts)
     {
         try
         {
-            await Task.Delay(timeout, ct);
+            await Task.Delay(timeout, cts.Token).ConfigureAwait(false);
 
-            if (!ct.IsCancellationRequested)
+            _dispatcher.Invoke(() =>
             {
-                _dispatcher.Invoke(() =>
+                lock (_sync)
                 {
+                    if (!ReferenceEquals(_cts, cts) ||
+                        cts.IsCancellationRequested ||
+                        !string.Equals(_copiedText, copiedText, StringComparison.Ordinal))
+                    {
+                        return;
+                    }
+
                     try
                     {
                         if (_clipboard.ContainsText() &&
@@ -71,20 +108,39 @@ public sealed class ClipboardService(
                         {
                             _clipboard.Clear();
                         }
-
-                        if (string.Equals(_copiedText, copiedText, StringComparison.Ordinal))
-                            _copiedText = null;
                     }
                     catch
                     {
-                        // Clipboard may be locked by another process; ignore.
+                        // Clipboard may be locked by another process or unavailable during shutdown.
                     }
-                });
+                    finally
+                    {
+                        _copiedText = null;
+                        _cts = null;
+                    }
+                }
+            });
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            // Expected when a new copy replaces the current clipboard value.
+        }
+        catch (Exception ex) when (
+            ex is InvalidOperationException or ObjectDisposedException or TaskCanceledException)
+        {
+            // The dispatcher may be shutting down; do not let a background task fault.
+            lock (_sync)
+            {
+                if (ReferenceEquals(_cts, cts))
+                {
+                    _copiedText = null;
+                    _cts = null;
+                }
             }
         }
-        catch (TaskCanceledException)
+        finally
         {
-            // Expected when a new copy arrives.
+            cts.Dispose();
         }
     }
 }
