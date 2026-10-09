@@ -68,11 +68,11 @@ public partial class MainViewModel
             }
             catch (System.Security.Cryptography.AuthenticationTagMismatchException)
             {
-                return VaultErrorMessages.ForBackupOpen(new System.Security.Cryptography.AuthenticationTagMismatchException());
+                return VaultErrorMessages.ForBackupOpen(authenticationFailed: true);
             }
             catch (Exception)
             {
-                return VaultErrorMessages.ForBackupOpen(new Exception());
+                return VaultErrorMessages.ForBackupOpen(authenticationFailed: false);
             }
         };
 
