@@ -1572,6 +1572,8 @@ public partial class MainViewModel : ObservableObject
         }
 
         VaultKeyMaterial? keyMaterial = null;
+        Vault? recoveredSessionVault = null;
+        long? recoveredSessionGeneration = null;
         var sessionGeneration = _vaultSession.Generation;
         var vaultPath = _vaultSession.VaultPath;
         var vault = _vaultSession.Vault;
@@ -1610,13 +1612,14 @@ public partial class MainViewModel : ObservableObject
                         !string.IsNullOrWhiteSpace(vaultPath) &&
                         _vaultSession.IsCurrent(sessionGeneration, vault))
                     {
-                        var recoveredVault = await _vaultService.OpenVaultWithKeyAsync(
+                        recoveredSessionVault = await _vaultService.OpenVaultWithKeyAsync(
                             vaultPath,
                             keyMaterial);
 
                         if (_vaultSession.IsCurrent(sessionGeneration, vault))
                         {
-                            _vaultSession.ReplaceVault(recoveredVault);
+                            _vaultSession.ReplaceVault(recoveredSessionVault);
+                            recoveredSessionGeneration = _vaultSession.Generation;
                             await LoadVaultAsync();
                             SelectedEntry = null;
                         }
@@ -1632,10 +1635,24 @@ public partial class MainViewModel : ObservableObject
                 }
             }
 
-            if (vault is null || !_vaultSession.IsCurrent(sessionGeneration, vault))
+            if (recoveredSessionVault is not null &&
+                recoveredSessionGeneration is { } recoveredGeneration)
+            {
+                if (!_vaultSession.IsCurrent(recoveredGeneration, recoveredSessionVault))
+                    _skipNextSnapshotRestore = true;
+            }
+            else if (vault is null || !_vaultSession.IsCurrent(sessionGeneration, vault))
+            {
                 _skipNextSnapshotRestore = true;
+            }
 
-            if (vault is not null && _vaultSession.IsCurrent(sessionGeneration, vault))
+            var canShowError =
+                (vault is not null && _vaultSession.IsCurrent(sessionGeneration, vault)) ||
+                (recoveredSessionVault is not null &&
+                 recoveredSessionGeneration is { } currentGeneration &&
+                 _vaultSession.IsCurrent(currentGeneration, recoveredSessionVault));
+
+            if (canShowError)
             {
                 DialogService.Error(
                     "Failed to save the vault. Check disk space and file permissions, then try again.",
