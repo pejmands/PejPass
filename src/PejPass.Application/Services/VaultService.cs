@@ -91,6 +91,23 @@ public sealed class VaultService(IVaultStore store)
     /// the in-memory vault with new key material. The caller replaces the session key only
     /// after this method succeeds.
     /// </summary>
+    public async Task ChangeMasterPasswordAsync(
+        string path,
+        string currentPassword,
+        string newPassword,
+        Vault vault,
+        CancellationToken ct = default)
+    {
+        using var currentSession = await _store.OpenSessionAsync(path, currentPassword, ct);
+        using var newKeyMaterial = await ChangeMasterPasswordAsync(
+            path,
+            currentPassword,
+            newPassword,
+            vault,
+            currentSession.KeyMaterial,
+            ct);
+    }
+
     public async Task<VaultKeyMaterial> ChangeMasterPasswordAsync(
         string path,
         string currentPassword,
