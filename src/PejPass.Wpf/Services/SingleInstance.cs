@@ -56,9 +56,8 @@ public static partial class SingleInstance
             return false;
         }
 
-        PendingVaultOpen.ReadAndClear();
-
         _activateEvent = new EventWaitHandle(false, EventResetMode.AutoReset, EventName);
+        PendingVaultOpen.Start();
         _listenCts = new CancellationTokenSource();
 
         _listenThread = new Thread(() => ListenForActivation(_listenCts.Token))
@@ -176,6 +175,8 @@ public static partial class SingleInstance
 
     public static void Release()
     {
+        PendingVaultOpen.Stop();
+
         try { _listenCts?.Cancel(); } catch { /* ignore */ }
 
         try { _activateEvent?.Dispose(); } catch { /* ignore */ }
