@@ -11,7 +11,7 @@ using System.Windows.Media.Imaging;
 
 namespace PejPass.Wpf.Tests;
 
-[CollectionDefinition(Name, DisableParallelization = true)]
+[CollectionDefinition("FaviconService", DisableParallelization = true)]
 public sealed class FaviconServiceCollection
 {
     public const string Name = "FaviconService";
