@@ -963,8 +963,7 @@ public partial class MainViewModel : ObservableObject
         editor.ClearSensitiveResult();
         editorVm.ClearSensitiveInputs();
 
-        {
-            if (!await EnsureVaultWritableAsync())
+        if (!await EnsureVaultWritableAsync())
                 return;
 
             var vault = _vaultSession.Vault!;
@@ -988,8 +987,7 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            SnackbarService.Show("Entry added.");
-        }
+        SnackbarService.Show("Entry added.");
     }
 
     [RelayCommand]
