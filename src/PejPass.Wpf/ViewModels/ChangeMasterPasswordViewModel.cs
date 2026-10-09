@@ -9,7 +9,8 @@ namespace PejPass.Wpf.ViewModels;
 
 public partial class ChangeMasterPasswordViewModel(
     VaultService vaultService,
-    VaultSession vaultSession) : ObservableObject
+    VaultSession vaultSession,
+    SessionPasswordCache sessionPasswordCache) : ObservableObject
 {
     private readonly VaultService _vaultService = vaultService;
     private readonly VaultSession _vaultSession = vaultSession;
