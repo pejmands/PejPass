@@ -588,11 +588,128 @@ public static class FaviconService
 
     // Cache storage privacy is implemented by HMAC-derived names and authenticated encryption.
     private static string CachePath(string host) =>
-        PathCache.GetOrAdd(host, static h =>
+        PathCache.GetOrAdd(host, static h => CreateCachePath(h, CacheMasterKey.Value));
+
+    private static string CreateCachePath(string host, byte[] masterKey)
+    {
+        var key = DeriveCacheKey(masterKey, "filename");
+        try
         {
-            var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(h))).ToLowerInvariant();
-            return Path.Combine(CacheDir, hash + ".bin");
-        });
+            var hash = Convert.ToHexString(HMACSHA256.HashData(key, Encoding.UTF8.GetBytes(host))).ToLowerInvariant();
+            return Path.Combine(CacheDir, "v2-" + hash + ".bin");
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
+    }
+
+    private static byte[] DeriveCacheKey(byte[] masterKey, string purpose) =>
+        HMACSHA256.HashData(masterKey, Encoding.UTF8.GetBytes("PejPass.FaviconCache." + purpose + ".v1"));
+
+    private static byte[] LoadOrCreateCacheMasterKey()
+    {
+        Directory.CreateDirectory(AppDataDir);
+        try
+        {
+            var key = ProtectedData.Unprotect(File.ReadAllBytes(CacheKeyPath), CacheKeyEntropy, DataProtectionScope.CurrentUser);
+            if (key.Length == CacheMasterKeySize)
+                return key;
+            CryptographicOperations.ZeroMemory(key);
+        }
+        catch
+        {
+        }
+
+        var newKey = RandomNumberGenerator.GetBytes(CacheMasterKeySize);
+        var protectedKey = ProtectedData.Protect(newKey, CacheKeyEntropy, DataProtectionScope.CurrentUser);
+        var tempPath = CacheKeyPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            File.WriteAllBytes(tempPath, protectedKey);
+            File.Move(tempPath, CacheKeyPath, overwrite: true);
+            return newKey;
+        }
+        catch
+        {
+            CryptographicOperations.ZeroMemory(newKey);
+            throw;
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(protectedKey);
+            try { File.Delete(tempPath); } catch { }
+        }
+    }
+
+    private static byte[] EncryptCacheBytes(string host, byte[] plaintext, byte[] masterKey)
+    {
+        var key = DeriveCacheKey(masterKey, "encryption");
+        var nonce = RandomNumberGenerator.GetBytes(CacheNonceSize);
+        var ciphertext = new byte[plaintext.Length];
+        var tag = new byte[CacheTagSize];
+        try
+        {
+            using var aes = new AesGcm(key, CacheTagSize);
+            aes.Encrypt(nonce, plaintext, ciphertext, tag, Encoding.UTF8.GetBytes(host));
+            var result = new byte[CacheFileMagic.Length + CacheNonceSize + CacheTagSize + ciphertext.Length];
+            CacheFileMagic.CopyTo(result, 0);
+            nonce.CopyTo(result, CacheFileMagic.Length);
+            tag.CopyTo(result, CacheFileMagic.Length + CacheNonceSize);
+            ciphertext.CopyTo(result, CacheFileMagic.Length + CacheNonceSize + CacheTagSize);
+            return result;
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
+    }
+
+    private static byte[]? TryDecryptCacheBytes(string host, byte[] storedBytes, byte[] masterKey)
+    {
+        var headerLength = CacheFileMagic.Length + CacheNonceSize + CacheTagSize;
+        if (storedBytes.Length < headerLength || !storedBytes.AsSpan(0, CacheFileMagic.Length).SequenceEqual(CacheFileMagic))
+            return null;
+
+        var nonce = storedBytes.AsSpan(CacheFileMagic.Length, CacheNonceSize);
+        var tag = storedBytes.AsSpan(CacheFileMagic.Length + CacheNonceSize, CacheTagSize);
+        var ciphertext = storedBytes.AsSpan(headerLength);
+        var plaintext = new byte[ciphertext.Length];
+        var key = DeriveCacheKey(masterKey, "encryption");
+        try
+        {
+            using var aes = new AesGcm(key, CacheTagSize);
+            aes.Decrypt(nonce, ciphertext, tag, plaintext, Encoding.UTF8.GetBytes(host));
+            return plaintext;
+        }
+        catch (CryptographicException)
+        {
+            CryptographicOperations.ZeroMemory(plaintext);
+            return null;
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
+    }
+
+    private static void PruneLegacyDiskCache(string directory)
+    {
+        try
+        {
+            if (!Directory.Exists(directory))
+                return;
+            foreach (var file in Directory.GetFiles(directory, "*.bin"))
+            {
+                if (Path.GetFileName(file).StartsWith("v2-", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                try { File.Delete(file); } catch { }
+            }
+        }
+        catch
+        {
+        }
+    }
 
     private static BitmapImage? TryLoadFromDisk(string host)
     {
