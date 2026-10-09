@@ -520,12 +520,12 @@ public partial class LoginViewModel : ObservableObject
         }
         catch (System.Security.Cryptography.AuthenticationTagMismatchException)
         {
-            PasswordError = "Could not unlock the vault with Windows Hello. Enter your master password.";
+            PasswordError = VaultErrorMessages.ForWindowsHelloUnlock(new System.Security.Cryptography.AuthenticationTagMismatchException());
             StatusMessage = string.Empty;
         }
         catch (Exception)
         {
-            PasswordError = "Could not unlock the vault. Please try again.";
+            PasswordError = VaultErrorMessages.ForWindowsHelloUnlock(new Exception());
             StatusMessage = string.Empty;
         }
         finally
@@ -646,12 +646,12 @@ public partial class LoginViewModel : ObservableObject
         }
         catch (System.Security.Cryptography.AuthenticationTagMismatchException)
         {
-            PasswordError = "The master password is incorrect, or the vault file is damaged.";
+            PasswordError = VaultErrorMessages.ForUnlock(new System.Security.Cryptography.AuthenticationTagMismatchException());
             StatusMessage = string.Empty;
         }
         catch (Exception)
         {
-            PasswordError = "Could not unlock or create the vault. Check the file and try again.";
+            PasswordError = VaultErrorMessages.ForUnlock(new Exception());
             StatusMessage = string.Empty;
         }
         finally
