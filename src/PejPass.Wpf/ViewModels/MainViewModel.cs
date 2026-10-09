@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using PejPass.Application.Interfaces;
+using PejPass.Application.Security;
 using PejPass.Application.Services;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Settings;
@@ -1512,10 +1513,12 @@ public partial class MainViewModel : ObservableObject
             BusyMessage = "Saving vault...";
         }
 
-        using var keyMaterial = _vaultSession.CopyKeyMaterial();
+        VaultKeyMaterial? keyMaterial = null;
 
         try
         {
+            keyMaterial = _vaultSession.CopyKeyMaterial();
+
             await _vaultService.SaveVaultAsync(
                 _vaultSession.VaultPath!,
                 keyMaterial,
@@ -1527,13 +1530,16 @@ public partial class MainViewModel : ObservableObject
         {
             try
             {
-                var vault = await _vaultService.OpenVaultWithKeyAsync(
-                    _vaultSession.VaultPath!,
-                    keyMaterial);
+                if (keyMaterial is not null)
+                {
+                    var vault = await _vaultService.OpenVaultWithKeyAsync(
+                        _vaultSession.VaultPath!,
+                        keyMaterial);
 
-                _vaultSession.ReplaceVault(vault);
-                await LoadVaultAsync();
-                SelectedEntry = null;
+                    _vaultSession.ReplaceVault(vault);
+                    await LoadVaultAsync();
+                    SelectedEntry = null;
+                }
             }
             catch
             {
@@ -1548,6 +1554,7 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
+            keyMaterial?.Dispose();
             if (ownsBusyState)
                 IsBusy = false;
         }
