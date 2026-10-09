@@ -32,6 +32,7 @@ public partial class MainViewModel : ObservableObject
     private System.Timers.Timer? _autoLockTimer;
     private DispatcherTimer? _totpTimer;
     private bool _isPasswordVisible;
+    private bool _skipNextSnapshotRestore;
     private readonly SecretRevealTimer _passwordRevealTimer = new();
     private DateTime _lastAutoLockActivityUtc;
 
@@ -1485,10 +1486,20 @@ public partial class MainViewModel : ObservableObject
 
     private void RestoreVaultSnapshot(Vault snapshot, Guid? preserveSelectionId = null)
     {
-        _vaultSession.Vault!.RestoreSnapshot(snapshot);
+        if (_skipNextSnapshotRestore)
+        {
+            _skipNextSnapshotRestore = false;
+            return;
+        }
+
+        var activeVault = _vaultSession.Vault;
+        if (activeVault is null)
+            return;
+
+        activeVault.RestoreSnapshot(snapshot);
 
         Entries.Clear();
-        foreach (var entry in _vaultSession.Vault.Entries)
+        foreach (var entry in activeVault.Entries
             Entries.Add(entry);
 
         RebuildTagFilters();
@@ -1535,6 +1546,8 @@ public partial class MainViewModel : ObservableObject
 
     private async Task<bool> SaveVaultAsync()
     {
+        _skipNextSnapshotRestore = false;
+
         var ownsBusyState = !IsBusy;
 
         if (ownsBusyState)
@@ -1544,44 +1557,64 @@ public partial class MainViewModel : ObservableObject
         }
 
         VaultKeyMaterial? keyMaterial = null;
+        var sessionGeneration = _vaultSession.Generation;
         var vaultPath = _vaultSession.VaultPath;
+        var vault = _vaultSession.Vault;
 
         try
         {
+            if (vault is null || string.IsNullOrWhiteSpace(vaultPath))
+                return false;
+
             keyMaterial = _vaultSession.CopyKeyMaterial();
 
             await _vaultService.SaveVaultAsync(
-                vaultPath!,
+                vaultPath,
                 keyMaterial,
-                _vaultSession.Vault!);
+                vault);
+
+            if (!_vaultSession.IsCurrent(sessionGeneration, vault))
+            {
+                _skipNextSnapshotRestore = true;
+                return false;
+            }
 
             return true;
         }
         catch (Exception)
         {
-            try
+            if (vault is null || !_vaultSession.IsCurrent(sessionGeneration, vault))
             {
-                if (keyMaterial is not null &&
-                    !string.IsNullOrWhiteSpace(vaultPath) &&
-                    _vaultSession.IsActive &&
-                    string.Equals(_vaultSession.VaultPath, vaultPath, StringComparison.OrdinalIgnoreCase))
+                _skipNextSnapshotRestore = true;
+            }
+            else
+            {
+                try
                 {
-                    var vault = await _vaultService.OpenVaultWithKeyAsync(
-                        vaultPath,
-                        keyMaterial);
-
-                    if (_vaultSession.IsActive &&
-                        string.Equals(_vaultSession.VaultPath, vaultPath, StringComparison.OrdinalIgnoreCase))
+                    if (keyMaterial is not null &&
+                        !string.IsNullOrWhiteSpace(vaultPath) &&
+                        _vaultSession.IsCurrent(sessionGeneration, vault))
                     {
-                        _vaultSession.ReplaceVault(vault);
-                        await LoadVaultAsync();
-                        SelectedEntry = null;
+                        var recoveredVault = await _vaultService.OpenVaultWithKeyAsync(
+                            vaultPath,
+                            keyMaterial);
+
+                        if (_vaultSession.IsCurrent(sessionGeneration, vault))
+                        {
+                            _vaultSession.ReplaceVault(recoveredVault);
+                            await LoadVaultAsync();
+                            SelectedEntry = null;
+                        }
+                        else
+                        {
+                            _skipNextSnapshotRestore = true;
+                        }
                     }
                 }
-            }
-            catch
-            {
-                // Keep the original save error.
+                catch
+                {
+                    // Keep the original save error.
+                }
             }
 
             DialogService.Error(
