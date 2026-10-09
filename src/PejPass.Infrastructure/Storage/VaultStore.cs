@@ -419,9 +419,9 @@ public sealed class VaultStore(
                 ciphertext = new byte[(int)ciphertextLength];
                 await fs.ReadExactlyAsync(ciphertext, ct);
 
-                key = keyFactory(salt, kdfParameters);
                 try
                 {
+                    key = keyFactory(salt, kdfParameters);
                     plaintext = _crypto.Decrypt(ciphertext, nonce, tag, key, associatedData);
                     vault = JsonSerializer.Deserialize<Vault>(plaintext)
                             ?? throw new InvalidDataException("Vault data is corrupted.");
