@@ -75,9 +75,9 @@ public partial class MainViewModel
                 "Import complete");
             ResetAutoLockTimer();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DialogService.Error($"PejPass CSV import failed:\n{ex.Message}", "Import PejPass CSV");
+            DialogService.Error("PejPass CSV import failed. Check the file and try again.", "Import PejPass CSV");
             StatusMessage = "PejPass CSV import failed.";
         }
         finally
