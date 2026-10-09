@@ -355,9 +355,8 @@ public sealed class FaviconServiceTests
         try
         {
             ImageSource? image = null;
-            RunOnSta(() => image = FaviconService.GetImage(
-                "https://side-effect-check.example",
-                "Example"));
+            var url = $"https://{Guid.NewGuid():N}.example";
+            RunOnSta(() => image = FaviconService.GetImage(url, "Example"));
 
             Assert.IsType<RenderTargetBitmap>(image);
             Assert.Empty(GetDownloadQueue());
