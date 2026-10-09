@@ -421,7 +421,8 @@ public partial class SettingsViewModel : ObservableObject
 
         var vm = new ChangeMasterPasswordViewModel(
             _vaultService,
-            _vaultSession);
+            _vaultSession,
+            _sessionPasswordCache);
 
         var win = new ChangeMasterPasswordWindow(vm) { Owner = owner };
         if (win.ShowDialog() == true)
