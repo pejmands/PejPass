@@ -60,10 +60,8 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
             cancellationToken);
 
         Assert.Equal("Original", restoredVault.Name);
-        Assert.Single(restoredVault.Entries);
-        Assert.Equal(
-            originalVault.Entries[0].Id,
-            restoredVault.Entries[0].Id);
+        var restoredEntry = Assert.Single(restoredVault.Entries);
+        Assert.Equal(originalVault.Entries[0].Id, restoredEntry.Id);
     }
 
     [Fact]
@@ -98,10 +96,8 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
             cancellationToken);
 
         Assert.Equal("Original", restoredVault.Name);
-        Assert.Single(restoredVault.Entries);
-        Assert.Equal(
-            originalVault.Entries[0].Id,
-            restoredVault.Entries[0].Id);
+        var restoredEntry = Assert.Single(restoredVault.Entries);
+        Assert.Equal(originalVault.Entries[0].Id, restoredEntry.Id);
     }
 
     [Fact]
@@ -142,10 +138,8 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
             cancellationToken);
 
         Assert.Equal("Original", restoredVault.Name);
-        Assert.Single(restoredVault.Entries);
-        Assert.Equal(
-            originalVault.Entries[0].Id,
-            restoredVault.Entries[0].Id);
+        var restoredEntry = Assert.Single(restoredVault.Entries);
+        Assert.Equal(originalVault.Entries[0].Id, restoredEntry.Id);
 
         await Assert.ThrowsAsync<AuthenticationTagMismatchException>(() =>
             store.OpenAsync(
@@ -189,10 +183,8 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
             cancellationToken);
 
         Assert.Equal("Original", restoredVault.Name);
-        Assert.Single(restoredVault.Entries);
-        Assert.Equal(
-            originalVault.Entries[0].Id,
-            restoredVault.Entries[0].Id);
+        var restoredEntry = Assert.Single(restoredVault.Entries);
+        Assert.Equal(originalVault.Entries[0].Id, restoredEntry.Id);
 
         await Assert.ThrowsAsync<AuthenticationTagMismatchException>(() =>
             store.OpenAsync(
