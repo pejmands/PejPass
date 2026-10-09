@@ -112,17 +112,17 @@ public sealed class UpdateService : IDisposable
         {
             return UpdateCheckResult.NetworkError("Request timed out.");
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException)
         {
-            return UpdateCheckResult.NetworkError(ex.Message);
+            return UpdateCheckResult.NetworkError("Could not connect to the update server.");
         }
-        catch (JsonException ex)
+        catch (JsonException)
         {
-            return UpdateCheckResult.InvalidManifest(ex.Message);
+            return UpdateCheckResult.InvalidManifest("The update manifest is invalid.");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return UpdateCheckResult.NetworkError(ex.Message);
+            return UpdateCheckResult.NetworkError("Could not check for updates.");
         }
     }
 
