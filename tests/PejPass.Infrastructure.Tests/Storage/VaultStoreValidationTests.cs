@@ -129,17 +129,29 @@ public sealed class VaultStoreValidationTests
         }
     }
 
-    [Fact]
-    public async Task OpenAsync_WhenArgon2MemoryExceedsLimit_ThrowsInvalidDataException()
+    [Theory]
+    [InlineData(262145, 3, 4)]
+    [InlineData(65536, 0, 4)]
+    [InlineData(65536, 11, 4)]
+    [InlineData(65536, 3, 0)]
+    [InlineData(65536, 3, 9)]
+    [InlineData(8192, 3, 2)]
+    public async Task OpenAsync_WhenArgon2ParametersAreInvalid_RejectsBeforeDerivingKey(
+        int memorySizeKiB,
+        int iterations,
+        int degreeOfParallelism)
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        var path = CreateV3VaultFile(memorySizeKiB: 262145);
+        var path = CreateV3VaultFile(memorySizeKiB, iterations, degreeOfParallelism);
+        var crypto = new FakeCryptoService();
+        var store = new VaultStore(crypto, new FakeFileMover());
 
         try
         {
-            var store = CreateStore();
             await Assert.ThrowsAsync<InvalidDataException>(() =>
                 store.OpenAsync(path, "password", cancellationToken));
+
+            Assert.Equal(0, crypto.DeriveKeyCallCount);
         }
         finally
         {
@@ -241,7 +253,10 @@ public sealed class VaultStoreValidationTests
         return path;
     }
 
-    private static string CreateV3VaultFile(int memorySizeKiB)
+    private static string CreateV3VaultFile(
+        int memorySizeKiB,
+        int iterations = 3,
+        int degreeOfParallelism = 4)
     {
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
         using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
@@ -250,8 +265,8 @@ public sealed class VaultStoreValidationTests
         stream.WriteByte(3);
         stream.WriteByte(1);
         stream.Write(BitConverter.GetBytes(memorySizeKiB));
-        stream.Write(BitConverter.GetBytes(3));
-        stream.Write(BitConverter.GetBytes(4));
+        stream.Write(BitConverter.GetBytes(iterations));
+        stream.Write(BitConverter.GetBytes(degreeOfParallelism));
         stream.Write(BitConverter.GetBytes((ushort)16));
         stream.Write(new byte[16 + 12 + 16 + 1]);
 
@@ -302,11 +317,14 @@ public sealed class VaultStoreValidationTests
 
     private sealed class FakeCryptoService : ICryptoService
     {
+        public int DeriveKeyCallCount { get; private set; }
+
         public byte[] DeriveKey(
             string masterPassword,
             byte[] salt,
             Argon2Parameters? parameters = null)
         {
+            DeriveKeyCallCount++;
             return new byte[32];
         }
 
