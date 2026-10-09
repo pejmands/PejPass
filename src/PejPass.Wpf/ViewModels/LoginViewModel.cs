@@ -20,6 +20,7 @@ public partial class LoginViewModel : ObservableObject
     private readonly VaultService _vaultService;
     private readonly AppSettings _settings;
     private readonly VaultSession _vaultSession;
+    private readonly SessionPasswordCache _sessionPasswordCache;
 
     public event EventHandler? RequestClose;
 
@@ -80,11 +81,13 @@ public partial class LoginViewModel : ObservableObject
     public LoginViewModel(
         VaultService vaultService,
         AppSettings settings,
-        VaultSession vaultSession)
+        VaultSession vaultSession,
+        SessionPasswordCache sessionPasswordCache)
     {
         _vaultService = vaultService;
         _settings = settings;
         _vaultSession = vaultSession;
+        _sessionPasswordCache = sessionPasswordCache;
 
         var recentPaths = NormalizeRecentPaths(_settings.RecentVaultPaths);
 
@@ -338,7 +341,7 @@ public partial class LoginViewModel : ObservableObject
                 _settings.WindowsHelloEnabled
                 && IsOpenMode
                 && !string.IsNullOrWhiteSpace(VaultPath)
-                && SessionPasswordCache.HasCacheFor(VaultPath)
+                && _sessionPasswordCache.HasCacheFor(VaultPath)
                 && await WindowsHelloHelper.IsAvailableAsync();
         }
         catch
@@ -452,10 +455,10 @@ public partial class LoginViewModel : ObservableObject
             return;
         }
 
-        if (!SessionPasswordCache.HasCacheFor(VaultPath))
+        if (!_sessionPasswordCache.HasCacheFor(VaultPath))
         {
             PasswordError =
-                "Unlock once with your master password first, then Windows Hello will be available until you exit the app.";
+                "Unlock with your master password first. The Windows Hello cache may have expired.";
             return;
         }
 
@@ -474,25 +477,35 @@ public partial class LoginViewModel : ObservableObject
         {
             StatusMessage = "Waiting for Windows Hello…";
 
-            var verified =
+            var verificationResult =
                 await WindowsHelloHelper.VerifyAsync(
                     owner,
                     "Unlock PejPass");
 
-            if (!verified)
+            if (verificationResult != WindowsHelloVerificationResult.Verified)
             {
-                PasswordError =
-                    "Windows Hello verification failed or was cancelled.";
+                PasswordError = verificationResult switch
+                {
+                    WindowsHelloVerificationResult.AuthenticationFailed =>
+                        _sessionPasswordCache.RecordHelloAuthenticationFailure()
+                            ? "Windows Hello failed three times. Enter your master password to unlock."
+                            : "Windows Hello authentication failed. Try again or enter your master password.",
+                    WindowsHelloVerificationResult.Cancelled =>
+                        "Windows Hello was cancelled.",
+                    _ =>
+                        "Windows Hello is unavailable. Try again or enter your master password."
+                };
                 StatusMessage = string.Empty;
                 return;
             }
 
-            if (!SessionPasswordCache.TryRestore(
+            if (!_sessionPasswordCache.TryRestore(
                     VaultPath,
                     out var password))
             {
+                _sessionPasswordCache.Clear();
                 PasswordError =
-                    "Could not restore the session. Enter your master password.";
+                    "The cached session expired or could not be restored. Enter your master password.";
                 StatusMessage = string.Empty;
                 return;
             }
@@ -509,10 +522,6 @@ public partial class LoginViewModel : ObservableObject
                 VaultPath,
                 password);
 
-            SessionPasswordCache.Store(
-                VaultPath,
-                password);
-
             RecordRecentVault(VaultPath);
 
             StatusMessage = "Vault unlocked.";
@@ -520,6 +529,7 @@ public partial class LoginViewModel : ObservableObject
         }
         catch (System.Security.Cryptography.AuthenticationTagMismatchException)
         {
+            _sessionPasswordCache.Clear();
             PasswordError = VaultErrorMessages.ForWindowsHelloUnlock(authenticationFailed: true);
             StatusMessage = string.Empty;
         }
@@ -626,15 +636,16 @@ public partial class LoginViewModel : ObservableObject
                 VaultPath,
                 MasterPassword);
 
+            _sessionPasswordCache.ResetHelloFailures();
             if (_settings.WindowsHelloEnabled)
             {
-                SessionPasswordCache.Store(
+                _sessionPasswordCache.Store(
                     VaultPath,
                     MasterPassword);
             }
             else
             {
-                SessionPasswordCache.Clear();
+                _sessionPasswordCache.Clear();
             }
 
             RecordRecentVault(VaultPath);
