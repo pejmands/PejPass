@@ -131,7 +131,7 @@ public partial class ChangeMasterPasswordViewModel(
                 vault,
                 currentKeyMaterial);
 
-            _vaultSession.UpdateKeyMaterial(newKeyMaterial);
+            _vaultSession.TryUpdateKeyMaterial(newKeyMaterial);
             cache.Clear();
 
             Success = true;
