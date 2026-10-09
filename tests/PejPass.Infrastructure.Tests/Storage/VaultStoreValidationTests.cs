@@ -147,6 +147,73 @@ public sealed class VaultStoreValidationTests
         }
     }
 
+    [Fact]
+    public async Task OpenAsync_WhenRequiredCollectionIsNull_ThrowsInvalidDataException()
+    {
+        var path = CreateV2VaultFile("{\"Name\":\"Test\",\"Entries\":null,\"Trash\":[],\"History\":[]}");
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                CreateStore().OpenAsync(path, "password", TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenEntryFieldExceedsLimit_ThrowsInvalidDataException()
+    {
+        var oversizedTitle = new string('x', 1_048_577);
+        var json = System.Text.Json.JsonSerializer.Serialize(new Vault
+        {
+            Entries = [new VaultEntry { Title = oversizedTitle }]
+        });
+        var path = CreateV2VaultFile(json);
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                CreateStore().OpenAsync(path, "password", TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenEntryCountExceedsLimit_ThrowsInvalidDataException()
+    {
+        var entries = new List<VaultEntry>(100_001);
+        for (var i = 0; i < 100_001; i++)
+            entries.Add(new VaultEntry { Title = "Entry" + i });
+
+        var json = System.Text.Json.JsonSerializer.Serialize(new Vault { Entries = entries });
+        var path = CreateV2VaultFile(json);
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                CreateStore().OpenAsync(path, "password", TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    private static string CreateV2VaultFile(string json)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        stream.Write("PEJP"u8);
+        stream.WriteByte(2);
+        stream.Write(BitConverter.GetBytes((ushort)16));
+        stream.Write(new byte[16 + 12 + 16]);
+        stream.Write(System.Text.Encoding.UTF8.GetBytes(json));
+        return path;
+    }
+
     private static string CreateV3VaultFile(int memorySizeKiB)
     {
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
