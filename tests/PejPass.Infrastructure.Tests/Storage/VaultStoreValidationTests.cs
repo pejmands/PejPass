@@ -135,7 +135,7 @@ public sealed class VaultStoreValidationTests
     [InlineData(65536, 11, 4)]
     [InlineData(65536, 3, 0)]
     [InlineData(65536, 3, 9)]
-    [InlineData(8192, 3, 2)]
+    [InlineData(8191, 3, 2)]
     public async Task OpenAsync_WhenArgon2ParametersAreInvalid_RejectsBeforeDerivingKey(
         int memorySizeKiB,
         int iterations,
