@@ -377,6 +377,29 @@
 							IsChecked="{Binding WindowsHelloEnabled}"
 							ToolTip="Unlock with Windows Hello after first password unlock" />
 					</Grid>
+					<Grid Margin="0,0,0,20">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="180" />
+						</Grid.ColumnDefinitions>
+						<StackPanel VerticalAlignment="Top">
+							<TextBlock
+								FontSize="{DynamicResource AppFontSize12}"
+								Foreground="{DynamicResource TextBrush}"
+								Text="Require master password again after" />
+							<TextBlock
+								Margin="0,4,12,0"
+								FontSize="{DynamicResource AppFontSize11}"
+								Foreground="{DynamicResource MutedBrush}"
+								Text="The timer starts after successful master-password authentication. Windows Hello does not extend it. Windows lock or suspend clears the cache immediately."
+								TextWrapping="Wrap" />
+						</StackPanel>
+						<ComboBox
+							Grid.Column="1"
+							Height="36"
+							ItemsSource="{Binding WindowsHelloTimeoutOptions}"
+							SelectedIndex="{Binding SelectedWindowsHelloTimeoutIndex}" />
+					</Grid>
 
 					<Grid Margin="0,0,0,20">
 						<Grid.ColumnDefinitions>

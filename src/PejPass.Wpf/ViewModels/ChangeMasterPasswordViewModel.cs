@@ -9,10 +9,12 @@ namespace PejPass.Wpf.ViewModels;
 
 public partial class ChangeMasterPasswordViewModel(
     VaultService vaultService,
-    VaultSession vaultSession) : ObservableObject
+    VaultSession vaultSession,
+    SessionPasswordCache sessionPasswordCache) : ObservableObject
 {
     private readonly VaultService _vaultService = vaultService;
     private readonly VaultSession _vaultSession = vaultSession;
+    private readonly SessionPasswordCache cache = sessionPasswordCache;
 
     [ObservableProperty]
     public partial string CurrentPassword { get; set; } = string.Empty;
@@ -117,7 +119,7 @@ public partial class ChangeMasterPasswordViewModel(
                 vault);
 
             _vaultSession.UpdateSecret(NewPassword);
-            SessionPasswordCache.Store(path, NewPassword);
+            cache.Clear();
 
             Success = true;
             RequestClose?.Invoke(this, EventArgs.Empty);

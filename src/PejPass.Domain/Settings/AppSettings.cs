@@ -32,6 +32,9 @@ public sealed class AppSettings
     /// </summary>
     public bool WindowsHelloEnabled { get; set; } = true;
 
+    /// <summary>Windows Hello cache lifetime in minutes; zero means until the app exits.</summary>
+    public int WindowsHelloTimeoutMinutes { get; set; } = 240;
+
     public bool OnlineFaviconFetchingEnabled { get; set; }
 
     /// <summary>

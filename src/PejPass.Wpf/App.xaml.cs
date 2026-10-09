@@ -67,6 +67,8 @@ public partial class App : System.Windows.Application
 
         services.AddSingleton(settings);
         services.AddSingleton(themeService);
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<SessionPasswordCache>();
 
         services.AddSingleton<ICryptoService, CryptoService>();
         services.AddSingleton<IFileMover, FileMover>();
@@ -199,6 +201,9 @@ public partial class App : System.Windows.Application
     {
         Current.Dispatcher.Invoke(() =>
         {
+            // Clear the Hello cache before locking for Windows lock or system suspend.
+            Services.GetRequiredService<SessionPasswordCache>().Clear();
+
             // Lock immediately when Windows locks or suspends the system.
             // A minimized or hidden main window keeps the login screen hidden.
             if (Current.MainWindow is MainWindow main &&
@@ -544,6 +549,8 @@ public partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         SingleInstance.Activated -= OnSecondInstanceActivated;
+        try { Services.GetRequiredService<SessionPasswordCache>().Clear(); }
+        catch { /* Best-effort cleanup on exit. */ }
         if (_windowsSecurityService is not null)
         {
             _windowsSecurityService.SecurityLockRequested -= OnWindowsSecurityLockRequested;

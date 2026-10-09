@@ -25,6 +25,7 @@ public partial class MainViewModel : ObservableObject
     private readonly AppSettings _settings;
     private readonly ThemeService _themeService;
     private readonly VaultSession _vaultSession;
+    private readonly SessionPasswordCache _sessionPasswordCache;
 
     private static readonly TimeSpan AutoLockActivityThrottle = TimeSpan.FromMilliseconds(500);
     private System.Timers.Timer? _autoLockTimer;
@@ -145,7 +146,8 @@ public partial class MainViewModel : ObservableObject
         IBrowserImportService importService,
         AppSettings settings,
         ThemeService themeService,
-        VaultSession vaultSession)
+        VaultSession vaultSession,
+        SessionPasswordCache sessionPasswordCache)
     {
         _vaultService = vaultService;
         _clipboard = clipboard;
@@ -153,6 +155,7 @@ public partial class MainViewModel : ObservableObject
         _settings = settings;
         _themeService = themeService;
         _vaultSession = vaultSession;
+        _sessionPasswordCache = sessionPasswordCache;
         _lastAutoLockActivityUtc = DateTime.UtcNow;
         InputManager.Current.PreProcessInput += OnPreProcessInput;
 
@@ -776,7 +779,8 @@ public partial class MainViewModel : ObservableObject
             _settings,
             _themeService,
             _vaultService,
-            _vaultSession);
+            _vaultSession,
+            _sessionPasswordCache);
 
         var win = new SettingsWindow(vm) { Owner = GetOwnerWindow() };
         win.ShowDialog();
