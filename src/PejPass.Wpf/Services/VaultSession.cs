@@ -94,27 +94,34 @@ public sealed class VaultSession : IDisposable
         }
     }
 
-    public void UpdateKeyMaterial(VaultKeyMaterial keyMaterial)
+    public bool TryUpdateKeyMaterial(VaultKeyMaterial keyMaterial)
     {
         ArgumentNullException.ThrowIfNull(keyMaterial);
         var materialCopy = keyMaterial.Clone();
+        bool updated;
 
-        try
+        lock (_sync)
         {
-            lock (_sync)
+            updated = !_disposed &&
+                _vault is not null &&
+                _vaultPath is not null &&
+                _keyMaterial is not null;
+
+            if (updated)
             {
-                ThrowIfDisposed();
                 ClearKeyMaterialCore();
                 _keyMaterial = materialCopy;
             }
         }
-        catch
+
+        if (!updated)
         {
             materialCopy.Dispose();
-            throw;
+            return false;
         }
 
         StateChanged?.Invoke(this, EventArgs.Empty);
+        return true;
     }
 
     public void Clear()
