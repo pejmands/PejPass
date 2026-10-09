@@ -592,24 +592,6 @@ public sealed class UpdateService : IDisposable
         return value.All(Uri.IsHexDigit);
     }
 
-    private static string ResolveFileName(string url, HttpResponseMessage response)
-    {
-        if (response.Content.Headers.ContentDisposition?.FileName is { Length: > 0 } cd)
-            return cd.Trim('"', '\'');
-
-        try
-        {
-            var name = Path.GetFileName(new Uri(url).AbsolutePath);
-            if (!string.IsNullOrWhiteSpace(name))
-                return name;
-        }
-        catch
-        {
-        }
-
-        return $"{AppInfoService.Name}-update.zip";
-    }
-
     public static bool IsNewerVersion(string candidate, string current)
     {
         if (!Version.TryParse(Normalize(candidate), out var next))
