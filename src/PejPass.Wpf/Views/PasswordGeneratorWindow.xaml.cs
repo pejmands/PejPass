@@ -39,6 +39,24 @@ public partial class PasswordGeneratorWindow : Window
 
         viewModel.RequestAccept += OnRequestAccept;
         viewModel.RequestCancel += OnRequestCancel;
+        Closed += OnClosed;
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        Closed -= OnClosed;
+
+        if (DataContext is not PasswordGeneratorViewModel viewModel)
+            return;
+
+        viewModel.RequestAccept -= OnRequestAccept;
+        viewModel.RequestCancel -= OnRequestCancel;
+
+        if (_standalone)
+        {
+            viewModel.ClearState();
+            DataContext = null;
+        }
     }
 
     private void OnRequestCancel(object? sender, EventArgs e)

@@ -83,6 +83,15 @@ public partial class PasswordGeneratorViewModel : ObservableObject
         RequestAccept?.Invoke(this, EventArgs.Empty);
     }
 
+    public void ClearState()
+    {
+        Preview = string.Empty;
+        Result = null;
+        Error = null;
+        RequestAccept = null;
+        RequestCancel = null;
+    }
+
     [RelayCommand]
     private void Cancel() => RequestCancel?.Invoke(this, EventArgs.Empty);
 }
