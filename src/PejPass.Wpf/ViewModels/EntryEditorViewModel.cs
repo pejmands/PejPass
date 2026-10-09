@@ -221,9 +221,9 @@ public partial class EntryEditorViewModel : ObservableObject
 
             ApplyTotpImport(bitmap);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DialogService.Warning($"Could not read image:\n{ex.Message}", "TOTP import");
+            DialogService.Warning("Could not read the image. Use a valid QR-code image and try again.", "TOTP import");
         }
     }
 
@@ -249,9 +249,9 @@ public partial class EntryEditorViewModel : ObservableObject
 
             ApplyTotpImport(image);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DialogService.Warning($"Clipboard import failed:\n{ex.Message}", "TOTP import");
+            DialogService.Warning("Clipboard import failed. Copy a valid TOTP URI or secret and try again.", "TOTP import");
         }
     }
 
