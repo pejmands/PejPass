@@ -494,7 +494,7 @@ public partial class MainViewModel : ObservableObject
 
         if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot, vault, SelectedEntry?.Id);
+            RestoreVaultSnapshot(snapshot, vault, operationGeneration, SelectedEntry?.Id);
             return;
         }
 
@@ -563,7 +563,7 @@ public partial class MainViewModel : ObservableObject
 
         if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot, vault, SelectedEntry?.Id);
+            RestoreVaultSnapshot(snapshot, vault, operationGeneration, SelectedEntry?.Id);
             return;
         }
 
@@ -626,7 +626,7 @@ public partial class MainViewModel : ObservableObject
 
         if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot, vault, SelectedEntry?.Id);
+            RestoreVaultSnapshot(snapshot, vault, operationGeneration, SelectedEntry?.Id);
             return;
         }
 
@@ -769,7 +769,7 @@ public partial class MainViewModel : ObservableObject
 
         if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot, vault);
+            RestoreVaultSnapshot(snapshot, vault, operationGeneration);
             return;
         }
 
@@ -1045,7 +1045,7 @@ public partial class MainViewModel : ObservableObject
 
         if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot, vault);
+            RestoreVaultSnapshot(snapshot, vault, operationGeneration);
             return;
         }
 
@@ -1141,7 +1141,7 @@ public partial class MainViewModel : ObservableObject
 
         if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot, vault, updated.Id);
+            RestoreVaultSnapshot(snapshot, vault, operationGeneration, updated.Id);
             return;
         }
 
@@ -1188,7 +1188,7 @@ public partial class MainViewModel : ObservableObject
 
         if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot, vault);
+            RestoreVaultSnapshot(snapshot, vault, operationGeneration);
             return;
         }
 
@@ -1240,7 +1240,7 @@ public partial class MainViewModel : ObservableObject
 
         if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot, vault);
+            RestoreVaultSnapshot(snapshot, vault, operationGeneration);
             return;
         }
 
@@ -1280,7 +1280,7 @@ public partial class MainViewModel : ObservableObject
 
         if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot, vault);
+            RestoreVaultSnapshot(snapshot, vault, operationGeneration);
             return;
         }
 
@@ -1350,7 +1350,7 @@ public partial class MainViewModel : ObservableObject
 
             if (!await SaveVaultAsync(vault, operationGeneration))
             {
-                RestoreVaultSnapshot(snapshot, vault);
+                RestoreVaultSnapshot(snapshot, vault, operationGeneration);
                 return;
             }
 
@@ -1541,9 +1541,9 @@ public partial class MainViewModel : ObservableObject
         SelectedEntry = null;
     }
 
-    private void RestoreVaultSnapshot(Vault snapshot, Vault expectedVault, Guid? preserveSelectionId = null)
+    private void RestoreVaultSnapshot(Vault snapshot, Vault expectedVault, long expectedGeneration, Guid? preserveSelectionId = null)
     {
-        if (!ReferenceEquals(_vaultSession.Vault, expectedVault) || !_vaultSession.IsActive)
+        if (!_vaultSession.IsCurrent(expectedGeneration, expectedVault))
             return;
 
         expectedVault.RestoreSnapshot(snapshot);
