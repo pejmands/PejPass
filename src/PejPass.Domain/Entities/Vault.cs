@@ -19,6 +19,8 @@ public sealed class Vault
     /// <summary>Soft-deleted entries (recoverable until purged).</summary>
     public List<TrashedEntry> Trash { get; set; } = [];
 
+    public Argon2Parameters KdfParameters { get; set; } = Argon2Parameters.Default;
+
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
@@ -43,6 +45,7 @@ public sealed class Vault
         Entries = snapshot.Entries;
         History = snapshot.History;
         Trash = snapshot.Trash;
+        KdfParameters = snapshot.KdfParameters;
         UpdatedAt = snapshot.UpdatedAt;
     }
 

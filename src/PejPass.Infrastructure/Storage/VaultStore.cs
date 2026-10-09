@@ -1,5 +1,6 @@
 using PejPass.Application.Interfaces;
 using PejPass.Domain.Entities;
+using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json;
 
@@ -9,6 +10,7 @@ namespace PejPass.Infrastructure.Storage;
 /// Simple encrypted vault file format:
 /// [4 bytes magic "PEJP"]
 /// [1 byte version]
+/// [Argon2id algorithm and parameters in version 3]
 /// [salt length + salt]
 /// [nonce]
 /// [tag]
@@ -21,7 +23,9 @@ public sealed class VaultStore(
     private static readonly byte[] Magic = Encoding.ASCII.GetBytes("PEJP");
 
     private const byte LegacyVersion = 1;
-    private const byte CurrentVersion = 2;
+    private const byte PreviousVersion = 2;
+    private const byte CurrentVersion = 3;
+    private const byte Argon2idAlgorithmId = 1;
     private const int SaltLength = 16;
     private const int MaxSaltLength = 64;
     private const int NonceLength = 12;
@@ -65,14 +69,20 @@ public sealed class VaultStore(
         Vault vault,
         CancellationToken ct = default)
     {
+        var kdfParameters = vault.KdfParameters;
+        kdfParameters.Validate();
+
         var salt = _crypto.GenerateSalt(SaltLength);
-        var key = _crypto.DeriveKey(masterPassword, salt);
+        var key = _crypto.DeriveKey(
+            masterPassword,
+            salt,
+            kdfParameters);
 
         try
         {
             var json = JsonSerializer.SerializeToUtf8Bytes(vault);
-            var associatedData = BuildAssociatedData(
-                CurrentVersion,
+            var associatedData = BuildAssociatedDataV3(
+                kdfParameters,
                 salt);
 
             var (ciphertext, nonce, tag) = _crypto.Encrypt(
@@ -86,7 +96,14 @@ public sealed class VaultStore(
                 FileAccess.Write,
                 FileShare.None);
 
-            await WriteVaultAsync(fs, salt, nonce, tag, ciphertext, ct);
+            await WriteVaultAsync(
+                fs,
+                salt,
+                kdfParameters,
+                nonce,
+                tag,
+                ciphertext,
+                ct);
             await fs.FlushAsync(ct);
             fs.Flush(flushToDisk: true);
         }
@@ -136,10 +153,46 @@ public sealed class VaultStore(
             versionValue = version[0];
 
             if (versionValue != LegacyVersion &&
+                versionValue != PreviousVersion &&
                 versionValue != CurrentVersion)
             {
                 throw new NotSupportedException(
                     $"Unsupported vault version: {versionValue}");
+            }
+
+            if (versionValue == CurrentVersion &&
+                fs.Length < Magic.Length + sizeof(byte) + 13 + sizeof(ushort) +
+                            SaltLength + NonceLength + TagLength + 1)
+            {
+                throw new InvalidDataException("Vault file is too short for the version 3 header.");
+            }
+
+            var kdfParameters = Argon2Parameters.Default;
+
+            if (versionValue == CurrentVersion)
+            {
+                var kdfHeader = new byte[13];
+                await fs.ReadExactlyAsync(kdfHeader, ct);
+
+                if (kdfHeader[0] != Argon2idAlgorithmId)
+                    throw new NotSupportedException(
+                        $"Unsupported key derivation algorithm: {kdfHeader[0]}");
+
+                kdfParameters = new Argon2Parameters(
+                    BinaryPrimitives.ReadInt32LittleEndian(kdfHeader.AsSpan(1, 4)),
+                    BinaryPrimitives.ReadInt32LittleEndian(kdfHeader.AsSpan(5, 4)),
+                    BinaryPrimitives.ReadInt32LittleEndian(kdfHeader.AsSpan(9, 4)));
+
+                try
+                {
+                    kdfParameters.Validate();
+                }
+                catch (ArgumentOutOfRangeException ex)
+                {
+                    throw new InvalidDataException(
+                        "Vault contains invalid Argon2 parameters.",
+                        ex);
+                }
             }
 
             var saltLenBytes = new byte[sizeof(ushort)];
@@ -161,10 +214,12 @@ public sealed class VaultStore(
             var salt = new byte[saltLen];
             await fs.ReadExactlyAsync(salt, ct);
 
-            var associatedData =
-                versionValue == CurrentVersion
-                    ? BuildAssociatedData(versionValue, salt)
-                    : null;
+            var associatedData = versionValue switch
+            {
+                CurrentVersion => BuildAssociatedDataV3(kdfParameters, salt),
+                PreviousVersion => BuildAssociatedDataV2(versionValue, salt),
+                _ => null
+            };
 
             var nonce = new byte[NonceLength];
             await fs.ReadExactlyAsync(nonce, ct);
@@ -185,7 +240,10 @@ public sealed class VaultStore(
             var ciphertext = new byte[(int)ciphertextLength];
             await fs.ReadExactlyAsync(ciphertext, ct);
 
-            var key = _crypto.DeriveKey(masterPassword, salt);
+            var key = _crypto.DeriveKey(
+                masterPassword,
+                salt,
+                kdfParameters);
 
             try
             {
@@ -199,6 +257,15 @@ public sealed class VaultStore(
                 vault = JsonSerializer.Deserialize<Vault>(plaintext)
                         ?? throw new InvalidDataException(
                             "Vault data is corrupted.");
+
+                if (versionValue == CurrentVersion &&
+                    vault.KdfParameters != kdfParameters)
+                {
+                    throw new InvalidDataException(
+                        "Vault KDF parameters do not match the authenticated header.");
+                }
+
+                vault.KdfParameters = kdfParameters;
             }
             finally
             {
@@ -206,7 +273,7 @@ public sealed class VaultStore(
             }
         }
 
-        if (versionValue == LegacyVersion)
+        if (versionValue != CurrentVersion)
         {
             await SaveAsync(
                 path,
@@ -233,14 +300,20 @@ public sealed class VaultStore(
             directory,
             $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
 
+        var kdfParameters = vault.KdfParameters;
+        kdfParameters.Validate();
+
         var salt = _crypto.GenerateSalt(SaltLength);
-        var key = _crypto.DeriveKey(masterPassword, salt);
+        var key = _crypto.DeriveKey(
+            masterPassword,
+            salt,
+            kdfParameters);
 
         try
         {
             var json = JsonSerializer.SerializeToUtf8Bytes(vault);
-            var associatedData = BuildAssociatedData(
-                CurrentVersion,
+            var associatedData = BuildAssociatedDataV3(
+                kdfParameters,
                 salt);
 
             var (ciphertext, nonce, tag) = _crypto.Encrypt(
@@ -257,6 +330,7 @@ public sealed class VaultStore(
                 await WriteVaultAsync(
                     fs,
                     salt,
+                    kdfParameters,
                     nonce,
                     tag,
                     ciphertext,
@@ -287,9 +361,9 @@ public sealed class VaultStore(
         }
     }
 
-    private static byte[] BuildAssociatedData(
-    byte version,
-    byte[] salt)
+    private static byte[] BuildAssociatedDataV2(
+        byte version,
+        byte[] salt)
     {
         using var ms = new MemoryStream();
 
@@ -301,19 +375,45 @@ public sealed class VaultStore(
         return ms.ToArray();
     }
 
+    private static byte[] BuildAssociatedDataV3(
+        Argon2Parameters parameters,
+        byte[] salt)
+    {
+        using var ms = new MemoryStream();
+        var parameterBytes = new byte[12];
+
+        BinaryPrimitives.WriteInt32LittleEndian(parameterBytes.AsSpan(0, 4), parameters.MemorySizeKiB);
+        BinaryPrimitives.WriteInt32LittleEndian(parameterBytes.AsSpan(4, 4), parameters.Iterations);
+        BinaryPrimitives.WriteInt32LittleEndian(parameterBytes.AsSpan(8, 4), parameters.DegreeOfParallelism);
+
+        ms.Write(Magic);
+        ms.WriteByte(CurrentVersion);
+        ms.WriteByte(Argon2idAlgorithmId);
+        ms.Write(parameterBytes);
+        ms.Write(BitConverter.GetBytes((ushort)salt.Length));
+        ms.Write(salt);
+
+        return ms.ToArray();
+    }
+
     private static async Task WriteVaultAsync(
         FileStream fs,
         byte[] salt,
+        Argon2Parameters parameters,
         byte[] nonce,
         byte[] tag,
         byte[] ciphertext,
         CancellationToken ct)
     {
-        await fs.WriteAsync(Magic, ct);
-        await fs.WriteAsync(
-            new byte[] { CurrentVersion },
-            ct);
+        var parameterBytes = new byte[12];
 
+        BinaryPrimitives.WriteInt32LittleEndian(parameterBytes.AsSpan(0, 4), parameters.MemorySizeKiB);
+        BinaryPrimitives.WriteInt32LittleEndian(parameterBytes.AsSpan(4, 4), parameters.Iterations);
+        BinaryPrimitives.WriteInt32LittleEndian(parameterBytes.AsSpan(8, 4), parameters.DegreeOfParallelism);
+
+        await fs.WriteAsync(Magic, ct);
+        await fs.WriteAsync(new byte[] { CurrentVersion, Argon2idAlgorithmId }, ct);
+        await fs.WriteAsync(parameterBytes, ct);
         await fs.WriteAsync(
             BitConverter.GetBytes((ushort)salt.Length),
             ct);
