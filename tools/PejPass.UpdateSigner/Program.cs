@@ -70,19 +70,19 @@ try
 
     return 0;
 }
-catch (CryptographicException ex)
+catch (CryptographicException)
 {
-    Console.Error.WriteLine($"Cryptographic error: {ex.Message}");
+    Console.Error.WriteLine("Cryptographic operation failed. Verify the private key and try again.");
     return 1;
 }
-catch (JsonException ex)
+catch (JsonException)
 {
-    Console.Error.WriteLine($"Invalid JSON: {ex.Message}");
+    Console.Error.WriteLine("Manifest JSON is invalid. Check the manifest file.");
     return 1;
 }
-catch (Exception ex)
+catch (Exception)
 {
-    Console.Error.WriteLine(ex.Message);
+    Console.Error.WriteLine("Signing failed. Check the manifest fields and private key.");
     return 1;
 }
 
