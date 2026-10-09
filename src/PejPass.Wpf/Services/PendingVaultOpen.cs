@@ -178,12 +178,12 @@ internal static class PendingVaultOpen
             catch (IOException)
             {
                 if (!ct.IsCancellationRequested)
-                    await Task.Delay(50, ct).ConfigureAwait(false);
+                    await Task.Delay(50).ConfigureAwait(false);
             }
             catch (UnauthorizedAccessException)
             {
                 if (!ct.IsCancellationRequested)
-                    await Task.Delay(100, ct).ConfigureAwait(false);
+                    await Task.Delay(100).ConfigureAwait(false);
             }
         }
     }
