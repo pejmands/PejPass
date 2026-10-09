@@ -80,6 +80,7 @@ public sealed class UpdateManifestValidationTests
         var longNotes = Enumerable.Repeat(new string('x', 3_600), 100).ToList();
         var manifest = new UpdateManifest
         {
+            Version = "1.2.0",
             Notes = new UpdateNotes
             {
                 Added = longNotes,
