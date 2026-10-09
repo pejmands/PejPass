@@ -14,6 +14,18 @@ public partial class HistoryWindow : Window
 
         DataContext = viewModel;
         KeyDown += OnKeyDown;
+        Closed += OnClosed;
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        Closed -= OnClosed;
+        KeyDown -= OnKeyDown;
+
+        if (DataContext is HistoryViewModel viewModel)
+            viewModel.Dispose();
+
+        DataContext = null;
     }
 
     private void OnKeyDown(object sender, KeyEventArgs e)
