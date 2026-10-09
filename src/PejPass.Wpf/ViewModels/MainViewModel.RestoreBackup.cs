@@ -68,11 +68,11 @@ public partial class MainViewModel
             }
             catch (System.Security.Cryptography.AuthenticationTagMismatchException)
             {
-                return "The password is incorrect, or the backup file is damaged.";
+                return VaultErrorMessages.ForBackupOpen(new System.Security.Cryptography.AuthenticationTagMismatchException());
             }
             catch (Exception)
             {
-                return "Could not open the backup. Check the file and try again.";
+                return VaultErrorMessages.ForBackupOpen(new Exception());
             }
         };
 
