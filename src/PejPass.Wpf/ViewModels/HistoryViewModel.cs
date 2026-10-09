@@ -414,6 +414,8 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         if (vault is null)
             return;
 
+        var sessionGeneration = _vaultSession.Generation;
+
         var entry = vault.FindEntry(
             SelectedItem.EntryId);
 
@@ -481,12 +483,15 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         }
         catch (Exception)
         {
-            _vaultSession.Vault!.RestoreSnapshot(snapshot);
-            Load();
+            if (_vaultSession.IsCurrent(sessionGeneration, vault))
+            {
+                vault.RestoreSnapshot(snapshot);
+                Load();
 
-            DialogService.Error(
-                "Failed to save the restored fields. Please try again.",
-                "Restore history");
+                DialogService.Error(
+                    "Failed to save the restored fields. Please try again.",
+                    "Restore history");
+            }
 
             return;
         }
@@ -495,6 +500,9 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         {
             IsBusy = false;
         }
+
+        if (!_vaultSession.IsCurrent(sessionGeneration, vault))
+            return;
 
         Load();
 
@@ -615,8 +623,10 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
     private async Task<bool> SaveAsync(Vault snapshot, string actionTitle)
     {
         var path = _vaultSession.VaultPath;
+        var vault = _vaultSession.Vault;
+        var sessionGeneration = _vaultSession.Generation;
 
-        if (string.IsNullOrEmpty(path))
+        if (string.IsNullOrEmpty(path) || vault is null)
             return false;
 
         try
@@ -625,18 +635,21 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             await _vaultService.SaveVaultAsync(
                 path,
                 keyMaterial,
-                _vaultSession.Vault!);
+                vault);
 
-            return true;
+            return _vaultSession.IsCurrent(sessionGeneration, vault);
         }
         catch (Exception)
         {
-            _vaultSession.Vault!.RestoreSnapshot(snapshot);
-            Load();
+            if (_vaultSession.IsCurrent(sessionGeneration, vault))
+            {
+                vault.RestoreSnapshot(snapshot);
+                Load();
 
-            DialogService.Error(
-                "Failed to save the history changes. Please try again.",
-                actionTitle);
+                DialogService.Error(
+                    "Failed to save the history changes. Please try again.",
+                    actionTitle);
+            }
 
             return false;
         }
