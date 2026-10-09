@@ -6,7 +6,10 @@ public sealed class WpfClipboardProvider : IClipboardProvider
 {
     public void SetText(string text)
     {
-        Clipboard.SetText(text);
+        var data = new DataObject();
+        data.SetData(DataFormats.UnicodeText, text);
+        data.SetData("ExcludeClipboardContentFromMonitorProcessing", true);
+        Clipboard.SetDataObject(data, copy: true);
     }
 
     public bool ContainsText()
