@@ -50,6 +50,27 @@ public sealed class VaultSessionTests
         Assert.True(session.IsCurrent(session.Generation, replacementVault));
     }
 
+    [Fact]
+    public void UpdatingKeyMaterialInvalidatesPreviouslyCapturedSession()
+    {
+        using var session = new VaultSession();
+        using var originalMaterial = CreateMaterial();
+        using var replacementMaterial = CreateMaterial();
+        var vault = new Vault();
+
+        session.Open(
+            vault,
+            Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"),
+            originalMaterial);
+
+        var generation = session.Generation;
+
+        Assert.True(session.TryUpdateKeyMaterial(replacementMaterial));
+
+        Assert.False(session.IsCurrent(generation, vault));
+        Assert.True(session.IsCurrent(session.Generation, vault));
+    }
+
     private static VaultKeyMaterial CreateMaterial()
     {
         var key = new byte[32];
