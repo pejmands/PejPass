@@ -34,6 +34,123 @@ public sealed class VaultStore(
     private const int TagLength = 16;
     private const long MaxVaultFileBytes = 128L * 1024 * 1024;
 
+    private const int MaxVaultEntries = 100_000;
+    private const int MaxVaultHistoryItems = 1_000_000;
+    private const int MaxCollectionItemsPerEntry = 256;
+    private const int MaxTextCharacters = 1_048_576;
+    private const int MaxTagCharacters = 4_096;
+
+    private static void ValidateVaultStructure(Vault vault)
+    {
+        if (vault.Entries is null || vault.Trash is null || vault.History is null)
+            throw new InvalidDataException("Vault contains a missing required collection.");
+
+        if (vault.Entries.Count + vault.Trash.Count > MaxVaultEntries)
+            throw new InvalidDataException($"Vault exceeds the limit of {MaxVaultEntries} active and trashed entries.");
+
+        if (vault.History.Count > MaxVaultHistoryItems)
+            throw new InvalidDataException($"Vault exceeds the limit of {MaxVaultHistoryItems} history items.");
+
+        ValidateText(vault.Name, "vault name");
+
+        foreach (var entry in vault.Entries)
+            ValidateEntry(entry);
+
+        foreach (var trashedEntry in vault.Trash)
+        {
+            if (trashedEntry?.Entry is null)
+                throw new InvalidDataException("Vault contains an invalid trash entry.");
+
+            ValidateEntry(trashedEntry.Entry);
+        }
+
+        foreach (var history in vault.History)
+        {
+            if (history is null)
+                throw new InvalidDataException("Vault contains an invalid history item.");
+
+            ValidateText(history.Title, "history title");
+            ValidateText(history.Username, "history username");
+            ValidateText(history.Password, "history password");
+            ValidateText(history.Url, "history URL");
+            ValidateText(history.TotpSecret, "history TOTP secret");
+            ValidateText(history.Notes, "history notes");
+            ValidateTags(history.Tags);
+            ValidateCustomFields(history.CustomFields);
+        }
+    }
+
+    private static void ValidateEntry(VaultEntry? entry)
+    {
+        if (entry is null)
+            throw new InvalidDataException("Vault contains an invalid entry.");
+
+        ValidateText(entry.Title, "entry title");
+        ValidateText(entry.Username, "entry username");
+        ValidateText(entry.Password, "entry password");
+        ValidateText(entry.Url, "entry URL");
+        ValidateText(entry.TotpSecret, "entry TOTP secret");
+        ValidateText(entry.Notes, "entry notes");
+        ValidateTags(entry.Tags);
+        ValidateCustomFields(entry.CustomFields);
+
+        if (entry.PasswordHistory is null || entry.UsernameHistory is null)
+            throw new InvalidDataException("Vault entry contains a missing history collection.");
+
+        if (entry.PasswordHistory.Count > VaultEntry.MaxPasswordHistory ||
+            entry.UsernameHistory.Count > VaultEntry.MaxUsernameHistory)
+            throw new InvalidDataException("Vault entry exceeds the supported credential history limit.");
+
+        foreach (var item in entry.PasswordHistory)
+        {
+            if (item is null)
+                throw new InvalidDataException("Vault entry contains an invalid password history item.");
+
+            ValidateText(item.Password, "historical password");
+        }
+
+        foreach (var item in entry.UsernameHistory)
+        {
+            if (item is null)
+                throw new InvalidDataException("Vault entry contains an invalid username history item.");
+
+            ValidateText(item.Username, "historical username");
+        }
+    }
+
+    private static void ValidateTags(List<string>? tags)
+    {
+        if (tags is null || tags.Count > MaxCollectionItemsPerEntry)
+            throw new InvalidDataException("Vault contains an invalid or oversized tag collection.");
+
+        foreach (var tag in tags)
+        {
+            if (tag is null || tag.Length > MaxTagCharacters)
+                throw new InvalidDataException("Vault contains an invalid or oversized tag.");
+        }
+    }
+
+    private static void ValidateCustomFields(List<CustomField>? fields)
+    {
+        if (fields is null || fields.Count > MaxCollectionItemsPerEntry)
+            throw new InvalidDataException("Vault contains an invalid or oversized custom-field collection.");
+
+        foreach (var field in fields)
+        {
+            if (field is null)
+                throw new InvalidDataException("Vault contains an invalid custom field.");
+
+            ValidateText(field.Name, "custom-field name");
+            ValidateText(field.Value, "custom-field value");
+        }
+    }
+
+    private static void ValidateText(string? value, string fieldName)
+    {
+        if (value is null || value.Length > MaxTextCharacters)
+            throw new InvalidDataException($"Vault contains an invalid or oversized {fieldName}.");
+    }
+
     private readonly ICryptoService _crypto = crypto;
     private readonly IFileMover _fileMover = fileMover;
 
@@ -306,6 +423,8 @@ public sealed class VaultStore(
                     plaintext = _crypto.Decrypt(ciphertext, nonce, tag, key, associatedData);
                     vault = JsonSerializer.Deserialize<Vault>(plaintext)
                             ?? throw new InvalidDataException("Vault data is corrupted.");
+
+                    ValidateVaultStructure(vault);
 
                     if (versionValue == CurrentVersion &&
                         vault.KdfParameters != kdfParameters)
