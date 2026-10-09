@@ -72,15 +72,4 @@ public sealed partial class CsvExportService
         }
     }
 
-    private static void TryDeleteTemporaryFile(string path)
-    {
-        try
-        {
-            File.Delete(path);
-        }
-        catch
-        {
-            // Best-effort cleanup; never mask the original export error.
-        }
-    }
 }
