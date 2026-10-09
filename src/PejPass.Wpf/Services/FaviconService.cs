@@ -188,9 +188,6 @@ public static class FaviconService
         if (host is not null && Memory.TryGetValue(host, out var mem))
             return mem;
 
-        if (_onlineFetchingEnabled && host is not null && !IsFailedRecently(host) && !Memory.ContainsKey(host))
-            EnqueueDownload(host);
-
         var letterSource = !string.IsNullOrWhiteSpace(title) ? title : host ?? "?";
         return GetLetterAvatar(letterSource);
     }

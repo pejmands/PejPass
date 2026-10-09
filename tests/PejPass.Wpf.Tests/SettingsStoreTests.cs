@@ -148,13 +148,14 @@ public sealed class SettingsStoreTests : IDisposable
 
         Directory.CreateDirectory(directory);
 
+        var now = DateTime.UtcNow;
         var oldFile = Path.Combine(
             directory,
-            "settings.corrupt-20250101-120000.json");
+            $"settings.corrupt-{now.AddDays(-91):yyyyMMdd-HHmmss}.json");
 
         var recentFile = Path.Combine(
             directory,
-            "settings.corrupt-20260901-120000.json");
+            $"settings.corrupt-{now.AddDays(-2):yyyyMMdd-HHmmss}.json");
 
         try
         {
@@ -184,10 +185,11 @@ public sealed class SettingsStoreTests : IDisposable
 
         Directory.CreateDirectory(directory);
 
+        var firstDate = DateTime.UtcNow.Date;
         var files = Enumerable.Range(1, 7)
             .Select(i => Path.Combine(
                 directory,
-                $"settings.corrupt-2026090{i}-000000.json"))
+                $"settings.corrupt-{firstDate.AddDays(i):yyyyMMdd}-000000.json"))
             .ToList();
 
         try

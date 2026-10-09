@@ -11,6 +11,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using System.Collections.Specialized;
 
 namespace PejPass.Wpf;
 
@@ -32,6 +33,7 @@ public partial class MainWindow : Window
     /// Prevents minimize-to-tray from cancelling that transition.
     /// </summary>
     private bool _allowClose;
+    private NotifyCollectionChangedEventHandler? _entriesCollectionChangedHandler;
 
     public MainWindow(MainViewModel viewModel, VaultSession vaultSession)
     {
@@ -45,6 +47,10 @@ public partial class MainWindow : Window
         _snackbarTimer.Tick += (_, _) => HideSnackbar();
         SnackbarService.Shown += OnSnackbarShown;
 
+
+        _entriesCollectionChangedHandler = (_, _) =>
+            FaviconService.Prefetch(viewModel.Entries.Select(e => (e.Url, e.Title)));
+        viewModel.Entries.CollectionChanged += _entriesCollectionChangedHandler;
 
         viewModel.PropertyChanged += (_, e) =>
         {
@@ -106,6 +112,9 @@ public partial class MainWindow : Window
 
         Closed += (_, _) =>
         {
+            if (_entriesCollectionChangedHandler is not null)
+                viewModel.Entries.CollectionChanged -= _entriesCollectionChangedHandler;
+
             FaviconService.OnlineFetchingChanged -= OnOnlineFetchingChanged;
             SnackbarService.Shown -= OnSnackbarShown;
 
