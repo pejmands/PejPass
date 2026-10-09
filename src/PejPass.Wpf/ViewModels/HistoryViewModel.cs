@@ -613,21 +613,26 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
 
     private async Task<bool> EnsureVaultWritableAsync()
     {
+        var vault = _vaultSession.Vault;
+        var sessionGeneration = _vaultSession.Generation;
         var path = _vaultSession.VaultPath;
 
-        if (string.IsNullOrEmpty(path))
+        if (vault is null || string.IsNullOrEmpty(path))
             return false;
 
         try
         {
             await _vaultService.EnsureVaultWritableAsync(path);
-            return true;
+            return _vaultSession.IsCurrent(sessionGeneration, vault);
         }
         catch (Exception)
         {
-            DialogService.Error(
-                "The vault cannot be modified right now. Check file permissions and try again.",
-                "Vault unavailable");
+            if (_vaultSession.IsCurrent(sessionGeneration, vault))
+            {
+                DialogService.Error(
+                    "The vault cannot be modified right now. Check file permissions and try again.",
+                    "Vault unavailable");
+            }
 
             return false;
         }
