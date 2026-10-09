@@ -18,8 +18,10 @@ public partial class MainViewModel
     {
         var currentPath = _vaultSession.VaultPath;
         var currentVault = _vaultSession.Vault;
+        var operationGeneration = _vaultSession.Generation;
 
-        if (string.IsNullOrEmpty(currentPath) || currentVault is null)
+        if (string.IsNullOrEmpty(currentPath) || currentVault is null ||
+            !_vaultSession.IsCurrent(operationGeneration, currentVault))
         {
             DialogService.Warning("No vault is open.", "Restore Backup");
             return;
@@ -79,6 +81,9 @@ public partial class MainViewModel
         if (prompt.ShowDialog() != true || backupVault is null)
             return;
 
+        if (!_vaultSession.IsCurrent(operationGeneration, currentVault))
+            return;
+
         StatusMessage = "Backup opened successfully.";
 
         var entryCount = backupVault.Entries.Count;
@@ -98,6 +103,9 @@ public partial class MainViewModel
             primaryText: "Replace",
             secondaryText: "Merge",
             tertiaryText: "Cancel");
+
+        if (!_vaultSession.IsCurrent(operationGeneration, currentVault))
+            return;
 
         if (choice == AppDialogResult.Tertiary || choice == AppDialogResult.None)
         {
@@ -126,7 +134,9 @@ public partial class MainViewModel
                     return;
                 }
 
-                if (!await EnsureVaultWritableAsync())
+                if (!_vaultSession.IsCurrent(operationGeneration, currentVault) ||
+                    !await EnsureVaultWritableAsync() ||
+                    !_vaultSession.IsCurrent(operationGeneration, currentVault))
                     return;
 
                 var snapshot = currentVault.CreateSnapshot();
@@ -151,9 +161,9 @@ public partial class MainViewModel
 
                 SelectedEntry = null;
                 ApplyFilter(preserveSelectionId: null);
-                if (!await SaveVaultAsync())
+                if (!await SaveVaultAsync(currentVault, operationGeneration))
                 {
-                    RestoreVaultSnapshot(snapshot);
+                    RestoreVaultSnapshot(snapshot, currentVault);
                     return;
                 }
 
@@ -166,7 +176,9 @@ public partial class MainViewModel
             }
             else
             {
-                if (!await EnsureVaultWritableAsync())
+                if (!_vaultSession.IsCurrent(operationGeneration, currentVault) ||
+                    !await EnsureVaultWritableAsync() ||
+                    !_vaultSession.IsCurrent(operationGeneration, currentVault))
                     return;
 
                 var snapshot = currentVault.CreateSnapshot();
@@ -254,9 +266,9 @@ public partial class MainViewModel
 
                 SelectedEntry = null;
                 ApplyFilter(preserveSelectionId: null);
-                if (!await SaveVaultAsync())
+                if (!await SaveVaultAsync(currentVault, operationGeneration))
                 {
-                    RestoreVaultSnapshot(snapshot);
+                    RestoreVaultSnapshot(snapshot, currentVault);
                     return;
                 }
 
