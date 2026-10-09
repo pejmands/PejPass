@@ -1,10 +1,12 @@
 using PejPass.Domain.Entities;
+using PejPass.Wpf.Controls;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -15,7 +17,10 @@ public partial class EntryEditorWindow : Window
 {
     public VaultEntry? Result { get; private set; }
 
+    public void ClearSensitiveResult() => Result = null;
+
     private readonly Func<VaultEntry, bool>? _isDuplicate;
+    private bool _isClosing;
 
     public EntryEditorWindow(
         EntryEditorViewModel viewModel,
@@ -122,7 +127,7 @@ public partial class EntryEditorWindow : Window
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (sender is not EntryEditorViewModel vm)
+        if (_isClosing || sender is not EntryEditorViewModel vm)
             return;
 
         if (e.PropertyName == nameof(EntryEditorViewModel.Password) &&
@@ -140,7 +145,7 @@ public partial class EntryEditorWindow : Window
 
     private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
-        if (DataContext is EntryEditorViewModel vm &&
+        if (!_isClosing && DataContext is EntryEditorViewModel vm &&
             vm.Password != PasswordBox.Password)
         {
             vm.Password = PasswordBox.Password;
@@ -149,7 +154,7 @@ public partial class EntryEditorWindow : Window
 
     private void TotpSecretBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
-        if (DataContext is EntryEditorViewModel vm &&
+        if (!_isClosing && DataContext is EntryEditorViewModel vm &&
             vm.TotpSecret != TotpSecretBox.Password)
         {
             vm.TotpSecret = TotpSecretBox.Password;
@@ -158,8 +163,27 @@ public partial class EntryEditorWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        if (DataContext is EntryEditorViewModel vm)
-            vm.PropertyChanged -= ViewModel_PropertyChanged;
+        _isClosing = true;
+
+        var viewModel = DataContext as EntryEditorViewModel;
+        var secretCustomFieldValues = viewModel?.CustomFields
+            .Where(field => field.IsSecret)
+            .Select(field => (Field: field, field.Value))
+            .ToArray() ?? [];
+
+        viewModel?.PropertyChanged -= ViewModel_PropertyChanged;
+
+        foreach (var passwordBox in FindVisualChildren<PasswordRevealBox>(this))
+        {
+            BindingOperations.ClearBinding(passwordBox, PasswordRevealBox.PasswordProperty);
+            passwordBox.Clear();
+        }
+
+        // Keep the view-model values until the caller completes the sensitive-change audit.
+        foreach (var (field, value) in secretCustomFieldValues)
+            field.Value = value;
+
+        DataContext = null;
 
         if (_tagCaseWarningAdorner is not null)
         {

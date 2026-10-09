@@ -46,8 +46,7 @@ public partial class LoginWindow : Window
 
         viewModel.RequestClose += (_, _) =>
         {
-            MasterPasswordBox.Clear();
-            ConfirmMasterPasswordBox.Clear();
+            ClearPasswordInputs();
 
             var main = App.Services.GetRequiredService<MainWindow>();
 
@@ -72,6 +71,8 @@ public partial class LoginWindow : Window
         {
             if (_allowClose)
                 return;
+
+            ClearPasswordInputs();
 
             if (_settings.CloseToSystemTray)
             {
@@ -378,9 +379,11 @@ public partial class LoginWindow : Window
     {
         MasterPasswordBox.Clear();
         ConfirmMasterPasswordBox.Clear();
-
         MasterPasswordBox.IsRevealed = false;
         ConfirmMasterPasswordBox.IsRevealed = false;
+
+        if (DataContext is LoginViewModel viewModel)
+            viewModel.ClearSensitiveInputs();
     }
 
     private void VaultMode_Checked(object sender, RoutedEventArgs e)
