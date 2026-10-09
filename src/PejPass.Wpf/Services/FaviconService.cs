@@ -579,10 +579,7 @@ public static class FaviconService
         }
     }
 
-    // TODO(security): Prevent favicon cache filenames from revealing vault domains through
-    // dictionary attacks against the SHA-256(host) cache key.
-    // TODO(security): Encrypt favicon bytes stored on disk so the cache cannot be used
-    // to identify vault domains by inspecting the cached images.
+    // Cache storage privacy is implemented by HMAC-derived names and authenticated encryption.
     private static string CachePath(string host) =>
         PathCache.GetOrAdd(host, static h =>
         {
