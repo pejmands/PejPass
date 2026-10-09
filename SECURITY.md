@@ -1,5 +1,11 @@
 # Security Notes
 
+## Favicon cache privacy
+
+Favicon cache filenames use HMAC-SHA-256 with a random per-user key protected by Windows DPAPI (`CurrentUser`). Cached image bytes are encrypted with AES-256-GCM using a fresh nonce and the normalized host as authenticated associated data. Invalid or mismatched cache files are rejected. The protected key is stored outside the favicon image directory.
+
+On startup, legacy cache files using the old SHA-256 filenames are deleted instead of migrated. The cache is disposable and can be downloaded again. DPAPI protects data at rest but is not a boundary against code running as the same Windows user.
+
 ## Windows Hello session cache
 
 Windows Hello is an interactive verification step before PejPass restores a master password protected with Windows DPAPI using the current-user scope. It is not itself the encryption key for the vault or a cryptographic key that directly protects the cached password. DPAPI and the timeout reduce exposure, but code running as the same Windows user may be able to unprotect data it can access.

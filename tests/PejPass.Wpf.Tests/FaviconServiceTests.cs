@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using PejPass.Wpf.Services;
 using System.Collections.Concurrent;
 using System.IO;
@@ -38,6 +40,21 @@ public sealed class FaviconServiceTests
 
     private static readonly MethodInfo CachePathMethod =
         typeof(FaviconService).GetMethod("CachePath", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly FieldInfo CacheMasterKeyField =
+        typeof(FaviconService).GetField("CacheMasterKey", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly MethodInfo EncryptCacheBytesMethod =
+        typeof(FaviconService).GetMethod("EncryptCacheBytes", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly MethodInfo TryDecryptCacheBytesMethod =
+        typeof(FaviconService).GetMethod("TryDecryptCacheBytes", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly MethodInfo CreateCachePathMethod =
+        typeof(FaviconService).GetMethod("CreateCachePath", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly MethodInfo PruneLegacyDiskCacheMethod =
+        typeof(FaviconService).GetMethod("PruneLegacyDiskCache", BindingFlags.NonPublic | BindingFlags.Static)!;
 
     private static readonly FieldInfo FailedField =
         typeof(FaviconService).GetField("Failed", BindingFlags.NonPublic | BindingFlags.Static)!;
@@ -343,7 +360,7 @@ public sealed class FaviconServiceTests
         var cachePath = (string)CachePathMethod.Invoke(null, [host])!;
 
         Directory.CreateDirectory(cacheDir);
-        await File.WriteAllBytesAsync(cachePath, TinyPng, TestContext.Current.CancellationToken);
+        await WriteEncryptedCacheFileAsync(host, cachePath);
 
         try
         {
@@ -411,6 +428,89 @@ public sealed class FaviconServiceTests
     }
 
     [Fact]
+    public void CachePath_UsesHmacAndIsStable()
+    {
+        const string host = "example.com";
+        var masterKey = GetCacheMasterKey();
+        var first = (string)CreateCachePathMethod.Invoke(null, [host, masterKey])!;
+        var second = (string)CreateCachePathMethod.Invoke(null, [host, masterKey])!;
+        var plainHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(host))).ToLowerInvariant();
+
+        Assert.Equal(first, second);
+        Assert.StartsWith("v2-", Path.GetFileName(first));
+        Assert.DoesNotContain(plainHash, first, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DiskCacheMigration_DeletesLegacyNamesAndKeepsVersionedFiles()
+    {
+        var directory = CreateTempDirectory();
+        var legacyPath = Path.Combine(directory, new string('a', 64) + ".bin");
+        var currentPath = Path.Combine(directory, "v2-" + new string('b', 64) + ".bin");
+
+        try
+        {
+            File.WriteAllBytes(legacyPath, [1, 2, 3]);
+            File.WriteAllBytes(currentPath, [4, 5, 6]);
+
+            PruneLegacyDiskCacheMethod.Invoke(null, [directory]);
+
+            Assert.False(File.Exists(legacyPath));
+            Assert.True(File.Exists(currentPath));
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
+    public void DiskCacheEncryption_RoundTripsAndUsesFreshNonce()
+    {
+        const string host = "example.com";
+        var masterKey = GetCacheMasterKey();
+        var first = (byte[])EncryptCacheBytesMethod.Invoke(null, [host, TinyPng, masterKey])!;
+        var second = (byte[])EncryptCacheBytesMethod.Invoke(null, [host, TinyPng, masterKey])!;
+        var decrypted = (byte[]?)TryDecryptCacheBytesMethod.Invoke(null, [host, first, masterKey]);
+
+        Assert.False(TinyPng.SequenceEqual(first));
+        Assert.False(first.SequenceEqual(second));
+        Assert.Equal(TinyPng, decrypted);
+    }
+
+    [Fact]
+    public void DiskCacheEncryption_RejectsTamperedDataAndWrongHost()
+    {
+        const string host = "example.com";
+        var masterKey = GetCacheMasterKey();
+        var encrypted = (byte[])EncryptCacheBytesMethod.Invoke(null, [host, TinyPng, masterKey])!;
+        encrypted[^1] ^= 0x40;
+
+        Assert.Null(TryDecryptCacheBytesMethod.Invoke(null, [host, encrypted, masterKey]));
+        var valid = (byte[])EncryptCacheBytesMethod.Invoke(null, [host, TinyPng, masterKey])!;
+        Assert.Null(TryDecryptCacheBytesMethod.Invoke(null, ["other.example", valid, masterKey]));
+    }
+
+    private static byte[] GetCacheMasterKey()
+    {
+        var lazy = CacheMasterKeyField.GetValue(null)!;
+        return (byte[])lazy.GetType().GetProperty("Value")!.GetValue(lazy)!;
+    }
+
+    private static async Task WriteEncryptedCacheFileAsync(string host, string path)
+    {
+        var encrypted = (byte[])EncryptCacheBytesMethod.Invoke(null, [host, TinyPng, GetCacheMasterKey()])!;
+        try
+        {
+            await File.WriteAllBytesAsync(path, encrypted, TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(encrypted);
+        }
+    }
+
+    [Fact]
     public void RecentFailure_BlocksRetry()
     {
         const string host = "recent-failure.example";
@@ -458,7 +558,7 @@ public sealed class FaviconServiceTests
         var originalCleanupTask = (Task)StartupCleanupTaskField.GetValue(null)!;
 
         Directory.CreateDirectory(cacheDir);
-        await File.WriteAllBytesAsync(cachePath, TinyPng, TestContext.Current.CancellationToken);
+        await WriteEncryptedCacheFileAsync(host, cachePath);
         memory.TryRemove(host, out _);
         StartupCleanupTaskField.SetValue(null, cleanupReleased.Task);
 
@@ -496,7 +596,7 @@ public sealed class FaviconServiceTests
         var originalCleanupTask = (Task)StartupCleanupTaskField.GetValue(null)!;
 
         Directory.CreateDirectory(cacheDir);
-        await File.WriteAllBytesAsync(cachePath, TinyPng, TestContext.Current.CancellationToken);
+        await WriteEncryptedCacheFileAsync(host, cachePath);
         memory.TryRemove(host, out _);
         ConfigureOnlineFetching(true);
         StartupCleanupTaskField.SetValue(null, cleanupReleased.Task);
@@ -538,7 +638,7 @@ public sealed class FaviconServiceTests
         var cachePath = (string)CachePathMethod.Invoke(null, [host])!;
 
         Directory.CreateDirectory(cacheDir);
-        await File.WriteAllBytesAsync(cachePath, TinyPng, TestContext.Current.CancellationToken);
+        await WriteEncryptedCacheFileAsync(host, cachePath);
         MarkFailedMethod.Invoke(null, [host]);
 
         try
