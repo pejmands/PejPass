@@ -288,7 +288,10 @@ public partial class MainViewModel : ObservableObject
     private async Task LoadVaultAsync()
     {
         var vault = _vaultSession.Vault;
-        if (vault is null)
+        var sessionGeneration = _vaultSession.Generation;
+        var vaultPath = _vaultSession.VaultPath;
+
+        if (vault is null || !_vaultSession.IsCurrent(sessionGeneration, vault))
             return;
 
         VaultName = vault.Name;
@@ -303,8 +306,12 @@ public partial class MainViewModel : ObservableObject
         ApplyFilter(preserveSelectionId: null);
         UpdateEntryStatus(purged > 0 ? $"purged {purged} expired trash item(s)" : null);
 
-        if (purged == 0 || string.IsNullOrEmpty(_vaultSession.VaultPath))
+        if (purged == 0 ||
+            string.IsNullOrEmpty(vaultPath) ||
+            !_vaultSession.IsCurrent(sessionGeneration, vault))
+        {
             return;
+        }
 
         var ownsBusyState = !IsBusy;
 
@@ -318,15 +325,18 @@ public partial class MainViewModel : ObservableObject
 
             using var keyMaterial = _vaultSession.CopyKeyMaterial();
             await _vaultService.SaveVaultAsync(
-                _vaultSession.VaultPath,
+                vaultPath,
                 keyMaterial,
                 vault);
         }
         catch (Exception)
         {
-            DialogService.Error(
-                "Failed to save expired trash cleanup. Please try again.",
-                "Save failed");
+            if (_vaultSession.IsCurrent(sessionGeneration, vault))
+            {
+                DialogService.Error(
+                    "Failed to save expired trash cleanup. Please try again.",
+                    "Save failed");
+            }
         }
         finally
         {
@@ -1524,21 +1534,26 @@ public partial class MainViewModel : ObservableObject
 
     private async Task<bool> EnsureVaultWritableAsync()
     {
+        var vault = _vaultSession.Vault;
+        var sessionGeneration = _vaultSession.Generation;
         var path = _vaultSession.VaultPath;
 
-        if (string.IsNullOrEmpty(path))
+        if (vault is null || string.IsNullOrEmpty(path))
             return false;
 
         try
         {
             await _vaultService.EnsureVaultWritableAsync(path);
-            return true;
+            return _vaultSession.IsCurrent(sessionGeneration, vault);
         }
         catch (Exception)
         {
-            DialogService.Error(
-                "The vault cannot be modified right now. Check file permissions and try again.",
-                "Vault unavailable");
+            if (_vaultSession.IsCurrent(sessionGeneration, vault))
+            {
+                DialogService.Error(
+                    "The vault cannot be modified right now. Check file permissions and try again.",
+                    "Vault unavailable");
+            }
 
             return false;
         }
