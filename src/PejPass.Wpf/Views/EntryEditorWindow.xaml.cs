@@ -17,6 +17,8 @@ public partial class EntryEditorWindow : Window
 {
     public VaultEntry? Result { get; private set; }
 
+    public void ClearSensitiveResult() => Result = null;
+
     private readonly Func<VaultEntry, bool>? _isDuplicate;
     private bool _isClosing;
 
