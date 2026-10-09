@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using PejPass.Application.Interfaces;
+using PejPass.Application.Security;
 using PejPass.Application.Services;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Settings;
@@ -314,9 +315,10 @@ public partial class MainViewModel : ObservableObject
                 BusyMessage = "Saving vault...";
             }
 
+            using var keyMaterial = _vaultSession.CopyKeyMaterial();
             await _vaultService.SaveVaultAsync(
                 _vaultSession.VaultPath,
-                _vaultSession.GetSecret(),
+                keyMaterial,
                 vault);
         }
         catch (Exception)
@@ -1400,9 +1402,10 @@ public partial class MainViewModel : ObservableObject
             IsBusy = true;
             BusyMessage = "Exporting backup...";
 
+            using var keyMaterial = _vaultSession.CopyKeyMaterial();
             await _vaultService.SaveVaultAsync(
                 dlg.FileName,
-                _vaultSession.GetSecret(),
+                keyMaterial,
                 _vaultSession.Vault!);
 
             SnackbarService.Show("Encrypted backup exported.");
@@ -1510,11 +1513,16 @@ public partial class MainViewModel : ObservableObject
             BusyMessage = "Saving vault...";
         }
 
+        VaultKeyMaterial? keyMaterial = null;
+        var vaultPath = _vaultSession.VaultPath;
+
         try
         {
+            keyMaterial = _vaultSession.CopyKeyMaterial();
+
             await _vaultService.SaveVaultAsync(
-                _vaultSession.VaultPath!,
-                _vaultSession.GetSecret(),
+                vaultPath!,
+                keyMaterial,
                 _vaultSession.Vault!);
 
             return true;
@@ -1523,13 +1531,23 @@ public partial class MainViewModel : ObservableObject
         {
             try
             {
-                var vault = await _vaultService.OpenVaultAsync(
-                    _vaultSession.VaultPath!,
-                    _vaultSession.GetSecret());
+                if (keyMaterial is not null &&
+                    !string.IsNullOrWhiteSpace(vaultPath) &&
+                    _vaultSession.IsActive &&
+                    string.Equals(_vaultSession.VaultPath, vaultPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    var vault = await _vaultService.OpenVaultWithKeyAsync(
+                        vaultPath,
+                        keyMaterial);
 
-                _vaultSession.ReplaceVault(vault);
-                await LoadVaultAsync();
-                SelectedEntry = null;
+                    if (_vaultSession.IsActive &&
+                        string.Equals(_vaultSession.VaultPath, vaultPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _vaultSession.ReplaceVault(vault);
+                        await LoadVaultAsync();
+                        SelectedEntry = null;
+                    }
+                }
             }
             catch
             {
@@ -1544,6 +1562,7 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
+            keyMaterial?.Dispose();
             if (ownsBusyState)
                 IsBusy = false;
         }

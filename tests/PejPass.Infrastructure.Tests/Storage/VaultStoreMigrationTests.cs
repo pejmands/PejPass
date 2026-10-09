@@ -8,41 +8,26 @@ namespace PejPass.Infrastructure.Tests.Storage;
 public sealed class VaultStoreMigrationTests
 {
     [Fact]
-    public async Task OpenAsync_WhenVaultIsV1_MigratesItToV3()
+    public async Task OpenSessionAsync_WhenVaultIsV1_MigratesToV3AndPreservesSessionKey()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        var path = Path.Combine(
-            Path.GetTempPath(),
-            $"{Guid.NewGuid():N}.pejp");
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
 
         try
         {
-            var store = new VaultStore(
-                new CryptoService(),
-                new FileMover());
+            var store = new VaultStore(new CryptoService(), new FileMover());
+            var vault = new Vault { Name = "Legacy V1" };
 
-            var vault = new Vault();
+            await CreateLegacyV1VaultAsync(path, "password", vault, cancellationToken);
 
-            await CreateLegacyV1VaultAsync(
-                path,
-                "password",
-                vault,
-                cancellationToken);
+            using var session = await store.OpenSessionAsync(path, "password", cancellationToken);
+            Assert.Equal("Legacy V1", session.Vault.Name);
 
-            var opened = await store.OpenAsync(
-                path,
-                "password",
-                cancellationToken);
+            var data = await File.ReadAllBytesAsync(path, cancellationToken);
+            Assert.Equal(3, data[4]);
 
-            Assert.NotNull(opened);
-
-            var data = await File.ReadAllBytesAsync(
-                path,
-                cancellationToken);
-
-            Assert.Equal(
-                3,
-                data[4]);
+            var reopened = await store.OpenWithKeyAsync(path, session.KeyMaterial, cancellationToken);
+            Assert.Equal("Legacy V1", reopened.Name);
         }
         finally
         {
@@ -52,47 +37,29 @@ public sealed class VaultStoreMigrationTests
     }
 
     [Fact]
-    public async Task OpenAsync_WhenVaultIsV2_MigratesItToV3()
+    public async Task OpenSessionAsync_WhenVaultIsV2_MigratesToV3AndPreservesSessionKey()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        var path = Path.Combine(
-            Path.GetTempPath(),
-            $"{Guid.NewGuid():N}.pejp");
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
 
         try
         {
-            var store = new VaultStore(
-                new CryptoService(),
-                new FileMover());
+            var store = new VaultStore(new CryptoService(), new FileMover());
+            var vault = new Vault { Name = "Legacy V2" };
 
-            await CreateLegacyV2VaultAsync(
-                path,
-                "password",
-                new Vault(),
-                cancellationToken);
+            await CreateLegacyV2VaultAsync(path, "password", vault, cancellationToken);
 
-            var data = await File.ReadAllBytesAsync(
-                path,
-                cancellationToken);
+            var originalData = await File.ReadAllBytesAsync(path, cancellationToken);
+            Assert.Equal(2, originalData[4]);
 
-            Assert.Equal(
-                2,
-                data[4]);
+            using var session = await store.OpenSessionAsync(path, "password", cancellationToken);
+            Assert.Equal("Legacy V2", session.Vault.Name);
 
-            var opened = await store.OpenAsync(
-                path,
-                "password",
-                cancellationToken);
+            var migratedData = await File.ReadAllBytesAsync(path, cancellationToken);
+            Assert.Equal(3, migratedData[4]);
 
-            Assert.NotNull(opened);
-
-            var migratedData = await File.ReadAllBytesAsync(
-                path,
-                cancellationToken);
-
-            Assert.Equal(
-                3,
-                migratedData[4]);
+            var reopened = await store.OpenWithKeyAsync(path, session.KeyMaterial, cancellationToken);
+            Assert.Equal("Legacy V2", reopened.Name);
         }
         finally
         {

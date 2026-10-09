@@ -1,3 +1,4 @@
+using PejPass.Application.Security;
 using PejPass.Domain.Settings;
 using System.IO;
 using System.Security.Cryptography;
@@ -6,14 +7,10 @@ using System.Text;
 namespace PejPass.Wpf.Services;
 
 /// <summary>
-/// In-process DPAPI cache of the master password (CurrentUser scope).
+/// In-process DPAPI cache of derived vault key material (CurrentUser scope).
 /// The cache is bound to a vault path and expires according to AppSettings.
 /// The protected bytes are cleared on expiry, security lock, password change, or app exit.
 /// </summary>
-/// <remarks>
-/// ZeroMemory clears buffers owned by this service, but managed password strings and other
-/// copies may remain in process memory until the runtime reclaims them.
-/// </remarks>
 public sealed class SessionPasswordCache(AppSettings settings, TimeProvider timeProvider) : IDisposable
 {
     private const int MaxConsecutiveHelloFailures = 3;
@@ -53,10 +50,10 @@ public sealed class SessionPasswordCache(AppSettings settings, TimeProvider time
     }
 
     /// <summary>Call only after successful master-password authentication.</summary>
-    public void Store(string vaultPath, string password)
+    public void Store(string vaultPath, VaultKeyMaterial keyMaterial)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(vaultPath);
-        ArgumentException.ThrowIfNullOrEmpty(password);
+        ArgumentNullException.ThrowIfNull(keyMaterial);
 
         string fullPath;
         try { fullPath = Path.GetFullPath(vaultPath); }
@@ -66,13 +63,15 @@ public sealed class SessionPasswordCache(AppSettings settings, TimeProvider time
         {
             ThrowIfDisposed();
             ClearCore();
-            byte[]? passwordBytes = null;
+
+            byte[]? payload = null;
+            byte[]? entropy = null;
             try
             {
-                passwordBytes = Encoding.UTF8.GetBytes(password);
-                var entropy = Encoding.UTF8.GetBytes("PejPass.Session." + fullPath.ToLowerInvariant());
+                payload = keyMaterial.ToByteArray();
+                entropy = Encoding.UTF8.GetBytes("PejPass.Session." + fullPath.ToLowerInvariant());
                 _protected = ProtectedData.Protect(
-                    passwordBytes,
+                    payload,
                     optionalEntropy: entropy,
                     scope: DataProtectionScope.CurrentUser);
                 _vaultPath = fullPath;
@@ -80,18 +79,23 @@ public sealed class SessionPasswordCache(AppSettings settings, TimeProvider time
                 _consecutiveHelloFailures = 0;
                 ScheduleExpiryCore();
             }
-            catch { ClearCore(); }
+            catch
+            {
+                ClearCore();
+            }
             finally
             {
-                if (passwordBytes is not null)
-                    CryptographicOperations.ZeroMemory(passwordBytes);
+                if (payload is not null)
+                    CryptographicOperations.ZeroMemory(payload);
+                if (entropy is not null)
+                    CryptographicOperations.ZeroMemory(entropy);
             }
         }
     }
 
-    public bool TryRestore(string vaultPath, out string password)
+    public bool TryRestore(string vaultPath, out VaultKeyMaterial? keyMaterial)
     {
-        password = string.Empty;
+        keyMaterial = null;
         if (!HasCacheFor(vaultPath))
             return false;
 
@@ -105,28 +109,36 @@ public sealed class SessionPasswordCache(AppSettings settings, TimeProvider time
             ExpireIfNeededCore();
             if (_protected is not { Length: > 0 } || _vaultPath is null ||
                 !string.Equals(fullPath, _vaultPath, StringComparison.OrdinalIgnoreCase))
+            {
                 return false;
+            }
 
-            byte[]? bytes = null;
+            byte[]? payload = null;
+            byte[]? entropy = null;
             try
             {
-                bytes = ProtectedData.Unprotect(
+                entropy = Encoding.UTF8.GetBytes("PejPass.Session." + fullPath.ToLowerInvariant());
+                payload = ProtectedData.Unprotect(
                     _protected,
-                    optionalEntropy: Encoding.UTF8.GetBytes("PejPass.Session." + fullPath.ToLowerInvariant()),
+                    optionalEntropy: entropy,
                     scope: DataProtectionScope.CurrentUser);
-                password = Encoding.UTF8.GetString(bytes);
-                return !string.IsNullOrEmpty(password);
+
+                keyMaterial = VaultKeyMaterial.FromByteArray(payload);
+                return true;
             }
             catch
             {
-                password = string.Empty;
+                keyMaterial?.Dispose();
+                keyMaterial = null;
                 ClearCore();
                 return false;
             }
             finally
             {
-                if (bytes is not null)
-                    CryptographicOperations.ZeroMemory(bytes);
+                if (payload is not null)
+                    CryptographicOperations.ZeroMemory(payload);
+                if (entropy is not null)
+                    CryptographicOperations.ZeroMemory(entropy);
             }
         }
     }

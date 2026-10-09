@@ -123,13 +123,15 @@ public partial class ChangeMasterPasswordViewModel(
         IsBusy = true;
         try
         {
-            await _vaultService.ChangeMasterPasswordAsync(
+            using var currentKeyMaterial = _vaultSession.CopyKeyMaterial();
+            using var newKeyMaterial = await _vaultService.ChangeMasterPasswordAsync(
                 path,
                 CurrentPassword,
                 NewPassword,
-                vault);
+                vault,
+                currentKeyMaterial);
 
-            _vaultSession.UpdateSecret(NewPassword);
+            _vaultSession.TryUpdateKeyMaterial(newKeyMaterial);
             cache.Clear();
 
             Success = true;

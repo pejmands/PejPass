@@ -453,9 +453,10 @@ public partial class HistoryViewModel : ObservableObject
             IsBusy = true;
             BusyMessage = "Restoring history...";
 
+            using var keyMaterial = _vaultSession.CopyKeyMaterial();
             await _vaultService.SaveVaultAsync(
                 path,
-                _vaultSession.GetSecret(),
+                keyMaterial,
                 vault);
         }
         catch (Exception)
@@ -600,9 +601,10 @@ public partial class HistoryViewModel : ObservableObject
 
         try
         {
+            using var keyMaterial = _vaultSession.CopyKeyMaterial();
             await _vaultService.SaveVaultAsync(
                 path,
-                _vaultSession.GetSecret(),
+                keyMaterial,
                 _vaultSession.Vault!);
 
             return true;

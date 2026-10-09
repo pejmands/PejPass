@@ -8,7 +8,7 @@ On startup, legacy cache files using the old SHA-256 filenames are deleted inste
 
 ## Windows Hello session cache
 
-Windows Hello is an interactive verification step before PejPass restores a master password protected with Windows DPAPI using the current-user scope. It is not itself the encryption key for the vault or a cryptographic key that directly protects the cached password. DPAPI and the timeout reduce exposure, but code running as the same Windows user may be able to unprotect data it can access.
+Windows Hello is an interactive verification step before PejPass restores the vault's derived encryption key material protected with Windows DPAPI using the current-user scope. The cache includes the derived 256-bit key, its salt, and the KDF parameters; it does not cache the master password. The restored key material is accepted only when its metadata matches the vault header and authenticated decryption succeeds. DPAPI and the timeout reduce exposure, but code running as the same Windows user may be able to unprotect data it can access.
 
 The cache lifetime begins after successful master-password authentication. A Windows Hello unlock does not renew the lifetime. The cache is cleared when its timeout expires, Windows locks or suspends, Windows Hello is disabled, the master password changes, three consecutive completed Windows Hello verifications exhaust authentication retries, or the application exits. Cancelling the Hello prompt and system/unavailability errors do not count as authentication failures. A successful master-password authentication or Windows Hello verification resets the failure counter.
 
