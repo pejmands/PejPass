@@ -16,6 +16,9 @@ namespace PejPass.Wpf.Services;
 public sealed class UpdateService : IDisposable
 {
     private const long MaxUpdatePackageBytes = 512L * 1024 * 1024;
+    private const int MaxUpdateArchiveEntries = 4096;
+    private const long MaxUpdateUncompressedBytes = 1024L * 1024 * 1024;
+    private const long MaxUpdateEntryBytes = 256L * 1024 * 1024;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -198,7 +201,6 @@ public sealed class UpdateService : IDisposable
         {
         }
     }
-
     private static void WritePendingWhatsNew(string version)
     {
         try
@@ -230,8 +232,26 @@ public sealed class UpdateService : IDisposable
             Path.GetTempPath(),
             "PejPass-update-" + Guid.NewGuid().ToString("N"));
 
+        using (var archive = ZipFile.OpenRead(zipPath))
+            ValidateUpdateArchive(archive);
+
         Directory.CreateDirectory(stageRoot);
-        ZipFile.ExtractToDirectory(zipPath, stageRoot);
+        try
+        {
+            ZipFile.ExtractToDirectory(zipPath, stageRoot);
+        }
+        catch
+        {
+            try
+            {
+                Directory.Delete(stageRoot, recursive: true);
+            }
+            catch
+            {
+            }
+
+            throw;
+        }
 
         try
         {
@@ -283,6 +303,41 @@ public sealed class UpdateService : IDisposable
 
         System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             System.Windows.Application.Current.Shutdown());
+    }
+
+    internal static void ValidateUpdateArchive(
+        ZipArchive archive,
+        int maxEntries = MaxUpdateArchiveEntries,
+        long maxTotalUncompressedBytes = MaxUpdateUncompressedBytes,
+        long maxEntryUncompressedBytes = MaxUpdateEntryBytes)
+    {
+        ArgumentNullException.ThrowIfNull(archive);
+
+        if (maxEntries < 1)
+            throw new ArgumentOutOfRangeException(nameof(maxEntries));
+        if (maxTotalUncompressedBytes < 1)
+            throw new ArgumentOutOfRangeException(nameof(maxTotalUncompressedBytes));
+        if (maxEntryUncompressedBytes < 1)
+            throw new ArgumentOutOfRangeException(nameof(maxEntryUncompressedBytes));
+
+        if (archive.Entries.Count == 0)
+            throw new InvalidDataException("Update archive is empty.");
+
+        if (archive.Entries.Count > maxEntries)
+            throw new InvalidDataException("Update archive contains too many entries.");
+
+        long totalUncompressedBytes = 0;
+
+        foreach (var entry in archive.Entries)
+        {
+            if (entry.Length > maxEntryUncompressedBytes)
+                throw new InvalidDataException("Update archive contains an oversized entry.");
+
+            if (entry.Length > maxTotalUncompressedBytes - totalUncompressedBytes)
+                throw new InvalidDataException("Update archive exceeds the maximum uncompressed size.");
+
+            totalUncompressedBytes += entry.Length;
+        }
     }
 
     private static string ResolveExtractedPayloadRoot(string stageRoot)
@@ -398,7 +453,6 @@ public sealed class UpdateService : IDisposable
             return [];
 
         entries.Sort((a, b) => CompareVersionsDesc(a.Version, b.Version));
-
         var latestNorm = Normalize(entries[0].Version);
         var installedNorm = Normalize(installedVersion);
 
