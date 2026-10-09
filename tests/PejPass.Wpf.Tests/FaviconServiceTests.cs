@@ -5,7 +5,6 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -20,75 +19,6 @@ public sealed class FaviconServiceCollection
 [Collection(FaviconServiceCollection.Name)]
 public sealed class FaviconServiceTests
 {
-    private static readonly FieldInfo DownloadQueueField =
-        typeof(FaviconService).GetField("DownloadQueue", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly FieldInfo InFlightField =
-        typeof(FaviconService).GetField("InFlight", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly FieldInfo MemoryField =
-        typeof(FaviconService).GetField("Memory", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly FieldInfo MemoryEvictionQueueField =
-        typeof(FaviconService).GetField("MemoryEvictionQueue", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly MethodInfo SetMemoryMethod =
-        typeof(FaviconService).GetMethod("SetMemory", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly MethodInfo CreateBitmapMethod =
-        typeof(FaviconService).GetMethod("CreateBitmap", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly FieldInfo CacheDirField =
-        typeof(FaviconService).GetField("CacheDir", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly FieldInfo PathCacheField =
-        typeof(FaviconService).GetField("PathCache", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly MethodInfo CachePathMethod =
-        typeof(FaviconService).GetMethod("CachePath", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly FieldInfo CacheMasterKeyField =
-        typeof(FaviconService).GetField("CacheMasterKey", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly MethodInfo EncryptCacheBytesMethod =
-        typeof(FaviconService).GetMethod("EncryptCacheBytes", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly MethodInfo TryDecryptCacheBytesMethod =
-        typeof(FaviconService).GetMethod("TryDecryptCacheBytes", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly MethodInfo CreateCachePathMethod =
-        typeof(FaviconService).GetMethod("CreateCachePath", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly MethodInfo PruneLegacyDiskCacheMethod =
-        typeof(FaviconService).GetMethod("PruneLegacyDiskCache", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly FieldInfo FailedField =
-        typeof(FaviconService).GetField("Failed", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly MethodInfo IsFailedRecentlyMethod =
-        typeof(FaviconService).GetMethod("IsFailedRecently", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly MethodInfo MarkFailedMethod =
-        typeof(FaviconService).GetMethod("MarkFailed", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly MethodInfo DownloadOneMethod =
-        typeof(FaviconService).GetMethod("DownloadOneAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly MethodInfo WarmDiskThenDownloadMethod =
-        typeof(FaviconService).GetMethod("WarmDiskThenDownloadAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly FieldInfo StartupCleanupTaskField =
-        typeof(FaviconService).GetField("_startupCleanupTask", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly MethodInfo PruneDiskCacheMethod =
-        typeof(FaviconService).GetMethod("PruneDiskCache", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly MethodInfo PruneExpiredDiskCacheOncePerDayMethod =
-        typeof(FaviconService).GetMethod("PruneExpiredDiskCacheOncePerDay", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    private static readonly MethodInfo ReadContentBytesMethod =
-        typeof(FaviconService).GetMethod("ReadContentBytesAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
-
     private static readonly byte[] TinyPng =
         Convert.FromBase64String(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
@@ -383,10 +313,10 @@ public sealed class FaviconServiceTests
         ConfigureOnlineFetching(false);
         ClearPendingDownloads();
 
-        var cacheDir = (string)CacheDirField.GetValue(null)!;
-        var pathCache = (ConcurrentDictionary<string, string>)PathCacheField.GetValue(null)!;
-        var memory = (ConcurrentDictionary<string, System.Windows.Media.ImageSource>)MemoryField.GetValue(null)!;
-        var cachePath = (string)CachePathMethod.Invoke(null, [host])!;
+        var cacheDir = FaviconService.CacheDir;
+        var pathCache = FaviconService.PathCache;
+        var memory = FaviconService.Memory;
+        var cachePath = FaviconService.CachePath(host);
 
         Directory.CreateDirectory(cacheDir);
         await WriteEncryptedCacheFileAsync(host, cachePath);
@@ -427,7 +357,7 @@ public sealed class FaviconServiceTests
 
     private static async Task<byte[]?> ReadContentBytesAsync(HttpContent content)
     {
-        var task = (Task<byte[]?>)ReadContentBytesMethod.Invoke(null, [content])!;
+        var task = FaviconService.ReadContentBytesAsync(content);
         return await task;
     }
 
@@ -461,8 +391,8 @@ public sealed class FaviconServiceTests
     {
         const string host = "example.com";
         var masterKey = GetCacheMasterKey();
-        var first = (string)CreateCachePathMethod.Invoke(null, [host, masterKey])!;
-        var second = (string)CreateCachePathMethod.Invoke(null, [host, masterKey])!;
+        var first = FaviconService.CreateCachePath(host, masterKey);
+        var second = FaviconService.CreateCachePath(host, masterKey);
         var plainHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(host))).ToLowerInvariant();
 
         Assert.Equal(first, second);
@@ -482,7 +412,7 @@ public sealed class FaviconServiceTests
             File.WriteAllBytes(legacyPath, [1, 2, 3]);
             File.WriteAllBytes(currentPath, [4, 5, 6]);
 
-            PruneLegacyDiskCacheMethod.Invoke(null, [directory]);
+            FaviconService.PruneLegacyDiskCache(directory);
 
             Assert.False(File.Exists(legacyPath));
             Assert.True(File.Exists(currentPath));
@@ -498,9 +428,9 @@ public sealed class FaviconServiceTests
     {
         const string host = "example.com";
         var masterKey = GetCacheMasterKey();
-        var first = (byte[])EncryptCacheBytesMethod.Invoke(null, [host, TinyPng, masterKey])!;
-        var second = (byte[])EncryptCacheBytesMethod.Invoke(null, [host, TinyPng, masterKey])!;
-        var decrypted = (byte[]?)TryDecryptCacheBytesMethod.Invoke(null, [host, first, masterKey]);
+        var first = FaviconService.EncryptCacheBytes(host, TinyPng, masterKey);
+        var second = FaviconService.EncryptCacheBytes(host, TinyPng, masterKey);
+        var decrypted = FaviconService.TryDecryptCacheBytes(host, first, masterKey);
 
         Assert.False(TinyPng.SequenceEqual(first));
         Assert.False(first.SequenceEqual(second));
@@ -512,23 +442,19 @@ public sealed class FaviconServiceTests
     {
         const string host = "example.com";
         var masterKey = GetCacheMasterKey();
-        var encrypted = (byte[])EncryptCacheBytesMethod.Invoke(null, [host, TinyPng, masterKey])!;
+        var encrypted = FaviconService.EncryptCacheBytes(host, TinyPng, masterKey);
         encrypted[^1] ^= 0x40;
 
-        Assert.Null(TryDecryptCacheBytesMethod.Invoke(null, [host, encrypted, masterKey]));
-        var valid = (byte[])EncryptCacheBytesMethod.Invoke(null, [host, TinyPng, masterKey])!;
-        Assert.Null(TryDecryptCacheBytesMethod.Invoke(null, ["other.example", valid, masterKey]));
+        Assert.Null(FaviconService.TryDecryptCacheBytes(host, encrypted, masterKey));
+        var valid = FaviconService.EncryptCacheBytes(host, TinyPng, masterKey);
+        Assert.Null(FaviconService.TryDecryptCacheBytes("other.example", valid, masterKey));
     }
 
-    private static byte[] GetCacheMasterKey()
-    {
-        var lazy = CacheMasterKeyField.GetValue(null)!;
-        return (byte[])lazy.GetType().GetProperty("Value")!.GetValue(lazy)!;
-    }
+    private static byte[] GetCacheMasterKey() => FaviconService.CacheMasterKey.Value;
 
     private static async Task WriteEncryptedCacheFileAsync(string host, string path)
     {
-        var encrypted = (byte[])EncryptCacheBytesMethod.Invoke(null, [host, TinyPng, GetCacheMasterKey()])!;
+        var encrypted = FaviconService.EncryptCacheBytes(host, TinyPng, GetCacheMasterKey());
         try
         {
             await File.WriteAllBytesAsync(path, encrypted, TestContext.Current.CancellationToken);
@@ -544,11 +470,11 @@ public sealed class FaviconServiceTests
     {
         const string host = "recent-failure.example";
 
-        MarkFailedMethod.Invoke(null, [host]);
+        FaviconService.MarkFailed(host);
 
         try
         {
-            var isFailed = (bool)IsFailedRecentlyMethod.Invoke(null, [host])!;
+            var isFailed = (bool)FaviconService.IsFailedRecently(host);
             Assert.True(isFailed);
         }
         finally
@@ -565,7 +491,7 @@ public sealed class FaviconServiceTests
 
         try
         {
-            var isFailed = (bool)IsFailedRecentlyMethod.Invoke(null, [host])!;
+            var isFailed = (bool)FaviconService.IsFailedRecently(host);
             Assert.False(isFailed);
             Assert.False(GetFailed().ContainsKey(host));
         }
@@ -580,20 +506,20 @@ public sealed class FaviconServiceTests
     {
         const string host = "startup-cleanup-warm.example";
         var cleanupReleased = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var memory = (ConcurrentDictionary<string, ImageSource>)MemoryField.GetValue(null)!;
-        var pathCache = (ConcurrentDictionary<string, string>)PathCacheField.GetValue(null)!;
-        var cacheDir = (string)CacheDirField.GetValue(null)!;
-        var cachePath = (string)CachePathMethod.Invoke(null, [host])!;
-        var originalCleanupTask = (Task)StartupCleanupTaskField.GetValue(null)!;
+        var memory = FaviconService.Memory;
+        var pathCache = FaviconService.PathCache;
+        var cacheDir = FaviconService.CacheDir;
+        var cachePath = FaviconService.CachePath(host);
+        var originalCleanupTask = FaviconService._startupCleanupTask;
 
         Directory.CreateDirectory(cacheDir);
         await WriteEncryptedCacheFileAsync(host, cachePath);
         memory.TryRemove(host, out _);
-        StartupCleanupTaskField.SetValue(null, cleanupReleased.Task);
+        FaviconService._startupCleanupTask = cleanupReleased.Task;
 
         try
         {
-            var task = (Task)WarmDiskThenDownloadMethod.Invoke(null, [new List<string> { host }])!;
+            var task = FaviconService.WarmDiskThenDownloadAsync(new List<string> { host });
 
             await Task.Delay(100, TestContext.Current.CancellationToken);
             Assert.False(memory.ContainsKey(host));
@@ -606,7 +532,7 @@ public sealed class FaviconServiceTests
         }
         finally
         {
-            StartupCleanupTaskField.SetValue(null, originalCleanupTask);
+            FaviconService._startupCleanupTask = originalCleanupTask;
             memory.TryRemove(host, out _);
             pathCache.TryRemove(host, out _);
             File.Delete(cachePath);
@@ -618,21 +544,21 @@ public sealed class FaviconServiceTests
     {
         const string host = "startup-cleanup-download.example";
         var cleanupReleased = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var memory = (ConcurrentDictionary<string, ImageSource>)MemoryField.GetValue(null)!;
-        var pathCache = (ConcurrentDictionary<string, string>)PathCacheField.GetValue(null)!;
-        var cacheDir = (string)CacheDirField.GetValue(null)!;
-        var cachePath = (string)CachePathMethod.Invoke(null, [host])!;
-        var originalCleanupTask = (Task)StartupCleanupTaskField.GetValue(null)!;
+        var memory = FaviconService.Memory;
+        var pathCache = FaviconService.PathCache;
+        var cacheDir = FaviconService.CacheDir;
+        var cachePath = FaviconService.CachePath(host);
+        var originalCleanupTask = FaviconService._startupCleanupTask;
 
         Directory.CreateDirectory(cacheDir);
         await WriteEncryptedCacheFileAsync(host, cachePath);
         memory.TryRemove(host, out _);
         ConfigureOnlineFetching(true);
-        StartupCleanupTaskField.SetValue(null, cleanupReleased.Task);
+        FaviconService._startupCleanupTask = cleanupReleased.Task;
 
         try
         {
-            var task = (Task)DownloadOneMethod.Invoke(null, [host])!;
+            var task = FaviconService.DownloadOneAsync(host);
 
             await Task.Delay(100, TestContext.Current.CancellationToken);
             Assert.False(memory.ContainsKey(host));
@@ -645,7 +571,7 @@ public sealed class FaviconServiceTests
         }
         finally
         {
-            StartupCleanupTaskField.SetValue(null, originalCleanupTask);
+            FaviconService._startupCleanupTask = originalCleanupTask;
             memory.TryRemove(host, out _);
             pathCache.TryRemove(host, out _);
             File.Delete(cachePath);
@@ -661,20 +587,20 @@ public sealed class FaviconServiceTests
         ConfigureOnlineFetching(true);
         ClearPendingDownloads();
 
-        var cacheDir = (string)CacheDirField.GetValue(null)!;
-        var pathCache = (ConcurrentDictionary<string, string>)PathCacheField.GetValue(null)!;
-        var memory = (ConcurrentDictionary<string, ImageSource>)MemoryField.GetValue(null)!;
-        var cachePath = (string)CachePathMethod.Invoke(null, [host])!;
+        var cacheDir = FaviconService.CacheDir;
+        var pathCache = FaviconService.PathCache;
+        var memory = FaviconService.Memory;
+        var cachePath = FaviconService.CachePath(host);
 
         Directory.CreateDirectory(cacheDir);
         await WriteEncryptedCacheFileAsync(host, cachePath);
-        MarkFailedMethod.Invoke(null, [host]);
+        FaviconService.MarkFailed(host);
 
         try
         {
             memory.TryRemove(host, out _);
 
-            var task = (Task)DownloadOneMethod.Invoke(null, [host])!;
+            var task = FaviconService.DownloadOneAsync(host);
             await task;
 
             Assert.False(GetFailed().ContainsKey(host));
@@ -719,13 +645,13 @@ public sealed class FaviconServiceTests
     }
 
     private static void PruneDiskCache(string directory) =>
-        PruneDiskCacheMethod.Invoke(null, [directory]);
+        FaviconService.PruneDiskCache(directory);
 
     private static void PruneExpiredDiskCacheOncePerDay(
         string directory,
         DateTime utcNow,
         DateOnly localDate) =>
-        PruneExpiredDiskCacheOncePerDayMethod.Invoke(null, [directory, utcNow, localDate]);
+        FaviconService.PruneExpiredDiskCacheOncePerDay(directory, utcNow, localDate);
 
     private static string CreateTempDirectory()
     {
@@ -735,25 +661,25 @@ public sealed class FaviconServiceTests
     }
 
     private static ConcurrentDictionary<string, ImageSource> GetMemory() =>
-        (ConcurrentDictionary<string, ImageSource>)MemoryField.GetValue(null)!;
+        FaviconService.Memory;
 
     private static ConcurrentQueue<KeyValuePair<string, ImageSource>> GetMemoryEvictionQueue() =>
-        (ConcurrentQueue<KeyValuePair<string, ImageSource>>)MemoryEvictionQueueField.GetValue(null)!;
+        FaviconService.MemoryEvictionQueue;
 
     private static void SetMemory(string host, ImageSource image) =>
-        SetMemoryMethod.Invoke(null, [host, image]);
+        FaviconService.SetMemory(host, image);
 
     private static ImageSource CreateTestImage() =>
-        (ImageSource)CreateBitmapMethod.Invoke(null, [TinyPng])!;
+        FaviconService.CreateBitmap(TinyPng)!;
 
     private static ConcurrentQueue<string> GetDownloadQueue() =>
-        (ConcurrentQueue<string>)DownloadQueueField.GetValue(null)!;
+        FaviconService.DownloadQueue;
 
     private static ConcurrentDictionary<string, byte> GetInFlight() =>
-        (ConcurrentDictionary<string, byte>)InFlightField.GetValue(null)!;
+        FaviconService.InFlight;
 
     private static ConcurrentDictionary<string, DateTimeOffset> GetFailed() =>
-        (ConcurrentDictionary<string, DateTimeOffset>)FailedField.GetValue(null)!;
+        FaviconService.Failed;
 
     private static void ClearPendingDownloads()
     {

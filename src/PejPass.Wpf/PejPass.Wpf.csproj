@@ -50,4 +50,8 @@
     </Resource>
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="PejPass.Wpf.Tests" />
+  </ItemGroup>
+
 </Project>

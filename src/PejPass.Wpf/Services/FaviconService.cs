@@ -18,14 +18,14 @@ namespace PejPass.Wpf.Services;
 public static class FaviconService
 {
     private static readonly HttpClient Http = CreateClient();
-    private static readonly ConcurrentDictionary<string, ImageSource> Memory = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly ConcurrentQueue<KeyValuePair<string, ImageSource>> MemoryEvictionQueue = new();
+    internal static readonly ConcurrentDictionary<string, ImageSource> Memory = new(StringComparer.OrdinalIgnoreCase);
+    internal static readonly ConcurrentQueue<KeyValuePair<string, ImageSource>> MemoryEvictionQueue = new();
     private static readonly Lock MemoryCacheLock = new();
     private static readonly ConcurrentDictionary<string, ImageSource> LetterCache = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly ConcurrentDictionary<string, byte> InFlight = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly ConcurrentDictionary<string, DateTimeOffset> Failed = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly ConcurrentDictionary<string, string> PathCache = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly ConcurrentQueue<string> DownloadQueue = new();
+    internal static readonly ConcurrentDictionary<string, byte> InFlight = new(StringComparer.OrdinalIgnoreCase);
+    internal static readonly ConcurrentDictionary<string, DateTimeOffset> Failed = new(StringComparer.OrdinalIgnoreCase);
+    internal static readonly ConcurrentDictionary<string, string> PathCache = new(StringComparer.OrdinalIgnoreCase);
+    internal static readonly ConcurrentQueue<string> DownloadQueue = new();
     private static readonly SemaphoreSlim DownloadGate = new(1, 1);
     private static readonly SemaphoreSlim DownloadSlots = new(3, 3);
     private const int MaxFaviconResponseBytes = 1024 * 1024;
@@ -38,10 +38,10 @@ public static class FaviconService
 
     private static readonly string AppDataDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PejPass");
-    private static readonly string CacheDir = Path.Combine(AppDataDir, "favicons");
+    internal static readonly string CacheDir = Path.Combine(AppDataDir, "favicons");
     private static readonly string CacheKeyPath = Path.Combine(AppDataDir, "favicon-cache-key.dpapi");
     private static readonly byte[] CacheKeyEntropy = Encoding.UTF8.GetBytes("PejPass.FaviconCache.Key.v1");
-    private static readonly Lazy<byte[]> CacheMasterKey = new(LoadOrCreateCacheMasterKey, LazyThreadSafetyMode.ExecutionAndPublication);
+    internal static readonly Lazy<byte[]> CacheMasterKey = new(LoadOrCreateCacheMasterKey, LazyThreadSafetyMode.ExecutionAndPublication);
     private static readonly byte[] CacheFileMagic = "PFC2"u8.ToArray();
     private const int CacheNonceSize = 12;
     private const int CacheTagSize = 16;
@@ -51,7 +51,7 @@ public static class FaviconService
     private static readonly Lock StartupCleanupLock = new();
     private static readonly Lock OnlineFetchingStateLock = new();
     private static long _cacheGeneration;
-    private static Task _startupCleanupTask = Task.CompletedTask;
+    internal static Task _startupCleanupTask = Task.CompletedTask;
     private static bool _startupCleanupStarted;
 
     private static DispatcherTimer? _batchTimer;
@@ -212,7 +212,7 @@ public static class FaviconService
         _ = Task.Run(() => WarmDiskThenDownloadAsync(hosts));
     }
 
-    private static async Task WarmDiskThenDownloadAsync(List<string> hosts)
+    internal static async Task WarmDiskThenDownloadAsync(List<string> hosts)
     {
         await WaitForStartupCleanupAsync().ConfigureAwait(false);
 
@@ -314,7 +314,7 @@ public static class FaviconService
         }
     }
 
-    private static async Task DownloadOneAsync(string host)
+    internal static async Task DownloadOneAsync(string host)
     {
         try
         {
@@ -393,7 +393,7 @@ public static class FaviconService
         }
     }
 
-    private static void SetMemory(string host, ImageSource image)
+    internal static void SetMemory(string host, ImageSource image)
     {
         lock (MemoryCacheLock)
         {
@@ -411,7 +411,7 @@ public static class FaviconService
         }
     }
 
-    private static bool IsFailedRecently(string host)
+    internal static bool IsFailedRecently(string host)
     {
         if (!Failed.TryGetValue(host, out var failedAt))
             return false;
@@ -423,7 +423,7 @@ public static class FaviconService
         return false;
     }
 
-    private static void MarkFailed(string host) =>
+    internal static void MarkFailed(string host) =>
         Failed[host] = DateTimeOffset.UtcNow;
 
     private static void ScheduleBatchNotify()
@@ -472,7 +472,7 @@ public static class FaviconService
         }
     }
 
-    private static async Task<byte[]?> ReadContentBytesAsync(HttpContent content)
+    internal static async Task<byte[]?> ReadContentBytesAsync(HttpContent content)
     {
         try
         {
@@ -502,7 +502,7 @@ public static class FaviconService
         }
     }
 
-    private static void PruneDiskCache(string directory)
+    internal static void PruneDiskCache(string directory)
     {
         try
         {
@@ -538,7 +538,7 @@ public static class FaviconService
         }
     }
 
-    private static void PruneExpiredDiskCacheOncePerDay(
+    internal static void PruneExpiredDiskCacheOncePerDay(
         string directory,
         DateTime utcNow,
         DateOnly localDate)
@@ -593,10 +593,10 @@ public static class FaviconService
     }
 
     // Cache storage privacy is implemented by HMAC-derived names and authenticated encryption.
-    private static string CachePath(string host) =>
+    internal static string CachePath(string host) =>
         PathCache.GetOrAdd(host, static h => CreateCachePath(h, CacheMasterKey.Value));
 
-    private static string CreateCachePath(string host, byte[] masterKey)
+    internal static string CreateCachePath(string host, byte[] masterKey)
     {
         var key = DeriveCacheKey(masterKey, "filename");
         try
@@ -648,7 +648,7 @@ public static class FaviconService
         }
     }
 
-    private static byte[] EncryptCacheBytes(string host, byte[] plaintext, byte[] masterKey)
+    internal static byte[] EncryptCacheBytes(string host, byte[] plaintext, byte[] masterKey)
     {
         var key = DeriveCacheKey(masterKey, "encryption");
         var nonce = RandomNumberGenerator.GetBytes(CacheNonceSize);
@@ -671,7 +671,7 @@ public static class FaviconService
         }
     }
 
-    private static byte[]? TryDecryptCacheBytes(string host, byte[] storedBytes, byte[] masterKey)
+    internal static byte[]? TryDecryptCacheBytes(string host, byte[] storedBytes, byte[] masterKey)
     {
         var headerLength = CacheFileMagic.Length + CacheNonceSize + CacheTagSize;
         if (storedBytes.Length < headerLength || !storedBytes.AsSpan(0, CacheFileMagic.Length).SequenceEqual(CacheFileMagic))
@@ -699,7 +699,7 @@ public static class FaviconService
         }
     }
 
-    private static void PruneLegacyDiskCache(string directory)
+    internal static void PruneLegacyDiskCache(string directory)
     {
         try
         {
@@ -749,7 +749,7 @@ public static class FaviconService
     /// Decode + Freeze on the calling thread (background is fine).
     /// No Dispatcher.Invoke — avoids serializing hundreds of icons on the UI thread.
     /// </summary>
-    private static BitmapImage? CreateBitmap(byte[] bytes)
+    internal static BitmapImage? CreateBitmap(byte[] bytes)
     {
         try
         {
