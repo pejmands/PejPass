@@ -241,6 +241,46 @@ public sealed class VaultStoreValidationTests
         }
     }
 
+    [Fact]
+    public async Task CreateSessionAsync_WhenKeyDerivationFails_ClearsGeneratedSalt()
+    {
+        var crypto = new FakeCryptoService { ThrowOnDeriveKey = true };
+        var store = new VaultStore(crypto, new FakeFileMover());
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            store.CreateSessionAsync(
+                path,
+                "password",
+                new Vault(),
+                TestContext.Current.CancellationToken));
+
+        Assert.NotNull(crypto.LastGeneratedSalt);
+        Assert.All(crypto.LastGeneratedSalt!, value => Assert.Equal(0, value));
+        Assert.False(File.Exists(path));
+    }
+
+    [Fact]
+    public async Task SaveWithNewPasswordAsync_WhenKeyDerivationFails_ClearsGeneratedSalt()
+    {
+        var crypto = new FakeCryptoService { ThrowOnDeriveKey = true };
+        var store = new VaultStore(crypto, new FakeFileMover());
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        var vault = new Vault();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            store.SaveWithNewPasswordAsync(
+                path,
+                "password",
+                vault,
+                vault.KdfParameters,
+                TestContext.Current.CancellationToken));
+
+        Assert.NotNull(crypto.LastGeneratedSalt);
+        Assert.All(crypto.LastGeneratedSalt!, value => Assert.Equal(0, value));
+        Assert.False(File.Exists(path));
+    }
+
     private static string CreateV2VaultFile(string json)
     {
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
@@ -319,12 +359,19 @@ public sealed class VaultStoreValidationTests
     {
         public int DeriveKeyCallCount { get; private set; }
 
+        public bool ThrowOnDeriveKey { get; init; }
+
+        public byte[]? LastGeneratedSalt { get; private set; }
+
         public byte[] DeriveKey(
             string masterPassword,
             byte[] salt,
             Argon2Parameters? parameters = null)
         {
             DeriveKeyCallCount++;
+            if (ThrowOnDeriveKey)
+                throw new InvalidOperationException("Simulated key derivation failure.");
+
             return new byte[32];
         }
 
@@ -351,7 +398,8 @@ public sealed class VaultStoreValidationTests
 
         public byte[] GenerateSalt(int length = 16)
         {
-            return new byte[length];
+            LastGeneratedSalt = Enumerable.Repeat((byte)0x5A, length).ToArray();
+            return LastGeneratedSalt;
         }
 
         public void ZeroMemory(byte[] data)
