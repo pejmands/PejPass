@@ -124,11 +124,11 @@ public partial class ChangeMasterPasswordViewModel(
         }
         catch (System.Security.Cryptography.AuthenticationTagMismatchException)
         {
-            CurrentPasswordError = "Current master password is incorrect, or the vault file is damaged.";
+            CurrentPasswordError = VaultErrorMessages.ForChangeMasterPassword(new System.Security.Cryptography.AuthenticationTagMismatchException());
         }
         catch (Exception)
         {
-            CurrentPasswordError = "Could not change the master password. Please try again.";
+            CurrentPasswordError = VaultErrorMessages.ForChangeMasterPassword(new Exception());
         }
         finally
         {
