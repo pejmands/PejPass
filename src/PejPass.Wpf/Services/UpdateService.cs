@@ -15,6 +15,8 @@ namespace PejPass.Wpf.Services;
 /// </summary>
 public sealed class UpdateService : IDisposable
 {
+    private const long MaxUpdatePackageBytes = 512L * 1024 * 1024;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -494,13 +496,14 @@ public sealed class UpdateService : IDisposable
 
         response.EnsureSuccessStatusCode();
 
-        var fileName = ResolveFileName(downloadUrl, response);
-        // Always stage under %TEMP% with a unique name; deleted after install.
+        var total = response.Content.Headers.ContentLength ?? -1L;
+        if (total > MaxUpdatePackageBytes)
+            throw new InvalidDataException("Update package exceeds the maximum supported size.");
+
+        // Use a generated filename; never trust a server-provided filename for a filesystem path.
         var destPath = Path.Combine(
             Path.GetTempPath(),
-            $"PejPass-dl-{Guid.NewGuid():N}-{fileName}");
-
-        var total = response.Content.Headers.ContentLength ?? -1L;
+            $"PejPass-dl-{Guid.NewGuid():N}.zip");
         await using var input = await response.Content
             .ReadAsStreamAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -524,6 +527,9 @@ public sealed class UpdateService : IDisposable
             while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)
                        .ConfigureAwait(false)) > 0)
             {
+                if (readTotal > MaxUpdatePackageBytes - read)
+                    throw new InvalidDataException("Update package exceeds the maximum supported size.");
+
                 hasher.AppendData(buffer, 0, read);
 
                 await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken)
@@ -584,24 +590,6 @@ public sealed class UpdateService : IDisposable
             return false;
 
         return value.All(Uri.IsHexDigit);
-    }
-
-    private static string ResolveFileName(string url, HttpResponseMessage response)
-    {
-        if (response.Content.Headers.ContentDisposition?.FileName is { Length: > 0 } cd)
-            return cd.Trim('"', '\'');
-
-        try
-        {
-            var name = Path.GetFileName(new Uri(url).AbsolutePath);
-            if (!string.IsNullOrWhiteSpace(name))
-                return name;
-        }
-        catch
-        {
-        }
-
-        return $"{AppInfoService.Name}-update.zip";
     }
 
     public static bool IsNewerVersion(string candidate, string current)

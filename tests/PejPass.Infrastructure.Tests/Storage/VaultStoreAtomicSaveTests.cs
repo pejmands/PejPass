@@ -26,6 +26,30 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
     }
 
     [Fact]
+    public async Task OpenAsync_WhenVaultFileExceedsMaximumSize_RejectsBeforeReadingHeader()
+    {
+        var oversizedLength = 128L * 1024 * 1024 + 1;
+        await using (var file = new FileStream(
+            _vaultPath,
+            FileMode.CreateNew,
+            FileAccess.Write,
+            FileShare.None))
+        {
+            file.SetLength(oversizedLength);
+        }
+
+        var store = new VaultStore(
+            new TestCryptoService(),
+            new FileMover());
+
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            store.OpenAsync(
+                _vaultPath,
+                "Password123!",
+                TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task SaveAsync_WhenEncryptionFails_KeepsPreviousVaultIntact()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

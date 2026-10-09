@@ -32,6 +32,7 @@ public sealed class VaultStore(
     private const int MaxSaltLength = 64;
     private const int NonceLength = 12;
     private const int TagLength = 16;
+    private const long MaxVaultFileBytes = 128L * 1024 * 1024;
 
     private readonly ICryptoService _crypto = crypto;
     private readonly IFileMover _fileMover = fileMover;
@@ -197,6 +198,9 @@ public sealed class VaultStore(
                     NonceLength +
                     TagLength +
                     1;
+
+                if (fs.Length > MaxVaultFileBytes)
+                    throw new InvalidDataException("Vault file exceeds the maximum supported size.");
 
                 if (fs.Length < minimumHeaderLength)
                     throw new InvalidDataException("Vault file is too short.");
