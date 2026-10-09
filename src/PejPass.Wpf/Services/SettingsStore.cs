@@ -191,6 +191,15 @@ public static class SettingsStore
 
         settings.WindowsHelloEnabled = windowsHelloEnabled;
 
+        if (!TryGetInt32(root, "windowsHelloTimeoutMinutes", out var windowsHelloTimeoutMinutes) ||
+            windowsHelloTimeoutMinutes is not 0 and not 15 and not 60 and not 240)
+        {
+            windowsHelloTimeoutMinutes = defaults.WindowsHelloTimeoutMinutes;
+            needsSave = true;
+        }
+
+        settings.WindowsHelloTimeoutMinutes = windowsHelloTimeoutMinutes;
+
         if (!TryGetBool(root, "onlineFaviconFetchingEnabled", out var onlineFaviconFetchingEnabled))
         {
             onlineFaviconFetchingEnabled = false;
