@@ -597,6 +597,8 @@ public sealed class VaultStore(
         Vault vault,
         VaultKeyMaterial keyMaterial)
     {
+        ValidateVaultStructure(vault);
+
         var key = keyMaterial.CopyKey();
         var salt = keyMaterial.CopySalt();
         var json = JsonSerializer.SerializeToUtf8Bytes(vault);
