@@ -59,6 +59,8 @@ internal sealed class WpfTestHost : IDisposable
 
         services.AddSingleton(_settings);
         services.AddSingleton(themeService);
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<SessionPasswordCache>();
         services.AddSingleton(vaultSession);
         services.AddSingleton(crypto);
         services.AddSingleton(fileMover);
