@@ -1514,13 +1514,14 @@ public partial class MainViewModel : ObservableObject
         }
 
         VaultKeyMaterial? keyMaterial = null;
+        var vaultPath = _vaultSession.VaultPath;
 
         try
         {
             keyMaterial = _vaultSession.CopyKeyMaterial();
 
             await _vaultService.SaveVaultAsync(
-                _vaultSession.VaultPath!,
+                vaultPath!,
                 keyMaterial,
                 _vaultSession.Vault!);
 
@@ -1530,15 +1531,22 @@ public partial class MainViewModel : ObservableObject
         {
             try
             {
-                if (keyMaterial is not null)
+                if (keyMaterial is not null &&
+                    !string.IsNullOrWhiteSpace(vaultPath) &&
+                    _vaultSession.IsActive &&
+                    string.Equals(_vaultSession.VaultPath, vaultPath, StringComparison.OrdinalIgnoreCase))
                 {
                     var vault = await _vaultService.OpenVaultWithKeyAsync(
-                        _vaultSession.VaultPath!,
+                        vaultPath,
                         keyMaterial);
 
-                    _vaultSession.ReplaceVault(vault);
-                    await LoadVaultAsync();
-                    SelectedEntry = null;
+                    if (_vaultSession.IsActive &&
+                        string.Equals(_vaultSession.VaultPath, vaultPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _vaultSession.ReplaceVault(vault);
+                        await LoadVaultAsync();
+                        SelectedEntry = null;
+                    }
                 }
             }
             catch
