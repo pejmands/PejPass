@@ -70,6 +70,16 @@ public sealed class ExternalVaultPathValidatorTests : IDisposable
         Assert.False(ExternalVaultPathValidator.TryValidate(path, out _));
     }
 
+
+    [Fact]
+    public void TryValidate_RejectsRelativePath()
+    {
+        var path = CreateVaultFile("relative.pejpass", version: 3);
+        var relativePath = Path.GetRelativePath(Environment.CurrentDirectory, path);
+
+        Assert.False(ExternalVaultPathValidator.TryValidate(relativePath, out _));
+    }
+
     [Fact]
     public void TryValidate_RejectsMissingFile()
     {
