@@ -32,7 +32,6 @@ public partial class MainViewModel : ObservableObject
     private System.Timers.Timer? _autoLockTimer;
     private DispatcherTimer? _totpTimer;
     private bool _isPasswordVisible;
-    private bool _skipNextSnapshotRestore;
     private readonly SecretRevealTimer _passwordRevealTimer = new();
     private DateTime _lastAutoLockActivityUtc;
 
@@ -459,6 +458,10 @@ public partial class MainViewModel : ObservableObject
             return;
 
         var vault = _vaultSession.Vault!;
+        var operationGeneration = _vaultSession.Generation;
+        if (!_vaultSession.IsCurrent(operationGeneration, vault))
+            return;
+
         var snapshot = vault.CreateSnapshot();
 
         // Reorder only within the target's favorite group.
@@ -489,9 +492,9 @@ public partial class MainViewModel : ObservableObject
 
         ApplyFilter(preserveSelectionId: SelectedEntry?.Id);
 
-        if (!await SaveVaultAsync())
+        if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot, SelectedEntry?.Id);
+            RestoreVaultSnapshot(snapshot, vault, SelectedEntry?.Id);
             return;
         }
 
@@ -529,6 +532,10 @@ public partial class MainViewModel : ObservableObject
             return;
 
         var vault = _vaultSession.Vault!;
+        var operationGeneration = _vaultSession.Generation;
+        if (!_vaultSession.IsCurrent(operationGeneration, vault))
+            return;
+
         var snapshot = vault.CreateSnapshot();
 
         foreach (var isFavorite in new[] { true, false })
@@ -554,9 +561,9 @@ public partial class MainViewModel : ObservableObject
 
         ApplyFilter(preserveSelectionId: SelectedEntry?.Id);
 
-        if (!await SaveVaultAsync())
+        if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot, SelectedEntry?.Id);
+            RestoreVaultSnapshot(snapshot, vault, SelectedEntry?.Id);
             return;
         }
 
@@ -586,6 +593,10 @@ public partial class MainViewModel : ObservableObject
             return;
 
         var vault = _vaultSession.Vault!;
+        var operationGeneration = _vaultSession.Generation;
+        if (!_vaultSession.IsCurrent(operationGeneration, vault))
+            return;
+
         var snapshot = vault.CreateSnapshot();
 
         var group = Entries
@@ -613,9 +624,9 @@ public partial class MainViewModel : ObservableObject
 
         ApplyFilter(preserveSelectionId: SelectedEntry?.Id);
 
-        if (!await SaveVaultAsync())
+        if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot, SelectedEntry?.Id);
+            RestoreVaultSnapshot(snapshot, vault, SelectedEntry?.Id);
             return;
         }
 
@@ -743,6 +754,10 @@ public partial class MainViewModel : ObservableObject
             return;
 
         var vault = _vaultSession.Vault!;
+        var operationGeneration = _vaultSession.Generation;
+        if (!_vaultSession.IsCurrent(operationGeneration, vault))
+            return;
+
         var snapshot = vault.CreateSnapshot();
 
         if (!vault.SetFavorite(entry.Id, isFavorite))
@@ -752,9 +767,9 @@ public partial class MainViewModel : ObservableObject
 
         ApplyFilter(preserveSelectionId: entry.Id);
 
-        if (!await SaveVaultAsync())
+        if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot);
+            RestoreVaultSnapshot(snapshot, vault);
             return;
         }
 
@@ -1010,6 +1025,10 @@ public partial class MainViewModel : ObservableObject
             return;
 
         var vault = _vaultSession.Vault!;
+        var operationGeneration = _vaultSession.Generation;
+        if (!_vaultSession.IsCurrent(operationGeneration, vault))
+            return;
+
         var snapshot = vault.CreateSnapshot();
 
         newEntry.SortOrder = Entries
@@ -1024,9 +1043,9 @@ public partial class MainViewModel : ObservableObject
         RebuildTagFilters();
         ApplyFilter(preserveSelectionId: newEntry.Id);
 
-        if (!await SaveVaultAsync())
+        if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot);
+            RestoreVaultSnapshot(snapshot, vault);
             return;
         }
 
@@ -1089,6 +1108,10 @@ public partial class MainViewModel : ObservableObject
         if (!vault.Entries.Any(e => e.Id == updated.Id))
             return;
 
+        var operationGeneration = _vaultSession.Generation;
+        if (!_vaultSession.IsCurrent(operationGeneration, vault))
+            return;
+
         var snapshot = vault.CreateSnapshot();
 
         var dataChanged = vault.UpdateEntry(updated);
@@ -1116,9 +1139,9 @@ public partial class MainViewModel : ObservableObject
         RefreshTotp();
         OnSelectedEntryChanged(SelectedEntry);
 
-        if (!await SaveVaultAsync())
+        if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot, updated.Id);
+            RestoreVaultSnapshot(snapshot, vault, updated.Id);
             return;
         }
 
@@ -1147,6 +1170,10 @@ public partial class MainViewModel : ObservableObject
         if (!await EnsureVaultWritableAsync())
             return;
 
+        var operationGeneration = _vaultSession.Generation;
+        if (!_vaultSession.IsCurrent(operationGeneration, vault))
+            return;
+
         var snapshot = vault.CreateSnapshot();
         var entryIds = Entries.Select(e => e.Id).ToArray();
 
@@ -1159,9 +1186,9 @@ public partial class MainViewModel : ObservableObject
         RebuildTagFilters();
         ApplyFilter(preserveSelectionId: null);
 
-        if (!await SaveVaultAsync())
+        if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot);
+            RestoreVaultSnapshot(snapshot, vault);
             return;
         }
 
@@ -1193,6 +1220,10 @@ public partial class MainViewModel : ObservableObject
             return;
 
         var vault = _vaultSession.Vault!;
+        var operationGeneration = _vaultSession.Generation;
+        if (!_vaultSession.IsCurrent(operationGeneration, vault))
+            return;
+
         var snapshot = vault.CreateSnapshot();
 
         foreach (var entry in selected)
@@ -1207,9 +1238,9 @@ public partial class MainViewModel : ObservableObject
         RebuildTagFilters();
         ApplyFilter(preserveSelectionId: null);
 
-        if (!await SaveVaultAsync())
+        if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot);
+            RestoreVaultSnapshot(snapshot, vault);
             return;
         }
 
@@ -1234,6 +1265,10 @@ public partial class MainViewModel : ObservableObject
             return;
 
         var vault = _vaultSession.Vault!;
+        var operationGeneration = _vaultSession.Generation;
+        if (!_vaultSession.IsCurrent(operationGeneration, vault))
+            return;
+
         var snapshot = vault.CreateSnapshot();
 
         vault.SoftDelete(entry.Id);
@@ -1243,9 +1278,9 @@ public partial class MainViewModel : ObservableObject
         RebuildTagFilters();
         ApplyFilter(preserveSelectionId: null);
 
-        if (!await SaveVaultAsync())
+        if (!await SaveVaultAsync(vault, operationGeneration))
         {
-            RestoreVaultSnapshot(snapshot);
+            RestoreVaultSnapshot(snapshot, vault);
             return;
         }
 
@@ -1293,7 +1328,11 @@ public partial class MainViewModel : ObservableObject
                 return;
 
             var vault = _vaultSession.Vault!;
-            var snapshot = vault.CreateSnapshot();
+            var operationGeneration = _vaultSession.Generation;
+        if (!_vaultSession.IsCurrent(operationGeneration, vault))
+            return;
+
+        var snapshot = vault.CreateSnapshot();
             var result = MergeImportedEntries(vault, imported, includeTags: false);
 
             Entries.Clear();
@@ -1303,9 +1342,9 @@ public partial class MainViewModel : ObservableObject
             RebuildTagFilters();
             ApplyFilter();
 
-            if (!await SaveVaultAsync())
+            if (!await SaveVaultAsync(vault, operationGeneration))
             {
-                RestoreVaultSnapshot(snapshot);
+                RestoreVaultSnapshot(snapshot, vault);
                 return;
             }
 
@@ -1494,19 +1533,13 @@ public partial class MainViewModel : ObservableObject
         SelectedEntry = null;
     }
 
-    private void RestoreVaultSnapshot(Vault snapshot, Guid? preserveSelectionId = null)
+    private void RestoreVaultSnapshot(Vault snapshot, Vault expectedVault, Guid? preserveSelectionId = null)
     {
-        if (_skipNextSnapshotRestore)
-        {
-            _skipNextSnapshotRestore = false;
-            return;
-        }
-
-        var activeVault = _vaultSession.Vault;
-        if (activeVault is null)
+        if (!ReferenceEquals(_vaultSession.Vault, expectedVault) || !_vaultSession.IsActive)
             return;
 
-        activeVault.RestoreSnapshot(snapshot);
+        expectedVault.RestoreSnapshot(snapshot);
+        var activeVault = expectedVault;
 
         Entries.Clear();
         foreach (var entry in activeVault.Entries)
@@ -1559,9 +1592,8 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private async Task<bool> SaveVaultAsync()
+    private async Task<bool> SaveVaultAsync(Vault? expectedVault = null, long? expectedGeneration = null)
     {
-        _skipNextSnapshotRestore = false;
 
         var ownsBusyState = !IsBusy;
 
@@ -1580,7 +1612,10 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            if (vault is null || string.IsNullOrWhiteSpace(vaultPath))
+            if (vault is null || string.IsNullOrWhiteSpace(vaultPath) ||
+                (expectedVault is not null && !ReferenceEquals(expectedVault, vault)) ||
+                (expectedGeneration is { } expected && expected != sessionGeneration) ||
+                !_vaultSession.IsCurrent(sessionGeneration, vault))
                 return false;
 
             keyMaterial = _vaultSession.CopyKeyMaterial();
@@ -1591,10 +1626,7 @@ public partial class MainViewModel : ObservableObject
                 vault);
 
             if (!_vaultSession.IsCurrent(sessionGeneration, vault))
-            {
-                _skipNextSnapshotRestore = true;
                 return false;
-            }
 
             return true;
         }
@@ -1602,7 +1634,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (vault is null || !_vaultSession.IsCurrent(sessionGeneration, vault))
             {
-                _skipNextSnapshotRestore = true;
+                // The session changed while saving; never recover or roll back into another session.
             }
             else
             {
@@ -1625,7 +1657,7 @@ public partial class MainViewModel : ObservableObject
                         }
                         else
                         {
-                            _skipNextSnapshotRestore = true;
+                            // The active session changed; discard this recovery result.
                         }
                     }
                 }
@@ -1639,11 +1671,7 @@ public partial class MainViewModel : ObservableObject
                 recoveredSessionGeneration is { } recoveredGeneration)
             {
                 if (!_vaultSession.IsCurrent(recoveredGeneration, recoveredSessionVault))
-                    _skipNextSnapshotRestore = true;
-            }
-            else if (vault is null || !_vaultSession.IsCurrent(sessionGeneration, vault))
-            {
-                _skipNextSnapshotRestore = true;
+                    recoveredSessionVault = null;
             }
 
             var canShowError =
