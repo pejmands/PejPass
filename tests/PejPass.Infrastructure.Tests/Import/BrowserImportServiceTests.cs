@@ -57,6 +57,62 @@ public sealed class BrowserImportServiceTests
         Assert.Equal("one,two,three", item.Notes);
     }
 
+    [Fact]
+    public async Task ImportCsv_WhenFileExceedsSizeLimit_RejectsBeforeParsing()
+    {
+        var file = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.csv");
+        try
+        {
+            await using (var stream = new FileStream(file, FileMode.CreateNew, FileAccess.Write))
+                stream.SetLength(64L * 1024 * 1024 + 1);
+
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => _service.ImportFromCsvAsync(file, TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ImportCsv_WhenFieldExceedsCharacterLimit_RejectsRecord()
+    {
+        var csv = "name,password,notes\nTest,123," + new string('x', 1_048_577);
+        var file = CreateTempCsv(csv);
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => _service.ImportFromCsvAsync(file, TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ImportCsv_WhenRecordCountExceedsLimit_RejectsImport()
+    {
+        var csv = new System.Text.StringBuilder("name,password\n");
+        for (var i = 0; i < 100_001; i++)
+            csv.Append("Test,pass\n");
+
+        var file = CreateTempCsv(csv.ToString());
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => _service.ImportFromCsvAsync(file, TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+    }
+
     private static string CreateTempCsv(string content)
     {
         var file = Path.Combine(
