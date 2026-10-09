@@ -237,8 +237,12 @@ public sealed class SessionPasswordCache : IDisposable
     {
         lock (_sync)
         {
-            if (!_disposed)
-                ExpireIfNeededCore();
+            if (_disposed)
+                return;
+
+            ExpireIfNeededCore();
+            if (_protected is { Length: > 0 })
+                ScheduleExpiryCore();
         }
     }
 
