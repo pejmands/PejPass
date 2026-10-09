@@ -495,6 +495,9 @@ public partial class LoginViewModel : ObservableObject
                     _ =>
                         "Windows Hello is unavailable. Try again or enter your master password."
                 };
+                if (!_sessionPasswordCache.HasCacheFor(VaultPath))
+                    ShowWindowsHello = false;
+
                 StatusMessage = string.Empty;
                 return;
             }
