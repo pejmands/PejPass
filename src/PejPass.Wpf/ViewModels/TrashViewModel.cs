@@ -148,7 +148,7 @@ public partial class TrashViewModel : ObservableObject
     [RelayCommand]
     private async Task RestoreAsync(TrashRow? row)
     {
-        if (row is null || !await _ensureWritable()) return;
+        if (row is null || !await EnsureCurrentAndWritableAsync()) return;
 
         var trashedEntry = _vault.Trash
             .FirstOrDefault(t => t.Entry.Id == row.EntryId)?.Entry;
@@ -194,7 +194,7 @@ public partial class TrashViewModel : ObservableObject
                 noText: "Cancel"))
             return;
 
-        if (!await _ensureWritable())
+        if (!await EnsureCurrentAndWritableAsync())
             return;
 
         var snapshot = _vault.CreateSnapshot();
@@ -232,7 +232,7 @@ public partial class TrashViewModel : ObservableObject
                 noText: "Cancel"))
             return;
 
-        if (!await _ensureWritable())
+        if (!await EnsureCurrentAndWritableAsync())
             return;
 
         var snapshot = _vault.CreateSnapshot();
@@ -268,7 +268,7 @@ public partial class TrashViewModel : ObservableObject
                 noText: "Cancel"))
             return;
 
-        if (!await _ensureWritable())
+        if (!await EnsureCurrentAndWritableAsync())
             return;
 
         var snapshot = _vault.CreateSnapshot();
