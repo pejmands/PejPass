@@ -122,21 +122,13 @@ public partial class ChangeMasterPasswordViewModel(
             Success = true;
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
-        catch (Exception ex)
+        catch (System.Security.Cryptography.AuthenticationTagMismatchException)
         {
-            var msg = ex.Message;
-            if (msg.Contains("authentication", StringComparison.OrdinalIgnoreCase) ||
-                msg.Contains("tag", StringComparison.OrdinalIgnoreCase) ||
-                msg.Contains("decrypt", StringComparison.OrdinalIgnoreCase) ||
-                msg.Contains("padding", StringComparison.OrdinalIgnoreCase) ||
-                msg.Contains("mac", StringComparison.OrdinalIgnoreCase))
-            {
-                CurrentPasswordError = "Current master password is incorrect.";
-            }
-            else
-            {
-                CurrentPasswordError = msg;
-            }
+            CurrentPasswordError = "Current master password is incorrect, or the vault file is damaged.";
+        }
+        catch (Exception)
+        {
+            CurrentPasswordError = "Could not change the master password. Please try again.";
         }
         finally
         {
