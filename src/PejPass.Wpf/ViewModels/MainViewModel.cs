@@ -964,28 +964,28 @@ public partial class MainViewModel : ObservableObject
         editorVm.ClearSensitiveInputs();
 
         if (!await EnsureVaultWritableAsync())
-                return;
+            return;
 
-            var vault = _vaultSession.Vault!;
-            var snapshot = vault.CreateSnapshot();
+        var vault = _vaultSession.Vault!;
+        var snapshot = vault.CreateSnapshot();
 
-            newEntry.SortOrder = Entries
-                .Where(entry => entry.IsFavorite == newEntry.IsFavorite)
-                .Select(entry => entry.SortOrder)
-                .DefaultIfEmpty(-10)
-                .Max() + 10;
+        newEntry.SortOrder = Entries
+            .Where(entry => entry.IsFavorite == newEntry.IsFavorite)
+            .Select(entry => entry.SortOrder)
+            .DefaultIfEmpty(-10)
+            .Max() + 10;
 
-            vault.AddEntry(newEntry);
-            Entries.Add(newEntry);
+        vault.AddEntry(newEntry);
+        Entries.Add(newEntry);
 
-            RebuildTagFilters();
-            ApplyFilter(preserveSelectionId: newEntry.Id);
+        RebuildTagFilters();
+        ApplyFilter(preserveSelectionId: newEntry.Id);
 
-            if (!await SaveVaultAsync())
-            {
-                RestoreVaultSnapshot(snapshot);
-                return;
-            }
+        if (!await SaveVaultAsync())
+        {
+            RestoreVaultSnapshot(snapshot);
+            return;
+        }
 
         SnackbarService.Show("Entry added.");
     }
