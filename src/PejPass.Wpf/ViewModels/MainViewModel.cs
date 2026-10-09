@@ -912,13 +912,43 @@ public partial class MainViewModel : ObservableObject
 
     public void Lock(bool showLogin)
     {
-        if (!_vaultSession.IsActive)
-            return;
+        var wasActive = _vaultSession.IsActive;
 
         _autoLockTimer?.Stop();
         _totpTimer?.Stop();
+        _passwordRevealTimer.Stop();
         _clipboard.ClearIfOwned();
+
+        foreach (var item in DisplayCustomFields)
+            item.Dispose();
+
+        DisplayCustomFields.Clear();
+        SelectedEntry = null;
+        FilteredEntries.Clear();
+        Entries.Clear();
+        _selectedTagFilters.Clear();
+        IsNoTagsFilterSelected = false;
+        SearchText = string.Empty;
+        HasTotpFilter = false;
+        HasNotesFilter = false;
+        VaultName = string.Empty;
+        DisplayPassword = string.Empty;
+        TotpCode = string.Empty;
+        TotpCodeFormatted = string.Empty;
+        TotpRemainingSeconds = 0;
+        TotpProgress = 0;
+        HasSelection = false;
+        HasUrl = false;
+        HasTotp = false;
+        HasNotes = false;
+        HasCustomFields = false;
+        HasTags = false;
+        IsFavoriteSelected = false;
+
         _vaultSession.Clear();
+
+        if (!wasActive)
+            return;
 
         StatusMessage = "Vault locked.";
         RequestLock?.Invoke(
