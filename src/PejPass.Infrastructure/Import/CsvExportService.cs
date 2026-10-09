@@ -15,30 +15,53 @@ public sealed partial class CsvExportService : ICsvExportService
         IEnumerable<VaultEntry> entries,
         CancellationToken ct = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+        ArgumentNullException.ThrowIfNull(entries);
         ct.ThrowIfCancellationRequested();
 
-        // UTF-8 with BOM helps Excel open non-ASCII correctly.
-        using var writer = new StreamWriter(
-            filePath,
-            append: false,
-            encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+        var destinationPath = Path.GetFullPath(filePath);
+        var directory = Path.GetDirectoryName(destinationPath)!;
+        var tempPath = Path.Combine(
+            directory,
+            $".{Path.GetFileName(destinationPath)}.{Guid.NewGuid():N}.tmp");
 
-        await writer.WriteAsync("name,url,username,password,note".AsMemory(), ct).ConfigureAwait(false);
-        await writer.WriteLineAsync().ConfigureAwait(false);
-
-        foreach (var entry in entries)
+        try
         {
+            // Write to a sibling temp file so cancellation/failure cannot leave a partial export
+            // at the destination or destroy a previously existing export.
+            await using (var writer = new StreamWriter(
+                tempPath,
+                append: false,
+                encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: true)))
+            {
+                await writer.WriteAsync("name,url,username,password,note".AsMemory(), ct).ConfigureAwait(false);
+                await writer.WriteLineAsync().ConfigureAwait(false);
+
+                foreach (var entry in entries)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    await WriteFieldAsync(writer, entry.Title, ct).ConfigureAwait(false);
+                    await WriteCommaAsync(writer, ct).ConfigureAwait(false);
+                    await WriteFieldAsync(writer, entry.Url, ct).ConfigureAwait(false);
+                    await WriteCommaAsync(writer, ct).ConfigureAwait(false);
+                    await WriteFieldAsync(writer, entry.Username, ct).ConfigureAwait(false);
+                    await WriteCommaAsync(writer, ct).ConfigureAwait(false);
+                    await WriteFieldAsync(writer, entry.Password, ct).ConfigureAwait(false);
+                    await WriteCommaAsync(writer, ct).ConfigureAwait(false);
+                    await WriteFieldAsync(writer, entry.Notes, ct).ConfigureAwait(false);
+                    await writer.WriteLineAsync().ConfigureAwait(false);
+                }
+
+                await writer.FlushAsync(ct).ConfigureAwait(false);
+            }
+
             ct.ThrowIfCancellationRequested();
-            await WriteFieldAsync(writer, entry.Title, ct).ConfigureAwait(false);
-            await WriteCommaAsync(writer, ct).ConfigureAwait(false);
-            await WriteFieldAsync(writer, entry.Url, ct).ConfigureAwait(false);
-            await WriteCommaAsync(writer, ct).ConfigureAwait(false);
-            await WriteFieldAsync(writer, entry.Username, ct).ConfigureAwait(false);
-            await WriteCommaAsync(writer, ct).ConfigureAwait(false);
-            await WriteFieldAsync(writer, entry.Password, ct).ConfigureAwait(false);
-            await WriteCommaAsync(writer, ct).ConfigureAwait(false);
-            await WriteFieldAsync(writer, entry.Notes, ct).ConfigureAwait(false);
-            await writer.WriteLineAsync().ConfigureAwait(false);
+            File.Move(tempPath, destinationPath, overwrite: true);
+        }
+        catch
+        {
+            TryDeleteTemporaryFile(tempPath);
+            throw;
         }
     }
 
@@ -59,5 +82,17 @@ public sealed partial class CsvExportService : ICsvExportService
         if (!needsQuotes)
             return value;
         return "\"" + value.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
+    }
+
+    private static void TryDeleteTemporaryFile(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch
+        {
+            // Best-effort cleanup; never mask the original export error.
+        }
     }
 }
