@@ -1,4 +1,5 @@
 using PejPass.Domain.Entities;
+using PejPass.Wpf.Controls;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
@@ -6,6 +7,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -16,6 +18,7 @@ public partial class EntryEditorWindow : Window
     public VaultEntry? Result { get; private set; }
 
     private readonly Func<VaultEntry, bool>? _isDuplicate;
+    private bool _isClosing;
 
     public EntryEditorWindow(
         EntryEditorViewModel viewModel,
@@ -122,7 +125,7 @@ public partial class EntryEditorWindow : Window
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (sender is not EntryEditorViewModel vm)
+        if (_isClosing || sender is not EntryEditorViewModel vm)
             return;
 
         if (e.PropertyName == nameof(EntryEditorViewModel.Password) &&
@@ -140,7 +143,7 @@ public partial class EntryEditorWindow : Window
 
     private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
-        if (DataContext is EntryEditorViewModel vm &&
+        if (!_isClosing && DataContext is EntryEditorViewModel vm &&
             vm.Password != PasswordBox.Password)
         {
             vm.Password = PasswordBox.Password;
@@ -149,7 +152,7 @@ public partial class EntryEditorWindow : Window
 
     private void TotpSecretBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
-        if (DataContext is EntryEditorViewModel vm &&
+        if (!_isClosing && DataContext is EntryEditorViewModel vm &&
             vm.TotpSecret != TotpSecretBox.Password)
         {
             vm.TotpSecret = TotpSecretBox.Password;
@@ -158,8 +161,18 @@ public partial class EntryEditorWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        _isClosing = true;
+
         if (DataContext is EntryEditorViewModel vm)
             vm.PropertyChanged -= ViewModel_PropertyChanged;
+
+        foreach (var passwordBox in FindVisualChildren<PasswordRevealBox>(this))
+        {
+            BindingOperations.ClearBinding(passwordBox, PasswordRevealBox.PasswordProperty);
+            passwordBox.Clear();
+        }
+
+        DataContext = null;
 
         if (_tagCaseWarningAdorner is not null)
         {
