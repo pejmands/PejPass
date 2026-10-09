@@ -409,7 +409,7 @@ public sealed class UpdateService : IDisposable
     private async Task<UpdateManifest?> FetchManifestAsync(CancellationToken cancellationToken)
     {
         using var response = await _http
-            .GetAsync(_manifestUrl, cancellationToken)
+            .GetAsync(_manifestUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
             .ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
@@ -450,6 +450,9 @@ public sealed class UpdateService : IDisposable
     internal static void ValidateUpdateManifest(UpdateManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
+
+        if (string.IsNullOrWhiteSpace(manifest.Version))
+            throw new InvalidDataException("Update manifest is missing its version.");
 
         if (manifest.Releases is null || manifest.Releases.Count > MaxManifestReleases)
             throw new InvalidDataException("Update manifest contains too many releases.");
