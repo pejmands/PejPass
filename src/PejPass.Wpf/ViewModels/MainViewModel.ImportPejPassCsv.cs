@@ -71,7 +71,7 @@ public partial class MainViewModel
 
             if (!await SaveVaultAsync(vault, operationGeneration))
             {
-                RestoreVaultSnapshot(snapshot, vault);
+                RestoreVaultSnapshot(snapshot, vault, operationGeneration);
                 return;
             }
 
