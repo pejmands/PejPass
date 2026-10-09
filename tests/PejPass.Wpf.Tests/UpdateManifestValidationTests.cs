@@ -75,6 +75,23 @@ public sealed class UpdateManifestValidationTests
     }
 
     [Fact]
+    public void ValidateUpdateManifest_AcceptsAggregateTextAbovePreviousLimit()
+    {
+        var longNotes = Enumerable.Repeat(new string('x', 3_600), 100).ToList();
+        var manifest = new UpdateManifest
+        {
+            Notes = new UpdateNotes
+            {
+                Added = longNotes,
+                Improved = longNotes,
+                Fixed = longNotes
+            }
+        };
+
+        UpdateService.ValidateUpdateManifest(manifest);
+    }
+
+    [Fact]
     public void ValidateUpdateManifest_RejectsExcessiveAggregateText()
     {
         var longNotes = Enumerable.Repeat(new string('x', 4_096), 100).ToList();
