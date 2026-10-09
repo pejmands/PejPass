@@ -97,12 +97,29 @@ public sealed class UpdateManifestValidationTests
         var longNotes = Enumerable.Repeat(new string('x', 4_096), 100).ToList();
         var manifest = new UpdateManifest
         {
-            Notes = new UpdateNotes
-            {
-                Added = longNotes,
-                Improved = longNotes,
-                Fixed = longNotes
-            }
+            Releases =
+            [
+                new ManifestRelease
+                {
+                    Version = "1.0.1",
+                    Notes = new UpdateNotes
+                    {
+                        Added = longNotes,
+                        Improved = longNotes,
+                        Fixed = longNotes
+                    }
+                },
+                new ManifestRelease
+                {
+                    Version = "1.0.0",
+                    Notes = new UpdateNotes
+                    {
+                        Added = longNotes,
+                        Improved = longNotes,
+                        Fixed = longNotes
+                    }
+                }
+            ]
         };
 
         Assert.Throws<InvalidDataException>(() =>
