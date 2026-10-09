@@ -549,6 +549,8 @@ public partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         SingleInstance.Activated -= OnSecondInstanceActivated;
+        try { Services.GetRequiredService<SessionPasswordCache>().Clear(); }
+        catch { /* Best-effort cleanup on exit. */ }
         if (_windowsSecurityService is not null)
         {
             _windowsSecurityService.SecurityLockRequested -= OnWindowsSecurityLockRequested;
