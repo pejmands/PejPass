@@ -11,15 +11,18 @@ public sealed partial class CsvExportService
         IEnumerable<VaultEntry> entries,
         CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
+
         // CSV is unencrypted; UTF-8 with BOM helps Excel display non-ASCII text.
         using var writer = new StreamWriter(
             filePath,
             append: false,
             encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
 
-        await writer.WriteLineAsync(
+        await writer.WriteAsync(
             "name,url,username,password,note,totp_secret,tags,custom_fields,favorite,pejpass_format".AsMemory(),
             ct).ConfigureAwait(false);
+        await writer.WriteLineAsync().ConfigureAwait(false);
 
         foreach (var entry in entries)
         {
@@ -43,7 +46,7 @@ public sealed partial class CsvExportService
             await writer.WriteAsync((entry.IsFavorite ? "1" : "0").AsMemory(), ct).ConfigureAwait(false);
             await WriteCommaAsync(writer, ct).ConfigureAwait(false);
             await writer.WriteAsync("2".AsMemory(), ct).ConfigureAwait(false);
-            await writer.WriteLineAsync(ct).ConfigureAwait(false);
+            await writer.WriteLineAsync().ConfigureAwait(false);
         }
     }
 }
