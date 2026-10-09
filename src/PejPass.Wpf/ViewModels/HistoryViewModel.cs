@@ -9,8 +9,9 @@ using System.Collections.ObjectModel;
 
 namespace PejPass.Wpf.ViewModels;
 
-public partial class HistoryViewModel : ObservableObject
+public partial class HistoryViewModel : ObservableObject, IDisposable
 {
+    private bool _isDisposed;
     private readonly VaultSession _vaultSession;
     private readonly VaultService _vaultService;
     private readonly AppSettings _settings;
@@ -115,6 +116,9 @@ public partial class HistoryViewModel : ObservableObject
 
     private void Load()
     {
+        if (_isDisposed)
+            return;
+
         Items.Clear();
         ClearFields();
 
@@ -331,6 +335,22 @@ public partial class HistoryViewModel : ObservableObject
     {
         if (e.PropertyName == nameof(HistoryFieldRow.IsSelected))
             OnPropertyChanged(nameof(HasSelectedFields));
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+            return;
+
+        _isDisposed = true;
+
+        ClearFields();
+        SelectedItem = null;
+        Items.Clear();
+        FilteredItems.Clear();
+        SearchText = string.Empty;
+        BusyMessage = string.Empty;
+        HistoryRestored = null;
     }
 
     private void ClearFields()
