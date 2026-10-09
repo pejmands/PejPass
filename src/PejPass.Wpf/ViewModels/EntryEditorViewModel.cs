@@ -389,7 +389,7 @@ public partial class EntryEditorViewModel : ObservableObject
         Password = string.Empty;
         TotpSecret = string.Empty;
 
-        foreach (var field in CustomFields.Where(field => field.IsSecret))
+        foreach (var field in CustomFields)
             field.Value = string.Empty;
 
         PasswordStrengthLabel = string.Empty;
