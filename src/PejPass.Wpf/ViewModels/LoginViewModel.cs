@@ -350,6 +350,16 @@ public partial class LoginViewModel : ObservableObject
         }
     }
 
+    public void ClearSensitiveInputs()
+    {
+        MasterPassword = string.Empty;
+        ConfirmMasterPassword = string.Empty;
+        MasterPasswordStrengthLabel = string.Empty;
+        MasterPasswordStrengthProgress = 0;
+        MasterPasswordStrengthLevel = 0;
+        ShowMasterPasswordStrength = false;
+    }
+
     private void ResetModeState()
     {
         MasterPassword = string.Empty;
