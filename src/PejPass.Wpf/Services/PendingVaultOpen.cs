@@ -63,7 +63,7 @@ internal static class PendingVaultOpen
                 using var client = new NamedPipeClientStream(
                     ".",
                     PipeName,
-                    PipeDirection.Out,
+                    PipeDirection.InOut,
                     PipeOptions.None,
                     TokenImpersonationLevel.Identification);
 
@@ -71,7 +71,10 @@ internal static class PendingVaultOpen
                 client.Write(length);
                 client.Write(payload);
                 client.Flush();
-                return true;
+
+                var acknowledgement = new byte[1];
+                client.ReadExactly(acknowledgement);
+                return acknowledgement[0] == 1;
             }
             catch (TimeoutException)
             {
@@ -128,7 +131,7 @@ internal static class PendingVaultOpen
             {
                 using var server = new NamedPipeServerStream(
                     PipeName,
-                    PipeDirection.In,
+                    PipeDirection.InOut,
                     maxNumberOfServerInstances: 1,
                     PipeTransmissionMode.Byte,
                     PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
@@ -161,7 +164,16 @@ internal static class PendingVaultOpen
                 }
 
                 if (!string.IsNullOrWhiteSpace(path))
+                {
                     Interlocked.Exchange(ref _pendingPath, path);
+                    await server.WriteAsync(new byte[] { 1 }, connectionCts.Token);
+                }
+                else
+                {
+                    await server.WriteAsync(new byte[] { 0 }, connectionCts.Token);
+                }
+
+                await server.FlushAsync(connectionCts.Token);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
