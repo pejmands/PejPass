@@ -941,8 +941,9 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task AddEntryAsync()
     {
+        var editorVm = new EntryEditorViewModel(null, GetUsedTags());
         var editor = new EntryEditorWindow(
-            new EntryEditorViewModel(null, GetUsedTags()),
+            editorVm,
             candidate => Entries.Any(e =>
                 string.Equals(
                     EntryContentFingerprint(e),
@@ -952,7 +953,16 @@ public partial class MainViewModel : ObservableObject
             Owner = GetOwnerWindow()
         };
 
-        if (editor.ShowDialog() == true && editor.Result is { } newEntry)
+        if (editor.ShowDialog() != true || editor.Result is not { } newEntry)
+        {
+            editor.ClearSensitiveResult();
+            editorVm.ClearSensitiveInputs();
+            return;
+        }
+
+        editor.ClearSensitiveResult();
+        editorVm.ClearSensitiveInputs();
+
         {
             if (!await EnsureVaultWritableAsync())
                 return;
@@ -1003,9 +1013,15 @@ public partial class MainViewModel : ObservableObject
         };
 
         if (editor.ShowDialog() != true || editor.Result is not { } updated)
+        {
+            editor.ClearSensitiveResult();
+            editorVm.ClearSensitiveInputs();
             return;
+        }
 
         var sensitive = editorVm.GetSensitiveChanges();
+        editor.ClearSensitiveResult();
+        editorVm.ClearSensitiveInputs();
 
         if (sensitive.Count > 0)
         {
