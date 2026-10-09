@@ -1407,12 +1407,14 @@ public partial class MainViewModel : ObservableObject
     private async Task OpenTrashAsync()
     {
         var vault = _vaultSession.Vault;
-        if (vault is null) return;
+        var sessionGeneration = _vaultSession.Generation;
+        if (vault is null || !_vaultSession.IsCurrent(sessionGeneration, vault)) return;
 
         var vm = new TrashViewModel(
             vault,
             EnsureVaultWritableAsync,
-            SaveVaultAsync,
+            () => SaveVaultAsync(vault, sessionGeneration),
+            () => _vaultSession.IsCurrent(sessionGeneration, vault),
             candidate => Entries.Any(e =>
                 string.Equals(
                     EntryContentFingerprint(e),
