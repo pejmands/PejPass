@@ -1499,7 +1499,7 @@ public partial class MainViewModel : ObservableObject
         activeVault.RestoreSnapshot(snapshot);
 
         Entries.Clear();
-        foreach (var entry in activeVault.Entries
+        foreach (var entry in activeVault.Entries)
             Entries.Add(entry);
 
         RebuildTagFilters();
@@ -1617,9 +1617,15 @@ public partial class MainViewModel : ObservableObject
                 }
             }
 
-            DialogService.Error(
-                "Failed to save the vault. Check disk space and file permissions, then try again.",
-                "Save failed");
+            if (vault is null || !_vaultSession.IsCurrent(sessionGeneration, vault))
+                _skipNextSnapshotRestore = true;
+
+            if (vault is not null && _vaultSession.IsCurrent(sessionGeneration, vault))
+            {
+                DialogService.Error(
+                    "Failed to save the vault. Check disk space and file permissions, then try again.",
+                    "Save failed");
+            }
 
             return false;
         }
