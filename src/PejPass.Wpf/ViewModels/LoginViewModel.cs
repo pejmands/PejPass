@@ -520,12 +520,12 @@ public partial class LoginViewModel : ObservableObject
         }
         catch (System.Security.Cryptography.AuthenticationTagMismatchException)
         {
-            PasswordError = VaultErrorMessages.ForWindowsHelloUnlock(new System.Security.Cryptography.AuthenticationTagMismatchException());
+            PasswordError = VaultErrorMessages.ForWindowsHelloUnlock(authenticationFailed: true);
             StatusMessage = string.Empty;
         }
         catch (Exception)
         {
-            PasswordError = VaultErrorMessages.ForWindowsHelloUnlock(new Exception());
+            PasswordError = VaultErrorMessages.ForWindowsHelloUnlock(authenticationFailed: false);
             StatusMessage = string.Empty;
         }
         finally
@@ -646,12 +646,12 @@ public partial class LoginViewModel : ObservableObject
         }
         catch (System.Security.Cryptography.AuthenticationTagMismatchException)
         {
-            PasswordError = VaultErrorMessages.ForUnlock(new System.Security.Cryptography.AuthenticationTagMismatchException());
+            PasswordError = VaultErrorMessages.ForUnlock(authenticationFailed: true);
             StatusMessage = string.Empty;
         }
         catch (Exception)
         {
-            PasswordError = VaultErrorMessages.ForUnlock(new Exception());
+            PasswordError = VaultErrorMessages.ForUnlock(authenticationFailed: false);
             StatusMessage = string.Empty;
         }
         finally
