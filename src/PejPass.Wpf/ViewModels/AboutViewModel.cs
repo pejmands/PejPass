@@ -184,12 +184,12 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
                     LatestVersion ?? "0.0.0");
                 return;
             }
-            catch (Exception applyEx)
+            catch (Exception)
             {
                 TryDeleteTempPackage(path);
-                StatusMessage = $"Install failed: {applyEx.Message}";
+                StatusMessage = "Install failed. Please try again.";
                 DialogService.Error(
-                    $"Could not apply the update automatically.\n\n{applyEx.Message}",
+                    "Could not apply the update automatically. Please download and install the update manually.",
                     "Install failed");
             }
         }
@@ -197,9 +197,9 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
         {
             StatusMessage = "Download cancelled.";
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            StatusMessage = $"Download failed: {ex.Message}";
+            StatusMessage = "Download failed. Check your connection and try again.";
         }
         finally
         {
