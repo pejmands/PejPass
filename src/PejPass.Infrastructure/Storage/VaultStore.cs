@@ -459,7 +459,22 @@ public sealed class VaultStore(
             }
 
             if (versionValue != CurrentVersion)
-                await SaveAsync(path, material!, vault!, ct);
+            {
+                try
+                {
+                    await SaveAsync(path, material!, vault!, ct);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    material?.Dispose();
+                    material = null;
+                    throw;
+                }
+                catch
+                {
+                    // Keep the successfully decrypted legacy vault usable if migration cannot be saved.
+                }
+            }
 
             var result = new VaultSessionData(vault!, material!);
             material = null;
