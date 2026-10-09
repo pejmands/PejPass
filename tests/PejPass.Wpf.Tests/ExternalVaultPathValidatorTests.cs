@@ -27,9 +27,9 @@ public sealed class ExternalVaultPathValidatorTests : IDisposable
     }
 
     [Theory]
-    [InlineData(1)]
-    [InlineData(2)]
-    [InlineData(3)]
+    [InlineData((byte)1)]
+    [InlineData((byte)2)]
+    [InlineData((byte)3)]
     public void TryValidate_AcceptsAllSupportedVersions(byte version)
     {
         var path = CreateVaultFile($"version-{version}.pejpass", version);
