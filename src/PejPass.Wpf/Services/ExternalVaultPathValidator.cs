@@ -24,9 +24,14 @@ internal static class ExternalVaultPathValidator
         if (string.IsNullOrWhiteSpace(path))
             return false;
 
+        var candidate = path.Trim().Trim('"');
+
+        if (!Path.IsPathFullyQualified(candidate))
+            return false;
+
         try
         {
-            canonicalPath = Path.GetFullPath(path.Trim().Trim('"'));
+            canonicalPath = Path.GetFullPath(candidate);
         }
         catch
         {
@@ -70,11 +75,8 @@ internal static class ExternalVaultPathValidator
 
             if (version == CurrentVersion)
             {
-                if (stream.Length < 20 ||
-                    stream.ReadByte() < 0)
-                {
+                if (stream.Length < 20)
                     return Fail(out canonicalPath);
-                }
 
                 stream.Position = 5;
                 if (stream.ReadByte() != Argon2idAlgorithmId)
