@@ -33,7 +33,7 @@ public sealed class VaultStoreSessionKeyTests
 
             var after = await File.ReadAllBytesAsync(path, cancellationToken);
             Assert.Equal(originalSalt, after.AsSpan(20, 16).ToArray());
-            Assert.False(originalNonce.AsSpan().SequenceEqual(after.AsSpan(36, 12)));
+            Assert.False(originalNonce.SequenceEqual(after.Skip(36).Take(12)));
 
             var reopened = await store.OpenWithKeyAsync(path, session.KeyMaterial, cancellationToken);
             Assert.Equal("After save", reopened.Name);
