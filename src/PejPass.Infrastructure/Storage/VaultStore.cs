@@ -1,13 +1,15 @@
 using PejPass.Application.Interfaces;
+using PejPass.Application.Security;
 using PejPass.Domain.Entities;
 using System.Buffers.Binary;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
 namespace PejPass.Infrastructure.Storage;
 
 /// <summary>
-/// Simple encrypted vault file format:
+/// Encrypted vault file format:
 /// [4 bytes magic "PEJP"]
 /// [1 byte version]
 /// [Argon2id algorithm and parameters in version 3]
@@ -69,220 +71,292 @@ public sealed class VaultStore(
         Vault vault,
         CancellationToken ct = default)
     {
+        using var session = await CreateSessionAsync(path, masterPassword, vault, ct);
+    }
+
+    public async Task<VaultSessionData> CreateSessionAsync(
+        string path,
+        string masterPassword,
+        Vault vault,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentNullException.ThrowIfNull(vault);
+
         var kdfParameters = vault.KdfParameters;
         kdfParameters.Validate();
 
         var salt = _crypto.GenerateSalt(SaltLength);
-        var key = _crypto.DeriveKey(
-            masterPassword,
-            salt,
-            kdfParameters);
+        var key = _crypto.DeriveKey(masterPassword, salt, kdfParameters);
 
         try
         {
-            var json = JsonSerializer.SerializeToUtf8Bytes(vault);
-            var associatedData = BuildAssociatedDataV3(
-                kdfParameters,
-                salt);
+            using var material = new VaultKeyMaterial(key, salt, kdfParameters);
+            var encrypted = EncryptVault(vault, material);
+            var headerSalt = material.CopySalt();
 
-            var (ciphertext, nonce, tag) = _crypto.Encrypt(
-                json,
-                key,
-                associatedData);
+            try
+            {
+                await using var fs = new FileStream(
+                    path,
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None);
 
-            await using var fs = new FileStream(
-                path,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None);
+                await WriteVaultAsync(
+                    fs,
+                    headerSalt,
+                    kdfParameters,
+                    encrypted.Nonce,
+                    encrypted.Tag,
+                    encrypted.Ciphertext,
+                    ct);
 
-            await WriteVaultAsync(
-                fs,
-                salt,
-                kdfParameters,
-                nonce,
-                tag,
-                ciphertext,
-                ct);
-            await fs.FlushAsync(ct);
-            fs.Flush(flushToDisk: true);
+                await fs.FlushAsync(ct);
+                fs.Flush(flushToDisk: true);
+            }
+            finally
+            {
+                _crypto.ZeroMemory(headerSalt);
+                ClearEncryptedPayload(encrypted);
+            }
+
+            return new VaultSessionData(vault, material.Clone());
         }
         finally
         {
             _crypto.ZeroMemory(key);
+            _crypto.ZeroMemory(salt);
         }
     }
 
-    public async Task<Vault> OpenAsync(
-    string path,
-    string masterPassword,
-    CancellationToken ct = default)
-    {
-        Vault vault;
-        byte versionValue;
-
-        await using (var fs = new FileStream(
+    public Task<VaultSessionData> OpenSessionAsync(
+        string path,
+        string masterPassword,
+        CancellationToken ct = default) =>
+        OpenCoreAsync(
             path,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read))
+            (salt, parameters) => _crypto.DeriveKey(masterPassword, salt, parameters),
+            expectedMaterial: null,
+            ct);
+
+    public async Task<Vault> OpenAsync(
+        string path,
+        string masterPassword,
+        CancellationToken ct = default)
+    {
+        using var session = await OpenSessionAsync(path, masterPassword, ct);
+        return session.Vault;
+    }
+
+    public async Task<Vault> OpenWithKeyAsync(
+        string path,
+        VaultKeyMaterial keyMaterial,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(keyMaterial);
+
+        using var session = await OpenCoreAsync(
+            path,
+            (_, _) => keyMaterial.CopyKey(),
+            keyMaterial,
+            ct);
+
+        return session.Vault;
+    }
+
+    private async Task<VaultSessionData> OpenCoreAsync(
+        string path,
+        Func<byte[], Argon2Parameters, byte[]> keyFactory,
+        VaultKeyMaterial? expectedMaterial,
+        CancellationToken ct)
+    {
+        Vault? vault = null;
+        VaultKeyMaterial? material = null;
+        byte versionValue = 0;
+        byte[]? salt = null;
+        byte[]? nonce = null;
+        byte[]? tag = null;
+        byte[]? ciphertext = null;
+        byte[]? key = null;
+        byte[]? plaintext = null;
+
+        try
         {
-            var minimumHeaderLength =
-                Magic.Length +
-                sizeof(byte) +
-                sizeof(ushort) +
-                SaltLength +
-                NonceLength +
-                TagLength +
-                1;
-
-            if (fs.Length < minimumHeaderLength)
-                throw new InvalidDataException(
-                    "Vault file is too short.");
-
-            var magic = new byte[Magic.Length];
-            await fs.ReadExactlyAsync(magic, ct);
-
-            if (!magic.AsSpan().SequenceEqual(Magic))
-                throw new InvalidDataException(
-                    "Not a valid PejPass vault file.");
-
-            var version = new byte[1];
-            await fs.ReadExactlyAsync(version, ct);
-
-            versionValue = version[0];
-
-            if (versionValue != LegacyVersion &&
-                versionValue != PreviousVersion &&
-                versionValue != CurrentVersion)
+            await using (var fs = new FileStream(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read))
             {
-                throw new NotSupportedException(
-                    $"Unsupported vault version: {versionValue}");
-            }
+                var minimumHeaderLength =
+                    Magic.Length +
+                    sizeof(byte) +
+                    sizeof(ushort) +
+                    SaltLength +
+                    NonceLength +
+                    TagLength +
+                    1;
 
-            if (versionValue == CurrentVersion &&
-                fs.Length < Magic.Length + sizeof(byte) + 13 + sizeof(ushort) +
-                            SaltLength + NonceLength + TagLength + 1)
-            {
-                throw new InvalidDataException("Vault file is too short for the version 3 header.");
-            }
+                if (fs.Length < minimumHeaderLength)
+                    throw new InvalidDataException("Vault file is too short.");
 
-            var kdfParameters = Argon2Parameters.Default;
+                var magic = new byte[Magic.Length];
+                await fs.ReadExactlyAsync(magic, ct);
 
-            if (versionValue == CurrentVersion)
-            {
-                var kdfHeader = new byte[13];
-                await fs.ReadExactlyAsync(kdfHeader, ct);
+                if (!magic.AsSpan().SequenceEqual(Magic))
+                    throw new InvalidDataException("Not a valid PejPass vault file.");
 
-                if (kdfHeader[0] != Argon2idAlgorithmId)
-                    throw new NotSupportedException(
-                        $"Unsupported key derivation algorithm: {kdfHeader[0]}");
+                var version = new byte[1];
+                await fs.ReadExactlyAsync(version);
+                versionValue = version[0];
 
-                kdfParameters = new Argon2Parameters(
-                    BinaryPrimitives.ReadInt32LittleEndian(kdfHeader.AsSpan(1, 4)),
-                    BinaryPrimitives.ReadInt32LittleEndian(kdfHeader.AsSpan(5, 4)),
-                    BinaryPrimitives.ReadInt32LittleEndian(kdfHeader.AsSpan(9, 4)));
-
-                try
+                if (versionValue != LegacyVersion &&
+                    versionValue != PreviousVersion &&
+                    versionValue != CurrentVersion)
                 {
-                    kdfParameters.Validate();
+                    throw new NotSupportedException($"Unsupported vault version: {versionValue}");
                 }
-                catch (ArgumentOutOfRangeException ex)
-                {
-                    throw new InvalidDataException(
-                        "Vault contains invalid Argon2 parameters.",
-                        ex);
-                }
-            }
-
-            var saltLenBytes = new byte[sizeof(ushort)];
-            await fs.ReadExactlyAsync(saltLenBytes, ct);
-
-            var saltLen = BitConverter.ToUInt16(saltLenBytes);
-
-            if (saltLen < SaltLength || saltLen > MaxSaltLength)
-                throw new InvalidDataException(
-                    $"Invalid salt length: {saltLen}.");
-
-            if (fs.Length - fs.Position <
-                saltLen + NonceLength + TagLength + 1)
-            {
-                throw new InvalidDataException(
-                    "Vault file is truncated.");
-            }
-
-            var salt = new byte[saltLen];
-            await fs.ReadExactlyAsync(salt, ct);
-
-            var associatedData = versionValue switch
-            {
-                CurrentVersion => BuildAssociatedDataV3(kdfParameters, salt),
-                PreviousVersion => BuildAssociatedDataV2(versionValue, salt),
-                _ => null
-            };
-
-            var nonce = new byte[NonceLength];
-            await fs.ReadExactlyAsync(nonce, ct);
-
-            var tag = new byte[TagLength];
-            await fs.ReadExactlyAsync(tag, ct);
-
-            var ciphertextLength = fs.Length - fs.Position;
-
-            if (ciphertextLength < 1)
-                throw new InvalidDataException(
-                    "Vault ciphertext is empty.");
-
-            if (ciphertextLength > int.MaxValue)
-                throw new InvalidDataException(
-                    "Vault ciphertext is too large.");
-
-            var ciphertext = new byte[(int)ciphertextLength];
-            await fs.ReadExactlyAsync(ciphertext, ct);
-
-            var key = _crypto.DeriveKey(
-                masterPassword,
-                salt,
-                kdfParameters);
-
-            try
-            {
-                var plaintext = _crypto.Decrypt(
-                    ciphertext,
-                    nonce,
-                    tag,
-                    key,
-                    associatedData);
-
-                vault = JsonSerializer.Deserialize<Vault>(plaintext)
-                        ?? throw new InvalidDataException(
-                            "Vault data is corrupted.");
 
                 if (versionValue == CurrentVersion &&
-                    vault.KdfParameters != kdfParameters)
+                    fs.Length < Magic.Length + sizeof(byte) + 13 + sizeof(ushort) +
+                                SaltLength + NonceLength + TagLength + 1)
                 {
-                    throw new InvalidDataException(
-                        "Vault KDF parameters do not match the authenticated header.");
+                    throw new InvalidDataException("Vault file is too short for the version 3 header.");
                 }
 
-                vault.KdfParameters = kdfParameters;
-            }
-            finally
-            {
-                _crypto.ZeroMemory(key);
-            }
-        }
+                var kdfParameters = Argon2Parameters.Default;
 
-        if (versionValue != CurrentVersion)
+                if (versionValue == CurrentVersion)
+                {
+                    var kdfHeader = new byte[13];
+                    await fs.ReadExactlyAsync(kdfHeader, ct);
+
+                    if (kdfHeader[0] != Argon2idAlgorithmId)
+                        throw new NotSupportedException(
+                            $"Unsupported key derivation algorithm: {kdfHeader[0]}");
+
+                    kdfParameters = new Argon2Parameters(
+                        BinaryPrimitives.ReadInt32LittleEndian(kdfHeader.AsSpan(1, 4)),
+                        BinaryPrimitives.ReadInt32LittleEndian(kdfHeader.AsSpan(5, 4)),
+                        BinaryPrimitives.ReadInt32LittleEndian(kdfHeader.AsSpan(9, 4)));
+
+                    try
+                    {
+                        kdfParameters.Validate();
+                    }
+                    catch (ArgumentOutOfRangeException ex)
+                    {
+                        throw new InvalidDataException("Vault contains invalid Argon2 parameters.", ex);
+                    }
+                }
+
+                var saltLenBytes = new byte[sizeof(ushort)];
+                await fs.ReadExactlyAsync(saltLenBytes, ct);
+
+                var saltLen = BitConverter.ToUInt16(saltLenBytes);
+                if (saltLen < SaltLength || saltLen > MaxSaltLength)
+                    throw new InvalidDataException($"Invalid salt length: {saltLen}.");
+
+                if (fs.Length - fs.Position < saltLen + NonceLength + TagLength + 1)
+                    throw new InvalidDataException("Vault file is truncated.");
+
+                salt = new byte[saltLen];
+                await fs.ReadExactlyAsync(salt, ct);
+
+                if (expectedMaterial is not null)
+                {
+                    if (expectedMaterial.KdfParameters != kdfParameters ||
+                        !CryptographicOperations.FixedTimeEquals(expectedMaterial.Salt.Span, salt))
+                    {
+                        throw new AuthenticationTagMismatchException();
+                    }
+                }
+
+                var associatedData = versionValue switch
+                {
+                    CurrentVersion => BuildAssociatedDataV3(kdfParameters, salt),
+                    PreviousVersion => BuildAssociatedDataV2(versionValue, salt),
+                    _ => null
+                };
+
+                nonce = new byte[NonceLength];
+                await fs.ReadExactlyAsync(nonce, ct);
+
+                tag = new byte[TagLength];
+                await fs.ReadExactlyAsync(tag, ct);
+
+                var ciphertextLength = fs.Length - fs.Position;
+                if (ciphertextLength < 1)
+                    throw new InvalidDataException("Vault ciphertext is empty.");
+
+                if (ciphertextLength > int.MaxValue)
+                    throw new InvalidDataException("Vault ciphertext is too large.");
+
+                ciphertext = new byte[(int)ciphertextLength];
+                await fs.ReadExactlyAsync(ciphertext, ct);
+
+                key = keyFactory(salt, kdfParameters);
+                try
+                {
+                    plaintext = _crypto.Decrypt(ciphertext, nonce, tag, key, associatedData);
+                    vault = JsonSerializer.Deserialize<Vault>(plaintext)
+                            ?? throw new InvalidDataException("Vault data is corrupted.");
+
+                    if (versionValue == CurrentVersion &&
+                        vault.KdfParameters != kdfParameters)
+                    {
+                        throw new InvalidDataException(
+                            "Vault KDF parameters do not match the authenticated header.");
+                    }
+
+                    vault.KdfParameters = kdfParameters;
+                    material = expectedMaterial?.Clone()
+                        ?? new VaultKeyMaterial(key, salt, kdfParameters);
+                }
+                finally
+                {
+                    _crypto.ZeroMemory(key);
+                    key = null;
+
+                    if (plaintext is not null)
+                    {
+                        _crypto.ZeroMemory(plaintext);
+                        plaintext = null;
+                    }
+
+                    if (associatedData is not null)
+                        _crypto.ZeroMemory(associatedData);
+                }
+            }
+
+            if (versionValue != CurrentVersion)
+                await SaveAsync(path, material!, vault!, ct);
+
+            var result = new VaultSessionData(vault!, material!);
+            material = null;
+            return result;
+        }
+        catch
         {
-            await SaveAsync(
-                path,
-                masterPassword,
-                vault,
-                ct);
+            material?.Dispose();
+            throw;
         }
-
-        return vault;
+        finally
+        {
+            if (key is not null)
+                _crypto.ZeroMemory(key);
+            if (plaintext is not null)
+                _crypto.ZeroMemory(plaintext);
+            if (salt is not null)
+                _crypto.ZeroMemory(salt);
+            if (nonce is not null)
+                _crypto.ZeroMemory(nonce);
+            if (tag is not null)
+                _crypto.ZeroMemory(tag);
+            if (ciphertext is not null)
+                _crypto.ZeroMemory(ciphertext);
+        }
     }
 
     public async Task SaveAsync(
@@ -291,36 +365,73 @@ public sealed class VaultStore(
         Vault vault,
         CancellationToken ct = default)
     {
-        var directory = Path.GetDirectoryName(
-                            Path.GetFullPath(path))
-                        ?? throw new InvalidOperationException(
-                            "Vault directory could not be determined.");
+        using var material = await SaveWithNewPasswordAsync(
+            path,
+            masterPassword,
+            vault,
+            vault.KdfParameters,
+            ct);
+    }
+
+    public async Task<VaultKeyMaterial> SaveWithNewPasswordAsync(
+        string path,
+        string masterPassword,
+        Vault vault,
+        Argon2Parameters kdfParameters,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentNullException.ThrowIfNull(vault);
+        ArgumentNullException.ThrowIfNull(kdfParameters);
+        kdfParameters.Validate();
+
+        if (vault.KdfParameters != kdfParameters)
+            throw new ArgumentException("KDF parameters must match the vault metadata.", nameof(kdfParameters));
+
+        var salt = _crypto.GenerateSalt(SaltLength);
+        var key = _crypto.DeriveKey(masterPassword, salt, kdfParameters);
+
+        try
+        {
+            using var material = new VaultKeyMaterial(key, salt, kdfParameters);
+            await SaveAsync(path, material, vault, ct);
+            return material.Clone();
+        }
+        finally
+        {
+            _crypto.ZeroMemory(key);
+            _crypto.ZeroMemory(salt);
+        }
+    }
+
+    public async Task SaveAsync(
+        string path,
+        VaultKeyMaterial keyMaterial,
+        Vault vault,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentNullException.ThrowIfNull(keyMaterial);
+        ArgumentNullException.ThrowIfNull(vault);
+
+        var kdfParameters = keyMaterial.KdfParameters;
+        kdfParameters.Validate();
+
+        if (vault.KdfParameters != kdfParameters)
+            throw new InvalidOperationException("Vault KDF parameters do not match the active key material.");
+
+        var directory = Path.GetDirectoryName(Path.GetFullPath(path))
+                        ?? throw new InvalidOperationException("Vault directory could not be determined.");
 
         var tempPath = Path.Combine(
             directory,
             $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
 
-        var kdfParameters = vault.KdfParameters;
-        kdfParameters.Validate();
-
-        var salt = _crypto.GenerateSalt(SaltLength);
-        var key = _crypto.DeriveKey(
-            masterPassword,
-            salt,
-            kdfParameters);
+        var salt = keyMaterial.CopySalt();
+        var encrypted = EncryptVault(vault, keyMaterial);
 
         try
         {
-            var json = JsonSerializer.SerializeToUtf8Bytes(vault);
-            var associatedData = BuildAssociatedDataV3(
-                kdfParameters,
-                salt);
-
-            var (ciphertext, nonce, tag) = _crypto.Encrypt(
-                json,
-                key,
-                associatedData);
-
             await using (var fs = new FileStream(
                 tempPath,
                 FileMode.CreateNew,
@@ -331,23 +442,21 @@ public sealed class VaultStore(
                     fs,
                     salt,
                     kdfParameters,
-                    nonce,
-                    tag,
-                    ciphertext,
+                    encrypted.Nonce,
+                    encrypted.Tag,
+                    encrypted.Ciphertext,
                     ct);
 
                 await fs.FlushAsync(ct);
                 fs.Flush(flushToDisk: true);
             }
 
-            _fileMover.Move(
-                tempPath,
-                path,
-                overwrite: true);
+            _fileMover.Move(tempPath, path, overwrite: true);
         }
         finally
         {
-            _crypto.ZeroMemory(key);
+            _crypto.ZeroMemory(salt);
+            ClearEncryptedPayload(encrypted);
 
             try
             {
@@ -359,6 +468,38 @@ public sealed class VaultStore(
                 // Do not hide the original save exception if cleanup fails.
             }
         }
+    }
+
+    private (byte[] Ciphertext, byte[] Nonce, byte[] Tag) EncryptVault(
+        Vault vault,
+        VaultKeyMaterial keyMaterial)
+    {
+        var key = keyMaterial.CopyKey();
+        var salt = keyMaterial.CopySalt();
+        var json = JsonSerializer.SerializeToUtf8Bytes(vault);
+        byte[]? associatedData = null;
+
+        try
+        {
+            associatedData = BuildAssociatedDataV3(keyMaterial.KdfParameters, salt);
+            return _crypto.Encrypt(json, key, associatedData);
+        }
+        finally
+        {
+            _crypto.ZeroMemory(key);
+            _crypto.ZeroMemory(salt);
+            _crypto.ZeroMemory(json);
+
+            if (associatedData is not null)
+                _crypto.ZeroMemory(associatedData);
+        }
+    }
+
+    private void ClearEncryptedPayload((byte[] Ciphertext, byte[] Nonce, byte[] Tag) encrypted)
+    {
+        _crypto.ZeroMemory(encrypted.Ciphertext);
+        _crypto.ZeroMemory(encrypted.Nonce);
+        _crypto.ZeroMemory(encrypted.Tag);
     }
 
     private static byte[] BuildAssociatedDataV2(
@@ -414,9 +555,7 @@ public sealed class VaultStore(
         await fs.WriteAsync(Magic, ct);
         await fs.WriteAsync(new byte[] { CurrentVersion, Argon2idAlgorithmId }, ct);
         await fs.WriteAsync(parameterBytes, ct);
-        await fs.WriteAsync(
-            BitConverter.GetBytes((ushort)salt.Length),
-            ct);
+        await fs.WriteAsync(BitConverter.GetBytes((ushort)salt.Length), ct);
 
         await fs.WriteAsync(salt, ct);
         await fs.WriteAsync(nonce, ct);
