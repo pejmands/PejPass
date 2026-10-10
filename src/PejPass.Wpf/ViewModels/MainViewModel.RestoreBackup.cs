@@ -167,7 +167,7 @@ public partial class MainViewModel
                 ApplyFilter(preserveSelectionId: null);
                 if (!await SaveVaultAsync(currentVault, operationGeneration))
                 {
-                    RestoreVaultSnapshot(rollbackSnapshot, currentVault, operationGeneration);
+                    RestoreVaultSnapshot(rollbackSnapshot!, currentVault, operationGeneration);
                     return;
                 }
 
@@ -273,7 +273,7 @@ public partial class MainViewModel
                 ApplyFilter(preserveSelectionId: null);
                 if (!await SaveVaultAsync(currentVault, operationGeneration))
                 {
-                    RestoreVaultSnapshot(rollbackSnapshot, currentVault, operationGeneration);
+                    RestoreVaultSnapshot(rollbackSnapshot!, currentVault, operationGeneration);
                     return;
                 }
 
@@ -324,7 +324,7 @@ public partial class MainViewModel
             {
                 try
                 {
-                    RestoreVaultSnapshot(rollbackSnapshot, currentVault, operationGeneration);
+                    RestoreVaultSnapshot(rollbackSnapshot!, currentVault, operationGeneration);
                 }
                 catch
                 {
