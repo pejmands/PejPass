@@ -742,9 +742,9 @@ public partial class HistoryFieldRow(
 
     public string Name { get; } = name;
 
-    public string CurrentValue { get; } = currentValue;
+    public string CurrentValue { get; private set; } = currentValue;
 
-    public string SnapshotValue { get; } = snapshotValue;
+    public string SnapshotValue { get; private set; } = snapshotValue;
 
     public bool IsChanged { get; } = isChanged;
 
@@ -795,6 +795,11 @@ public partial class HistoryFieldRow(
     public void Dispose()
     {
         _revealTimer.Dispose();
+        IsSecretVisible = false;
+        CurrentValue = string.Empty;
+        SnapshotValue = string.Empty;
+        OnPropertyChanged(nameof(CurrentDisplayValue));
+        OnPropertyChanged(nameof(SnapshotDisplayValue));
     }
 
     private static string MaskSecret(string value)

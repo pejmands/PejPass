@@ -114,6 +114,57 @@ public sealed class SensitiveInputCleanupTests
         }, TestContext.Current.CancellationToken);
     }
 
+    [Fact(Timeout = 15000)]
+    public void CustomFieldDisplayItem_DisposeClearsValueAndRevealState()
+    {
+        WpfTestHost.Run(_ =>
+        {
+            var item = new CustomFieldDisplayItem(new CustomField
+            {
+                Name = "API token",
+                Value = "sensitive-token",
+                IsSecret = true
+            });
+
+            item.Reveal(30);
+            Assert.Equal("sensitive-token", item.DisplayValue);
+
+            item.Dispose();
+
+            Assert.Equal(string.Empty, item.Value);
+            Assert.Equal(string.Empty, item.DisplayValue);
+            Assert.False(item.IsRevealed);
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 15000)]
+    public void HistoryFieldRow_DisposeClearsCurrentAndSnapshotValues()
+    {
+        WpfTestHost.Run(_ =>
+        {
+            var row = new HistoryFieldRow(
+                PejPass.Domain.Entities.EntryHistoryField.Password,
+                "Password",
+                "current-secret",
+                "previous-secret",
+                isChanged: true,
+                isSecret: true,
+                revealSecretSeconds: 30);
+
+            row.ToggleSecretVisibilityCommand.Execute(null);
+            Assert.Equal("current-secret", row.CurrentDisplayValue);
+            Assert.Equal("previous-secret", row.SnapshotDisplayValue);
+
+            row.Dispose();
+
+            Assert.Equal(string.Empty, row.CurrentValue);
+            Assert.Equal(string.Empty, row.SnapshotValue);
+            Assert.Equal("(empty)", row.CurrentDisplayValue);
+            Assert.Equal("(empty)", row.SnapshotDisplayValue);
+            Assert.False(row.IsSecretVisible);
+        }, TestContext.Current.CancellationToken);
+    }
+
     private static IEnumerable<T> FindVisualChildren<T>(System.Windows.DependencyObject parent)
         where T : System.Windows.DependencyObject
     {
