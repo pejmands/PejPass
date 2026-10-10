@@ -482,7 +482,7 @@ public sealed class VaultStoreValidationTests
         {
             LastEncryptSynchronizationContext = SynchronizationContext.Current;
             return (
-                plaintext,
+                plaintext.ToArray(),
                 new byte[12],
                 new byte[16]);
         }
