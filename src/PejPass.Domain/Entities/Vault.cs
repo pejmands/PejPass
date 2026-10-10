@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace PejPass.Domain.Entities;
 
 /// <summary>
@@ -32,9 +30,81 @@ public sealed class Vault
 
     public Vault CreateSnapshot()
     {
-        return JsonSerializer.Deserialize<Vault>(
-            JsonSerializer.Serialize(this))
-            ?? throw new InvalidOperationException("Failed to create vault snapshot.");
+        return new Vault
+        {
+            Id = Id,
+            Name = Name,
+            Entries = [.. Entries.Select(CloneEntry)],
+            History = [.. History.Select(CloneHistoryItem)],
+            Trash = [.. Trash.Select(item => new TrashedEntry
+            {
+                Entry = CloneEntry(item.Entry),
+                DeletedAt = item.DeletedAt
+            })],
+            KdfParameters = KdfParameters,
+            CreatedAt = CreatedAt,
+            UpdatedAt = UpdatedAt
+        };
+    }
+
+    private static VaultEntry CloneEntry(VaultEntry entry)
+    {
+        return new VaultEntry
+        {
+            Id = entry.Id,
+            Title = entry.Title,
+            Username = entry.Username,
+            Password = entry.Password,
+            Url = entry.Url,
+            TotpSecret = entry.TotpSecret,
+            Notes = entry.Notes,
+            Tags = [.. entry.Tags],
+            CustomFields = [.. entry.CustomFields.Select(field => new CustomField
+            {
+                Name = field.Name,
+                Value = field.Value,
+                IsSecret = field.IsSecret
+            })],
+            PasswordHistory = [.. entry.PasswordHistory.Select(item => new PasswordHistoryItem
+            {
+                Password = item.Password,
+                ChangedAt = item.ChangedAt
+            })],
+            UsernameHistory = [.. entry.UsernameHistory.Select(item => new UsernameHistoryItem
+            {
+                Username = item.Username,
+                ChangedAt = item.ChangedAt
+            })],
+            IsFavorite = entry.IsFavorite,
+            SortOrder = entry.SortOrder,
+            CreatedAt = entry.CreatedAt,
+            UpdatedAt = entry.UpdatedAt
+        };
+    }
+
+    private static EntryHistoryItem CloneHistoryItem(EntryHistoryItem item)
+    {
+        return new EntryHistoryItem
+        {
+            Id = item.Id,
+            EntryId = item.EntryId,
+            Title = item.Title,
+            Username = item.Username,
+            Password = item.Password,
+            Url = item.Url,
+            TotpSecret = item.TotpSecret,
+            Notes = item.Notes,
+            Tags = [.. item.Tags],
+            CustomFields = [.. item.CustomFields.Select(field => new CustomField
+            {
+                Name = field.Name,
+                Value = field.Value,
+                IsSecret = field.IsSecret
+            })],
+            SortOrder = item.SortOrder,
+            CreatedAt = item.CreatedAt,
+            ChangedAt = item.ChangedAt
+        };
     }
 
     public void RestoreSnapshot(Vault snapshot)
@@ -249,6 +319,17 @@ public sealed class Vault
         var selectedFields = fields
             .Distinct()
             .ToList();
+
+        var invalidField = selectedFields.FirstOrDefault(
+            field => !Enum.IsDefined(typeof(EntryHistoryField), field));
+        if (selectedFields.Any(
+                field => !Enum.IsDefined(typeof(EntryHistoryField), field)))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(fields),
+                invalidField,
+                "One or more history fields are invalid.");
+        }
 
         if (selectedFields.Count == 0)
             return false;
