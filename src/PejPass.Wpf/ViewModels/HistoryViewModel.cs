@@ -94,6 +94,8 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
 
     public event EventHandler? HistoryRestored;
 
+    public event EventHandler? VaultRollbackCompleted;
+
     public HistoryViewModel(
         VaultSession vaultSession,
         VaultService vaultService,
@@ -351,6 +353,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         SearchText = string.Empty;
         BusyMessage = string.Empty;
         HistoryRestored = null;
+        VaultRollbackCompleted = null;
     }
 
     private void ClearItems()
@@ -500,6 +503,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             {
                 vault.RestoreSnapshot(snapshot);
                 Load();
+                VaultRollbackCompleted?.Invoke(this, EventArgs.Empty);
 
                 DialogService.Error(
                     "Failed to save the restored fields. Please try again.",
@@ -678,6 +682,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             {
                 vault.RestoreSnapshot(snapshot);
                 Load();
+                VaultRollbackCompleted?.Invoke(this, EventArgs.Empty);
 
                 DialogService.Error(
                     "Failed to save the history changes. Please try again.",
