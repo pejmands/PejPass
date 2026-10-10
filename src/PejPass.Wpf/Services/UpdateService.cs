@@ -119,9 +119,9 @@ public sealed class UpdateService : IDisposable
         {
             return UpdateCheckResult.NetworkError("Request timed out.");
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
-            return UpdateCheckResult.NetworkError("Could not connect to the update server.");
+            return UpdateCheckResult.NetworkError($"The update server request failed: {ex.Message}");
         }
         catch (JsonException)
         {
@@ -862,7 +862,7 @@ public sealed class UpdateService : IDisposable
     private static bool IsTrustedManifest(UpdateManifest manifest) =>
         UpdateSignatureService.VerifyManifestSignature(manifest);
 
-    private static bool TryValidateHttpsUrl(string? value)
+    internal static bool TryValidateHttpsUrl(string? value)
     {
         return Uri.TryCreate(value, UriKind.Absolute, out var uri)
                && uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
