@@ -64,7 +64,8 @@ public partial class MainViewModel
             {
                 backupVault = await _vaultService.OpenVaultAsync(
                     backupPath,
-                    password);
+                    password,
+                    migrateLegacy: false);
 
                 return null;
             }

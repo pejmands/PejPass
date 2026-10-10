@@ -57,7 +57,7 @@ public interface IVaultStore
     /// <summary>
     /// Opens and decrypts an existing vault.
     /// </summary>
-    Task<Vault> OpenAsync(string path, string masterPassword, CancellationToken ct = default);
+    Task<Vault> OpenAsync(string path, string masterPassword, CancellationToken ct = default, bool migrateLegacy = true);
 
     /// <summary>
     /// Saves the current vault state (re-encrypts with a newly derived key).
