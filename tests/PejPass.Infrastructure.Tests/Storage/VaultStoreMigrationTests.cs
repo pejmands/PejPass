@@ -94,6 +94,40 @@ public sealed class VaultStoreMigrationTests
     }
 
     [Fact]
+    public async Task OpenAsync_WhenLegacyMigrationIsDisabled_LeavesBackupFileUnchanged()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+
+        try
+        {
+            var store = new VaultStore(new CryptoService(), new FileMover());
+            await CreateLegacyV2VaultAsync(
+                path,
+                "password",
+                new Vault { Name = "Legacy backup" },
+                cancellationToken);
+
+            var originalData = await File.ReadAllBytesAsync(path, cancellationToken);
+
+            var opened = await store.OpenAsync(
+                path,
+                "password",
+                cancellationToken,
+                migrateLegacy: false);
+
+            Assert.Equal("Legacy backup", opened.Name);
+            Assert.Equal(2, originalData[4]);
+            Assert.Equal(originalData, await File.ReadAllBytesAsync(path, cancellationToken));
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
+    [Fact]
     public async Task OpenAsync_WhenVaultUsesCustomArgon2Parameters_PreservesThemAcrossSave()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
