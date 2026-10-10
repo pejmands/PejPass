@@ -252,6 +252,8 @@ public sealed class UpdateService : IDisposable
         if (!Directory.Exists(appDir))
             throw new DirectoryNotFoundException("The PejPass installation directory no longer exists.");
 
+        EnsureDirectoryWritable(appDir);
+
         var stageRoot = Path.Combine(
             Path.GetTempPath(),
             "PejPass-update-" + Guid.NewGuid().ToString("N"));
@@ -330,6 +332,7 @@ public sealed class UpdateService : IDisposable
             "set \"SOURCE=" + sourceEsc + "\"" + Environment.NewLine +
             "set \"EXE=" + exeEsc + "\"" + Environment.NewLine +
             "set \"STAGE=" + stageEsc + "\"" + Environment.NewLine +
+            "set \"BACKUP=" + EscapeCmd(Path.Combine(Path.GetTempPath(), "PejPass-backup-" + Guid.NewGuid().ToString("N"))) + "\"" + Environment.NewLine +
             "set /a WAITCOUNT=0" + Environment.NewLine +
             ":wait" + Environment.NewLine +
             "tasklist /FI \"IMAGENAME eq PejPass.exe\" 2>nul | find /I \"PejPass.exe\" >nul" + Environment.NewLine +
@@ -339,11 +342,24 @@ public sealed class UpdateService : IDisposable
             "timeout /t 1 /nobreak >nul" + Environment.NewLine +
             "goto wait" + Environment.NewLine +
             ":apply_update" + Environment.NewLine +
+            "mkdir \"%BACKUP%\" 2>nul" + Environment.NewLine +
+            "robocopy \"%APPDIR%\" \"%BACKUP%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1" + Environment.NewLine +
+            "if errorlevel 8 goto install_failed" + Environment.NewLine +
             "robocopy \"%SOURCE%\" \"%APPDIR%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1" + Environment.NewLine +
-            "if errorlevel 8 exit /b 1" + Environment.NewLine +
+            "if errorlevel 8 goto install_failed" + Environment.NewLine +
             "start \"\" \"%EXE%\"" + Environment.NewLine +
             "rmdir /S /Q \"%STAGE%\" 2>nul" + Environment.NewLine +
-            "del \"%~f0\" 2>nul" + Environment.NewLine;
+            "rmdir /S /Q \"%BACKUP%\" 2>nul" + Environment.NewLine +
+            "del \"%~f0\" 2>nul" + Environment.NewLine +
+            "exit /b 0" + Environment.NewLine +
+            ":install_failed" + Environment.NewLine +
+            "if exist \"%BACKUP%\" robocopy \"%BACKUP%\" \"%APPDIR%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1 >nul" + Environment.NewLine +
+            "start \"\" \"%EXE%\" 2>nul" + Environment.NewLine +
+            "echo PejPass update installation failed. Previous application files were restored when possible. > \"%TEMP%\\PejPass-update-error.txt\"" + Environment.NewLine +
+            "rmdir /S /Q \"%STAGE%\" 2>nul" + Environment.NewLine +
+            "rmdir /S /Q \"%BACKUP%\" 2>nul" + Environment.NewLine +
+            "del \"%~f0\" 2>nul" + Environment.NewLine +
+            "exit /b 1" + Environment.NewLine;
 
         File.WriteAllText(scriptPath, script);
 
@@ -391,6 +407,43 @@ public sealed class UpdateService : IDisposable
                 throw new InvalidDataException("Update archive exceeds the maximum uncompressed size.");
 
             totalUncompressedBytes += entry.Length;
+        }
+    }
+
+    private static void EnsureDirectoryWritable(string directory)
+    {
+        var probePath = Path.Combine(
+            directory,
+            ".pejpass-write-check-" + Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            using (new FileStream(
+                probePath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 1,
+                FileOptions.DeleteOnClose))
+            {
+            }
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw new UnauthorizedAccessException(
+                "PejPass cannot write to its installation folder. Move the portable app to a folder you can modify, then try again.",
+                ex);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(probePath))
+                    File.Delete(probePath);
+            }
+            catch
+            {
+            }
         }
     }
 
@@ -720,6 +773,8 @@ public sealed class UpdateService : IDisposable
         response.EnsureSuccessStatusCode();
 
         var total = response.Content.Headers.ContentLength ?? -1L;
+        if (total == 0)
+            throw new InvalidDataException("The update package is empty.");
         if (total > MaxUpdatePackageBytes)
             throw new InvalidDataException("Update package exceeds the maximum supported size.");
 
@@ -770,6 +825,9 @@ public sealed class UpdateService : IDisposable
 
             cancellationToken.ThrowIfCancellationRequested();
 
+            if (readTotal == 0)
+                throw new InvalidDataException("The update package is empty.");
+
             var actualSha256 = Convert.ToHexString(hasher.GetHashAndReset());
 
             if (!CryptographicOperations.FixedTimeEquals(
@@ -807,7 +865,9 @@ public sealed class UpdateService : IDisposable
     private static bool TryValidateHttpsUrl(string? value)
     {
         return Uri.TryCreate(value, UriKind.Absolute, out var uri)
-               && uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+               && uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+               && !string.IsNullOrWhiteSpace(uri.Host)
+               && string.IsNullOrEmpty(uri.UserInfo);
     }
 
     internal static bool IsValidSha256(string? value)
