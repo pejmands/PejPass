@@ -5,8 +5,6 @@ namespace PejPass.Wpf.Views;
 
 public partial class PasswordPromptWindow : Window
 {
-    public string Password { get; private set; } = string.Empty;
-
     public Func<string, Task<string?>>? ValidatePasswordAsync { get; set; }
 
     public PasswordPromptWindow(string title, string message)
@@ -28,6 +26,13 @@ public partial class PasswordPromptWindow : Window
             if (!string.IsNullOrEmpty(PasswordInput.Password))
                 PasswordErrorText.Visibility = Visibility.Collapsed;
         };
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        PasswordInput.Clear();
+        ValidatePasswordAsync = null;
+        base.OnClosed(e);
     }
 
     private async void Ok_Click(object sender, RoutedEventArgs e)
@@ -56,7 +61,6 @@ public partial class PasswordPromptWindow : Window
             }
 
             PasswordErrorText.Visibility = Visibility.Collapsed;
-            Password = password;
             DialogResult = true;
             Close();
         }
@@ -66,6 +70,7 @@ public partial class PasswordPromptWindow : Window
         }
         finally
         {
+            password = string.Empty;
             OkButton.IsEnabled = true;
         }
     }
