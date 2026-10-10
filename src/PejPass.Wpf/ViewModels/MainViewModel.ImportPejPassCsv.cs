@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using PejPass.Application.Interfaces;
+using PejPass.Domain.Entities;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 
@@ -25,6 +26,9 @@ public partial class MainViewModel
         var operationGeneration = _vaultSession.Generation;
         if (initialVault is null || !_vaultSession.IsCurrent(operationGeneration, initialVault))
             return;
+
+        Vault? rollbackSnapshot = null;
+        var mutationStarted = false;
 
         try
         {
@@ -59,7 +63,8 @@ public partial class MainViewModel
                 return;
 
             var vault = initialVault;
-            var snapshot = vault.CreateSnapshot();
+            rollbackSnapshot = vault.CreateSnapshot();
+            mutationStarted = true;
             var result = MergeImportedEntries(vault, imported);
 
             Entries.Clear();
@@ -71,9 +76,12 @@ public partial class MainViewModel
 
             if (!await SaveVaultAsync(vault, operationGeneration))
             {
-                RestoreVaultSnapshot(snapshot, vault, operationGeneration);
+                RestoreVaultSnapshot(rollbackSnapshot!, vault, operationGeneration);
                 return;
             }
+
+            mutationStarted = false;
+            rollbackSnapshot = null;
 
             DialogService.Success(
                 $"Import finished.\n\n" +
@@ -87,6 +95,18 @@ public partial class MainViewModel
         }
         catch (Exception)
         {
+            if (mutationStarted && rollbackSnapshot is not null)
+            {
+                try
+                {
+                    RestoreVaultSnapshot(rollbackSnapshot!, initialVault, operationGeneration);
+                }
+                catch
+                {
+                    // Preserve the original import error.
+                }
+            }
+
             DialogService.Error("PejPass CSV import failed. Check the file and try again.", "Import PejPass CSV");
             StatusMessage = "PejPass CSV import failed.";
         }

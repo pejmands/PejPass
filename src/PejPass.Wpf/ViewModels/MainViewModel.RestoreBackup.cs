@@ -115,6 +115,9 @@ public partial class MainViewModel
 
         var replace = choice == AppDialogResult.Primary;
 
+        Vault? rollbackSnapshot = null;
+        var mutationStarted = false;
+
         try
         {
             IsBusy = true;
@@ -139,7 +142,8 @@ public partial class MainViewModel
                     !_vaultSession.IsCurrent(operationGeneration, currentVault))
                     return;
 
-                var snapshot = currentVault.CreateSnapshot();
+                rollbackSnapshot = currentVault.CreateSnapshot();
+                mutationStarted = true;
                 currentVault.Entries.Clear();
                 currentVault.Trash.Clear();
                 foreach (var e in backupVault.Entries)
@@ -163,9 +167,12 @@ public partial class MainViewModel
                 ApplyFilter(preserveSelectionId: null);
                 if (!await SaveVaultAsync(currentVault, operationGeneration))
                 {
-                    RestoreVaultSnapshot(snapshot, currentVault, operationGeneration);
+                    RestoreVaultSnapshot(rollbackSnapshot!, currentVault, operationGeneration);
                     return;
                 }
+
+                mutationStarted = false;
+                rollbackSnapshot = null;
 
                 DialogService.Success(
                     $"Vault replaced from backup.\n\n" +
@@ -181,7 +188,8 @@ public partial class MainViewModel
                     !_vaultSession.IsCurrent(operationGeneration, currentVault))
                     return;
 
-                var snapshot = currentVault.CreateSnapshot();
+                rollbackSnapshot = currentVault.CreateSnapshot();
+                mutationStarted = true;
 
                 // ---- Merge with explicit active-vs-trash rules ----
                 // Map fingerprint → entry (or trashed entry) in the CURRENT vault
@@ -268,9 +276,12 @@ public partial class MainViewModel
                 ApplyFilter(preserveSelectionId: null);
                 if (!await SaveVaultAsync(currentVault, operationGeneration))
                 {
-                    RestoreVaultSnapshot(snapshot, currentVault, operationGeneration);
+                    RestoreVaultSnapshot(rollbackSnapshot!, currentVault, operationGeneration);
                     return;
                 }
+
+                mutationStarted = false;
+                rollbackSnapshot = null;
 
                 var totalSkipped = skippedAlreadyInList + skippedTrashAlreadyInList + skippedTrashAlreadyInTrash;
                 var totalChanged = addedToList + restoredFromTrash + addedToTrash;
@@ -315,6 +326,18 @@ public partial class MainViewModel
         }
         catch (Exception)
         {
+            if (mutationStarted && rollbackSnapshot is not null)
+            {
+                try
+                {
+                    RestoreVaultSnapshot(rollbackSnapshot!, currentVault, operationGeneration);
+                }
+                catch
+                {
+                    // Preserve the original restore error.
+                }
+            }
+
             DialogService.Error("Restore failed. The backup may be damaged or incompatible.", "Restore Backup");
             StatusMessage = "Restore failed.";
         }
