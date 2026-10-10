@@ -137,10 +137,14 @@ public sealed class SettingsViewModelSaveTests : IDisposable
     }
 
     [Fact(Timeout = 15000)]
-    public void Save_InAppearanceOnlyMode_NeverTouchesStartupRegistration()
+    public void Save_InAppearanceOnlyMode_DoesNotTouchStartupOrHiddenSettings()
     {
         WpfTestHost.Run(host =>
         {
+            host.Settings.AutoCheckForUpdates = true;
+            host.Settings.MinimizeToSystemTray = true;
+            host.Settings.CloseToSystemTray = true;
+
             var calls = new List<bool>();
             var viewModel = CreateViewModel(
                 host,
@@ -155,12 +159,24 @@ public sealed class SettingsViewModelSaveTests : IDisposable
             viewModel.RequestClose += (_, _) => closed++;
 
             viewModel.ConfigureAppearanceOnly(true);
+            viewModel.AutoCheckForUpdates = false;
+            viewModel.MinimizeToSystemTray = false;
+            viewModel.CloseToSystemTray = false;
             viewModel.StartWithWindows = true;
 
             viewModel.SaveCommand.Execute(null);
 
             Assert.Empty(calls);
             Assert.False(host.Settings.StartWithWindows);
+            Assert.True(host.Settings.AutoCheckForUpdates);
+            Assert.True(host.Settings.MinimizeToSystemTray);
+            Assert.True(host.Settings.CloseToSystemTray);
+
+            var saved = SettingsStore.Load();
+            Assert.True(saved.AutoCheckForUpdates);
+            Assert.True(saved.MinimizeToSystemTray);
+            Assert.True(saved.CloseToSystemTray);
+            Assert.False(saved.StartWithWindows);
             Assert.Equal(1, closed);
         }, TestContext.Current.CancellationToken);
     }
