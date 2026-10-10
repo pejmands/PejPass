@@ -9,8 +9,9 @@ public partial class PasswordGeneratorWindow : Window
     private readonly bool _standalone;
     private readonly IClipboardService? _clipboard;
     private readonly TimeSpan _clipboardTimeout;
+    private string? _generatedPassword;
 
-    public string? GeneratedPassword => (DataContext as PasswordGeneratorViewModel)?.Result;
+    public string? GeneratedPassword => _generatedPassword;
 
     public PasswordGeneratorWindow(
         PasswordGeneratorViewModel viewModel,
@@ -52,11 +53,11 @@ public partial class PasswordGeneratorWindow : Window
         viewModel.RequestAccept -= OnRequestAccept;
         viewModel.RequestCancel -= OnRequestCancel;
 
-        if (_standalone)
-        {
-            viewModel.ClearState();
-            DataContext = null;
-        }
+        if (!_standalone)
+            _generatedPassword = viewModel.Result;
+
+        viewModel.ClearState();
+        DataContext = null;
     }
 
     private void OnRequestCancel(object? sender, EventArgs e)
@@ -76,7 +77,7 @@ public partial class PasswordGeneratorWindow : Window
             return;
         }
 
-        var password = GeneratedPassword;
+        var password = (DataContext as PasswordGeneratorViewModel)?.Result;
         if (string.IsNullOrEmpty(password) || _clipboard is null)
             return;
 
