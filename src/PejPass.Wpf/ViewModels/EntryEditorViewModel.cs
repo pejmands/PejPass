@@ -386,16 +386,30 @@ public partial class EntryEditorViewModel : ObservableObject
 
     public void ClearSensitiveInputs()
     {
+        Title = string.Empty;
+        Username = string.Empty;
         Password = string.Empty;
+        Url = string.Empty;
         TotpSecret = string.Empty;
+        Notes = string.Empty;
+        TagsText = string.Empty;
+        IsFavorite = false;
+
+        TitleErrorMessage = null;
+        UrlErrorMessage = null;
+        TotpErrorMessage = null;
 
         foreach (var field in CustomFields)
+        {
+            field.Name = string.Empty;
             field.Value = string.Empty;
+            field.IsSecret = false;
+            field.ErrorMessage = null;
+        }
 
         PasswordStrengthLabel = string.Empty;
         PasswordStrengthProgress = 0;
         PasswordStrengthLevel = 0;
-        TotpErrorMessage = null;
         Original = null;
     }
 
