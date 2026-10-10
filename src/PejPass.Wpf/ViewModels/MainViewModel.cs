@@ -1728,7 +1728,13 @@ public partial class CustomFieldDisplayItem(CustomField field) : ObservableObjec
     private readonly SecretRevealTimer _revealTimer = new();
 
     public string Name { get; } = field.Name;
-    public string Value { get; private set; } = field.Value;
+
+    /// <summary>
+    /// Raw value. Deliberately internal so XAML cannot bind to it (tooltips would leak secrets).
+    /// Bind to <see cref="DisplayValue"/> instead.
+    /// </summary>
+    internal string Value { get; private set; } = field.Value;
+
     public bool IsSecret { get; } = field.IsSecret;
 
     [ObservableProperty]
