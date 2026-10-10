@@ -87,7 +87,8 @@ public sealed class SensitiveInputCleanupTests
             var dialogResult = window.ShowDialog();
 
             Assert.True(dialogResult);
-            Assert.Equal(expectedPassword, window.GeneratedPassword);
+            Assert.Equal(expectedPassword, window.TakeGeneratedPassword());
+            Assert.Null(window.GeneratedPassword);
             Assert.Null(window.DataContext);
             Assert.Equal(string.Empty, viewModel.Preview);
             Assert.Null(viewModel.Result);
