@@ -13,6 +13,13 @@ public partial class PasswordGeneratorWindow : Window
 
     public string? GeneratedPassword => _generatedPassword;
 
+    public string? TakeGeneratedPassword()
+    {
+        var password = _generatedPassword;
+        _generatedPassword = null;
+        return password;
+    }
+
     public PasswordGeneratorWindow(
         PasswordGeneratorViewModel viewModel,
         bool standalone = false,
