@@ -119,8 +119,8 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         if (_isDisposed)
             return;
 
-        SelectedItem = null;
         ClearFields();
+        SelectedItem = null;
         ClearItems();
 
         var vault = _vaultSession.Vault;
@@ -345,8 +345,8 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
 
         _isDisposed = true;
 
-        SelectedItem = null;
         ClearFields();
+        SelectedItem = null;
         ClearItems();
         SearchText = string.Empty;
         BusyMessage = string.Empty;
@@ -406,7 +406,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
     private async Task Restore()
     {
         var selectedItem = SelectedItem;
-        if (selectedItem?.Snapshot is not { } selectedSnapshot)
+        if (selectedItem is null || selectedItem.Snapshot is not { } selectedSnapshot)
             return;
 
         var selectedFields = Fields
