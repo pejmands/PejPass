@@ -943,7 +943,7 @@
 														Text="{Binding DisplayValue}"
 														TextTrimming="CharacterEllipsis"
 														TextWrapping="NoWrap"
-														ToolTip="{Binding Value}" />
+														ToolTip="{Binding DisplayValue}" />
 												</Border>
 
 												<Button
