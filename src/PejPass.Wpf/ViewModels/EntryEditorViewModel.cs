@@ -478,6 +478,16 @@ public partial class EntryEditorViewModel : ObservableObject
                 Notes = Notes.Trim(),
                 Tags = tags,
                 CustomFields = customFields,
+                PasswordHistory = [.. Original.PasswordHistory.Select(item => new PasswordHistoryItem
+                {
+                    Password = item.Password,
+                    ChangedAt = item.ChangedAt
+                })],
+                UsernameHistory = [.. Original.UsernameHistory.Select(item => new UsernameHistoryItem
+                {
+                    Username = item.Username,
+                    ChangedAt = item.ChangedAt
+                })],
                 IsFavorite = IsFavorite,
                 SortOrder = Original.SortOrder,
                 CreatedAt = Original.CreatedAt,
