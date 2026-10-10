@@ -32,7 +32,7 @@ public sealed partial class BrowserImportService : IBrowserImportService
         {
             HasHeaderRecord = true,
             IgnoreBlankLines = true,
-            BadDataFound = null
+            BadDataFound = _ => throw new InvalidDataException("CSV contains malformed quoting or field data.")
         });
 
         ct.ThrowIfCancellationRequested();
