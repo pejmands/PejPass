@@ -94,7 +94,7 @@
 					<ListBox.Resources>
 						<Style x:Key="EmptyHistoryTextStyle" TargetType="TextBlock">
 							<Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
-							<Setter Property="FontSize" Value="13" />
+							<Setter Property="FontSize" Value="{DynamicResource AppFontSize13}" />
 							<Setter Property="HorizontalAlignment" Value="Center" />
 							<Setter Property="TextAlignment" Value="Center" />
 						</Style>

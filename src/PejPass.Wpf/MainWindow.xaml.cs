@@ -34,6 +34,7 @@ public partial class MainWindow : Window
     /// </summary>
     private bool _allowClose;
     private NotifyCollectionChangedEventHandler? _entriesCollectionChangedHandler;
+    private readonly Debouncer _prefetchDebouncer;
 
     public MainWindow(MainViewModel viewModel, VaultSession vaultSession)
     {
@@ -47,9 +48,12 @@ public partial class MainWindow : Window
         _snackbarTimer.Tick += (_, _) => HideSnackbar();
         SnackbarService.Shown += OnSnackbarShown;
 
+        _prefetchDebouncer = new Debouncer(
+            TimeSpan.FromMilliseconds(150),
+            PrefetchFavicons,
+            Dispatcher);
 
-        _entriesCollectionChangedHandler = (_, _) =>
-            FaviconService.Prefetch(viewModel.Entries.Select(e => (e.Url, e.Title)));
+        _entriesCollectionChangedHandler = (_, _) => _prefetchDebouncer.Trigger();
         viewModel.Entries.CollectionChanged += _entriesCollectionChangedHandler;
 
         viewModel.PropertyChanged += (_, e) =>
@@ -115,6 +119,8 @@ public partial class MainWindow : Window
             if (_entriesCollectionChangedHandler is not null)
                 viewModel.Entries.CollectionChanged -= _entriesCollectionChangedHandler;
 
+            _prefetchDebouncer.Dispose();
+
             FaviconService.OnlineFetchingChanged -= OnOnlineFetchingChanged;
             FaviconService.FaviconsBatchReady -= OnFaviconsBatchReady;
             SnackbarService.Shown -= OnSnackbarShown;
@@ -173,8 +179,7 @@ public partial class MainWindow : Window
 
         Loaded += (_, _) =>
         {
-            if (DataContext is MainViewModel vm)
-                FaviconService.Prefetch(vm.Entries.Select(e => (e.Url, e.Title)));
+            PrefetchFavicons();
 
             Dispatcher.BeginInvoke(() =>
             {
@@ -827,6 +832,15 @@ public partial class MainWindow : Window
         }
     }
 
+    private void PrefetchFavicons()
+    {
+        // A direct prefetch (initial load or setting enabled) supersedes a pending collection-change debounce.
+        _prefetchDebouncer.Cancel();
+
+        if (DataContext is MainViewModel vm)
+            FaviconService.Prefetch(vm.Entries.Select(e => (e.Url, e.Title)));
+    }
+
     private void OnFaviconsBatchReady()
     {
         if (!IsLoaded)
@@ -847,8 +861,7 @@ public partial class MainWindow : Window
         if (!enabled)
             return;
 
-        if (DataContext is MainViewModel vm)
-            FaviconService.Prefetch(vm.Entries.Select(e => (e.Url, e.Title)));
+        PrefetchFavicons();
 
         Dispatcher.BeginInvoke(() =>
         {

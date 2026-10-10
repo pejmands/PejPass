@@ -354,17 +354,12 @@ public partial class App : System.Windows.Application
 
     public static void ApplyFontSize(FontSizeMode mode)
     {
-        var scale = mode switch
-        {
-            FontSizeMode.Small => 12d / 13d,
-            FontSizeMode.Large => 15d / 13d,
-            _ => 1d
-        };
+        var scale = FontScale.ScaleFor(mode);
 
-        foreach (var baseSize in new[] { 10d, 11d, 12d, 13d, 14d, 15d, 16d, 18d, 20d, 22d, 28d, 30d })
-            Current.Resources[$"AppFontSize{baseSize:0}"] = baseSize * scale;
+        foreach (var baseSize in FontScale.Steps)
+            Current.Resources[FontScale.ResourceKey(baseSize)] = baseSize * scale;
 
-        Current.Resources["AppFontSize"] = 13d * scale;
+        Current.Resources["AppFontSize"] = FontScale.BaseSize * scale;
     }
 
     public static void PrepareCustomChrome(Window window)

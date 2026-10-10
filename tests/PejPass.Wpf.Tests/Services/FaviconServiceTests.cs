@@ -502,6 +502,38 @@ public sealed class FaviconServiceTests
     }
 
     [Fact]
+    public void CollectMissingHosts_DeduplicatesAndSkipsKnownFailedAndInvalidHosts()
+    {
+        var unique = Guid.NewGuid().ToString("N");
+        var cached = $"cached-{unique}.example";
+        var failed = $"failed-{unique}.example";
+        var fresh = $"fresh-{unique}.example";
+
+        SetMemory(cached, CreateTestImage());
+        FaviconService.MarkFailed(failed);
+
+        try
+        {
+            var hosts = FaviconService.CollectMissingHosts(
+            [
+                ($"https://{fresh}/a", "A"),
+                ($"https://www.{fresh}/b", "B"),
+                ($"https://{cached}", "C"),
+                ($"https://{failed}", "D"),
+                ("ftp://example.org", "E"),
+                ("", "F")
+            ]);
+
+            Assert.Equal([fresh], hosts);
+        }
+        finally
+        {
+            GetMemory().TryRemove(cached, out _);
+            GetFailed().TryRemove(failed, out _);
+        }
+    }
+
+    [Fact]
     public async Task DiskWarm_WaitsForStartupCleanupBeforeReadingDisk()
     {
         const string host = "startup-cleanup-warm.example";
