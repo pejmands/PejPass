@@ -112,7 +112,7 @@ public sealed partial class BrowserImportService
             {
                 HasHeaderRecord = true,
                 IgnoreBlankLines = true,
-                BadDataFound = null
+                BadDataFound = _ => throw new InvalidDataException("CSV contains malformed quoting or field data.")
             });
 
             try
