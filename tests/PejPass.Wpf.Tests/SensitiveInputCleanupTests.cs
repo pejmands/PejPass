@@ -159,8 +159,8 @@ public sealed class SensitiveInputCleanupTests
 
             Assert.Equal(string.Empty, row.CurrentValue);
             Assert.Equal(string.Empty, row.SnapshotValue);
-            Assert.Equal("••••••••", row.CurrentDisplayValue);
-            Assert.Equal("••••••••", row.SnapshotDisplayValue);
+            Assert.Equal("(empty)", row.CurrentDisplayValue);
+            Assert.Equal("(empty)", row.SnapshotDisplayValue);
             Assert.False(row.IsSecretVisible);
         }, TestContext.Current.CancellationToken);
     }
