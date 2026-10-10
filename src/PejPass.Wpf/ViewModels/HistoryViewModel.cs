@@ -181,39 +181,62 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         EntryHistoryItem? newerSnapshot,
         VaultEntry? currentEntry)
     {
-        var newer = newerSnapshot;
+        if (newerSnapshot is not null)
+        {
+            return CollectChanges(
+                snapshot,
+                newerSnapshot.Title,
+                newerSnapshot.Username,
+                newerSnapshot.Password,
+                newerSnapshot.Url,
+                newerSnapshot.TotpSecret,
+                newerSnapshot.Notes,
+                newerSnapshot.Tags,
+                newerSnapshot.CustomFields);
+        }
+
+        if (currentEntry is not null)
+        {
+            return CollectChanges(
+                snapshot,
+                currentEntry.Title,
+                currentEntry.Username,
+                currentEntry.Password,
+                currentEntry.Url,
+                currentEntry.TotpSecret,
+                currentEntry.Notes,
+                currentEntry.Tags,
+                currentEntry.CustomFields);
+        }
+
+        return [];
+    }
+
+    private static List<string> CollectChanges(
+        EntryHistoryItem older,
+        string title,
+        string username,
+        string password,
+        string url,
+        string totpSecret,
+        string notes,
+        List<string> tags,
+        List<CustomField> customFields)
+    {
         var changed = new List<string>();
 
-        if (newer is not null)
-        {
-            AddIfChanged(changed, "Title", snapshot.Title, newer.Title);
-            AddIfChanged(changed, "Username", snapshot.Username, newer.Username);
-            AddIfChanged(changed, "Password", snapshot.Password, newer.Password);
-            AddIfChanged(changed, "URL", snapshot.Url, newer.Url);
-            AddIfChanged(changed, "TOTP", snapshot.TotpSecret, newer.TotpSecret);
-            AddIfChanged(changed, "Notes", snapshot.Notes, newer.Notes);
-            AddIfChanged(changed, "Tags", FormatTags(snapshot.Tags), FormatTags(newer.Tags));
-            AddIfChanged(
-                changed,
-                "Custom Fields",
-                FormatCustomFields(snapshot.CustomFields),
-                FormatCustomFields(newer.CustomFields));
-        }
-        else if (currentEntry is not null)
-        {
-            AddIfChanged(changed, "Title", snapshot.Title, currentEntry.Title);
-            AddIfChanged(changed, "Username", snapshot.Username, currentEntry.Username);
-            AddIfChanged(changed, "Password", snapshot.Password, currentEntry.Password);
-            AddIfChanged(changed, "URL", snapshot.Url, currentEntry.Url);
-            AddIfChanged(changed, "TOTP", snapshot.TotpSecret, currentEntry.TotpSecret);
-            AddIfChanged(changed, "Notes", snapshot.Notes, currentEntry.Notes);
-            AddIfChanged(changed, "Tags", FormatTags(snapshot.Tags), FormatTags(currentEntry.Tags));
-            AddIfChanged(
-                changed,
-                "Custom Fields",
-                FormatCustomFields(snapshot.CustomFields),
-                FormatCustomFields(currentEntry.CustomFields));
-        }
+        AddIfChanged(changed, "Title", older.Title, title);
+        AddIfChanged(changed, "Username", older.Username, username);
+        AddIfChanged(changed, "Password", older.Password, password);
+        AddIfChanged(changed, "URL", older.Url, url);
+        AddIfChanged(changed, "TOTP", older.TotpSecret, totpSecret);
+        AddIfChanged(changed, "Notes", older.Notes, notes);
+
+        if (!older.Tags.SequenceEqual(tags, StringComparer.Ordinal))
+            changed.Add("Tags");
+
+        if (!CustomField.AreSequencesEqual(older.CustomFields, customFields))
+            changed.Add("Custom Fields");
 
         return changed;
     }
@@ -298,13 +321,15 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             EntryHistoryField.Tags,
             "Tags",
             FormatTags(current.Tags),
-            FormatTags(snapshot.Tags));
+            FormatTags(snapshot.Tags),
+            isChanged: !current.Tags.SequenceEqual(snapshot.Tags, StringComparer.Ordinal));
 
         AddField(
             EntryHistoryField.CustomFields,
             "Custom Fields",
-            FormatCustomFields(current.CustomFields),
-            FormatCustomFields(snapshot.CustomFields));
+            FormatCustomFields(current.CustomFields, snapshot.CustomFields),
+            FormatCustomFields(snapshot.CustomFields, current.CustomFields),
+            isChanged: !CustomField.AreSequencesEqual(current.CustomFields, snapshot.CustomFields));
 
         OnPropertyChanged(nameof(HasSelectedFields));
     }
@@ -314,9 +339,10 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         string name,
         string currentValue,
         string snapshotValue,
-        bool isSecret = false)
+        bool isSecret = false,
+        bool? isChanged = null)
     {
-        var isChanged = !string.Equals(
+        var changed = isChanged ?? !string.Equals(
             currentValue,
             snapshotValue,
             StringComparison.Ordinal);
@@ -326,7 +352,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             name,
             currentValue,
             snapshotValue,
-            isChanged,
+            changed,
             isSecret,
             _settings.RevealSecretSeconds);
 
@@ -395,17 +421,42 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
     }
 
     private static string FormatCustomFields(
-        List<CustomField> fields)
+        List<CustomField> fields,
+        List<CustomField> other)
     {
         if (fields.Count == 0)
             return "(none)";
 
         return string.Join(
             Environment.NewLine,
-            fields.Select(field =>
-                field.IsSecret
-                    ? $"{field.Name}: ••••••••"
-                    : $"{field.Name}: {field.Value}"));
+            fields.Select((field, index) =>
+            {
+                var matches = other
+                    .Where(candidate =>
+                        string.Equals(candidate.Name, field.Name, StringComparison.Ordinal))
+                    .ToList();
+
+                var isSensitive = field.IsSecret || matches.Any(candidate => candidate.IsSecret);
+                if (!isSensitive)
+                    return $"{field.Name}: {field.Value}";
+
+                var counterpart = index < other.Count &&
+                    string.Equals(other[index].Name, field.Name, StringComparison.Ordinal)
+                        ? other[index]
+                        : matches.Count == 1
+                            ? matches[0]
+                            : null;
+
+                var differs = counterpart is null ||
+                    counterpart.IsSecret != field.IsSecret ||
+                    matches.Any(candidate =>
+                        candidate.IsSecret != field.IsSecret ||
+                        !string.Equals(candidate.Value, field.Value, StringComparison.Ordinal));
+
+                return differs
+                    ? $"{field.Name}: •••••••• (differs)"
+                    : $"{field.Name}: ••••••••";
+            }));
     }
 
     [RelayCommand]
