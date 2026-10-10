@@ -13,6 +13,7 @@ public partial class TrashViewModel : ObservableObject
     private readonly List<TrashRow> _all = [];
     private readonly Func<Task<bool>> _ensureWritable;
     private readonly Func<Task<bool>> _saveVault;
+    private readonly Func<bool> _isSessionCurrent;
     private readonly Func<VaultEntry, bool> _isDuplicate;
 
     public ObservableCollection<TrashRow> Items { get; } = [];
@@ -35,11 +36,13 @@ public partial class TrashViewModel : ObservableObject
         Vault vault,
         Func<Task<bool>> ensureWritable,
         Func<Task<bool>> saveVault,
+        Func<bool> isSessionCurrent,
         Func<VaultEntry, bool> isDuplicate)
     {
         _vault = vault;
         _ensureWritable = ensureWritable;
         _saveVault = saveVault;
+        _isSessionCurrent = isSessionCurrent;
         _isDuplicate = isDuplicate;
         Reload();
     }
@@ -94,7 +97,7 @@ public partial class TrashViewModel : ObservableObject
             .DistinctBy(row => row.EntryId)
             .ToList();
 
-        if (selected is not { Count: > 0 } || !await _ensureWritable())
+        if (selected is not { Count: > 0 } || !await EnsureCurrentAndWritableAsync())
             return;
 
         var snapshot = _vault.CreateSnapshot();
@@ -145,7 +148,7 @@ public partial class TrashViewModel : ObservableObject
     [RelayCommand]
     private async Task RestoreAsync(TrashRow? row)
     {
-        if (row is null || !await _ensureWritable()) return;
+        if (row is null || !await EnsureCurrentAndWritableAsync()) return;
 
         var trashedEntry = _vault.Trash
             .FirstOrDefault(t => t.Entry.Id == row.EntryId)?.Entry;
@@ -191,7 +194,7 @@ public partial class TrashViewModel : ObservableObject
                 noText: "Cancel"))
             return;
 
-        if (!await _ensureWritable())
+        if (!await EnsureCurrentAndWritableAsync())
             return;
 
         var snapshot = _vault.CreateSnapshot();
@@ -229,7 +232,7 @@ public partial class TrashViewModel : ObservableObject
                 noText: "Cancel"))
             return;
 
-        if (!await _ensureWritable())
+        if (!await EnsureCurrentAndWritableAsync())
             return;
 
         var snapshot = _vault.CreateSnapshot();
@@ -265,7 +268,7 @@ public partial class TrashViewModel : ObservableObject
                 noText: "Cancel"))
             return;
 
-        if (!await _ensureWritable())
+        if (!await EnsureCurrentAndWritableAsync())
             return;
 
         var snapshot = _vault.CreateSnapshot();
@@ -282,13 +285,27 @@ public partial class TrashViewModel : ObservableObject
         SnackbarService.Show("Trash emptied.");
     }
 
+    private async Task<bool> EnsureCurrentAndWritableAsync()
+    {
+        return _isSessionCurrent() &&
+            await _ensureWritable() &&
+            _isSessionCurrent();
+    }
+
     private async Task<bool> SaveAndRollbackAsync(Vault snapshot)
     {
-        if (await _saveVault())
+        if (!_isSessionCurrent())
+            return false;
+
+        if (await _saveVault() && _isSessionCurrent())
             return true;
 
-        _vault.RestoreSnapshot(snapshot);
-        Reload();
+        if (_isSessionCurrent())
+        {
+            _vault.RestoreSnapshot(snapshot);
+            Reload();
+        }
+
         return false;
     }
 }

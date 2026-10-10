@@ -11,8 +11,27 @@ public sealed class VaultSession : IDisposable
     private Vault? _vault;
     private string? _vaultPath;
     private bool _disposed;
+    private long _generation;
 
     public event EventHandler? StateChanged;
+
+    /// <summary>Changes whenever the active vault session is replaced or invalidated.</summary>
+    public long Generation
+    {
+        get { lock (_sync) return _generation; }
+    }
+
+    public bool IsCurrent(long generation, Vault vault)
+    {
+        ArgumentNullException.ThrowIfNull(vault);
+
+        lock (_sync)
+            return !_disposed &&
+                _generation == generation &&
+                ReferenceEquals(_vault, vault) &&
+                !string.IsNullOrEmpty(_vaultPath) &&
+                _keyMaterial is not null;
+    }
 
     public Vault? Vault
     {
@@ -59,6 +78,7 @@ public sealed class VaultSession : IDisposable
                 _vault = vault;
                 _vaultPath = fullPath;
                 _keyMaterial = materialCopy;
+                _generation++;
             }
         }
         catch
@@ -78,6 +98,7 @@ public sealed class VaultSession : IDisposable
         {
             ThrowIfDisposed();
             _vault = vault;
+            _generation++;
         }
     }
 
@@ -111,6 +132,7 @@ public sealed class VaultSession : IDisposable
             {
                 ClearKeyMaterialCore();
                 _keyMaterial = materialCopy;
+                _generation++;
             }
         }
 
@@ -136,6 +158,7 @@ public sealed class VaultSession : IDisposable
             ClearKeyMaterialCore();
             _vault = null;
             _vaultPath = null;
+            _generation++;
             changed = true;
         }
 
@@ -153,6 +176,7 @@ public sealed class VaultSession : IDisposable
             ClearKeyMaterialCore();
             _vault = null;
             _vaultPath = null;
+            _generation++;
             _disposed = true;
             StateChanged = null;
         }

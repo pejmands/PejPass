@@ -414,6 +414,8 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         if (vault is null)
             return;
 
+        var sessionGeneration = _vaultSession.Generation;
+
         var entry = vault.FindEntry(
             SelectedItem.EntryId);
 
@@ -442,6 +444,9 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             return;
 
         if (!await EnsureVaultWritableAsync())
+            return;
+
+        if (!_vaultSession.IsCurrent(sessionGeneration, vault))
             return;
 
         var snapshot = vault.CreateSnapshot();
@@ -481,12 +486,15 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         }
         catch (Exception)
         {
-            _vaultSession.Vault!.RestoreSnapshot(snapshot);
-            Load();
+            if (_vaultSession.IsCurrent(sessionGeneration, vault))
+            {
+                vault.RestoreSnapshot(snapshot);
+                Load();
 
-            DialogService.Error(
-                "Failed to save the restored fields. Please try again.",
-                "Restore history");
+                DialogService.Error(
+                    "Failed to save the restored fields. Please try again.",
+                    "Restore history");
+            }
 
             return;
         }
@@ -495,6 +503,9 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         {
             IsBusy = false;
         }
+
+        if (!_vaultSession.IsCurrent(sessionGeneration, vault))
+            return;
 
         Load();
 
@@ -523,7 +534,12 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         if (vault is null)
             return;
 
+        var sessionGeneration = _vaultSession.Generation;
+
         if (!await EnsureVaultWritableAsync())
+            return;
+
+        if (!_vaultSession.IsCurrent(sessionGeneration, vault))
             return;
 
         var snapshot = vault.CreateSnapshot();
@@ -536,7 +552,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             IsBusy = true;
             BusyMessage = "Deleting history...";
 
-            if (!await SaveAsync(snapshot, "Delete history"))
+            if (!await SaveAsync(vault, sessionGeneration, snapshot, "Delete history"))
                 return;
         }
         finally
@@ -557,6 +573,8 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         if (vault is null || vault.History.Count == 0)
             return;
 
+        var sessionGeneration = _vaultSession.Generation;
+
         var confirmed = DialogService.Confirm(
             "Delete all history snapshots?\n\nThis action cannot be undone.",
             "Delete all history",
@@ -569,6 +587,9 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         if (!await EnsureVaultWritableAsync())
             return;
 
+        if (!_vaultSession.IsCurrent(sessionGeneration, vault))
+            return;
+
         var snapshot = vault.CreateSnapshot();
         vault.ClearHistory();
 
@@ -577,7 +598,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             IsBusy = true;
             BusyMessage = "Deleting all history...";
 
-            if (!await SaveAsync(snapshot, "Delete all history"))
+            if (!await SaveAsync(vault, sessionGeneration, snapshot, "Delete all history"))
                 return;
         }
         finally
@@ -592,32 +613,44 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
 
     private async Task<bool> EnsureVaultWritableAsync()
     {
+        var vault = _vaultSession.Vault;
+        var sessionGeneration = _vaultSession.Generation;
         var path = _vaultSession.VaultPath;
 
-        if (string.IsNullOrEmpty(path))
+        if (vault is null || string.IsNullOrEmpty(path))
             return false;
 
         try
         {
             await _vaultService.EnsureVaultWritableAsync(path);
-            return true;
+            return _vaultSession.IsCurrent(sessionGeneration, vault);
         }
         catch (Exception)
         {
-            DialogService.Error(
-                "The vault cannot be modified right now. Check file permissions and try again.",
-                "Vault unavailable");
+            if (_vaultSession.IsCurrent(sessionGeneration, vault))
+            {
+                DialogService.Error(
+                    "The vault cannot be modified right now. Check file permissions and try again.",
+                    "Vault unavailable");
+            }
 
             return false;
         }
     }
 
-    private async Task<bool> SaveAsync(Vault snapshot, string actionTitle)
+    private async Task<bool> SaveAsync(
+        Vault vault,
+        long sessionGeneration,
+        Vault snapshot,
+        string actionTitle)
     {
         var path = _vaultSession.VaultPath;
 
-        if (string.IsNullOrEmpty(path))
+        if (string.IsNullOrEmpty(path) ||
+            !_vaultSession.IsCurrent(sessionGeneration, vault))
+        {
             return false;
+        }
 
         try
         {
@@ -625,18 +658,21 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             await _vaultService.SaveVaultAsync(
                 path,
                 keyMaterial,
-                _vaultSession.Vault!);
+                vault);
 
-            return true;
+            return _vaultSession.IsCurrent(sessionGeneration, vault);
         }
         catch (Exception)
         {
-            _vaultSession.Vault!.RestoreSnapshot(snapshot);
-            Load();
+            if (_vaultSession.IsCurrent(sessionGeneration, vault))
+            {
+                vault.RestoreSnapshot(snapshot);
+                Load();
 
-            DialogService.Error(
-                "Failed to save the history changes. Please try again.",
-                actionTitle);
+                DialogService.Error(
+                    "Failed to save the history changes. Please try again.",
+                    actionTitle);
+            }
 
             return false;
         }
