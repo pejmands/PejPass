@@ -3,6 +3,7 @@ using PejPass.Wpf.Controls;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace PejPass.Wpf.Tests;
 
@@ -66,6 +67,50 @@ public sealed class SensitiveInputCleanupTests
             Assert.Equal(0, viewModel.NewPasswordStrengthLevel);
             Assert.False(viewModel.ShowNewPasswordStrength);
             Assert.Null(window.DataContext);
+        }, TestContext.Current.CancellationToken);
+    }
+
+
+    [Fact(Timeout = 15000)]
+    public void PasswordGeneratorWindow_AcceptPreservesResultButClearsViewModel()
+    {
+        WpfTestHost.Run(_ =>
+        {
+            var viewModel = new PasswordGeneratorViewModel();
+            var expectedPassword = viewModel.Preview;
+            var window = new PasswordGeneratorWindow(viewModel);
+
+            Dispatcher.CurrentDispatcher.BeginInvoke(
+                DispatcherPriority.Background,
+                new Action(() => viewModel.UseCommand.Execute(null)));
+
+            var dialogResult = window.ShowDialog();
+
+            Assert.True(dialogResult);
+            Assert.Equal(expectedPassword, window.TakeGeneratedPassword());
+            Assert.Null(window.GeneratedPassword);
+            Assert.Null(window.DataContext);
+            Assert.Equal(string.Empty, viewModel.Preview);
+            Assert.Null(viewModel.Result);
+            Assert.Null(viewModel.Error);
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 15000)]
+    public void PasswordGeneratorWindow_CloseWithoutAcceptingClearsViewModel()
+    {
+        WpfTestHost.Run(_ =>
+        {
+            var viewModel = new PasswordGeneratorViewModel();
+            var window = new PasswordGeneratorWindow(viewModel);
+
+            window.Show();
+            window.Close();
+
+            Assert.Null(window.DataContext);
+            Assert.Equal(string.Empty, viewModel.Preview);
+            Assert.Null(viewModel.Result);
+            Assert.Null(viewModel.Error);
         }, TestContext.Current.CancellationToken);
     }
 

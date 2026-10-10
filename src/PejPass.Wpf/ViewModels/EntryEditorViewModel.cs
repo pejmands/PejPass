@@ -312,8 +312,12 @@ public partial class EntryEditorViewModel : ObservableObject
         var vm = new PasswordGeneratorViewModel();
         var win = new PasswordGeneratorWindow(vm) { Owner = owner };
 
-        if (win.ShowDialog() == true && !string.IsNullOrEmpty(win.GeneratedPassword))
-            Password = win.GeneratedPassword;
+        if (win.ShowDialog() == true)
+        {
+            var generatedPassword = win.TakeGeneratedPassword();
+            if (!string.IsNullOrEmpty(generatedPassword))
+                Password = generatedPassword;
+        }
     }
 
     [RelayCommand]
