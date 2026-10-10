@@ -79,6 +79,9 @@ public partial class MainViewModel
                 return;
             }
 
+            mutationStarted = false;
+            rollbackSnapshot = null;
+
             DialogService.Success(
                 $"Import finished.\n\n" +
                 $"Added to list:              {result.AddedToList}\n" +
