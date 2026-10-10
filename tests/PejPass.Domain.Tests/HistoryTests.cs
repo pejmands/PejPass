@@ -456,6 +456,35 @@ public sealed class HistoryTests
         Assert.Equal(originalHistoryCount, vault.History.Count);
     }
 
+    [Fact]
+    public void RestoreHistoryField_RestoresChangedSecretCustomFieldValue()
+    {
+        var vault = new Vault();
+
+        var entry = CreateEntry(customFields:
+        [
+            new CustomField { Name = "Recovery", Value = "old-secret", IsSecret = true }
+        ]);
+        vault.AddEntry(entry);
+
+        var updated = CloneEntry(entry, customFields:
+        [
+            new CustomField { Name = "Recovery", Value = "new-secret", IsSecret = true }
+        ]);
+
+        Assert.True(vault.UpdateEntry(updated));
+
+        var snapshot = Assert.Single(vault.History);
+
+        Assert.True(vault.RestoreHistoryField(snapshot, EntryHistoryField.CustomFields));
+
+        var restored = Assert.Single(vault.Entries);
+        var field = Assert.Single(restored.CustomFields);
+
+        Assert.Equal("old-secret", field.Value);
+        Assert.True(field.IsSecret);
+    }
+
     private static VaultEntry CreateEntry(
         string title = "Test Entry",
         string username = "user",
