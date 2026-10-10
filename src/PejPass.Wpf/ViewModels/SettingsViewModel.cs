@@ -11,6 +11,9 @@ using ThemeMode = PejPass.Domain.Settings.ThemeMode;
 
 namespace PejPass.Wpf.ViewModels;
 
+/// <summary>Registers or removes the Windows startup entry.</summary>
+public delegate bool StartupRegistrar(bool enabled, out string? error);
+
 public partial class SettingsViewModel : ObservableObject
 {
     private const int MaxAutoLockMinutes = 1440;
@@ -20,6 +23,8 @@ public partial class SettingsViewModel : ObservableObject
     private readonly VaultService _vaultService;
     private readonly VaultSession _vaultSession;
     private readonly SessionPasswordCache _sessionPasswordCache;
+    private readonly Action<string, string> _showError;
+    private readonly StartupRegistrar _setStartup;
 
     private readonly ThemeMode _savedTheme;
     private readonly int _savedAutoLock;
@@ -124,13 +129,17 @@ public partial class SettingsViewModel : ObservableObject
         ThemeService themeService,
         VaultService vaultService,
         VaultSession vaultSession,
-        SessionPasswordCache sessionPasswordCache)
+        SessionPasswordCache sessionPasswordCache,
+        Action<string, string>? showError = null,
+        StartupRegistrar? setStartup = null)
     {
         _settings = settings;
         _themeService = themeService;
         _vaultService = vaultService;
         _vaultSession = vaultSession;
         _sessionPasswordCache = sessionPasswordCache;
+        _showError = showError ?? DialogService.Error;
+        _setStartup = setStartup ?? WindowsStartupService.TrySetEnabled;
 
         _savedTheme = settings.Theme;
         _savedAutoLock = settings.AutoLockMinutes;
@@ -234,20 +243,49 @@ public partial class SettingsViewModel : ObservableObject
         {
             RevertPreview();
 
-            DialogService.Error(
+            _showError(
                 "The settings cannot be modified right now. Check file permissions and try again.",
                 "Settings unavailable");
 
             return;
         }
 
+        // Change the registry first, and only when the requested value differs.
+        // This keeps the settings object and file untouched if registration fails.
+        var startupChanged = !AppearanceOnly && StartWithWindows != _savedStartWithWindows;
+
+        if (startupChanged)
+        {
+            string? startupError;
+            bool startupUpdated;
+
+            try
+            {
+                startupUpdated = _setStartup(StartWithWindows, out startupError);
+            }
+            catch (Exception)
+            {
+                startupUpdated = false;
+                startupError = "The startup registrar failed unexpectedly.";
+            }
+
+            if (!startupUpdated)
+            {
+                // Reset only this option; keep the user's other edits so they can retry.
+                StartWithWindows = _savedStartWithWindows;
+
+                _showError(
+                    $"Windows startup could not be updated.\n\n{startupError}",
+                    "Startup setting unavailable");
+
+                return;
+            }
+        }
+
+        // Apply the editable values to memory only after startup registration succeeds.
         _settings.Theme = (ThemeMode)SelectedThemeIndex;
         _settings.FontSize = (FontSizeMode)SelectedFontSizeIndex;
         _settings.Zoom = ZoomBehavior.ZoomLevels[SelectedZoomIndex];
-        _settings.AutoCheckForUpdates = AutoCheckForUpdates;
-        _settings.MinimizeToSystemTray = MinimizeToSystemTray;
-        _settings.CloseToSystemTray = CloseToSystemTray;
-        _settings.StartWithWindows = StartWithWindows;
 
         // The tray icon is always available. This setting only controls
         // whether closing or minimizing the main window hides it to the tray.
@@ -255,6 +293,10 @@ public partial class SettingsViewModel : ObservableObject
 
         if (!AppearanceOnly)
         {
+            _settings.AutoCheckForUpdates = AutoCheckForUpdates;
+            _settings.MinimizeToSystemTray = MinimizeToSystemTray;
+            _settings.CloseToSystemTray = CloseToSystemTray;
+            _settings.StartWithWindows = StartWithWindows;
             _settings.AutoLockMinutes = AutoLockMinutes;
             _settings.ClipboardClearSeconds = ClipboardClearSeconds;
             _settings.RevealSecretSeconds = RevealSecretSeconds;
@@ -263,26 +305,31 @@ public partial class SettingsViewModel : ObservableObject
             _settings.OnlineFaviconFetchingEnabled = OnlineFaviconFetchingEnabled;
         }
 
+        // If persistence fails, attempt to undo the external registry change.
         if (!SettingsStore.TrySave(_settings))
         {
+            var startupRollbackSucceeded = true;
+
+            if (startupChanged)
+            {
+                try
+                {
+                    startupRollbackSucceeded =
+                        _setStartup(_savedStartWithWindows, out _);
+                }
+                catch (Exception)
+                {
+                    startupRollbackSucceeded = false;
+                }
+            }
+
             RevertPreview();
 
-            DialogService.Error(
-                "Failed to save settings. The changes were not applied.",
+            _showError(
+                startupRollbackSucceeded
+                    ? "Failed to save settings. The changes were not applied."
+                    : "Failed to save settings, and the Windows startup setting could not be rolled back. Check the Windows startup setting manually.",
                 "Save failed");
-
-            return;
-        }
-
-        if (!WindowsStartupService.TrySetEnabled(StartWithWindows, out var startupError))
-        {
-            _settings.StartWithWindows = _savedStartWithWindows;
-            SettingsStore.TrySave(_settings);
-            RevertPreview();
-
-            DialogService.Error(
-                $"Windows startup could not be updated.\n\n{startupError}",
-                "Startup setting unavailable");
 
             return;
         }
@@ -296,6 +343,7 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         _themeService.Apply();
+
         if (!AppearanceOnly)
             FaviconService.ConfigureOnlineFetching(OnlineFaviconFetchingEnabled);
 

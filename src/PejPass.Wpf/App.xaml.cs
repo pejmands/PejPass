@@ -16,6 +16,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shell;
+using System.Windows.Threading;
 
 namespace PejPass.Wpf;
 
@@ -25,6 +26,7 @@ public partial class App : System.Windows.Application
 
     private static AppSettings? _settings;
     private static WindowsSecurityService? _windowsSecurityService;
+    private static SecurityLockCoordinator? _securityLock;
     private static PasswordGeneratorWindow? _passwordGeneratorWindow;
 
     private const double WindowCornerRadius = 10;
@@ -110,6 +112,10 @@ public partial class App : System.Windows.Application
         tray.Show();
 
         _windowsSecurityService = Services.GetRequiredService<WindowsSecurityService>();
+        _securityLock = new SecurityLockCoordinator(
+            clearCache: () => Services.GetRequiredService<SessionPasswordCache>().Clear(),
+            lockVault: LockMainWindowIfOpen,
+            dispatchToUi: DispatchToUi);
         _windowsSecurityService.SecurityLockRequested += OnWindowsSecurityLockRequested;
         _windowsSecurityService.Start();
 
@@ -184,36 +190,47 @@ public partial class App : System.Windows.Application
 
     private static void OnTrayLockRequested(object? sender, EventArgs e)
     {
-        Current.Dispatcher.Invoke(() =>
-        {
-            // Preserve the current visibility of the main window.
-            if (Current.MainWindow is MainWindow main &&
-                main.DataContext is MainViewModel vm)
-            {
-                vm.Lock(
-                    main.IsVisible &&
-                    main.WindowState != WindowState.Minimized);
-            }
-        });
+        Current.Dispatcher.Invoke(LockMainWindowIfOpen);
     }
 
-    private static void OnWindowsSecurityLockRequested(object? sender, EventArgs e)
+    private static void OnWindowsSecurityLockRequested(object? sender, SecurityLockReason reason)
     {
-        Current.Dispatcher.Invoke(() =>
-        {
-            // Clear the Hello cache before locking for Windows lock or system suspend.
-            Services.GetRequiredService<SessionPasswordCache>().Clear();
+        _securityLock?.Handle(waitForUi: reason == SecurityLockReason.Suspend);
+    }
 
-            // Lock immediately when Windows locks or suspends the system.
-            // A minimized or hidden main window keeps the login screen hidden.
-            if (Current.MainWindow is MainWindow main &&
-                main.DataContext is MainViewModel vm)
-            {
-                vm.Lock(
-                    main.IsVisible &&
-                    main.WindowState != WindowState.Minimized);
-            }
-        });
+    /// <summary>Must run on the UI thread. Preserves the current visibility of the main window.</summary>
+    private static void LockMainWindowIfOpen()
+    {
+        if (Current.MainWindow is MainWindow main &&
+            main.DataContext is MainViewModel vm)
+        {
+            vm.Lock(
+                main.IsVisible &&
+                main.WindowState != WindowState.Minimized);
+        }
+    }
+
+    private static bool DispatchToUi(Action action, TimeSpan? wait)
+    {
+        var dispatcher = Current?.Dispatcher;
+        if (dispatcher is null ||
+            dispatcher.HasShutdownStarted ||
+            dispatcher.HasShutdownFinished)
+        {
+            return false;
+        }
+
+        if (dispatcher.CheckAccess())
+        {
+            action();
+            return true;
+        }
+
+        var operation = dispatcher.InvokeAsync(action, DispatcherPriority.Send);
+
+        return wait is { } timeout
+            ? operation.Wait(timeout) == DispatcherOperationStatus.Completed
+            : true;
     }
 
     private static async Task CheckForUpdatesInBackgroundAsync()
