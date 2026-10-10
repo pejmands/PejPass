@@ -217,23 +217,7 @@ public sealed class Vault
         if (!left.Tags.SequenceEqual(right.Tags, StringComparer.Ordinal))
             return false;
 
-        if (left.CustomFields.Count != right.CustomFields.Count)
-            return false;
-
-        for (var i = 0; i < left.CustomFields.Count; i++)
-        {
-            var a = left.CustomFields[i];
-            var b = right.CustomFields[i];
-
-            if (!string.Equals(a.Name, b.Name, StringComparison.Ordinal) ||
-                !string.Equals(a.Value, b.Value, StringComparison.Ordinal) ||
-                a.IsSecret != b.IsSecret)
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return CustomField.AreSequencesEqual(left.CustomFields, right.CustomFields);
     }
 
     private static bool IsHistoryCurrent(
@@ -464,38 +448,12 @@ public sealed class Vault
                     StringComparer.Ordinal),
 
             EntryHistoryField.CustomFields =>
-                CustomFieldsEqual(
+                CustomField.AreSequencesEqual(
                     entry.CustomFields,
                     historyItem.CustomFields),
 
             _ => false
         };
-    }
-
-    private static bool CustomFieldsEqual(
-        List<CustomField> left,
-        List<CustomField> right)
-    {
-        if (left.Count != right.Count)
-            return false;
-
-        for (var i = 0; i < left.Count; i++)
-        {
-            if (!string.Equals(
-                    left[i].Name,
-                    right[i].Name,
-                    StringComparison.Ordinal) ||
-                !string.Equals(
-                    left[i].Value,
-                    right[i].Value,
-                    StringComparison.Ordinal) ||
-                left[i].IsSecret != right[i].IsSecret)
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     public bool SoftDelete(Guid entryId)
