@@ -1,5 +1,3 @@
-using System.Reflection;
-using System.Security.Cryptography;
 using PejPass.Application.Interfaces;
 using PejPass.Application.Security;
 using PejPass.Application.Services;
@@ -7,6 +5,9 @@ using PejPass.Domain.Entities;
 using PejPass.Domain.Settings;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
+using System.IO;
+using System.Reflection;
+using System.Security.Cryptography;
 
 namespace PejPass.Wpf.Tests;
 
@@ -43,7 +44,7 @@ public sealed class AsyncVaultSessionRaceTests
             viewModel,
             [originalVault, generation, snapshot, "Race test"])!;
 
-        await store.SaveStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await store.SaveStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         session.ReplaceVault(replacementVault);
         store.ReleaseSave.TrySetException(new IOException("Simulated delayed save failure"));
 
