@@ -188,9 +188,9 @@ public partial class LoginWindow : Window
             var path = new TextBlock
             {
                 Text = recent.Path,
-                FontSize = 11,
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
+            path.SetResourceReference(TextBlock.FontSizeProperty, "AppFontSize11");
             path.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
 
             details.Children.Add(name);
