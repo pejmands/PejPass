@@ -347,9 +347,10 @@ public sealed class UpdateService : IDisposable
             "set \"EXE=" + exeEsc + "\"" + Environment.NewLine +
             "set \"STAGE=" + stageEsc + "\"" + Environment.NewLine +
             "set \"BACKUP=" + EscapeCmd(Path.Combine(Path.GetTempPath(), "PejPass-backup-" + Guid.NewGuid().ToString("N"))) + "\"" + Environment.NewLine +
+            "set \"APP_PID=" + Environment.ProcessId + "\"" + Environment.NewLine +
             "set /a WAITCOUNT=0" + Environment.NewLine +
             ":wait" + Environment.NewLine +
-            "tasklist /FI \"IMAGENAME eq PejPass.exe\" 2>nul | find /I \"PejPass.exe\" >nul" + Environment.NewLine +
+            "tasklist /FI \"PID eq %APP_PID%\" 2>nul | find \"%APP_PID%\" >nul" + Environment.NewLine +
             "if errorlevel 1 goto apply_update" + Environment.NewLine +
             "set /a WAITCOUNT+=1" + Environment.NewLine +
             "if %WAITCOUNT% GEQ 120 goto install_failed" + Environment.NewLine +
@@ -438,7 +439,7 @@ public sealed class UpdateService : IDisposable
                 FileAccess.Write,
                 FileShare.None,
                 bufferSize: 1,
-                FileOptions.DeleteOnClose))
+                options: FileOptions.DeleteOnClose))
             {
             }
         }
