@@ -72,6 +72,24 @@ public sealed class SensitiveInputCleanupTests
 
 
     [Fact(Timeout = 15000)]
+    public void PasswordPromptWindow_CloseClearsPasswordAndValidator()
+    {
+        WpfTestHost.Run(_ =>
+        {
+            var window = new PasswordPromptWindow("Backup password", "Enter the backup password.");
+            var passwordBox = Assert.IsType<PasswordBox>(window.FindName("PasswordInput"));
+            window.ValidatePasswordAsync = _ => Task.FromResult<string?>(null);
+            passwordBox.Password = "backup-master-password";
+
+            window.Show();
+            window.Close();
+
+            Assert.Equal(string.Empty, passwordBox.Password);
+            Assert.Null(window.ValidatePasswordAsync);
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 15000)]
     public void PasswordGeneratorWindow_AcceptPreservesResultButClearsViewModel()
     {
         WpfTestHost.Run(_ =>
