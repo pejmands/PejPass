@@ -377,6 +377,85 @@ public sealed class HistoryTests
         Assert.Empty(vault.Trash);
     }
 
+    [Fact]
+    public void CreateSnapshot_DeepClonesMutableVaultState()
+    {
+        var vault = new Vault
+        {
+            Name = "Original",
+            Entries =
+            [
+                new VaultEntry
+                {
+                    Title = "Entry",
+                    Password = "secret",
+                    Tags = ["one"],
+                    CustomFields = [new CustomField { Name = "Field", Value = "value", IsSecret = true }],
+                    PasswordHistory = [new PasswordHistoryItem { Password = "old-password" }],
+                    UsernameHistory = [new UsernameHistoryItem { Username = "old-user" }]
+                }
+            ]
+        };
+        vault.AddHistory(vault.Entries[0]);
+        vault.Trash.Add(new TrashedEntry
+        {
+            Entry = new VaultEntry { Title = "Trashed", Password = "trashed-secret" }
+        });
+
+        var snapshot = vault.CreateSnapshot();
+
+        Assert.NotSame(vault.Entries, snapshot.Entries);
+        Assert.NotSame(vault.Entries[0], snapshot.Entries[0]);
+        Assert.NotSame(vault.Entries[0].Tags, snapshot.Entries[0].Tags);
+        Assert.NotSame(vault.Entries[0].CustomFields[0], snapshot.Entries[0].CustomFields[0]);
+        Assert.NotSame(vault.Entries[0].PasswordHistory[0], snapshot.Entries[0].PasswordHistory[0]);
+        Assert.NotSame(vault.Entries[0].UsernameHistory[0], snapshot.Entries[0].UsernameHistory[0]);
+        Assert.NotSame(vault.History[0], snapshot.History[0]);
+        Assert.NotSame(vault.History[0].CustomFields[0], snapshot.History[0].CustomFields[0]);
+        Assert.NotSame(vault.Trash[0], snapshot.Trash[0]);
+        Assert.NotSame(vault.Trash[0].Entry, snapshot.Trash[0].Entry);
+
+        vault.Name = "Changed";
+        vault.Entries[0].Title = "Changed";
+        vault.Entries[0].Tags.Add("two");
+        vault.Entries[0].CustomFields[0].Value = "changed";
+        vault.Entries[0].PasswordHistory[0].Password = "changed-password";
+        vault.History[0].Tags.Add("two");
+        vault.Trash[0].Entry.Password = "changed-secret";
+
+        Assert.Equal("Original", snapshot.Name);
+        Assert.Equal("Entry", snapshot.Entries[0].Title);
+        Assert.Equal(["one"], snapshot.Entries[0].Tags);
+        Assert.Equal("value", snapshot.Entries[0].CustomFields[0].Value);
+        Assert.Equal("old-password", snapshot.Entries[0].PasswordHistory[0].Password);
+        Assert.Equal(["one"], snapshot.History[0].Tags);
+        Assert.Equal("trashed-secret", snapshot.Trash[0].Entry.Password);
+    }
+
+    [Fact]
+    public void RestoreHistoryFields_InvalidFieldDoesNotPartiallyMutateVault()
+    {
+        var vault = new Vault();
+        var entry = CreateEntry(title: "Current");
+        vault.AddEntry(entry);
+        var history = new EntryHistoryItem
+        {
+            EntryId = entry.Id,
+            Title = "Historical"
+        };
+        var originalUpdatedAt = vault.UpdatedAt;
+        var originalHistoryCount = vault.History.Count;
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            vault.RestoreHistoryFields(
+                history,
+                [EntryHistoryField.Title, (EntryHistoryField)999]));
+
+        Assert.Equal("Current", entry.Title);
+        Assert.Equal(originalUpdatedAt, vault.UpdatedAt);
+        Assert.Equal(originalHistoryCount, vault.History.Count);
+    }
+
     private static VaultEntry CreateEntry(
         string title = "Test Entry",
         string username = "user",
