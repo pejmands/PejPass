@@ -171,6 +171,9 @@ public partial class MainViewModel
                     return;
                 }
 
+                mutationStarted = false;
+                rollbackSnapshot = null;
+
                 DialogService.Success(
                     $"Vault replaced from backup.\n\n" +
                     $"Entries: {currentVault.Entries.Count}\n" +
@@ -276,6 +279,9 @@ public partial class MainViewModel
                     RestoreVaultSnapshot(rollbackSnapshot!, currentVault, operationGeneration);
                     return;
                 }
+
+                mutationStarted = false;
+                rollbackSnapshot = null;
 
                 var totalSkipped = skippedAlreadyInList + skippedTrashAlreadyInList + skippedTrashAlreadyInTrash;
                 var totalChanged = addedToList + restoredFromTrash + addedToTrash;
