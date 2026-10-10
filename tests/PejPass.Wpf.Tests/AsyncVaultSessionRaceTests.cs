@@ -97,6 +97,31 @@ public sealed class AsyncVaultSessionRaceTests
 
     private static Task RunOnStaAsync(Func<Task> action)
     {
+        var applicationDispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (applicationDispatcher is not null)
+        {
+            var applicationCompletion = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+
+            applicationDispatcher.BeginInvoke(new Action(async () =>
+            {
+                SynchronizationContext.SetSynchronizationContext(
+                    new System.Windows.Threading.DispatcherSynchronizationContext(applicationDispatcher));
+
+                try
+                {
+                    await action();
+                    applicationCompletion.TrySetResult();
+                }
+                catch (Exception ex)
+                {
+                    applicationCompletion.TrySetException(ex);
+                }
+            }));
+
+            return applicationCompletion.Task;
+        }
+
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var thread = new Thread(() =>
