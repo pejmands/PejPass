@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using PejPass.Application.Interfaces;
+using PejPass.Domain.Entities;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 
