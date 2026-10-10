@@ -10,12 +10,27 @@ public sealed class WindowsSecurityServiceTests
     {
         using var service = new WindowsSecurityService();
 
-        var requests = 0;
-        service.SecurityLockRequested += (_, _) => requests++;
+        var reasons = new List<SecurityLockReason>();
+        service.SecurityLockRequested += (_, reason) => reasons.Add(reason);
 
         service.HandleSessionSwitch(SessionSwitchReason.SessionLock);
 
-        Assert.Equal(1, requests);
+        Assert.Equal([SecurityLockReason.SessionLock], reasons);
+    }
+
+    [Theory]
+    [InlineData(SessionSwitchReason.RemoteDisconnect)]
+    [InlineData(SessionSwitchReason.ConsoleDisconnect)]
+    public void SessionDisconnect_RequestsSecurityLock(SessionSwitchReason switchReason)
+    {
+        using var service = new WindowsSecurityService();
+
+        var reasons = new List<SecurityLockReason>();
+        service.SecurityLockRequested += (_, reason) => reasons.Add(reason);
+
+        service.HandleSessionSwitch(switchReason);
+
+        Assert.Equal([SecurityLockReason.SessionDisconnect], reasons);
     }
 
     [Fact]
@@ -36,12 +51,12 @@ public sealed class WindowsSecurityServiceTests
     {
         using var service = new WindowsSecurityService();
 
-        var requests = 0;
-        service.SecurityLockRequested += (_, _) => requests++;
+        var reasons = new List<SecurityLockReason>();
+        service.SecurityLockRequested += (_, reason) => reasons.Add(reason);
 
         service.HandlePowerModeChanged(PowerModes.Suspend);
 
-        Assert.Equal(1, requests);
+        Assert.Equal([SecurityLockReason.Suspend], reasons);
     }
 
     [Fact]
