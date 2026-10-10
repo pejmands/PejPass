@@ -387,7 +387,7 @@ public sealed class UpdateService : IDisposable
             CreateNoWindow = true
         });
 
-        WritePendingWhatsNew(targetVersion);
+        WritePendingWhatsNew(targetVersion!);
 
         System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             System.Windows.Application.Current.Shutdown());
