@@ -181,15 +181,32 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
             {
                 UpdateService.ApplyPortableUpdateAndRestart(
                     path,
-                    LatestVersion ?? "0.0.0");
+                    LatestVersion ?? "0.0.0",
+                    DownloadSha256 ?? string.Empty);
                 return;
             }
-            catch (Exception)
+            catch (UnauthorizedAccessException)
             {
                 TryDeleteTempPackage(path);
-                StatusMessage = "Install failed. Please try again.";
+                StatusMessage = "Install failed: access to the installation folder was denied.";
                 DialogService.Error(
-                    "Could not apply the update automatically. Please download and install the update manually.",
+                    "PejPass could not write to its installation folder. Move the portable app to a folder you can modify, then try again.",
+                    "Install failed");
+            }
+            catch (InvalidDataException ex)
+            {
+                TryDeleteTempPackage(path);
+                StatusMessage = $"Install failed: {ex.Message}";
+                DialogService.Error(
+                    $"The update package could not be installed. {ex.Message}\n\nPlease download the update again or install it manually.",
+                    "Invalid update package");
+            }
+            catch (Exception ex) when (ex is IOException or InvalidOperationException or ArgumentException or System.ComponentModel.Win32Exception)
+            {
+                TryDeleteTempPackage(path);
+                StatusMessage = $"Install failed: {ex.Message}";
+                DialogService.Error(
+                    $"Could not apply the update automatically. {ex.Message}\n\nPlease download and install the update manually.",
                     "Install failed");
             }
         }
@@ -197,9 +214,31 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
         {
             StatusMessage = "Download cancelled.";
         }
+        catch (HttpRequestException ex)
+        {
+            StatusMessage = $"Download failed: {ex.Message}";
+            DialogService.Error(
+                $"The update server could not provide the package. {ex.Message}",
+                "Download failed");
+        }
+        catch (InvalidDataException ex)
+        {
+            StatusMessage = $"Download failed: {ex.Message}";
+            DialogService.Error(ex.Message, "Invalid update package");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            StatusMessage = $"Download failed: {ex.Message}";
+            DialogService.Error(
+                $"The update package could not be saved to the temporary folder. {ex.Message}",
+                "Download failed");
+        }
         catch (Exception)
         {
             StatusMessage = "Download failed. Check your connection and try again.";
+            DialogService.Error(
+                "The update could not be downloaded. Check your connection and try again.",
+                "Download failed");
         }
         finally
         {
