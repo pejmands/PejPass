@@ -139,10 +139,27 @@ public sealed class SensitiveInputCleanupTests
 
             viewModel.ClearSensitiveInputs();
 
+            Assert.Equal(string.Empty, viewModel.Title);
+            Assert.Equal(string.Empty, viewModel.Username);
             Assert.Equal(string.Empty, viewModel.Password);
+            Assert.Equal(string.Empty, viewModel.Url);
             Assert.Equal(string.Empty, viewModel.TotpSecret);
-            Assert.Equal(string.Empty, viewModel.CustomFields[0].Value);
-            Assert.Equal(string.Empty, viewModel.CustomFields[1].Value);
+            Assert.Equal(string.Empty, viewModel.Notes);
+            Assert.Equal(string.Empty, viewModel.TagsText);
+            Assert.False(viewModel.IsFavorite);
+            Assert.Null(viewModel.TitleErrorMessage);
+            Assert.Null(viewModel.UrlErrorMessage);
+            Assert.Null(viewModel.TotpErrorMessage);
+            Assert.Equal(string.Empty, viewModel.PasswordStrengthLabel);
+            Assert.Equal(0d, viewModel.PasswordStrengthProgress);
+            Assert.Equal(0, viewModel.PasswordStrengthLevel);
+            Assert.All(viewModel.CustomFields, field =>
+            {
+                Assert.Equal(string.Empty, field.Name);
+                Assert.Equal(string.Empty, field.Value);
+                Assert.False(field.IsSecret);
+                Assert.Null(field.ErrorMessage);
+            });
             Assert.Null(viewModel.Original);
         }, TestContext.Current.CancellationToken);
     }
