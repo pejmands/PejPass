@@ -13,6 +13,7 @@ public sealed class MasterPasswordPolicyTests
     [InlineData("LONGPASSWORD123!")]
     [InlineData("LongPassword123")]
     [InlineData("Long Password123!")]
+    [InlineData("Long\\tPassword123!")]
     [InlineData("Password1234!")]
     [InlineData("P@ssw0rd123!")]
     [InlineData("Summer2026!")]
