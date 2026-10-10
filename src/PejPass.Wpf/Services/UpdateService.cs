@@ -304,6 +304,21 @@ public sealed class UpdateService : IDisposable
             throw;
         }
 
+        var sourceDir = ResolveExtractedPayloadRoot(stageRoot);
+        if (!File.Exists(Path.Combine(sourceDir, "PejPass.exe")))
+        {
+            try
+            {
+                Directory.Delete(stageRoot, recursive: true);
+            }
+            catch
+            {
+            }
+
+            throw new InvalidDataException(
+                "The update package does not place PejPass.exe at the root of its application payload.");
+        }
+
         try
         {
             if (File.Exists(zipPath))
@@ -313,7 +328,6 @@ public sealed class UpdateService : IDisposable
         {
         }
 
-        var sourceDir = ResolveExtractedPayloadRoot(stageRoot);
         WritePendingWhatsNew(targetVersion);
 
         var scriptPath = Path.Combine(
