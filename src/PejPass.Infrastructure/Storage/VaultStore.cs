@@ -260,14 +260,22 @@ public sealed class VaultStore(
             path,
             (salt, parameters) => _crypto.DeriveKey(masterPassword, salt, parameters),
             expectedMaterial: null,
+            migrateLegacy: true,
             ct);
 
     public async Task<Vault> OpenAsync(
         string path,
         string masterPassword,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        bool migrateLegacy = true)
     {
-        using var session = await OpenSessionAsync(path, masterPassword, ct);
+        using var session = await OpenCoreAsync(
+            path,
+            (salt, parameters) => _crypto.DeriveKey(masterPassword, salt, parameters),
+            expectedMaterial: null,
+            migrateLegacy,
+            ct);
+
         return session.Vault;
     }
 
@@ -282,6 +290,7 @@ public sealed class VaultStore(
             path,
             (_, _) => keyMaterial.CopyKey(),
             keyMaterial,
+            migrateLegacy: true,
             ct);
 
         return session.Vault;
@@ -291,6 +300,7 @@ public sealed class VaultStore(
         string path,
         Func<byte[], Argon2Parameters, byte[]> keyFactory,
         VaultKeyMaterial? expectedMaterial,
+        bool migrateLegacy,
         CancellationToken ct)
     {
         Vault? vault = null;
