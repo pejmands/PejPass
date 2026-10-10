@@ -8,6 +8,23 @@ public sealed class BrowserImportServiceTests
     private readonly BrowserImportService _service = new();
 
     [Fact]
+    public async Task ImportCsv_WithMalformedQuoting_RejectsImport()
+    {
+        var file = CreateTempCsv("name,password,notes\nTest,123,bad\"quote");
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => _service.ImportFromCsvAsync(file, TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+    }
+
+    [Fact]
     public async Task ImportCsv_WithMultilineNotes_PreservesNewlines()
     {
         var csv = """
@@ -105,6 +122,25 @@ public sealed class BrowserImportServiceTests
         {
             await Assert.ThrowsAsync<InvalidDataException>(
                 () => _service.ImportFromCsvAsync(file, TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ImportPejPassCsv_WithMalformedQuoting_RejectsImport()
+    {
+        var csv = "name,url,username,password,note,totp_secret,tags,custom_fields,pejpass_format\n" +
+                  "bad\"quote,https://example.com,user,pass,,,\"[]\",\"[]\",1";
+        var file = CreateTempCsv(csv);
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => _service.ImportPejPassCsvAsync(file, TestContext.Current.CancellationToken));
         }
         finally
         {
