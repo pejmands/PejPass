@@ -286,10 +286,15 @@ public sealed class UpdateService : IDisposable
             "set \"SOURCE=" + sourceEsc + "\"" + Environment.NewLine +
             "set \"EXE=" + exeEsc + "\"" + Environment.NewLine +
             "set \"STAGE=" + stageEsc + "\"" + Environment.NewLine +
+            "set /a WAITCOUNT=0" + Environment.NewLine +
             ":wait" + Environment.NewLine +
-            "timeout /t 1 /nobreak >nul" + Environment.NewLine +
             "tasklist /FI \"IMAGENAME eq PejPass.exe\" 2>nul | find /I \"PejPass.exe\" >nul" + Environment.NewLine +
-            "if not errorlevel 1 goto wait" + Environment.NewLine +
+            "if errorlevel 1 goto apply_update" + Environment.NewLine +
+            "set /a WAITCOUNT+=1" + Environment.NewLine +
+            "if %WAITCOUNT% GEQ 120 goto install_failed" + Environment.NewLine +
+            "timeout /t 1 /nobreak >nul" + Environment.NewLine +
+            "goto wait" + Environment.NewLine +
+            ":apply_update" + Environment.NewLine +
             "robocopy \"%SOURCE%\" \"%APPDIR%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1" + Environment.NewLine +
             "if errorlevel 8 exit /b 1" + Environment.NewLine +
             "start \"\" \"%EXE%\"" + Environment.NewLine +
@@ -454,6 +459,9 @@ public sealed class UpdateService : IDisposable
         if (string.IsNullOrWhiteSpace(manifest.Version))
             throw new InvalidDataException("Update manifest is missing its version.");
 
+        if (!Version.TryParse(Normalize(manifest.Version), out _))
+            throw new InvalidDataException("Update manifest contains an invalid version number.");
+
         if (manifest.Releases is null || manifest.Releases.Count > MaxManifestReleases)
             throw new InvalidDataException("Update manifest contains too many releases.");
 
@@ -511,6 +519,12 @@ public sealed class UpdateService : IDisposable
                 throw new InvalidDataException("Update manifest contains an invalid release.");
 
             ValidateText(release.Version, "release version", 128);
+            if (!string.IsNullOrWhiteSpace(release.Version)
+                && !Version.TryParse(Normalize(release.Version), out _))
+            {
+                throw new InvalidDataException("Update manifest contains an invalid release version number.");
+            }
+
             ValidateText(release.Released, "release date", 128);
             ValidateNotes(release.Notes, $"release {release.Version} notes");
         }
