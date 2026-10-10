@@ -15,6 +15,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
     private readonly VaultSession _vaultSession;
     private readonly VaultService _vaultService;
     private readonly AppSettings _settings;
+    private readonly Action<string, string> _showError;
 
     public ObservableCollection<HistoryRow> Items { get; } = [];
 
@@ -99,11 +100,13 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
     public HistoryViewModel(
         VaultSession vaultSession,
         VaultService vaultService,
-        AppSettings settings)
+        AppSettings settings,
+        Action<string, string>? showError = null)
     {
         _vaultSession = vaultSession;
         _vaultService = vaultService;
         _settings = settings;
+        _showError = showError ?? DialogService.Error;
 
         Load();
 
@@ -691,7 +694,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
                 Load();
                 VaultRollbackCompleted?.Invoke(this, EventArgs.Empty);
 
-                DialogService.Error(
+                _showError(
                     "Failed to save the history changes. Please try again.",
                     actionTitle);
             }
