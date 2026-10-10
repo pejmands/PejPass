@@ -197,6 +197,23 @@ public static class FaviconService
     /// </summary>
     public static void Prefetch(IEnumerable<(string Url, string Title)> items)
     {
+        ArgumentNullException.ThrowIfNull(items);
+
+        // Materialize on the caller's thread: the source is usually an ObservableCollection
+        // that can change while the background task runs. Host parsing stays off the UI thread.
+        var snapshot = items.ToArray();
+        if (snapshot.Length == 0)
+            return;
+
+        _ = Task.Run(() => WarmDiskThenDownloadAsync(CollectMissingHosts(snapshot)));
+    }
+
+    /// <summary>
+    /// Distinct hosts that are neither in memory nor recently failed.
+    /// All state it reads is thread-safe, so it may run on any thread.
+    /// </summary>
+    internal static List<string> CollectMissingHosts(IEnumerable<(string Url, string Title)> items)
+    {
         var hosts = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -209,7 +226,7 @@ public static class FaviconService
             hosts.Add(host);
         }
 
-        _ = Task.Run(() => WarmDiskThenDownloadAsync(hosts));
+        return hosts;
     }
 
     internal static async Task WarmDiskThenDownloadAsync(List<string> hosts)
