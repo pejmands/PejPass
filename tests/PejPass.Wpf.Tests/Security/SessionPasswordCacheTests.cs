@@ -5,7 +5,7 @@ using PejPass.Wpf.Services;
 using System.IO;
 using System.Security.Cryptography;
 
-namespace PejPass.Wpf.Tests;
+namespace PejPass.Wpf.Tests.Security;
 
 public sealed class SessionPasswordCacheTests
 {

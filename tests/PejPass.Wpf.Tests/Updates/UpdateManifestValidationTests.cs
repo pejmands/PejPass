@@ -1,8 +1,8 @@
-using System.IO;
 using PejPass.Wpf.Records;
 using PejPass.Wpf.Services;
+using System.IO;
 
-namespace PejPass.Wpf.Tests;
+namespace PejPass.Wpf.Tests.Updates;
 
 public sealed class UpdateManifestValidationTests
 {
@@ -35,9 +35,7 @@ public sealed class UpdateManifestValidationTests
     {
         var manifest = new UpdateManifest
         {
-            Releases = Enumerable.Range(0, 1_001)
-                .Select(index => new ManifestRelease { Version = $"1.0.{index}" })
-                .ToList()
+            Releases = [.. Enumerable.Range(0, 1_001).Select(index => new ManifestRelease { Version = $"1.0.{index}" })]
         };
 
         Assert.Throws<InvalidDataException>(() =>
@@ -66,7 +64,7 @@ public sealed class UpdateManifestValidationTests
         {
             Notes = new UpdateNotes
             {
-                Added = Enumerable.Repeat("note", 101).ToList()
+                Added = [.. Enumerable.Repeat("note", 101)]
             }
         };
 

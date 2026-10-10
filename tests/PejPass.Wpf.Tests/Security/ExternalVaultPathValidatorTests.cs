@@ -3,7 +3,7 @@ using System.Buffers.Binary;
 using System.IO;
 using System.Text;
 
-namespace PejPass.Wpf.Tests;
+namespace PejPass.Wpf.Tests.Security;
 
 public sealed class ExternalVaultPathValidatorTests : IDisposable
 {

@@ -1,8 +1,8 @@
-using System.IO;
 using PejPass.Wpf.Records;
 using PejPass.Wpf.Services;
+using System.IO;
 
-namespace PejPass.Wpf.Tests;
+namespace PejPass.Wpf.Tests.Updates;
 
 public sealed class UpdateInstallInputValidationTests
 {

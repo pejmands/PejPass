@@ -3,7 +3,7 @@ using PejPass.Wpf.Services;
 using System.IO;
 using System.Text;
 
-namespace PejPass.Wpf.Tests;
+namespace PejPass.Wpf.Tests.Services;
 
 public sealed class SettingsStoreTests : IDisposable
 {

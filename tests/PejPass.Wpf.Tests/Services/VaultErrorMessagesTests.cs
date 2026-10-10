@@ -1,6 +1,6 @@
 using PejPass.Wpf.Services;
 
-namespace PejPass.Wpf.Tests;
+namespace PejPass.Wpf.Tests.Services;
 
 public sealed class VaultErrorMessagesTests
 {

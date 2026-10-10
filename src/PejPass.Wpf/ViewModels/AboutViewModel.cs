@@ -268,8 +268,8 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
     {
         try
         {
-            if (!string.IsNullOrWhiteSpace(path) && System.IO.File.Exists(path))
-                System.IO.File.Delete(path);
+            if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+                File.Delete(path);
         }
         catch
         {

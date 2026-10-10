@@ -5,7 +5,7 @@ using PejPass.Wpf.Views;
 using System.Windows.Controls;
 using System.Windows.Threading;
 
-namespace PejPass.Wpf.Tests;
+namespace PejPass.Wpf.Tests.Security;
 
 public sealed class SensitiveInputCleanupTests
 {

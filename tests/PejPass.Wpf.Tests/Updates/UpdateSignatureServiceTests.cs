@@ -1,8 +1,8 @@
 using PejPass.Wpf.Records;
-using System.Security.Cryptography;
 using PejPass.Wpf.Services;
+using System.Security.Cryptography;
 
-namespace PejPass.Wpf.Tests;
+namespace PejPass.Wpf.Tests.Updates;
 
 public sealed class UpdateSignatureServiceTests
 {

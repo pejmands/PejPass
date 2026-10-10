@@ -1,14 +1,14 @@
-using System.Security.Cryptography;
-using System.Text;
 using PejPass.Wpf.Services;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace PejPass.Wpf.Tests;
+namespace PejPass.Wpf.Tests.Services;
 
 [CollectionDefinition("FaviconService", DisableParallelization = true)]
 public sealed class FaviconServiceCollection
@@ -474,7 +474,7 @@ public sealed class FaviconServiceTests
 
         try
         {
-            var isFailed = (bool)FaviconService.IsFailedRecently(host);
+            var isFailed = FaviconService.IsFailedRecently(host);
             Assert.True(isFailed);
         }
         finally
@@ -491,7 +491,7 @@ public sealed class FaviconServiceTests
 
         try
         {
-            var isFailed = (bool)FaviconService.IsFailedRecently(host);
+            var isFailed = FaviconService.IsFailedRecently(host);
             Assert.False(isFailed);
             Assert.False(GetFailed().ContainsKey(host));
         }
@@ -519,7 +519,7 @@ public sealed class FaviconServiceTests
 
         try
         {
-            var task = FaviconService.WarmDiskThenDownloadAsync(new List<string> { host });
+            var task = FaviconService.WarmDiskThenDownloadAsync([host]);
 
             await Task.Delay(100, TestContext.Current.CancellationToken);
             Assert.False(memory.ContainsKey(host));
@@ -669,7 +669,7 @@ public sealed class FaviconServiceTests
     private static void SetMemory(string host, ImageSource image) =>
         FaviconService.SetMemory(host, image);
 
-    private static ImageSource CreateTestImage() =>
+    private static BitmapImage CreateTestImage() =>
         FaviconService.CreateBitmap(TinyPng)!;
 
     private static ConcurrentQueue<string> GetDownloadQueue() =>

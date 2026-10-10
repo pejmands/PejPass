@@ -1,7 +1,7 @@
 using PejPass.Domain.Entities;
 using PejPass.Wpf.ViewModels;
 
-namespace PejPass.Wpf.Tests;
+namespace PejPass.Wpf.Tests.ViewModels;
 
 public sealed class EntryEditorHistoryTests
 {

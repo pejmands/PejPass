@@ -1,7 +1,6 @@
-﻿
-using PejPass.Wpf.Services;
+﻿using PejPass.Wpf.Services;
 
-namespace PejPass.Wpf.Tests;
+namespace PejPass.Wpf.Tests.Services;
 
 public class WebUrlValidatorTests
 {

@@ -4,7 +4,7 @@ using PejPass.Wpf.Services;
 using System.IO;
 using System.Security.Cryptography;
 
-namespace PejPass.Wpf.Tests;
+namespace PejPass.Wpf.Tests.Sessions;
 
 public sealed class VaultSessionTests
 {

@@ -1,13 +1,13 @@
 using Microsoft.Win32;
 
-namespace PejPass.Wpf.Tests;
+namespace PejPass.Wpf.Tests.Security;
 
 public sealed class WindowsSecurityServiceTests
 {
     [Fact]
     public void SessionLock_RequestsSecurityLock()
     {
-        using var service = new PejPass.Wpf.Services.WindowsSecurityService();
+        using var service = new Services.WindowsSecurityService();
 
         var requests = 0;
         service.SecurityLockRequested += (_, _) => requests++;
@@ -20,7 +20,7 @@ public sealed class WindowsSecurityServiceTests
     [Fact]
     public void SessionUnlock_DoesNotRequestSecurityLock()
     {
-        using var service = new PejPass.Wpf.Services.WindowsSecurityService();
+        using var service = new Services.WindowsSecurityService();
 
         var requests = 0;
         service.SecurityLockRequested += (_, _) => requests++;
@@ -33,7 +33,7 @@ public sealed class WindowsSecurityServiceTests
     [Fact]
     public void Suspend_RequestsSecurityLock()
     {
-        using var service = new PejPass.Wpf.Services.WindowsSecurityService();
+        using var service = new Services.WindowsSecurityService();
 
         var requests = 0;
         service.SecurityLockRequested += (_, _) => requests++;
@@ -46,7 +46,7 @@ public sealed class WindowsSecurityServiceTests
     [Fact]
     public void Resume_DoesNotRequestSecurityLock()
     {
-        using var service = new PejPass.Wpf.Services.WindowsSecurityService();
+        using var service = new Services.WindowsSecurityService();
 
         var requests = 0;
         service.SecurityLockRequested += (_, _) => requests++;
@@ -59,7 +59,7 @@ public sealed class WindowsSecurityServiceTests
     [Fact]
     public void Dispose_UnsubscribesFromSystemEvents()
     {
-        using var service = new PejPass.Wpf.Services.WindowsSecurityService();
+        using var service = new Services.WindowsSecurityService();
 
         var requests = 0;
         service.SecurityLockRequested += (_, _) => requests++;

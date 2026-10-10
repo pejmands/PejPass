@@ -48,9 +48,9 @@ public sealed class HistoryTests
         var result = vault.UpdateEntry(updated);
 
         Assert.True(result);
-        Assert.Single(vault.History);
+        var item = Assert.Single(vault.History);
 
-        var snapshot = vault.History[0];
+        var snapshot = item;
 
         Assert.Equal(entry.Id, snapshot.EntryId);
         Assert.Equal("Original", snapshot.Title);
