@@ -55,8 +55,9 @@ public sealed class AsyncVaultSessionRaceTests
     }
 
     [Fact]
-    public async Task FailedSaveRollsBackVaultAndNotifiesMainViewToRefresh()
-    {
+    public Task FailedSaveRollsBackVaultAndNotifiesMainViewToRefresh() =>
+        RunOnStaAsync(async () =>
+        {
         var store = new DelayedSaveVaultStore();
         var vaultService = new VaultService(store);
         using var session = new VaultSession();
@@ -92,6 +93,43 @@ public sealed class AsyncVaultSessionRaceTests
         Assert.NotSame(originalEntry, vault.Entries[0]);
         Assert.Equal(1, rollbackNotifications);
         Assert.Same(vault, session.Vault);
+        });
+
+    private static Task RunOnStaAsync(Func<Task> action)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var thread = new Thread(() =>
+        {
+            var dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+            SynchronizationContext.SetSynchronizationContext(
+                new System.Windows.Threading.DispatcherSynchronizationContext(dispatcher));
+
+            async void Execute()
+            {
+                try
+                {
+                    await action();
+                    completion.TrySetResult();
+                }
+                catch (Exception ex)
+                {
+                    completion.TrySetException(ex);
+                }
+                finally
+                {
+                    dispatcher.BeginInvokeShutdown(
+                        System.Windows.Threading.DispatcherPriority.Background);
+                }
+            }
+
+            dispatcher.BeginInvoke((Action)Execute);
+            System.Windows.Threading.Dispatcher.Run();
+        });
+
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        return completion.Task;
     }
 
     private static VaultKeyMaterial CreateMaterial()
