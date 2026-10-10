@@ -48,7 +48,7 @@ public static partial class MasterPasswordPolicy
         if (password.Length < MinimumLength)
             return PasswordValidationResult.Fail($"Master password must be at least {MinimumLength} characters.");
 
-        if (password.Contains(' '))
+        if (password.Any(char.IsWhiteSpace))
             return PasswordValidationResult.Fail("Master password must not contain spaces.");
 
         if (!UppercaseRegex().IsMatch(password))
