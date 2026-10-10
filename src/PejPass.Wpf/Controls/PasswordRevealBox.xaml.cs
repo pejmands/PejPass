@@ -14,39 +14,59 @@ public partial class PasswordRevealBox : UserControl
     private readonly SecretRevealTimer _revealTimer = new();
     private bool _keyboardActivation;
 
-    private static readonly Type TextRangeType =
-        typeof(PasswordBox).Assembly.GetType("System.Windows.Documents.ITextRange")
-        ?? throw new InvalidOperationException("ITextRange was not found.");
+    private static readonly PasswordBoxReflection? Reflection = TryCreateReflection();
 
-    private static readonly PropertyInfo PasswordSelectionProperty =
-        typeof(PasswordBox).GetProperty(
-            "Selection",
-            BindingFlags.Instance | BindingFlags.NonPublic)
-        ?? throw new InvalidOperationException("PasswordBox.Selection was not found.");
+    private static PasswordBoxReflection? TryCreateReflection()
+    {
+        try
+        {
+            var assembly = typeof(PasswordBox).Assembly;
+            var textRangeType = assembly.GetType("System.Windows.Documents.ITextRange");
+            var passwordTextPointerType = assembly.GetType("System.Windows.Controls.PasswordTextPointer");
 
-    private static readonly MethodInfo PasswordSelectMethod =
-        typeof(PasswordBox).GetMethod(
-            "Select",
-            BindingFlags.Instance | BindingFlags.NonPublic)
-        ?? throw new InvalidOperationException("PasswordBox.Select was not found.");
+            if (textRangeType is null || passwordTextPointerType is null)
+                return null;
 
-    private static readonly MethodInfo TextRangeStartMethod =
-        TextRangeType.GetProperty("Start")?.GetGetMethod()
-        ?? throw new InvalidOperationException("ITextRange.Start was not found.");
+            var selectionProperty = typeof(PasswordBox).GetProperty(
+                "Selection",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            var selectMethod = typeof(PasswordBox).GetMethod(
+                "Select",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            var startMethod = textRangeType.GetProperty("Start")?.GetGetMethod();
+            var endMethod = textRangeType.GetProperty("End")?.GetGetMethod();
+            var offsetProperty = passwordTextPointerType.GetProperty(
+                "Offset",
+                BindingFlags.Instance | BindingFlags.NonPublic);
 
-    private static readonly MethodInfo TextRangeEndMethod =
-        TextRangeType.GetProperty("End")?.GetGetMethod()
-        ?? throw new InvalidOperationException("ITextRange.End was not found.");
+            if (selectionProperty is null ||
+                selectMethod is null ||
+                startMethod is null ||
+                endMethod is null ||
+                offsetProperty is null)
+            {
+                return null;
+            }
 
-    private static readonly Type PasswordTextPointerType =
-        typeof(PasswordBox).Assembly.GetType("System.Windows.Controls.PasswordTextPointer")
-        ?? throw new InvalidOperationException("PasswordTextPointer was not found.");
+            return new PasswordBoxReflection(
+                selectionProperty,
+                selectMethod,
+                startMethod,
+                endMethod,
+                offsetProperty);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
 
-    private static readonly PropertyInfo TextPointerOffsetProperty =
-        PasswordTextPointerType.GetProperty(
-            "Offset",
-            BindingFlags.Instance | BindingFlags.NonPublic)
-        ?? throw new InvalidOperationException("PasswordTextPointer.Offset was not found.");
+    private sealed record PasswordBoxReflection(
+        PropertyInfo SelectionProperty,
+        MethodInfo SelectMethod,
+        MethodInfo StartMethod,
+        MethodInfo EndMethod,
+        PropertyInfo OffsetProperty);
 
     public static readonly DependencyProperty PasswordProperty =
         DependencyProperty.Register(
@@ -261,31 +281,54 @@ public partial class PasswordRevealBox : UserControl
 
     private PasswordBoxSelection GetPasswordBoxSelection()
     {
-        var selection = PasswordSelectionProperty.GetValue(PasswordBox);
+        var fallback = new PasswordBoxSelection(PasswordBox.Password.Length, 0);
 
-        if (selection is null)
-            return new PasswordBoxSelection(PasswordBox.Password.Length, 0);
+        try
+        {
+            if (Reflection is not { } reflection)
+                return fallback;
 
-        var start = TextRangeStartMethod.Invoke(selection, null);
-        var end = TextRangeEndMethod.Invoke(selection, null);
+            var selection = reflection.SelectionProperty.GetValue(PasswordBox);
+            if (selection is null)
+                return fallback;
 
-        var startOffset = TextPointerOffsetProperty.GetValue(start) is int startValue
-            ? startValue
-            : 0;
-        var endOffset = TextPointerOffsetProperty.GetValue(end) is int endValue
-            ? endValue
-            : startOffset;
+            var start = reflection.StartMethod.Invoke(selection, null);
+            var end = reflection.EndMethod.Invoke(selection, null);
 
-        return new PasswordBoxSelection(
-            startOffset,
-            Math.Max(0, endOffset - startOffset));
+            if (start is null || end is null ||
+                reflection.OffsetProperty.GetValue(start) is not int startOffset ||
+                reflection.OffsetProperty.GetValue(end) is not int endOffset)
+            {
+                return fallback;
+            }
+
+            startOffset = Math.Clamp(startOffset, 0, PasswordBox.Password.Length);
+            endOffset = Math.Clamp(endOffset, startOffset, PasswordBox.Password.Length);
+
+            return new PasswordBoxSelection(
+                startOffset,
+                endOffset - startOffset);
+        }
+        catch (Exception)
+        {
+            return fallback;
+        }
     }
 
     private void SetPasswordBoxSelection(int start, int length)
     {
         start = Math.Clamp(start, 0, PasswordBox.Password.Length);
         length = Math.Clamp(length, 0, PasswordBox.Password.Length - start);
-        PasswordSelectMethod.Invoke(PasswordBox, [start, length]);
+
+        try
+        {
+            if (Reflection is { } reflection)
+                reflection.SelectMethod.Invoke(PasswordBox, [start, length]);
+        }
+        catch (Exception)
+        {
+            PasswordBox.Focus();
+        }
     }
 
     private readonly record struct PasswordBoxSelection(int Start, int Length);
