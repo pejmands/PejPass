@@ -14,7 +14,7 @@ The cache lifetime begins after successful master-password authentication. A Win
 
 The cache service uses `CryptographicOperations.ZeroMemory` for byte buffers it owns. This does **not** guarantee that all plaintext copies of the password are erased from process memory: managed strings and copies held by other components may remain until reclaimed by the runtime.
 
-The “Until app closes” timeout disables the elapsed-time limit only; it does not override the Windows lock/suspend, password-change, Hello-disable, failure-limit, or app-exit clearing rules.
+The “Until app closes” timeout disables the elapsed-time limit only; it does not override the Windows lock/disconnect/suspend, password-change, Hello-disable, failure-limit, or app-exit clearing rules.
 
 
 ## Single-instance vault-open IPC
