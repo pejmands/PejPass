@@ -1520,6 +1520,7 @@ public partial class MainViewModel : ObservableObject
         if (window.DataContext is HistoryViewModel historyViewModel)
         {
             historyViewModel.HistoryRestored += OnHistoryRestored;
+            historyViewModel.VaultRollbackCompleted += OnHistoryRollbackCompleted;
         }
 
         window.Owner = System.Windows.Application.Current.MainWindow;
@@ -1531,7 +1532,10 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             if (window.DataContext is HistoryViewModel currentViewModel)
+            {
                 currentViewModel.HistoryRestored -= OnHistoryRestored;
+                currentViewModel.VaultRollbackCompleted -= OnHistoryRollbackCompleted;
+            }
         }
     }
 
@@ -1539,6 +1543,12 @@ public partial class MainViewModel : ObservableObject
     {
         await LoadVaultAsync();
         SelectedEntry = null;
+    }
+
+    private void OnHistoryRollbackCompleted(object? sender, EventArgs e)
+    {
+        SelectedEntry = null;
+        RefreshEntriesFromVault();
     }
 
     private void RestoreVaultSnapshot(Vault snapshot, Vault expectedVault, long expectedGeneration, Guid? preserveSelectionId = null)
