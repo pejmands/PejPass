@@ -302,6 +302,55 @@ public sealed class VaultStoreValidationTests
         Assert.False(File.Exists(path));
     }
 
+    [Fact]
+    public async Task CreateOpenAndSave_RunCryptoWithoutCallerSynchronizationContext()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        var marker = new RecordingSynchronizationContext();
+        var previousContext = SynchronizationContext.Current;
+        var crypto = new FakeCryptoService();
+        var store = new VaultStore(crypto, new FakeFileMover());
+
+        SynchronizationContext.SetSynchronizationContext(marker);
+
+        try
+        {
+            using var session = await store.CreateSessionAsync(
+                path,
+                "master-password",
+                new Vault { Name = "Thread test" },
+                cancellationToken);
+
+            Assert.Null(crypto.LastDeriveKeySynchronizationContext);
+            Assert.Null(crypto.LastEncryptSynchronizationContext);
+
+            using var reopened = await store.OpenSessionAsync(
+                path,
+                "master-password",
+                cancellationToken);
+
+            Assert.Null(crypto.LastDeriveKeySynchronizationContext);
+            Assert.Null(crypto.LastDecryptSynchronizationContext);
+
+            using var newMaterial = await store.SaveWithNewPasswordAsync(
+                path,
+                "new-master-password",
+                reopened.Vault,
+                reopened.KeyMaterial.KdfParameters,
+                cancellationToken);
+
+            Assert.Null(crypto.LastDeriveKeySynchronizationContext);
+            Assert.Null(crypto.LastEncryptSynchronizationContext);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previousContext);
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
     private static string CreateV2VaultFile(string json)
     {
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
@@ -376,9 +425,35 @@ public sealed class VaultStoreValidationTests
         return path;
     }
 
+    private sealed class RecordingSynchronizationContext : SynchronizationContext
+    {
+        public override void Post(SendOrPostCallback callback, object? state)
+        {
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                var previous = Current;
+                SetSynchronizationContext(this);
+                try
+                {
+                    callback(state);
+                }
+                finally
+                {
+                    SetSynchronizationContext(previous);
+                }
+            });
+        }
+    }
+
     private sealed class FakeCryptoService : ICryptoService
     {
         public int DeriveKeyCallCount { get; private set; }
+
+        public SynchronizationContext? LastDeriveKeySynchronizationContext { get; private set; }
+
+        public SynchronizationContext? LastEncryptSynchronizationContext { get; private set; }
+
+        public SynchronizationContext? LastDecryptSynchronizationContext { get; private set; }
 
         public bool ThrowOnDeriveKey { get; init; }
 
@@ -392,6 +467,7 @@ public sealed class VaultStoreValidationTests
             Argon2Parameters? parameters = null)
         {
             DeriveKeyCallCount++;
+            LastDeriveKeySynchronizationContext = SynchronizationContext.Current;
             LastDerivedSalt = salt;
             if (ThrowOnDeriveKey)
                 throw new InvalidOperationException("Simulated key derivation failure.");
@@ -404,6 +480,7 @@ public sealed class VaultStoreValidationTests
             byte[] key,
             byte[]? associatedData = null)
         {
+            LastEncryptSynchronizationContext = SynchronizationContext.Current;
             return (
                 plaintext,
                 new byte[12],
@@ -417,6 +494,7 @@ public sealed class VaultStoreValidationTests
             byte[] key,
             byte[]? associatedData = null)
         {
+            LastDecryptSynchronizationContext = SynchronizationContext.Current;
             return ciphertext;
         }
 
