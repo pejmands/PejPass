@@ -209,9 +209,11 @@ public sealed class VaultStore(
 
         try
         {
-            key = _crypto.DeriveKey(masterPassword, salt, kdfParameters);
+            key = await Task.Run(
+                () => _crypto.DeriveKey(masterPassword, salt, kdfParameters),
+                ct);
             using var material = new VaultKeyMaterial(key, salt, kdfParameters);
-            var encrypted = EncryptVault(vault, material);
+            var encrypted = await EncryptVaultAsync(vault, material, ct);
             var headerSalt = material.CopySalt();
 
             try
@@ -421,8 +423,12 @@ public sealed class VaultStore(
 
                 try
                 {
-                    key = keyFactory(salt, kdfParameters);
-                    plaintext = _crypto.Decrypt(ciphertext, nonce, tag, key, associatedData);
+                    key = await Task.Run(
+                        () => keyFactory(salt, kdfParameters),
+                        ct);
+                    plaintext = await Task.Run(
+                        () => _crypto.Decrypt(ciphertext, nonce, tag, key, associatedData),
+                        ct);
                     vault = JsonSerializer.Deserialize<Vault>(plaintext)
                             ?? throw new InvalidDataException("Vault data is corrupted.");
 
@@ -536,7 +542,9 @@ public sealed class VaultStore(
 
         try
         {
-            key = _crypto.DeriveKey(masterPassword, salt, kdfParameters);
+            key = await Task.Run(
+                () => _crypto.DeriveKey(masterPassword, salt, kdfParameters),
+                ct);
             using var material = new VaultKeyMaterial(key, salt, kdfParameters);
             await SaveAsync(path, material, vault, ct);
             return material.Clone();
@@ -577,7 +585,7 @@ public sealed class VaultStore(
 
         try
         {
-            encrypted = EncryptVault(vault, keyMaterial);
+            encrypted = await EncryptVaultAsync(vault, keyMaterial, ct);
 
             await using (var fs = new FileStream(
                 tempPath,
@@ -618,9 +626,10 @@ public sealed class VaultStore(
         }
     }
 
-    private (byte[] Ciphertext, byte[] Nonce, byte[] Tag) EncryptVault(
+    private async Task<(byte[] Ciphertext, byte[] Nonce, byte[] Tag)> EncryptVaultAsync(
         Vault vault,
-        VaultKeyMaterial keyMaterial)
+        VaultKeyMaterial keyMaterial,
+        CancellationToken ct)
     {
         ValidateVaultStructure(vault);
 
@@ -635,7 +644,10 @@ public sealed class VaultStore(
             salt = keyMaterial.CopySalt();
             json = JsonSerializer.SerializeToUtf8Bytes(vault);
             associatedData = BuildAssociatedDataV3(keyMaterial.KdfParameters, salt);
-            return _crypto.Encrypt(json, key, associatedData);
+
+            return await Task.Run(
+                () => _crypto.Encrypt(json, key, associatedData),
+                ct);
         }
         finally
         {
