@@ -479,6 +479,13 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
 
         if (string.IsNullOrEmpty(path))
         {
+            if (_vaultSession.IsCurrent(sessionGeneration, vault))
+            {
+                vault.RestoreSnapshot(snapshot);
+                Load();
+                VaultRollbackCompleted?.Invoke(this, EventArgs.Empty);
+            }
+
             DialogService.Warning(
                 "The vault path is unavailable.",
                 "Restore history");
