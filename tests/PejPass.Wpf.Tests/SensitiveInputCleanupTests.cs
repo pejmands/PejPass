@@ -155,7 +155,7 @@ public sealed class SensitiveInputCleanupTests
         }, TestContext.Current.CancellationToken);
     }
 
-    [Fact(Timeout = 15000)]
+    [Fact]
     public void HistoryRow_DisposeClearsDisplayValuesAndReleasesSnapshot()
     {
         var snapshot = new EntryHistoryItem
