@@ -15,6 +15,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
     private readonly VaultSession _vaultSession;
     private readonly VaultService _vaultService;
     private readonly AppSettings _settings;
+    private readonly Action<string, string> _showError;
 
     public ObservableCollection<HistoryRow> Items { get; } = [];
 
@@ -94,14 +95,18 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
 
     public event EventHandler? HistoryRestored;
 
+    public event EventHandler? VaultRollbackCompleted;
+
     public HistoryViewModel(
         VaultSession vaultSession,
         VaultService vaultService,
-        AppSettings settings)
+        AppSettings settings,
+        Action<string, string>? showError = null)
     {
         _vaultSession = vaultSession;
         _vaultService = vaultService;
         _settings = settings;
+        _showError = showError ?? DialogService.Error;
 
         Load();
 
@@ -351,6 +356,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         SearchText = string.Empty;
         BusyMessage = string.Empty;
         HistoryRestored = null;
+        VaultRollbackCompleted = null;
     }
 
     private void ClearItems()
@@ -476,6 +482,13 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
 
         if (string.IsNullOrEmpty(path))
         {
+            if (_vaultSession.IsCurrent(sessionGeneration, vault))
+            {
+                vault.RestoreSnapshot(snapshot);
+                Load();
+                VaultRollbackCompleted?.Invoke(this, EventArgs.Empty);
+            }
+
             DialogService.Warning(
                 "The vault path is unavailable.",
                 "Restore history");
@@ -500,6 +513,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             {
                 vault.RestoreSnapshot(snapshot);
                 Load();
+                VaultRollbackCompleted?.Invoke(this, EventArgs.Empty);
 
                 DialogService.Error(
                     "Failed to save the restored fields. Please try again.",
@@ -678,8 +692,9 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             {
                 vault.RestoreSnapshot(snapshot);
                 Load();
+                VaultRollbackCompleted?.Invoke(this, EventArgs.Empty);
 
-                DialogService.Error(
+                _showError(
                     "Failed to save the history changes. Please try again.",
                     actionTitle);
             }

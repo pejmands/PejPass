@@ -54,6 +54,50 @@ public sealed class AsyncVaultSessionRaceTests
         Assert.Equal("Replacement session", session.Vault!.Entries[0].Title);
     }
 
+    [Fact]
+    public async Task FailedSaveRollsBackVaultAndNotifiesMainViewToRefresh()
+    {
+        var store = new DelayedSaveVaultStore();
+        var vaultService = new VaultService(store);
+        using var session = new VaultSession();
+        using var keyMaterial = CreateMaterial();
+        var originalEntry = new VaultEntry { Title = "Original" };
+        var vault = new Vault { Entries = [originalEntry] };
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass");
+
+        session.Open(vault, path, keyMaterial);
+        var generation = session.Generation;
+        var snapshot = vault.CreateSnapshot();
+        originalEntry.Title = "Modified before save";
+
+        using var viewModel = new HistoryViewModel(
+            session,
+            vaultService,
+            new AppSettings(),
+            (_, _) => { });
+        var rollbackNotifications = 0;
+        viewModel.VaultRollbackCompleted += (_, _) => rollbackNotifications++;
+
+        var saveMethod = typeof(HistoryViewModel).GetMethod(
+            "SaveAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+
+        Assert.NotNull(saveMethod);
+
+        var saveTask = (Task<bool>)saveMethod!.Invoke(
+            viewModel,
+            [vault, generation, snapshot, "Rollback test"])!;
+
+        await store.SaveStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        store.ReleaseSave.TrySetException(new IOException("Simulated save failure"));
+
+        Assert.False(await saveTask);
+        Assert.Equal("Original", vault.Entries[0].Title);
+        Assert.NotSame(originalEntry, vault.Entries[0]);
+        Assert.Equal(1, rollbackNotifications);
+        Assert.Same(vault, session.Vault);
+    }
+
     private static VaultKeyMaterial CreateMaterial()
     {
         var key = new byte[32];
