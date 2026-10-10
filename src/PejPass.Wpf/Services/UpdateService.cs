@@ -328,8 +328,6 @@ public sealed class UpdateService : IDisposable
         {
         }
 
-        WritePendingWhatsNew(targetVersion);
-
         var scriptPath = Path.Combine(
             Path.GetTempPath(),
             "PejPass-apply-update-" + Guid.NewGuid().ToString("N") + ".cmd");
@@ -338,6 +336,7 @@ public sealed class UpdateService : IDisposable
         var sourceEsc = EscapeCmd(sourceDir);
         var exeEsc = EscapeCmd(processPath);
         var stageEsc = EscapeCmd(stageRoot);
+        var pendingEsc = EscapeCmd(PendingWhatsNewPath);
 
         var script =
             "@echo off" + Environment.NewLine +
@@ -346,6 +345,7 @@ public sealed class UpdateService : IDisposable
             "set \"SOURCE=" + sourceEsc + "\"" + Environment.NewLine +
             "set \"EXE=" + exeEsc + "\"" + Environment.NewLine +
             "set \"STAGE=" + stageEsc + "\"" + Environment.NewLine +
+            "set \"PENDING=" + pendingEsc + "\"" + Environment.NewLine +
             "set \"BACKUP=" + EscapeCmd(Path.Combine(Path.GetTempPath(), "PejPass-backup-" + Guid.NewGuid().ToString("N"))) + "\"" + Environment.NewLine +
             "set \"APP_PID=" + Environment.ProcessId + "\"" + Environment.NewLine +
             "set /a WAITCOUNT=0" + Environment.NewLine +
@@ -370,6 +370,7 @@ public sealed class UpdateService : IDisposable
             ":install_failed" + Environment.NewLine +
             "if exist \"%BACKUP%\" robocopy \"%BACKUP%\" \"%APPDIR%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1 >nul" + Environment.NewLine +
             "start \"\" \"%EXE%\" 2>nul" + Environment.NewLine +
+            "del \"%PENDING%\" 2>nul" + Environment.NewLine +
             "echo PejPass update installation failed. Previous application files were restored when possible. > \"%TEMP%\\PejPass-update-error.txt\"" + Environment.NewLine +
             "rmdir /S /Q \"%STAGE%\" 2>nul" + Environment.NewLine +
             "rmdir /S /Q \"%BACKUP%\" 2>nul" + Environment.NewLine +
@@ -385,6 +386,8 @@ public sealed class UpdateService : IDisposable
             WindowStyle = ProcessWindowStyle.Hidden,
             CreateNoWindow = true
         });
+
+        WritePendingWhatsNew(targetVersion);
 
         System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             System.Windows.Application.Current.Shutdown());
