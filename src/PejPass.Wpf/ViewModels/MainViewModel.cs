@@ -379,6 +379,20 @@ public partial class MainViewModel : ObservableObject
         HasNotesFilter = false;
     }
 
+    internal static bool MatchesSearch(VaultEntry entry, string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return true;
+
+        return entry.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               entry.Username.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               entry.Url.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               entry.Tags.Any(tag => tag.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+               entry.CustomFields.Any(field =>
+                   field.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                   (!field.IsSecret && field.Value.Contains(query, StringComparison.OrdinalIgnoreCase)));
+    }
+
     private void ApplyFilter(Guid? preserveSelectionId = null)
     {
         var keepId = preserveSelectionId ?? SelectedEntry?.Id;
@@ -408,14 +422,7 @@ public partial class MainViewModel : ObservableObject
 
         if (!string.IsNullOrEmpty(q))
         {
-            source = source.Where(e =>
-                e.Title.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-                e.Username.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-                e.Url.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-                e.Tags.Any(t => t.Contains(q, StringComparison.OrdinalIgnoreCase)) ||
-                e.CustomFields.Any(f =>
-                    f.Name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-                    f.Value.Contains(q, StringComparison.OrdinalIgnoreCase)));
+            source = source.Where(e => MatchesSearch(e, q));
         }
 
         source = SortEntries(source);

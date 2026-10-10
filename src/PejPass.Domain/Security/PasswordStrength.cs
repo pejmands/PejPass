@@ -1,5 +1,7 @@
 namespace PejPass.Domain.Security;
 
+using PejPass.Domain.Policies;
+
 public enum PasswordStrengthLevel
 {
     Empty = 0,
@@ -16,6 +18,13 @@ public static class PasswordStrength
     {
         if (string.IsNullOrEmpty(password))
             return PasswordStrengthLevel.Empty;
+
+        if (password.Length < 8)
+            return PasswordStrengthLevel.VeryWeak;
+
+        // Common passwords and predictable variants must never receive a strong rating.
+        if (MasterPasswordPolicy.IsCommonOrPredictable(password))
+            return PasswordStrengthLevel.Weak;
 
         var score = 0;
 
@@ -38,10 +47,6 @@ public static class PasswordStrength
         if (classes >= 2) score++;
         if (classes >= 3) score++;
         if (classes >= 4) score++;
-
-        // Cap for short passwords
-        if (password.Length < 8)
-            return PasswordStrengthLevel.VeryWeak;
 
         // Repeated characters penalty
         if (password.Distinct().Count() <= password.Length / 3)

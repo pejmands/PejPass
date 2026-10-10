@@ -12,6 +12,9 @@ public class WebUrlValidatorTests
     [InlineData("  example.com  ", true)]
     [InlineData("example.com:8080", true)]
     [InlineData("localhost:5000", true)]
+    [InlineData("router", true)]
+    [InlineData("nas", true)]
+    [InlineData("router:5000", true)]
     [InlineData("javascript:alert(1)", false)]
     [InlineData("file:///C:/Windows/win.ini", false)]
     [InlineData("data:text/html,test", false)]
@@ -52,6 +55,15 @@ public class WebUrlValidatorTests
         {
             Assert.Equal(string.Empty, normalizedUrl);
         }
+    }
+
+    [Theory]
+    [InlineData("router", "https://router/")]
+    [InlineData("nas:5000", "https://nas:5000/")]
+    public void TryNormalize_PreservesSingleLabelLocalHostnames(string url, string expected)
+    {
+        Assert.True(WebUrlValidator.TryNormalize(url, out var normalizedUrl));
+        Assert.Equal(expected, normalizedUrl);
     }
 
     [Fact]
