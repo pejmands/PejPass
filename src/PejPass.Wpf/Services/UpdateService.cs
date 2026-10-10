@@ -84,28 +84,25 @@ public sealed class UpdateService : IDisposable
             var manifest = await FetchManifestAsync(cancellationToken).ConfigureAwait(false);
 
             if (manifest is null || string.IsNullOrWhiteSpace(manifest.Version))
-            {
-                return UpdateCheckResult.InvalidManifest(
-                    "Missing or empty version field.");
-            }
+                return UpdateCheckResult.InvalidManifest("Missing or empty version field.");
 
             if (!IsTrustedManifest(manifest))
                 return UpdateCheckResult.InvalidManifest("Update signature verification failed.");
+
+            if (!Version.TryParse(Normalize(manifest.Version), out _))
+                return UpdateCheckResult.InvalidManifest("The version field is not a valid version number.");
+
+            if (!TryValidateHttpsUrl(manifest.DownloadUrl))
+                return UpdateCheckResult.InvalidManifest("The download URL is missing or is not a valid HTTPS URL.");
+
+            if (!IsValidSha256(manifest.Sha256))
+                return UpdateCheckResult.InvalidManifest("The package SHA-256 hash is missing or invalid.");
 
             LastManifest = manifest;
             TrySaveManifestCache(manifest);
 
             if (!IsNewerVersion(manifest.Version, CurrentVersion))
                 return UpdateCheckResult.UpToDate(CurrentVersion);
-
-            if (string.IsNullOrWhiteSpace(manifest.DownloadUrl))
-                return UpdateCheckResult.InvalidManifest("Missing download URL.");
-
-            if (!TryValidateHttpsUrl(manifest.DownloadUrl))
-                return UpdateCheckResult.InvalidManifest("Download URL must use HTTPS.");
-
-            if (!IsValidSha256(manifest.Sha256))
-                return UpdateCheckResult.InvalidManifest("Missing or invalid SHA-256 package hash.");
 
             return UpdateCheckResult.Available(CurrentVersion, manifest);
         }
@@ -122,17 +119,21 @@ public sealed class UpdateService : IDisposable
         {
             return UpdateCheckResult.NetworkError("Request timed out.");
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
-            return UpdateCheckResult.NetworkError("Could not connect to the update server.");
+            return UpdateCheckResult.NetworkError($"The update server request failed: {ex.Message}");
         }
         catch (JsonException)
         {
-            return UpdateCheckResult.InvalidManifest("The update manifest is invalid.");
+            return UpdateCheckResult.InvalidManifest("The update manifest is not valid JSON.");
+        }
+        catch (InvalidDataException ex)
+        {
+            return UpdateCheckResult.InvalidManifest(ex.Message);
         }
         catch (Exception)
         {
-            return UpdateCheckResult.NetworkError("Could not check for updates.");
+            return UpdateCheckResult.NetworkError("Could not check for updates. Please try again later.");
         }
     }
 
@@ -222,23 +223,68 @@ public sealed class UpdateService : IDisposable
         }
     }
 
-    public static void ApplyPortableUpdateAndRestart(string zipPath, string targetVersion)
+    public static void ApplyPortableUpdateAndRestart(
+        string zipPath,
+        string targetVersion,
+        string expectedSha256)
     {
-        if (string.IsNullOrWhiteSpace(zipPath) || !File.Exists(zipPath))
-            throw new FileNotFoundException("Update package not found.", zipPath);
+        if (string.IsNullOrWhiteSpace(zipPath))
+            throw new ArgumentException("Update package path is required.", nameof(zipPath));
+
+        if (!File.Exists(zipPath))
+            throw new FileNotFoundException("The downloaded update package could not be found.", zipPath);
+
+        if (!Version.TryParse(Normalize(targetVersion ?? string.Empty), out _))
+            throw new ArgumentException("The target update version is invalid.", nameof(targetVersion));
+
+        if (!IsValidSha256(expectedSha256))
+            throw new ArgumentException("The expected update package SHA-256 hash is invalid.", nameof(expectedSha256));
 
         var processPath = Environment.ProcessPath
-            ?? throw new InvalidOperationException("Cannot resolve PejPass.exe path.");
+            ?? throw new InvalidOperationException("Could not determine the running PejPass executable path.");
+
+        if (!Path.GetFileName(processPath).Equals("PejPass.exe", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("The running process is not PejPass.exe. Automatic installation was stopped.");
 
         var appDir = Path.GetDirectoryName(processPath)
-            ?? throw new InvalidOperationException("Cannot resolve application directory.");
+            ?? throw new InvalidOperationException("Could not determine the PejPass installation directory.");
+
+        if (!Directory.Exists(appDir))
+            throw new DirectoryNotFoundException("The PejPass installation directory no longer exists.");
+
+        EnsureDirectoryWritable(appDir);
 
         var stageRoot = Path.Combine(
             Path.GetTempPath(),
             "PejPass-update-" + Guid.NewGuid().ToString("N"));
 
+        using (var packageStream = File.OpenRead(zipPath))
+        using (var hasher = SHA256.Create())
+        {
+            var actualHash = Convert.ToHexString(hasher.ComputeHash(packageStream));
+            if (!CryptographicOperations.FixedTimeEquals(
+                    Convert.FromHexString(actualHash),
+                    Convert.FromHexString(expectedSha256)))
+            {
+                throw new InvalidDataException("The update package changed after download or its SHA-256 hash does not match.");
+            }
+        }
+
         using (var archive = ZipFile.OpenRead(zipPath))
+        {
             ValidateUpdateArchive(archive);
+            if (!archive.Entries.Any(entry =>
+                    string.Equals(
+                        entry.FullName.Replace('\\', '/').TrimStart('/'),
+                        "PejPass.exe",
+                        StringComparison.OrdinalIgnoreCase)
+                    || entry.FullName.Replace('\\', '/').TrimStart('/').EndsWith(
+                        "/PejPass.exe",
+                        StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new InvalidDataException("The update package does not contain PejPass.exe.");
+            }
+        }
 
         Directory.CreateDirectory(stageRoot);
         try
@@ -258,6 +304,21 @@ public sealed class UpdateService : IDisposable
             throw;
         }
 
+        var sourceDir = ResolveExtractedPayloadRoot(stageRoot);
+        if (!File.Exists(Path.Combine(sourceDir, "PejPass.exe")))
+        {
+            try
+            {
+                Directory.Delete(stageRoot, recursive: true);
+            }
+            catch
+            {
+            }
+
+            throw new InvalidDataException(
+                "The update package does not place PejPass.exe at the root of its application payload.");
+        }
+
         try
         {
             if (File.Exists(zipPath))
@@ -267,9 +328,6 @@ public sealed class UpdateService : IDisposable
         {
         }
 
-        var sourceDir = ResolveExtractedPayloadRoot(stageRoot);
-        WritePendingWhatsNew(targetVersion);
-
         var scriptPath = Path.Combine(
             Path.GetTempPath(),
             "PejPass-apply-update-" + Guid.NewGuid().ToString("N") + ".cmd");
@@ -278,6 +336,7 @@ public sealed class UpdateService : IDisposable
         var sourceEsc = EscapeCmd(sourceDir);
         var exeEsc = EscapeCmd(processPath);
         var stageEsc = EscapeCmd(stageRoot);
+        var pendingEsc = EscapeCmd(PendingWhatsNewPath);
 
         var script =
             "@echo off" + Environment.NewLine +
@@ -286,15 +345,37 @@ public sealed class UpdateService : IDisposable
             "set \"SOURCE=" + sourceEsc + "\"" + Environment.NewLine +
             "set \"EXE=" + exeEsc + "\"" + Environment.NewLine +
             "set \"STAGE=" + stageEsc + "\"" + Environment.NewLine +
+            "set \"PENDING=" + pendingEsc + "\"" + Environment.NewLine +
+            "set \"BACKUP=" + EscapeCmd(Path.Combine(Path.GetTempPath(), "PejPass-backup-" + Guid.NewGuid().ToString("N"))) + "\"" + Environment.NewLine +
+            "set \"APP_PID=" + Environment.ProcessId + "\"" + Environment.NewLine +
+            "set /a WAITCOUNT=0" + Environment.NewLine +
             ":wait" + Environment.NewLine +
+            "tasklist /FI \"PID eq %APP_PID%\" 2>nul | find \"%APP_PID%\" >nul" + Environment.NewLine +
+            "if errorlevel 1 goto apply_update" + Environment.NewLine +
+            "set /a WAITCOUNT+=1" + Environment.NewLine +
+            "if %WAITCOUNT% GEQ 120 goto install_failed" + Environment.NewLine +
             "timeout /t 1 /nobreak >nul" + Environment.NewLine +
-            "tasklist /FI \"IMAGENAME eq PejPass.exe\" 2>nul | find /I \"PejPass.exe\" >nul" + Environment.NewLine +
-            "if not errorlevel 1 goto wait" + Environment.NewLine +
+            "goto wait" + Environment.NewLine +
+            ":apply_update" + Environment.NewLine +
+            "mkdir \"%BACKUP%\" 2>nul" + Environment.NewLine +
+            "robocopy \"%APPDIR%\" \"%BACKUP%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1" + Environment.NewLine +
+            "if errorlevel 8 goto install_failed" + Environment.NewLine +
             "robocopy \"%SOURCE%\" \"%APPDIR%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1" + Environment.NewLine +
-            "if errorlevel 8 exit /b 1" + Environment.NewLine +
+            "if errorlevel 8 goto install_failed" + Environment.NewLine +
             "start \"\" \"%EXE%\"" + Environment.NewLine +
             "rmdir /S /Q \"%STAGE%\" 2>nul" + Environment.NewLine +
-            "del \"%~f0\" 2>nul" + Environment.NewLine;
+            "rmdir /S /Q \"%BACKUP%\" 2>nul" + Environment.NewLine +
+            "del \"%~f0\" 2>nul" + Environment.NewLine +
+            "exit /b 0" + Environment.NewLine +
+            ":install_failed" + Environment.NewLine +
+            "if exist \"%BACKUP%\" robocopy \"%BACKUP%\" \"%APPDIR%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1 >nul" + Environment.NewLine +
+            "start \"\" \"%EXE%\" 2>nul" + Environment.NewLine +
+            "del \"%PENDING%\" 2>nul" + Environment.NewLine +
+            "echo PejPass update installation failed. Previous application files were restored when possible. > \"%TEMP%\\PejPass-update-error.txt\"" + Environment.NewLine +
+            "rmdir /S /Q \"%STAGE%\" 2>nul" + Environment.NewLine +
+            "rmdir /S /Q \"%BACKUP%\" 2>nul" + Environment.NewLine +
+            "del \"%~f0\" 2>nul" + Environment.NewLine +
+            "exit /b 1" + Environment.NewLine;
 
         File.WriteAllText(scriptPath, script);
 
@@ -305,6 +386,8 @@ public sealed class UpdateService : IDisposable
             WindowStyle = ProcessWindowStyle.Hidden,
             CreateNoWindow = true
         });
+
+        WritePendingWhatsNew(targetVersion!);
 
         System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             System.Windows.Application.Current.Shutdown());
@@ -345,6 +428,43 @@ public sealed class UpdateService : IDisposable
         }
     }
 
+    private static void EnsureDirectoryWritable(string directory)
+    {
+        var probePath = Path.Combine(
+            directory,
+            ".pejpass-write-check-" + Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            using (new FileStream(
+                probePath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 1,
+                options: FileOptions.DeleteOnClose))
+            {
+            }
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw new UnauthorizedAccessException(
+                "PejPass cannot write to its installation folder. Move the portable app to a folder you can modify, then try again.",
+                ex);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(probePath))
+                    File.Delete(probePath);
+            }
+            catch
+            {
+            }
+        }
+    }
+
     private static string ResolveExtractedPayloadRoot(string stageRoot)
     {
         var entries = Directory.GetFileSystemEntries(stageRoot);
@@ -354,8 +474,8 @@ public sealed class UpdateService : IDisposable
         return stageRoot;
     }
 
-    private static string EscapeCmd(string path) =>
-        path.Replace("\"", string.Empty);
+    internal static string EscapeCmd(string path) =>
+        path.Replace("\"", string.Empty).Replace("%", "%%");
 
     private static UpdateManifest? TryLoadManifestCache()
     {
@@ -413,7 +533,8 @@ public sealed class UpdateService : IDisposable
             .ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
-            return null;
+            throw new HttpRequestException(
+                $"The update server returned HTTP {(int)response.StatusCode} ({response.ReasonPhrase}).");
 
         var contentLength = response.Content.Headers.ContentLength;
         if (contentLength is <= 0 or > MaxUpdateManifestBytes)
@@ -453,6 +574,9 @@ public sealed class UpdateService : IDisposable
 
         if (string.IsNullOrWhiteSpace(manifest.Version))
             throw new InvalidDataException("Update manifest is missing its version.");
+
+        if (!Version.TryParse(Normalize(manifest.Version), out _))
+            throw new InvalidDataException("Update manifest contains an invalid version number.");
 
         if (manifest.Releases is null || manifest.Releases.Count > MaxManifestReleases)
             throw new InvalidDataException("Update manifest contains too many releases.");
@@ -511,6 +635,12 @@ public sealed class UpdateService : IDisposable
                 throw new InvalidDataException("Update manifest contains an invalid release.");
 
             ValidateText(release.Version, "release version", 128);
+            if (!string.IsNullOrWhiteSpace(release.Version)
+                && !Version.TryParse(Normalize(release.Version), out _))
+            {
+                throw new InvalidDataException("Update manifest contains an invalid release version number.");
+            }
+
             ValidateText(release.Released, "release date", 128);
             ValidateNotes(release.Notes, $"release {release.Version} notes");
         }
@@ -661,6 +791,8 @@ public sealed class UpdateService : IDisposable
         response.EnsureSuccessStatusCode();
 
         var total = response.Content.Headers.ContentLength ?? -1L;
+        if (total == 0)
+            throw new InvalidDataException("The update package is empty.");
         if (total > MaxUpdatePackageBytes)
             throw new InvalidDataException("Update package exceeds the maximum supported size.");
 
@@ -711,6 +843,9 @@ public sealed class UpdateService : IDisposable
 
             cancellationToken.ThrowIfCancellationRequested();
 
+            if (readTotal == 0)
+                throw new InvalidDataException("The update package is empty.");
+
             var actualSha256 = Convert.ToHexString(hasher.GetHashAndReset());
 
             if (!CryptographicOperations.FixedTimeEquals(
@@ -745,10 +880,12 @@ public sealed class UpdateService : IDisposable
     private static bool IsTrustedManifest(UpdateManifest manifest) =>
         UpdateSignatureService.VerifyManifestSignature(manifest);
 
-    private static bool TryValidateHttpsUrl(string? value)
+    internal static bool TryValidateHttpsUrl(string? value)
     {
         return Uri.TryCreate(value, UriKind.Absolute, out var uri)
-               && uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+               && uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+               && !string.IsNullOrWhiteSpace(uri.Host)
+               && string.IsNullOrEmpty(uri.UserInfo);
     }
 
     internal static bool IsValidSha256(string? value)
