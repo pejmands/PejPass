@@ -14,7 +14,7 @@
 
 	<Window.Resources>
 		<Style x:Key="SectionHeader" TargetType="TextBlock">
-			<Setter Property="FontSize" Value="13" />
+			<Setter Property="FontSize" Value="{DynamicResource AppFontSize13}" />
 			<Setter Property="FontWeight" Value="SemiBold" />
 			<Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
 			<Setter Property="Margin" Value="0,12,0,10" />
