@@ -80,31 +80,45 @@ public static partial class MasterPasswordPolicy
 
     private static string NormalizeForCommonPasswordCheck(string password)
     {
-        var builder = new StringBuilder(password.Length);
+        var core = password.ToLowerInvariant().ToList();
 
-        foreach (var character in password)
+        // Ignore common numeric and punctuation suffixes such as Password123! or Summer2026.
+        while (core.Count > 0 && !char.IsLetterOrDigit(core[^1]))
+            core.RemoveAt(core.Count - 1);
+
+        while (core.Count > 0 && char.IsDigit(core[^1]))
+            core.RemoveAt(core.Count - 1);
+
+        var builder = new StringBuilder(core.Count);
+
+        foreach (var character in core)
         {
-            var normalized = char.ToLowerInvariant(character) switch
+            var normalized = character switch
             {
-                '@' => 'a',
-                '4' => 'a',
+                '@' or '4' => 'a',
                 '8' => 'b',
                 '3' => 'e',
                 '6' => 'g',
                 '1' or '!' => 'i',
                 '0' => 'o',
-                '$' or '5' => 's',
-                '7' => 't',
-                '+' => 't',
-                _ => char.ToLowerInvariant(character)
+                '
+}
+
+public sealed record PasswordValidationResult(bool IsValid, string? ErrorMessage)
+{
+    public static PasswordValidationResult Success() => new(true, null);
+    public static PasswordValidationResult Fail(string message) => new(false, message);
+}
+ or '5' => 's',
+                '7' or '+' => 't',
+                _ => character
             };
 
             if (char.IsLetterOrDigit(normalized))
                 builder.Append(normalized);
         }
 
-        // Ignore common numeric suffixes such as Password123! or Summer2026.
-        return builder.ToString().TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
+        return builder.ToString();
     }
 }
 
