@@ -92,6 +92,7 @@ public partial class PasswordGeneratorWindow : Window
         {
             UseButton.IsEnabled = false;
             _clipboard.CopyWithTimeout(password, _clipboardTimeout);
+            password = string.Empty;
             UseButton.Content = "✓ Copied";
             await Task.Delay(500);
             Close();

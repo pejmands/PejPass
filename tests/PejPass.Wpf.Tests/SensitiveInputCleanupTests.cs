@@ -155,6 +155,31 @@ public sealed class SensitiveInputCleanupTests
         }, TestContext.Current.CancellationToken);
     }
 
+    [Fact]
+    public void HistoryRow_DisposeClearsDisplayValuesAndReleasesSnapshot()
+    {
+        var snapshot = new EntryHistoryItem
+        {
+            Title = "Snapshot title",
+            Username = "snapshot-user",
+            Password = "snapshot-secret",
+            Url = "https://example.test",
+            TotpSecret = "snapshot-totp",
+            Notes = "snapshot-notes"
+        };
+        var row = new HistoryRow(snapshot, "Displayed title", ["Password changed"]);
+
+        row.Dispose();
+
+        Assert.Equal(string.Empty, row.Title);
+        Assert.Equal(string.Empty, row.Username);
+        Assert.Equal(string.Empty, row.Url);
+        Assert.Null(row.Snapshot);
+        Assert.Equal("snapshot-secret", snapshot.Password);
+        Assert.Equal("snapshot-totp", snapshot.TotpSecret);
+        Assert.Equal("snapshot-notes", snapshot.Notes);
+    }
+
     [Fact(Timeout = 15000)]
     public void HistoryFieldRow_DisposeClearsCurrentAndSnapshotValues()
     {

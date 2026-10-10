@@ -119,8 +119,9 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         if (_isDisposed)
             return;
 
-        Items.Clear();
         ClearFields();
+        SelectedItem = null;
+        ClearItems();
 
         var vault = _vaultSession.Vault;
 
@@ -346,11 +347,19 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
 
         ClearFields();
         SelectedItem = null;
-        Items.Clear();
-        FilteredItems.Clear();
+        ClearItems();
         SearchText = string.Empty;
         BusyMessage = string.Empty;
         HistoryRestored = null;
+    }
+
+    private void ClearItems()
+    {
+        foreach (var item in Items)
+            item.Dispose();
+
+        Items.Clear();
+        FilteredItems.Clear();
     }
 
     private void ClearFields()
@@ -396,7 +405,8 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task Restore()
     {
-        if (SelectedItem is null)
+        var selectedItem = SelectedItem;
+        if (selectedItem is null || selectedItem.Snapshot is not { } selectedSnapshot)
             return;
 
         var selectedFields = Fields
@@ -417,7 +427,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         var sessionGeneration = _vaultSession.Generation;
 
         var entry = vault.FindEntry(
-            SelectedItem.EntryId);
+            selectedItem.EntryId);
 
         if (entry is null)
         {
@@ -452,7 +462,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         var snapshot = vault.CreateSnapshot();
 
         if (!vault.RestoreHistoryFields(
-                SelectedItem.Snapshot,
+                selectedSnapshot,
                 selectedFields))
         {
             DialogService.Warning(
@@ -682,17 +692,17 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
 public sealed class HistoryRow(
     EntryHistoryItem snapshot,
     string title,
-    IReadOnlyList<string> changedFields)
+    IReadOnlyList<string> changedFields) : IDisposable
 {
     public Guid EntryId { get; } = snapshot.EntryId;
 
     public Guid HistoryId { get; } = snapshot.Id;
 
-    public string Title { get; } = title;
+    public string Title { get; private set; } = title;
 
-    public string Username { get; } = snapshot.Username;
+    public string Username { get; private set; } = snapshot.Username;
 
-    public string Url { get; } = snapshot.Url;
+    public string Url { get; private set; } = snapshot.Url;
 
     public string ChangedAtText { get; } = FormatChangedAt(snapshot.ChangedAt);
 
@@ -707,7 +717,16 @@ public sealed class HistoryRow(
         _ => $"{changedFields.Count} fields changed"
     };
 
-    public EntryHistoryItem Snapshot { get; } = snapshot;
+    public EntryHistoryItem? Snapshot { get; private set; } = snapshot;
+
+    public void Dispose()
+    {
+        Title = string.Empty;
+        Username = string.Empty;
+        Url = string.Empty;
+        Snapshot = null;
+        IsExpanded = false;
+    }
 
     private static string FormatChangedAt(DateTimeOffset value)
     {
