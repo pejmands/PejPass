@@ -474,7 +474,7 @@ public sealed class VaultStore(
                 }
             }
 
-            if (versionValue != CurrentVersion)
+            if (migrateLegacy && versionValue != CurrentVersion)
             {
                 try
                 {
