@@ -116,6 +116,7 @@ public partial class MainWindow : Window
                 viewModel.Entries.CollectionChanged -= _entriesCollectionChangedHandler;
 
             FaviconService.OnlineFetchingChanged -= OnOnlineFetchingChanged;
+            FaviconService.FaviconsBatchReady -= OnFaviconsBatchReady;
             SnackbarService.Shown -= OnSnackbarShown;
 
             _snackbarTimer.Stop();
@@ -168,11 +169,7 @@ public partial class MainWindow : Window
         EntryList.Drop += EntryList_Drop;
         FaviconService.OnlineFetchingChanged += OnOnlineFetchingChanged;
 
-        FaviconService.FaviconsBatchReady += () =>
-        {
-            try { EntryList.Items.Refresh(); }
-            catch { /* list may be disposing */ }
-        };
+        FaviconService.FaviconsBatchReady += OnFaviconsBatchReady;
 
         Loaded += (_, _) =>
         {
@@ -827,6 +824,21 @@ public partial class MainWindow : Window
                     vm.OpenSettingsCommand.Execute(null);
                 e.Handled = true;
                 break;
+        }
+    }
+
+    private void OnFaviconsBatchReady()
+    {
+        if (!IsLoaded)
+            return;
+
+        try
+        {
+            EntryList.Items.Refresh();
+        }
+        catch (InvalidOperationException)
+        {
+            // The item collection may be changing during shutdown.
         }
     }
 
