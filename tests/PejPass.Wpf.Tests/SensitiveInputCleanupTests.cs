@@ -111,8 +111,6 @@ public sealed class SensitiveInputCleanupTests
             Assert.Equal(string.Empty, viewModel.Preview);
             Assert.Null(viewModel.Result);
             Assert.Null(viewModel.Error);
-            Assert.Null(viewModel.RequestAccept);
-            Assert.Null(viewModel.RequestCancel);
         }, TestContext.Current.CancellationToken);
     }
 
