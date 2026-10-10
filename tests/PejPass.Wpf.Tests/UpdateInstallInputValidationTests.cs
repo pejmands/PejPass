@@ -61,6 +61,25 @@ public sealed class UpdateInstallInputValidationTests
         Assert.Contains("invalid version", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("https://example.com/PejPass.zip", true)]
+    [InlineData("http://example.com/PejPass.zip", false)]
+    [InlineData("https://user:password@example.com/PejPass.zip", false)]
+    [InlineData("not-a-url", false)]
+    [InlineData("", false)]
+    public void TryValidateHttpsUrl_RejectsInvalidOrUnsafeUrls(string value, bool expected)
+    {
+        Assert.Equal(expected, UpdateService.TryValidateHttpsUrl(value));
+    }
+
+    [Fact]
+    public void IsValidSha256_RequiresExactly64HexCharacters()
+    {
+        Assert.True(UpdateService.IsValidSha256(new string('A', 64)));
+        Assert.False(UpdateService.IsValidSha256(new string('A', 63)));
+        Assert.False(UpdateService.IsValidSha256(new string('G', 64)));
+    }
+
     [Fact]
     public void EscapeCmd_ProtectsPercentSignsInInstallPaths()
     {
