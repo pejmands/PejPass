@@ -1711,7 +1711,7 @@ public partial class CustomFieldDisplayItem(CustomField field) : ObservableObjec
     private readonly SecretRevealTimer _revealTimer = new();
 
     public string Name { get; } = field.Name;
-    public string Value { get; } = field.Value;
+    public string Value { get; private set; } = field.Value;
     public bool IsSecret { get; } = field.IsSecret;
 
     [ObservableProperty]
@@ -1739,6 +1739,9 @@ public partial class CustomFieldDisplayItem(CustomField field) : ObservableObjec
     public void Dispose()
     {
         _revealTimer.Dispose();
+        IsRevealed = false;
+        Value = string.Empty;
+        OnPropertyChanged(nameof(DisplayValue));
         GC.SuppressFinalize(this);
     }
 
