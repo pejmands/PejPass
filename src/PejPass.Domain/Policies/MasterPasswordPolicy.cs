@@ -25,7 +25,7 @@ public static partial class MasterPasswordPolicy
     private static readonly HashSet<string> CommonPasswords = new(StringComparer.OrdinalIgnoreCase)
     {
         "123456", "123456789", "12345678", "1234567890", "password", "password1",
-        "password123", "qwerty", "qwerty123", "abc123", "letmein", "welcome",
+        "password123", "qwerty", "qwerty123", "abc", "abc123", "letmein", "welcome",
         "admin", "administrator", "iloveyou", "monkey", "dragon", "master",
         "login", "princess", "football", "baseball", "shadow", "sunshine",
         "trustno1", "whatever", "freedom", "hello", "charlie", "donald",
@@ -101,15 +101,7 @@ public static partial class MasterPasswordPolicy
                 '6' => 'g',
                 '1' or '!' => 'i',
                 '0' => 'o',
-                '
-}
-
-public sealed record PasswordValidationResult(bool IsValid, string? ErrorMessage)
-{
-    public static PasswordValidationResult Success() => new(true, null);
-    public static PasswordValidationResult Fail(string message) => new(false, message);
-}
- or '5' => 's',
+                '\u0024' or '5' => 's',
                 '7' or '+' => 't',
                 _ => character
             };
