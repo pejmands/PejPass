@@ -232,9 +232,9 @@ public static class WebUrlValidator
 
         var labels = asciiHost.Split('.');
 
-        // Unqualified names such as "abc" are not accepted as web hosts.
-        if (labels.Length < 2)
-            return false;
+        // Permit valid single-label hostnames used by routers, NAS devices, and other LAN services.
+        if (labels.Length == 1)
+            return IsValidDnsLabel(labels[0]);
 
         // Avoid browser-specific interpretation of numeric final labels.
         if (IsPotentialIpv4Number(labels[^1]))
