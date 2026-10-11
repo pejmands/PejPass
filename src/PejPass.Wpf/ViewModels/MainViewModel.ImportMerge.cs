@@ -2,20 +2,30 @@ using PejPass.Domain.Entities;
 
 namespace PejPass.Wpf.ViewModels;
 
+/// <summary>Which fields determine whether two imported entries are equivalent.</summary>
+internal enum EntryFingerprintScope
+{
+    /// <summary>All content fields, including TOTP, tags, and custom fields.</summary>
+    Full,
+
+    /// <summary>Only fields represented by browser CSV: title, username, password, URL, and notes.</summary>
+    BrowserFields
+}
+
 public partial class MainViewModel
 {
-    private static ImportMergeResult MergeImportedEntries(
+    internal static ImportMergeResult MergeImportedEntries(
         Vault vault,
         IReadOnlyList<VaultEntry> imported,
-        bool includeTags = true)
+        EntryFingerprintScope scope = EntryFingerprintScope.Full)
     {
         var activeByFp = new Dictionary<string, VaultEntry>(StringComparer.Ordinal);
         foreach (var entry in vault.Entries)
-            activeByFp[EntryContentFingerprint(entry, includeTags)] = entry;
+            activeByFp[EntryContentFingerprint(entry, scope)] = entry;
 
         var trashByFp = new Dictionary<string, TrashedEntry>(StringComparer.Ordinal);
         foreach (var trashed in vault.Trash)
-            trashByFp[EntryContentFingerprint(trashed.Entry, includeTags)] = trashed;
+            trashByFp[EntryContentFingerprint(trashed.Entry, scope)] = trashed;
 
         var addedToList = 0;
         var restoredFromTrash = 0;
@@ -23,7 +33,7 @@ public partial class MainViewModel
 
         foreach (var importedEntry in imported)
         {
-            var fp = EntryContentFingerprint(importedEntry, includeTags);
+            var fp = EntryContentFingerprint(importedEntry, scope);
 
             if (activeByFp.ContainsKey(fp))
             {
@@ -90,7 +100,7 @@ public partial class MainViewModel
         };
     }
 
-    private readonly record struct ImportMergeResult(
+    internal readonly record struct ImportMergeResult(
         int AddedToList,
         int RestoredFromTrash,
         int SkippedAlreadyInList);
