@@ -26,6 +26,64 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateSessionAsync_WhenFileMoveFails_LeavesNoVaultAndNoTempFile()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var store = new VaultStore(new TestCryptoService(), new FailingFileMover());
+
+        await Assert.ThrowsAsync<IOException>(() =>
+            store.CreateSessionAsync(
+                _vaultPath,
+                "Password123!",
+                CreateVault("New"),
+                cancellationToken));
+
+        Assert.False(File.Exists(_vaultPath));
+        Assert.Empty(Directory.GetFiles(_directory));
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenFileAlreadyExists_DoesNotOverwriteItAndLeavesNoTempFile()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        byte[] existing = [1, 2, 3, 4];
+        await File.WriteAllBytesAsync(_vaultPath, existing, cancellationToken);
+
+        var store = new VaultStore(new TestCryptoService(), new FileMover());
+
+        await Assert.ThrowsAsync<IOException>(() =>
+            store.CreateSessionAsync(
+                _vaultPath,
+                "Password123!",
+                CreateVault("New"),
+                cancellationToken));
+
+        Assert.Equal(existing, await File.ReadAllBytesAsync(_vaultPath, cancellationToken));
+        Assert.Single(Directory.GetFiles(_directory));
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_OnSuccess_LeavesOnlyTheVaultFile()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var store = new VaultStore(new TestCryptoService(), new FileMover());
+
+        using var session = await store.CreateSessionAsync(
+            _vaultPath,
+            "Password123!",
+            CreateVault("New"),
+            cancellationToken);
+
+        Assert.Equal(_vaultPath, Assert.Single(Directory.GetFiles(_directory)));
+
+        using var reopened = await store.OpenSessionAsync(
+            _vaultPath,
+            "Password123!",
+            cancellationToken);
+        Assert.Equal("New", reopened.Vault.Name);
+    }
+
+    [Fact]
     public async Task OpenAsync_WhenVaultFileExceedsMaximumSize_RejectsBeforeReadingHeader()
     {
         var oversizedLength = 128L * 1024 * 1024 + 1;
@@ -96,15 +154,14 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         var originalVault = CreateVault("Original");
 
         var crypto = new TestCryptoService();
-        var fileMover = new FailingFileMover();
-        var store = new VaultStore(crypto, fileMover);
 
-        await store.CreateAsync(
+        await new VaultStore(crypto, new FileMover()).CreateAsync(
             _vaultPath,
             originalPassword,
             originalVault,
             cancellationToken);
 
+        var store = new VaultStore(crypto, new FailingFileMover());
         var updatedVault = CreateVault("Updated");
 
         await Assert.ThrowsAsync<IOException>(() =>
@@ -181,16 +238,15 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         var originalVault = CreateVault("Original");
 
         var crypto = new TestCryptoService();
-        var fileMover = new FailingFileMover();
-        var store = new VaultStore(crypto, fileMover);
-        var vaultService = new VaultService(store);
 
-        await store.CreateAsync(
+        await new VaultStore(crypto, new FileMover()).CreateAsync(
             _vaultPath,
             originalPassword,
             originalVault,
             cancellationToken);
 
+        var store = new VaultStore(crypto, new FailingFileMover());
+        var vaultService = new VaultService(store);
         var updatedVault = CreateVault("Updated");
 
         await Assert.ThrowsAsync<IOException>(() =>

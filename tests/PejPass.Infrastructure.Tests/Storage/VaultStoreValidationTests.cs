@@ -518,6 +518,7 @@ public sealed class VaultStoreValidationTests
             string destinationPath,
             bool overwrite)
         {
+            File.Move(sourcePath, destinationPath, overwrite);
         }
     }
 }
