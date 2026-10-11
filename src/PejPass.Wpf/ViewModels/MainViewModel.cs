@@ -1336,7 +1336,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             if (!DialogService.Confirm(
-                    $"Found {imported.Count} entries.\n\nMerge them into the current vault?\n\nIdentical entries are skipped. Entries matching the current Trash are restored to the list.",
+                    $"Found {imported.Count} entries.\n\nMerge them into the current vault?\n\nEntries matching on title, username, password, URL, and notes are skipped. Entries matching the current Trash are restored to the list.",
                     "Confirm Import",
                     yesText: "Import",
                     noText: "Cancel"))
@@ -1352,7 +1352,10 @@ public partial class MainViewModel : ObservableObject
 
             var vault = initialVault;
             var snapshot = vault.CreateSnapshot();
-            var result = MergeImportedEntries(vault, imported, includeTags: false);
+            var result = MergeImportedEntries(
+                vault,
+                imported,
+                EntryFingerprintScope.BrowserFields);
 
             Entries.Clear();
             foreach (var entry in vault.Entries)

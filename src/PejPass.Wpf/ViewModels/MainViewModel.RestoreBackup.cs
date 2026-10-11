@@ -349,17 +349,27 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// Content fingerprint. Match only when every content field is exactly equal
-    /// (Ordinal, case-sensitive). Favorite state, Id, dates, history, and sort order are ignored.
+    /// Fingerprint used to compare entry content. BrowserFields intentionally ignores TOTP,
+    /// tags, and custom fields because browser CSV cannot represent them.
     /// </summary>
-    private static string EntryContentFingerprint(VaultEntry e, bool includeTags = true)
+    internal static string EntryContentFingerprint(
+        VaultEntry e,
+        EntryFingerprintScope scope = EntryFingerprintScope.Full)
     {
         static string S(string? s) => s ?? string.Empty;
 
-        var tags = includeTags
-            ? string.Join('\u001e',
-                e.Tags.Select(t => S(t)).OrderBy(t => t, StringComparer.Ordinal))
-            : string.Empty;
+        if (scope == EntryFingerprintScope.BrowserFields)
+        {
+            return string.Join('\u001f',
+                S(e.Title),
+                S(e.Username),
+                S(e.Password),
+                S(e.Url),
+                S(e.Notes));
+        }
+
+        var tags = string.Join('\u001e',
+            e.Tags.Select(t => S(t)).OrderBy(t => t, StringComparer.Ordinal));
 
         var customs = string.Join('\u001e',
             e.CustomFields
