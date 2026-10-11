@@ -181,6 +181,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         Assert.Equal(originalVault.Entries[0].Id, restoredEntry.Id);
     }
 
+    [Fact]
     public async Task ChangeMasterPassword_WhenEncryptionFails_KeepsPreviousVaultAndPasswordIntact()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
