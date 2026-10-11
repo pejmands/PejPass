@@ -54,10 +54,11 @@ public sealed class TotpHelperTests
         Assert.True(TotpHelper.TryGetCode(
             "otpauth://totp/test?secret=JBSWY3DPEHPK3PXP&period=60",
             time,
-            out _,
+            out var code,
             out var remaining,
             out var period));
 
+        Assert.Equal("996554", code);
         Assert.Equal(60, period);
         Assert.Equal(30, remaining);
     }
