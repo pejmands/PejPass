@@ -254,7 +254,8 @@ public sealed class UpdateService : IDisposable
         if (!File.Exists(zipPath))
             throw new FileNotFoundException("The downloaded update package could not be found.", zipPath);
 
-        if (!Version.TryParse(Normalize(targetVersion ?? string.Empty), out _))
+        var normalizedTargetVersion = Normalize(targetVersion ?? string.Empty);
+        if (!Version.TryParse(normalizedTargetVersion, out _))
             throw new ArgumentException("The target update version is invalid.", nameof(targetVersion));
 
         if (!IsValidSha256(expectedSha256))
@@ -339,7 +340,7 @@ public sealed class UpdateService : IDisposable
                     Path.Combine(Path.GetTempPath(), "PejPass-backup-" + Guid.NewGuid().ToString("N")),
                     Environment.ProcessId));
 
-            return new StagedUpdate(scriptPath, stageRoot, targetVersion);
+            return new StagedUpdate(scriptPath, stageRoot, normalizedTargetVersion);
         }
         catch
         {
