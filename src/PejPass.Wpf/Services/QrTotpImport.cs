@@ -177,19 +177,4 @@ public static class QrTotpImport
 
         return map;
     }
-
-    private static bool LooksLikeBase32(string s)
-    {
-        if (s.Length < 8)
-            return false;
-
-        foreach (var c in s)
-        {
-            var u = char.ToUpperInvariant(c);
-            if ((u < 'A' || u > 'Z') && (u < '2' || u > '7'))
-                return false;
-        }
-
-        return true;
-    }
 }
