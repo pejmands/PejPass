@@ -12,7 +12,7 @@ namespace PejPass.Wpf.Services;
 internal static class PendingVaultOpen
 {
     private const int MaxMessageBytes = 128 * 1024;
-    private static readonly string PipeName =
+    internal static string PipeName { get; set; } =
         $"PejPass.PendingVaultOpen.{System.Diagnostics.Process.GetCurrentProcess().SessionId}";
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
@@ -75,7 +75,7 @@ internal static class PendingVaultOpen
                     ".",
                     PipeName,
                     PipeDirection.InOut,
-                    PipeOptions.None,
+                    PipeOptions.CurrentUserOnly,
                     TokenImpersonationLevel.Identification);
 
                 client.Connect(200);

@@ -56,3 +56,10 @@ Thumbs.db
 *.pejpass
 *.vault
 secrets/
+
+## Signing keys and certificates (UpdateSigner private key must never be committed)
+*.pem
+*.key
+*.pfx
+*.p12
+*.snk
