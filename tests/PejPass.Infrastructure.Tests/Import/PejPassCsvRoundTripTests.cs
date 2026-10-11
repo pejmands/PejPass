@@ -55,4 +55,28 @@ public sealed class PejPassCsvRoundTripTests
                 File.Delete(file);
         }
     }
+
+    [Fact]
+    public async Task ExportAndImport_PreservesNonDefaultTotpParameters()
+    {
+        var source = new VaultEntry
+        {
+            Title = "Custom TOTP",
+            TotpSecret = "otpauth://totp/PejPass?secret=JBSWY3DPEHPK3PXP&algorithm=SHA256&digits=8&period=60"
+        };
+
+        var file = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.pejpass.csv");
+        try
+        {
+            await new CsvExportService().ExportPejPassCsvAsync(file, [source], TestContext.Current.CancellationToken);
+            var imported = Assert.Single(await new BrowserImportService().ImportPejPassCsvAsync(file, TestContext.Current.CancellationToken));
+
+            Assert.Equal(source.TotpSecret, imported.TotpSecret);
+        }
+        finally
+        {
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+    }
 }
