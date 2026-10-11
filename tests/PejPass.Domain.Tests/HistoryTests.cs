@@ -557,4 +557,61 @@ public sealed class HistoryTests
             System.Text.Json.JsonSerializer.Serialize(vault));
     }
 
+    [Fact]
+    public void RemoveHistoryOlderThan_RemovesOnlySnapshotsBeforeCutoff()
+    {
+        var vault = new Vault();
+        var entry = CreateEntry();
+        vault.AddEntry(entry);
+        var now = DateTimeOffset.UtcNow;
+        var cutoff = now.AddDays(-90);
+
+        vault.History.Add(new EntryHistoryItem
+        {
+            EntryId = entry.Id,
+            Title = "old",
+            ChangedAt = now.AddDays(-200)
+        });
+        vault.History.Add(new EntryHistoryItem
+        {
+            EntryId = entry.Id,
+            Title = "recent",
+            ChangedAt = now.AddDays(-5)
+        });
+        vault.History.Add(new EntryHistoryItem
+        {
+            EntryId = entry.Id,
+            Title = "at cutoff",
+            ChangedAt = cutoff
+        });
+
+        var removed = vault.RemoveHistoryOlderThan(cutoff);
+
+        Assert.Equal(1, removed);
+        Assert.Equal(2, vault.History.Count);
+        Assert.Contains(vault.History, h => h.Title == "recent");
+        Assert.Contains(vault.History, h => h.Title == "at cutoff");
+        Assert.DoesNotContain(vault.History, h => h.Title == "old");
+    }
+
+    [Fact]
+    public void RemoveHistoryOlderThan_WhenNothingMatches_DoesNotTouchVault()
+    {
+        var vault = new Vault();
+        var entry = CreateEntry();
+        vault.AddEntry(entry);
+        vault.History.Add(new EntryHistoryItem
+        {
+            EntryId = entry.Id,
+            Title = "recent",
+            ChangedAt = DateTimeOffset.UtcNow.AddDays(-5)
+        });
+        var before = vault.UpdatedAt;
+
+        Assert.Equal(0, vault.RemoveHistoryOlderThan(DateTimeOffset.UtcNow.AddDays(-90)));
+
+        Assert.Equal(before, vault.UpdatedAt);
+        Assert.Equal("recent", Assert.Single(vault.History).Title);
+    }
+
 }
