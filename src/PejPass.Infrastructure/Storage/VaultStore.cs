@@ -204,6 +204,18 @@ public sealed class VaultStore(
         var kdfParameters = vault.KdfParameters;
         kdfParameters.Validate();
 
+        // Fail fast before expensive key derivation. Move with overwrite:false
+        // still protects against a file that appears while creation is in progress.
+        if (File.Exists(path))
+            throw new IOException("A vault file already exists at this path.");
+
+        var directory = Path.GetDirectoryName(Path.GetFullPath(path))
+                        ?? throw new InvalidOperationException("Vault directory could not be determined.");
+
+        var tempPath = Path.Combine(
+            directory,
+            $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+
         var salt = _crypto.GenerateSalt(SaltLength);
         byte[]? key = null;
 
@@ -218,28 +230,43 @@ public sealed class VaultStore(
 
             try
             {
-                await using var fs = new FileStream(
-                    path,
+                await using (var fs = new FileStream(
+                    tempPath,
                     FileMode.CreateNew,
                     FileAccess.Write,
-                    FileShare.None);
+                    FileShare.None))
+                {
+                    await WriteVaultAsync(
+                        fs,
+                        headerSalt,
+                        kdfParameters,
+                        encrypted.Nonce,
+                        encrypted.Tag,
+                        encrypted.Ciphertext,
+                        ct);
 
-                await WriteVaultAsync(
-                    fs,
-                    headerSalt,
-                    kdfParameters,
-                    encrypted.Nonce,
-                    encrypted.Tag,
-                    encrypted.Ciphertext,
-                    ct);
+                    await fs.FlushAsync(ct);
+                    fs.Flush(flushToDisk: true);
+                }
 
-                await fs.FlushAsync(ct);
-                fs.Flush(flushToDisk: true);
+                // Publish only after the complete encrypted vault has been flushed.
+                // Never replace an existing vault.
+                _fileMover.Move(tempPath, path, overwrite: false);
             }
             finally
             {
                 _crypto.ZeroMemory(headerSalt);
                 ClearEncryptedPayload(encrypted);
+
+                try
+                {
+                    if (File.Exists(tempPath))
+                        File.Delete(tempPath);
+                }
+                catch
+                {
+                    // Do not hide the original exception if cleanup fails.
+                }
             }
 
             return new VaultSessionData(vault, material.Clone());
