@@ -223,7 +223,7 @@ public sealed class HistoryTests
     }
 
     [Fact]
-    public void UpdateEntry_KeepsOnlyTenHistorySnapshotsPerEntry()
+    public void UpdateEntry_KeepsAllHistorySnapshotsPerEntry()
     {
         var vault = new Vault();
 
@@ -244,19 +244,10 @@ public sealed class HistoryTests
             .OrderByDescending(h => h.ChangedAt)
             .ToList();
 
-        Assert.Equal(Vault.MaxHistoryPerEntry, history.Count);
-
-        Assert.DoesNotContain(
-            history,
-            h => h.Title == "Version 0");
-
-        Assert.Contains(
-            history,
-            h => h.Title == "Version 1");
-
-        Assert.Contains(
-            history,
-            h => h.Title == "Version 10");
+        Assert.Equal(11, history.Count);
+        Assert.Contains(history, h => h.Title == "Version 0");
+        Assert.Contains(history, h => h.Title == "Version 1");
+        Assert.Contains(history, h => h.Title == "Version 10");
     }
 
     [Fact]
@@ -390,9 +381,7 @@ public sealed class HistoryTests
                     Title = "Entry",
                     Password = "secret",
                     Tags = ["one"],
-                    CustomFields = [new CustomField { Name = "Field", Value = "value", IsSecret = true }],
-                    PasswordHistory = [new PasswordHistoryItem { Password = "old-password" }],
-                    UsernameHistory = [new UsernameHistoryItem { Username = "old-user" }]
+                    CustomFields = [new CustomField { Name = "Field", Value = "value", IsSecret = true }]
                 }
             ]
         };
@@ -408,8 +397,6 @@ public sealed class HistoryTests
         Assert.NotSame(vault.Entries[0], snapshot.Entries[0]);
         Assert.NotSame(vault.Entries[0].Tags, snapshot.Entries[0].Tags);
         Assert.NotSame(vault.Entries[0].CustomFields[0], snapshot.Entries[0].CustomFields[0]);
-        Assert.NotSame(vault.Entries[0].PasswordHistory[0], snapshot.Entries[0].PasswordHistory[0]);
-        Assert.NotSame(vault.Entries[0].UsernameHistory[0], snapshot.Entries[0].UsernameHistory[0]);
         Assert.NotSame(vault.History[0], snapshot.History[0]);
         Assert.NotSame(vault.History[0].CustomFields[0], snapshot.History[0].CustomFields[0]);
         Assert.NotSame(vault.Trash[0], snapshot.Trash[0]);
@@ -419,7 +406,6 @@ public sealed class HistoryTests
         vault.Entries[0].Title = "Changed";
         vault.Entries[0].Tags.Add("two");
         vault.Entries[0].CustomFields[0].Value = "changed";
-        vault.Entries[0].PasswordHistory[0].Password = "changed-password";
         vault.History[0].Tags.Add("two");
         vault.Trash[0].Entry.Password = "changed-secret";
 
@@ -427,7 +413,6 @@ public sealed class HistoryTests
         Assert.Equal("Entry", snapshot.Entries[0].Title);
         Assert.Equal(["one"], snapshot.Entries[0].Tags);
         Assert.Equal("value", snapshot.Entries[0].CustomFields[0].Value);
-        Assert.Equal("old-password", snapshot.Entries[0].PasswordHistory[0].Password);
         Assert.Equal(["one"], snapshot.History[0].Tags);
         Assert.Equal("trashed-secret", snapshot.Trash[0].Entry.Password);
     }
@@ -538,4 +523,37 @@ public sealed class HistoryTests
             CreatedAt = source.CreatedAt
         };
     }
+    [Fact]
+    public void RestoreHistoryField_DoesNotKeepReplacedPasswordOnTheEntryItself()
+    {
+        var vault = new Vault();
+
+        var entry = CreateEntry();
+        entry.Password = "first-password";
+        vault.AddEntry(entry);
+
+        var updated = CloneEntry(entry);
+        updated.Password = "second-password";
+        Assert.True(vault.UpdateEntry(updated));
+
+        var snapshot = Assert.Single(vault.History);
+        Assert.True(vault.RestoreHistoryField(snapshot, EntryHistoryField.Password));
+
+        var restored = Assert.Single(vault.Entries);
+        Assert.Equal("first-password", restored.Password);
+
+        // The replaced password is available as a user-visible, deletable history snapshot.
+        Assert.Contains(vault.History, h => h.Password == "second-password");
+
+        // The replaced password is not stored on the entry itself.
+        Assert.DoesNotContain(
+            "second-password",
+            System.Text.Json.JsonSerializer.Serialize(restored));
+
+        vault.ClearHistory();
+        Assert.DoesNotContain(
+            "second-password",
+            System.Text.Json.JsonSerializer.Serialize(vault));
+    }
+
 }
