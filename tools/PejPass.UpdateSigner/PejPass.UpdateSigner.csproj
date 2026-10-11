@@ -8,4 +8,10 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Shared with the app so the signed payload cannot drift. -->
+    <Compile Include="..\..\src\PejPass.Application\Security\UpdateSigningPayload.cs"
+             Link="UpdateSigningPayload.cs" />
+  </ItemGroup>
+
 </Project>
