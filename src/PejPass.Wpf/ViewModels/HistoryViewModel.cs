@@ -671,7 +671,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         var sessionGeneration = _vaultSession.Generation;
 
         if (!DialogService.Confirm(
-                $"Delete {count} history snapshot(s) older than {ageDescription}?\\n\\nThis cannot be undone.",
+                $"Delete {count} history snapshot(s) older than {ageDescription}?\n\nThis cannot be undone.",
                 "Delete old history",
                 yesText: "Delete",
                 noText: "Cancel"))
