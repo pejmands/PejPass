@@ -124,7 +124,7 @@ public partial class EntryEditorViewModel : ObservableObject
             : error;
     }
 
-    /// <summary>True when empty or a valid Base32 secret.</summary>
+    /// <summary>True when empty or a valid Base32 secret or TOTP URI.</summary>
     public bool IsTotpSecretValid()
     {
         ValidateTotpSecret();
