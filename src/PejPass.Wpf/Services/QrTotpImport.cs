@@ -1,3 +1,4 @@
+using PejPass.Infrastructure.Totp;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using ZXing;
@@ -75,16 +76,16 @@ public static class QrTotpImport
                 return false;
             }
 
-            var query = ParseQuery(uri.Query);
-            if (!query.TryGetValue("secret", out var secret) || string.IsNullOrWhiteSpace(secret))
+            // Reject settings that PejPass cannot compute correctly instead of silently using defaults.
+            if (!TotpHelper.TryParse(text, out var parameters, out var parseError) ||
+                parameters is null)
             {
-                error = "otpauth URI has no secret parameter.";
+                error = parseError ?? "Invalid TOTP QR code.";
                 return false;
             }
 
-            secret = secret.Replace(" ", "", StringComparison.Ordinal)
-                          .Replace("-", "", StringComparison.Ordinal)
-                          .Trim();
+            var secret = parameters.ToStorageString();
+            var query = ParseQuery(uri.Query);
 
             string? issuer = query.TryGetValue("issuer", out var iss) ? Uri.UnescapeDataString(iss) : null;
             string? account = null;
@@ -110,13 +111,10 @@ public static class QrTotpImport
             return true;
         }
 
-        // Raw Base32 secret (some exports put only the key in the QR)
-        var cleaned = text.Replace(" ", "", StringComparison.Ordinal)
-                          .Replace("-", "", StringComparison.Ordinal)
-                          .Trim();
-        if (LooksLikeBase32(cleaned))
+        // Raw Base32 secret (some exports put only the key in the QR).
+        if (TotpHelper.TryParse(text, out var rawParameters, out _) && rawParameters is not null)
         {
-            result = new Result(cleaned, null, null, text);
+            result = new Result(rawParameters.ToStorageString(), null, null, text);
             return true;
         }
 
@@ -178,20 +176,5 @@ public static class QrTotpImport
         }
 
         return map;
-    }
-
-    private static bool LooksLikeBase32(string s)
-    {
-        if (s.Length < 8)
-            return false;
-
-        foreach (var c in s)
-        {
-            var u = char.ToUpperInvariant(c);
-            if ((u < 'A' || u > 'Z') && (u < '2' || u > '7'))
-                return false;
-        }
-
-        return true;
     }
 }

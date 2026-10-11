@@ -243,13 +243,19 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        if (TotpHelper.TryGetCode(SelectedEntry.TotpSecret, out var code, out var remaining))
+        var now = DateTime.UtcNow;
+        if (TotpHelper.TryGetCode(
+                SelectedEntry.TotpSecret,
+                now,
+                out var code,
+                out var remaining,
+                out var period))
         {
             HasTotp = true;
             TotpCode = code;
-            TotpCodeFormatted = code.Length == 6 ? $"{code[..3]} {code[3..]}" : code;
+            TotpCodeFormatted = TotpHelper.FormatForDisplay(code);
             TotpRemainingSeconds = remaining;
-            TotpProgress = remaining / (double)TotpHelper.StepSeconds;
+            TotpProgress = remaining / (double)period;
         }
         else
         {

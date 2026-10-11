@@ -19,7 +19,8 @@ public sealed class VaultEntry
     public string Url { get; set; } = string.Empty;
 
     /// <summary>
-    /// Base32-encoded TOTP secret (empty if not configured).
+    /// Base32 TOTP secret for default settings, or an otpauth URI when non-default settings are needed.
+    /// Empty if TOTP is not configured.
     /// </summary>
     public string TotpSecret { get; set; } = string.Empty;
 
