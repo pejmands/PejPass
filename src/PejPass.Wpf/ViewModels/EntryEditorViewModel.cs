@@ -119,9 +119,9 @@ public partial class EntryEditorViewModel : ObservableObject
             return;
         }
 
-        TotpErrorMessage = TotpHelper.IsValidSecret(TotpSecret)
+        TotpErrorMessage = TotpHelper.TryParse(TotpSecret, out _, out var error)
             ? null
-            : "Invalid TOTP secret — use a Base32 key, or leave empty.";
+            : error;
     }
 
     /// <summary>True when empty or a valid Base32 secret.</summary>
@@ -174,13 +174,9 @@ public partial class EntryEditorViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(raw))
             return string.Empty;
 
-        var cleaned = raw
-            .Replace(" ", "", StringComparison.Ordinal)
-            .Replace("-", "", StringComparison.Ordinal)
-            .Trim()
-            .ToUpperInvariant();
-
-        return TotpHelper.IsValidSecret(cleaned) ? cleaned : raw.Trim();
+        return TotpHelper.TryParse(raw, out var parameters, out _) && parameters is not null
+            ? parameters.ToStorageString()
+            : raw.Trim();
     }
 
     private void UpdatePasswordStrength()
@@ -428,8 +424,10 @@ public partial class EntryEditorViewModel : ObservableObject
         if (!string.Equals(Original.Username, Username.Trim(), StringComparison.Ordinal))
             changes.Add(new SensitiveChange("Username", Original.Username, Username.Trim()));
 
-        if (!string.Equals(Original.TotpSecret, TotpSecret.Trim(), StringComparison.Ordinal))
-            changes.Add(new SensitiveChange("TOTP Secret", Original.TotpSecret, TotpSecret.Trim()));
+        var oldTotp = NormalizeTotpSecret(Original.TotpSecret);
+        var newTotp = NormalizeTotpSecret(TotpSecret);
+        if (!string.Equals(oldTotp, newTotp, StringComparison.Ordinal))
+            changes.Add(new SensitiveChange("TOTP Secret", Original.TotpSecret, newTotp));
 
         // GroupBy: duplicate field names must not throw (user can add same name twice)
         var newFields = CustomFields
