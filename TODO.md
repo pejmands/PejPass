@@ -13,4 +13,5 @@
 ## History Retention and Storage
 
 - [x] Keep entry history snapshots indefinitely unless the user explicitly deletes them; do not automatically delete snapshots based on age.
-- [ ] If history storage becomes a practical concern, consider showing the space used by history and offering user-controlled cleanup instead of silently deleting old snapshots.
+- [x] Offer user-controlled cleanup of history snapshots older than 90 days or one year; never trim them automatically.
+- [ ] If history storage becomes a practical concern, consider showing the space used by history.

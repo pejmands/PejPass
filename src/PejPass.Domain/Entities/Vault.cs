@@ -476,6 +476,20 @@ public sealed class Vault
         return true;
     }
 
+    /// <summary>
+    /// Removes history snapshots older than the cutoff. Only ever called on explicit user request;
+    /// history is never trimmed automatically.
+    /// </summary>
+    public int RemoveHistoryOlderThan(DateTimeOffset cutoff)
+    {
+        var removed = History.RemoveAll(h => h.ChangedAt < cutoff);
+
+        if (removed > 0)
+            Touch();
+
+        return removed;
+    }
+
     public void ClearHistory()
     {
         if (History.Count == 0)

@@ -37,6 +37,15 @@ public partial class HistoryWindow : Window
         e.Handled = true;
     }
 
+    private void DeleteOlderHistoryButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.ContextMenu is null)
+            return;
+
+        button.ContextMenu.PlacementTarget = button;
+        button.ContextMenu.IsOpen = true;
+    }
+
     private void HistoryListBoxItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (sender is ListBoxItem item)

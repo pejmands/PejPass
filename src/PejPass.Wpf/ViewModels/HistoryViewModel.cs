@@ -558,7 +558,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
                 keyMaterial,
                 vault);
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             if (_vaultSession.IsCurrent(sessionGeneration, vault))
             {
@@ -567,7 +567,9 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
                 VaultRollbackCompleted?.Invoke(this, EventArgs.Empty);
 
                 DialogService.Error(
-                    "Failed to save the restored fields. Please try again.",
+                    VaultSaveFailureMessage.For(
+                        exception,
+                        "Failed to save the restored fields. Please try again."),
                     "Restore history");
             }
 
@@ -637,6 +639,76 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
 
         Load();
 
+        SelectedItem = null;
+    }
+
+    [RelayCommand]
+    private Task DeleteHistoryOlderThan90DaysAsync() =>
+        DeleteOlderHistoryAsync(90);
+
+    [RelayCommand]
+    private Task DeleteHistoryOlderThanOneYearAsync() =>
+        DeleteOlderHistoryAsync(365);
+
+    private async Task DeleteOlderHistoryAsync(int days)
+    {
+        var vault = _vaultSession.Vault;
+        if (vault is null || days <= 0)
+            return;
+
+        var cutoff = DateTimeOffset.UtcNow.AddDays(-days);
+        var ageDescription = days == 365 ? "one year (365 days)" : $"{days} days";
+        var count = vault.History.Count(h => h.ChangedAt < cutoff);
+
+        if (count == 0)
+        {
+            DialogService.Info(
+                $"No history snapshots are older than {ageDescription}.",
+                "Delete old history");
+            return;
+        }
+
+        var sessionGeneration = _vaultSession.Generation;
+
+        if (!DialogService.Confirm(
+                $"Delete {count} history snapshot(s) older than {ageDescription}?\n\nThis cannot be undone.",
+                "Delete old history",
+                yesText: "Delete",
+                noText: "Cancel"))
+        {
+            return;
+        }
+
+        if (!await EnsureVaultWritableAsync() ||
+            !_vaultSession.IsCurrent(sessionGeneration, vault))
+        {
+            return;
+        }
+
+        var snapshot = vault.CreateSnapshot();
+        if (vault.RemoveHistoryOlderThan(cutoff) == 0)
+            return;
+
+        try
+        {
+            IsBusy = true;
+            BusyMessage = $"Deleting history older than {ageDescription}...";
+
+            if (!await SaveAsync(
+                    vault,
+                    sessionGeneration,
+                    snapshot,
+                    $"Delete history older than {ageDescription}"))
+            {
+                return;
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+
+        Load();
         SelectedItem = null;
     }
 
@@ -737,7 +809,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
 
             return _vaultSession.IsCurrent(sessionGeneration, vault);
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             if (_vaultSession.IsCurrent(sessionGeneration, vault))
             {
@@ -746,7 +818,9 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
                 VaultRollbackCompleted?.Invoke(this, EventArgs.Empty);
 
                 _showError(
-                    "Failed to save the history changes. Please try again.",
+                    VaultSaveFailureMessage.For(
+                        exception,
+                        "Failed to save the history changes. Please try again."),
                     actionTitle);
             }
 

@@ -1664,7 +1664,7 @@ public partial class MainViewModel : ObservableObject
 
             return true;
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             if (vault is null || !_vaultSession.IsCurrent(sessionGeneration, vault))
             {
@@ -1717,7 +1717,9 @@ public partial class MainViewModel : ObservableObject
             if (canShowError)
             {
                 DialogService.Error(
-                    "Failed to save the vault. Check disk space and file permissions, then try again.",
+                    VaultSaveFailureMessage.For(
+                        exception,
+                        "Failed to save the vault. Check disk space and file permissions, then try again."),
                     "Save failed");
             }
 
