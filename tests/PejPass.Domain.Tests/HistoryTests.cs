@@ -523,6 +523,7 @@ public sealed class HistoryTests
             CreatedAt = source.CreatedAt
         };
     }
+
     [Fact]
     public void RestoreHistoryField_DoesNotKeepReplacedPasswordOnTheEntryItself()
     {
