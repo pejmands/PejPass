@@ -58,9 +58,6 @@ Built with **C# / .NET 10**, **WPF**, **CommunityToolkit.Mvvm**, and modern auth
 ### Password Features
 
 - [x] Secure password generator
-- [x] Password history
-- [x] Username history
-- [x] Restore previous passwords/usernames
 - [x] Vault health analysis
 
 ### Two-Factor Authentication

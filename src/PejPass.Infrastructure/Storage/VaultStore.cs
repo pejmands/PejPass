@@ -94,28 +94,6 @@ public sealed class VaultStore(
         ValidateTags(entry.Tags);
         ValidateCustomFields(entry.CustomFields);
 
-        if (entry.PasswordHistory is null || entry.UsernameHistory is null)
-            throw new InvalidDataException("Vault entry contains a missing history collection.");
-
-        if (entry.PasswordHistory.Count > VaultEntry.MaxPasswordHistory ||
-            entry.UsernameHistory.Count > VaultEntry.MaxUsernameHistory)
-            throw new InvalidDataException("Vault entry exceeds the supported credential history limit.");
-
-        foreach (var item in entry.PasswordHistory)
-        {
-            if (item is null)
-                throw new InvalidDataException("Vault entry contains an invalid password history item.");
-
-            ValidateText(item.Password, "historical password");
-        }
-
-        foreach (var item in entry.UsernameHistory)
-        {
-            if (item is null)
-                throw new InvalidDataException("Vault entry contains an invalid username history item.");
-
-            ValidateText(item.Username, "historical username");
-        }
     }
 
     private static void ValidateTags(List<string>? tags)

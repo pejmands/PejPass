@@ -26,8 +26,6 @@ public sealed class Vault
     /// <summary>Entries older than this in trash are permanently removed.</summary>
     public static TimeSpan TrashRetention { get; } = TimeSpan.FromDays(30);
 
-    public const int MaxHistoryPerEntry = 10;
-
     public Vault CreateSnapshot()
     {
         return new Vault
@@ -64,16 +62,6 @@ public sealed class Vault
                 Name = field.Name,
                 Value = field.Value,
                 IsSecret = field.IsSecret
-            })],
-            PasswordHistory = [.. entry.PasswordHistory.Select(item => new PasswordHistoryItem
-            {
-                Password = item.Password,
-                ChangedAt = item.ChangedAt
-            })],
-            UsernameHistory = [.. entry.UsernameHistory.Select(item => new UsernameHistoryItem
-            {
-                Username = item.Username,
-                ChangedAt = item.ChangedAt
             })],
             IsFavorite = entry.IsFavorite,
             SortOrder = entry.SortOrder,
@@ -183,20 +171,7 @@ public sealed class Vault
             ChangedAt = DateTimeOffset.UtcNow
         });
 
-        TrimHistory(entry.Id);
         Touch();
-    }
-
-    private void TrimHistory(Guid entryId)
-    {
-        var entryHistory = History
-            .Where(h => h.EntryId == entryId)
-            .OrderByDescending(h => h.ChangedAt)
-            .Skip(MaxHistoryPerEntry)
-            .ToList();
-
-        foreach (var item in entryHistory)
-            History.Remove(item);
     }
 
     private static bool AreEntriesEqual(VaultEntry left, VaultEntry right)
@@ -218,54 +193,6 @@ public sealed class Vault
             return false;
 
         return CustomField.AreSequencesEqual(left.CustomFields, right.CustomFields);
-    }
-
-    private static bool IsHistoryCurrent(
-    VaultEntry entry,
-    EntryHistoryItem history)
-    {
-        if (!string.Equals(entry.Title, history.Title, StringComparison.Ordinal) ||
-            !string.Equals(entry.Username, history.Username, StringComparison.Ordinal) ||
-            !string.Equals(entry.Password, history.Password, StringComparison.Ordinal) ||
-            !string.Equals(entry.Url, history.Url, StringComparison.Ordinal) ||
-            !string.Equals(entry.TotpSecret, history.TotpSecret, StringComparison.Ordinal) ||
-            !string.Equals(entry.Notes, history.Notes, StringComparison.Ordinal) ||
-            entry.SortOrder != history.SortOrder ||
-            entry.CreatedAt != history.CreatedAt)
-        {
-            return false;
-        }
-
-        if (!entry.Tags.SequenceEqual(
-                history.Tags,
-                StringComparer.Ordinal))
-        {
-            return false;
-        }
-
-        if (entry.CustomFields.Count != history.CustomFields.Count)
-            return false;
-
-        for (var i = 0; i < entry.CustomFields.Count; i++)
-        {
-            var current = entry.CustomFields[i];
-            var snapshot = history.CustomFields[i];
-
-            if (!string.Equals(
-                    current.Name,
-                    snapshot.Name,
-                    StringComparison.Ordinal) ||
-                !string.Equals(
-                    current.Value,
-                    snapshot.Value,
-                    StringComparison.Ordinal) ||
-                current.IsSecret != snapshot.IsSecret)
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     public bool RestoreHistory(EntryHistoryItem historyItem)
@@ -341,12 +268,10 @@ public sealed class Vault
                     break;
 
                 case EntryHistoryField.Username:
-                    entry.PushUsernameHistory(entry.Username);
                     entry.Username = historyItem.Username;
                     break;
 
                 case EntryHistoryField.Password:
-                    entry.PushPasswordHistory(entry.Password);
                     entry.Password = historyItem.Password;
                     break;
 

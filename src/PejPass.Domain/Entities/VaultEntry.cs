@@ -2,6 +2,7 @@ namespace PejPass.Domain.Entities;
 
 /// <summary>
 /// A single credential entry inside the vault.
+/// Previous values live in <see cref="Vault.History"/> snapshots, which the user can see and delete.
 /// </summary>
 public sealed class VaultEntry
 {
@@ -30,12 +31,6 @@ public sealed class VaultEntry
 
     public List<CustomField> CustomFields { get; set; } = [];
 
-    /// <summary>Previous passwords (newest first). Never written into Notes.</summary>
-    public List<PasswordHistoryItem> PasswordHistory { get; set; } = [];
-
-    /// <summary>Previous usernames (newest first). Never written into Notes.</summary>
-    public List<UsernameHistoryItem> UsernameHistory { get; set; } = [];
-
     /// <summary>Pinned to top of sorted lists (Bitwarden/1Password style).</summary>
     public bool IsFavorite { get; set; }
 
@@ -48,55 +43,8 @@ public sealed class VaultEntry
 
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
-    public const int MaxPasswordHistory = 20;
-    public const int MaxUsernameHistory = 20;
-
     public void Touch()
     {
         UpdatedAt = DateTimeOffset.UtcNow;
-    }
-
-    /// <summary>
-    /// Records the current password into history before replacing it.
-    /// </summary>
-    public void PushPasswordHistory(string previousPassword)
-    {
-        if (string.IsNullOrEmpty(previousPassword))
-            return;
-
-        if (PasswordHistory.Count > 0 &&
-            string.Equals(PasswordHistory[0].Password, previousPassword, StringComparison.Ordinal))
-            return;
-
-        PasswordHistory.Insert(0, new PasswordHistoryItem
-        {
-            Password = previousPassword,
-            ChangedAt = DateTimeOffset.UtcNow
-        });
-
-        if (PasswordHistory.Count > MaxPasswordHistory)
-            PasswordHistory.RemoveRange(MaxPasswordHistory, PasswordHistory.Count - MaxPasswordHistory);
-    }
-
-    /// <summary>
-    /// Records the current username into history before replacing it.
-    /// </summary>
-    public void PushUsernameHistory(string previousUsername)
-    {
-        if (string.IsNullOrEmpty(previousUsername))
-            return;
-
-        if (UsernameHistory.Count > 0 &&
-            string.Equals(UsernameHistory[0].Username, previousUsername, StringComparison.Ordinal))
-            return;
-
-        UsernameHistory.Insert(0, new UsernameHistoryItem
-        {
-            Username = previousUsername,
-            ChangedAt = DateTimeOffset.UtcNow
-        });
-
-        if (UsernameHistory.Count > MaxUsernameHistory)
-            UsernameHistory.RemoveRange(MaxUsernameHistory, UsernameHistory.Count - MaxUsernameHistory);
     }
 }
