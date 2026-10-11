@@ -114,8 +114,8 @@ public sealed class TotpHelperTests
 
     [Theory]
     [InlineData("123456", "123 456")]
+    [InlineData("1234567", "123 4567")]
     [InlineData("12345678", "1234 5678")]
-    [InlineData("1234567", "1234567")]
     public void FormatForDisplay_GroupsDigits(string code, string expected)
     {
         Assert.Equal(expected, TotpHelper.FormatForDisplay(code));
