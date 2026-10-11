@@ -71,7 +71,7 @@
 					Width="200"
 					Height="3"
 					Margin="0,8,0,0"
-					IsIndeterminate="{Binding IsChecking}"
+					IsIndeterminate="{Binding IsIndeterminate}"
 					Maximum="1"
 					Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"
 					Value="{Binding DownloadProgress}" />

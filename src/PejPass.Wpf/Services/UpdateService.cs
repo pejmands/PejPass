@@ -223,7 +223,27 @@ public sealed class UpdateService : IDisposable
         }
     }
 
-    public static void ApplyPortableUpdateAndRestart(
+    /// <summary>A fully extracted update plus the script that applies it. Not yet launched.</summary>
+    internal sealed record StagedUpdate(string ScriptPath, string StageRoot, string TargetVersion);
+
+    /// <summary>
+    /// Verifies, extracts and stages the package on a worker thread, then launches the apply
+    /// script and shuts the application down on the calling (UI) thread.
+    /// </summary>
+    public static async Task ApplyPortableUpdateAndRestartAsync(
+        string zipPath,
+        string targetVersion,
+        string expectedSha256)
+    {
+        // Hashing and extraction are heavy; keep them off the UI thread.
+        var staged = await Task
+            .Run(() => StageUpdate(zipPath, targetVersion, expectedSha256))
+            .ConfigureAwait(true);
+
+        LaunchStagedUpdate(staged);
+    }
+
+    internal static StagedUpdate StageUpdate(
         string zipPath,
         string targetVersion,
         string expectedSha256)
@@ -234,7 +254,8 @@ public sealed class UpdateService : IDisposable
         if (!File.Exists(zipPath))
             throw new FileNotFoundException("The downloaded update package could not be found.", zipPath);
 
-        if (!Version.TryParse(Normalize(targetVersion ?? string.Empty), out _))
+        var normalizedTargetVersion = Normalize(targetVersion ?? string.Empty);
+        if (!Version.TryParse(normalizedTargetVersion, out _))
             throw new ArgumentException("The target update version is invalid.", nameof(targetVersion));
 
         if (!IsValidSha256(expectedSha256))
@@ -254,10 +275,7 @@ public sealed class UpdateService : IDisposable
 
         EnsureDirectoryWritable(appDir);
 
-        var stageRoot = Path.Combine(
-            Path.GetTempPath(),
-            "PejPass-update-" + Guid.NewGuid().ToString("N"));
-
+        // Re-verify the file that is about to be extracted, not just the one that was downloaded.
         using (var packageStream = File.OpenRead(zipPath))
         using (var hasher = SHA256.Create())
         {
@@ -273,6 +291,7 @@ public sealed class UpdateService : IDisposable
         using (var archive = ZipFile.OpenRead(zipPath))
         {
             ValidateUpdateArchive(archive);
+
             if (!archive.Entries.Any(entry =>
                     string.Equals(
                         entry.FullName.Replace('\\', '/').TrimStart('/'),
@@ -286,111 +305,141 @@ public sealed class UpdateService : IDisposable
             }
         }
 
-        Directory.CreateDirectory(stageRoot);
+        var stageRoot = Path.Combine(
+            Path.GetTempPath(),
+            "PejPass-update-" + Guid.NewGuid().ToString("N"));
+
+        string? scriptPath = null;
+
         try
         {
+            Directory.CreateDirectory(stageRoot);
             ZipFile.ExtractToDirectory(zipPath, stageRoot);
+
+            var sourceDir = ResolveExtractedPayloadRoot(stageRoot);
+            if (!File.Exists(Path.Combine(sourceDir, "PejPass.exe")))
+            {
+                throw new InvalidDataException(
+                    "The update package does not place PejPass.exe at the root of its application payload.");
+            }
+
+            TryDeleteFile(zipPath);
+
+            scriptPath = Path.Combine(
+                Path.GetTempPath(),
+                "PejPass-apply-update-" + Guid.NewGuid().ToString("N") + ".cmd");
+
+            File.WriteAllText(
+                scriptPath,
+                BuildApplyScript(
+                    appDir,
+                    sourceDir,
+                    processPath,
+                    stageRoot,
+                    PendingWhatsNewPath,
+                    Path.Combine(Path.GetTempPath(), "PejPass-backup-" + Guid.NewGuid().ToString("N")),
+                    Environment.ProcessId));
+
+            return new StagedUpdate(scriptPath, stageRoot, normalizedTargetVersion);
         }
         catch
         {
-            try
-            {
-                Directory.Delete(stageRoot, recursive: true);
-            }
-            catch
-            {
-            }
+            // Never leave a half-extracted payload or a script behind.
+            TryDeleteDirectory(stageRoot);
+            if (scriptPath is not null)
+                TryDeleteFile(scriptPath);
 
             throw;
         }
+    }
 
-        var sourceDir = ResolveExtractedPayloadRoot(stageRoot);
-        if (!File.Exists(Path.Combine(sourceDir, "PejPass.exe")))
-        {
-            try
-            {
-                Directory.Delete(stageRoot, recursive: true);
-            }
-            catch
-            {
-            }
-
-            throw new InvalidDataException(
-                "The update package does not place PejPass.exe at the root of its application payload.");
-        }
-
+    /// <summary>Must run on the UI thread: it shuts the application down.</summary>
+    internal static void LaunchStagedUpdate(StagedUpdate staged)
+    {
         try
         {
-            if (File.Exists(zipPath))
-                File.Delete(zipPath);
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = staged.ScriptPath,
+                UseShellExecute = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
+                CreateNoWindow = true
+            });
+        }
+        catch
+        {
+            TryDeleteDirectory(staged.StageRoot);
+            TryDeleteFile(staged.ScriptPath);
+            throw;
+        }
+
+        WritePendingWhatsNew(staged.TargetVersion);
+
+        System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            System.Windows.Application.Current.Shutdown());
+    }
+
+    internal static string BuildApplyScript(
+        string appDir,
+        string sourceDir,
+        string exePath,
+        string stageRoot,
+        string pendingPath,
+        string backupDir,
+        int processId)
+    {
+        var nl = Environment.NewLine;
+
+        return
+            "@echo off" + nl +
+            "setlocal EnableExtensions" + nl +
+            "set \"APPDIR=" + EscapeCmd(appDir) + "\"" + nl +
+            "set \"SOURCE=" + EscapeCmd(sourceDir) + "\"" + nl +
+            "set \"EXE=" + EscapeCmd(exePath) + "\"" + nl +
+            "set \"STAGE=" + EscapeCmd(stageRoot) + "\"" + nl +
+            "set \"PENDING=" + EscapeCmd(pendingPath) + "\"" + nl +
+            "set \"BACKUP=" + EscapeCmd(backupDir) + "\"" + nl +
+            "set \"APP_PID=" + processId + "\"" + nl +
+            "set /a WAITCOUNT=0" + nl +
+            ":wait" + nl +
+            "tasklist /FI \"PID eq %APP_PID%\" 2>nul | find \"%APP_PID%\" >nul" + nl +
+            "if errorlevel 1 goto apply_update" + nl +
+            "set /a WAITCOUNT+=1" + nl +
+            "if %WAITCOUNT% GEQ 120 goto install_failed" + nl +
+            "timeout /t 1 /nobreak >nul" + nl +
+            "goto wait" + nl +
+            ":apply_update" + nl +
+            "mkdir \"%BACKUP%\" 2>nul" + nl +
+            "robocopy \"%APPDIR%\" \"%BACKUP%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1" + nl +
+            "if errorlevel 8 goto install_failed" + nl +
+            "robocopy \"%SOURCE%\" \"%APPDIR%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1" + nl +
+            "if errorlevel 8 goto install_failed" + nl +
+            "start \"\" \"%EXE%\"" + nl +
+            "rmdir /S /Q \"%STAGE%\" 2>nul" + nl +
+            "rmdir /S /Q \"%BACKUP%\" 2>nul" + nl +
+            "del \"%~f0\" 2>nul" + nl +
+            "exit /b 0" + nl +
+            ":install_failed" + nl +
+            "if exist \"%BACKUP%\" robocopy \"%BACKUP%\" \"%APPDIR%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1 >nul" + nl +
+            "start \"\" \"%EXE%\" 2>nul" + nl +
+            "del \"%PENDING%\" 2>nul" + nl +
+            "echo PejPass update installation failed. Previous application files were restored when possible. > \"%TEMP%\\PejPass-update-error.txt\"" + nl +
+            "rmdir /S /Q \"%STAGE%\" 2>nul" + nl +
+            "rmdir /S /Q \"%BACKUP%\" 2>nul" + nl +
+            "del \"%~f0\" 2>nul" + nl +
+            "exit /b 1" + nl;
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+                Directory.Delete(path, recursive: true);
         }
         catch
         {
         }
-
-        var scriptPath = Path.Combine(
-            Path.GetTempPath(),
-            "PejPass-apply-update-" + Guid.NewGuid().ToString("N") + ".cmd");
-
-        var appDirEsc = EscapeCmd(appDir);
-        var sourceEsc = EscapeCmd(sourceDir);
-        var exeEsc = EscapeCmd(processPath);
-        var stageEsc = EscapeCmd(stageRoot);
-        var pendingEsc = EscapeCmd(PendingWhatsNewPath);
-
-        var script =
-            "@echo off" + Environment.NewLine +
-            "setlocal EnableExtensions" + Environment.NewLine +
-            "set \"APPDIR=" + appDirEsc + "\"" + Environment.NewLine +
-            "set \"SOURCE=" + sourceEsc + "\"" + Environment.NewLine +
-            "set \"EXE=" + exeEsc + "\"" + Environment.NewLine +
-            "set \"STAGE=" + stageEsc + "\"" + Environment.NewLine +
-            "set \"PENDING=" + pendingEsc + "\"" + Environment.NewLine +
-            "set \"BACKUP=" + EscapeCmd(Path.Combine(Path.GetTempPath(), "PejPass-backup-" + Guid.NewGuid().ToString("N"))) + "\"" + Environment.NewLine +
-            "set \"APP_PID=" + Environment.ProcessId + "\"" + Environment.NewLine +
-            "set /a WAITCOUNT=0" + Environment.NewLine +
-            ":wait" + Environment.NewLine +
-            "tasklist /FI \"PID eq %APP_PID%\" 2>nul | find \"%APP_PID%\" >nul" + Environment.NewLine +
-            "if errorlevel 1 goto apply_update" + Environment.NewLine +
-            "set /a WAITCOUNT+=1" + Environment.NewLine +
-            "if %WAITCOUNT% GEQ 120 goto install_failed" + Environment.NewLine +
-            "timeout /t 1 /nobreak >nul" + Environment.NewLine +
-            "goto wait" + Environment.NewLine +
-            ":apply_update" + Environment.NewLine +
-            "mkdir \"%BACKUP%\" 2>nul" + Environment.NewLine +
-            "robocopy \"%APPDIR%\" \"%BACKUP%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1" + Environment.NewLine +
-            "if errorlevel 8 goto install_failed" + Environment.NewLine +
-            "robocopy \"%SOURCE%\" \"%APPDIR%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1" + Environment.NewLine +
-            "if errorlevel 8 goto install_failed" + Environment.NewLine +
-            "start \"\" \"%EXE%\"" + Environment.NewLine +
-            "rmdir /S /Q \"%STAGE%\" 2>nul" + Environment.NewLine +
-            "rmdir /S /Q \"%BACKUP%\" 2>nul" + Environment.NewLine +
-            "del \"%~f0\" 2>nul" + Environment.NewLine +
-            "exit /b 0" + Environment.NewLine +
-            ":install_failed" + Environment.NewLine +
-            "if exist \"%BACKUP%\" robocopy \"%BACKUP%\" \"%APPDIR%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1 >nul" + Environment.NewLine +
-            "start \"\" \"%EXE%\" 2>nul" + Environment.NewLine +
-            "del \"%PENDING%\" 2>nul" + Environment.NewLine +
-            "echo PejPass update installation failed. Previous application files were restored when possible. > \"%TEMP%\\PejPass-update-error.txt\"" + Environment.NewLine +
-            "rmdir /S /Q \"%STAGE%\" 2>nul" + Environment.NewLine +
-            "rmdir /S /Q \"%BACKUP%\" 2>nul" + Environment.NewLine +
-            "del \"%~f0\" 2>nul" + Environment.NewLine +
-            "exit /b 1" + Environment.NewLine;
-
-        File.WriteAllText(scriptPath, script);
-
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = scriptPath,
-            UseShellExecute = true,
-            WindowStyle = ProcessWindowStyle.Hidden,
-            CreateNoWindow = true
-        });
-
-        WritePendingWhatsNew(targetVersion!);
-
-        System.Windows.Application.Current?.Dispatcher.Invoke(() =>
-            System.Windows.Application.Current.Shutdown());
     }
 
     internal static void ValidateUpdateArchive(

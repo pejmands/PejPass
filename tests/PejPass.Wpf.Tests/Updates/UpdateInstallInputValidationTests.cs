@@ -7,14 +7,14 @@ namespace PejPass.Wpf.Tests.Updates;
 public sealed class UpdateInstallInputValidationTests
 {
     [Fact]
-    public void ApplyPortableUpdateAndRestart_RejectsInvalidTargetVersion()
+    public async Task ApplyPortableUpdateAndRestartAsync_RejectsInvalidTargetVersion()
     {
         var packagePath = CreateTemporaryPackage();
 
         try
         {
-            var exception = Assert.Throws<ArgumentException>(() =>
-                UpdateService.ApplyPortableUpdateAndRestart(
+            var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+                UpdateService.ApplyPortableUpdateAndRestartAsync(
                     packagePath,
                     "latest",
                     new string('A', 64)));
@@ -28,14 +28,14 @@ public sealed class UpdateInstallInputValidationTests
     }
 
     [Fact]
-    public void ApplyPortableUpdateAndRestart_RejectsInvalidExpectedHash()
+    public async Task ApplyPortableUpdateAndRestartAsync_RejectsInvalidExpectedHash()
     {
         var packagePath = CreateTemporaryPackage();
 
         try
         {
-            var exception = Assert.Throws<ArgumentException>(() =>
-                UpdateService.ApplyPortableUpdateAndRestart(
+            var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+                UpdateService.ApplyPortableUpdateAndRestartAsync(
                     packagePath,
                     "1.2.3",
                     "not-a-hash"));
@@ -46,6 +46,36 @@ public sealed class UpdateInstallInputValidationTests
         {
             File.Delete(packagePath);
         }
+    }
+
+    [Fact]
+    public async Task ApplyPortableUpdateAndRestartAsync_WhenPackageIsMissing_ThrowsFileNotFound()
+    {
+        var missing = Path.Combine(Path.GetTempPath(), $"PejPass-missing-{Guid.NewGuid():N}.zip");
+
+        await Assert.ThrowsAsync<FileNotFoundException>(() =>
+            UpdateService.ApplyPortableUpdateAndRestartAsync(
+                missing,
+                "1.2.3",
+                new string('a', 64)));
+    }
+
+    [Fact]
+    public void BuildApplyScript_EscapesPercentSignsAndEmbedsProcessId()
+    {
+        var script = UpdateService.BuildApplyScript(
+            appDir: @"C:\Apps\100%\PejPass",
+            sourceDir: @"C:\Temp\stage",
+            exePath: @"C:\Apps\100%\PejPass\PejPass.exe",
+            stageRoot: @"C:\Temp\stage",
+            pendingPath: @"C:\Users\u\pending.txt",
+            backupDir: @"C:\Temp\backup",
+            processId: 4242);
+
+        Assert.Contains(@"set ""APPDIR=C:\Apps\100%%\PejPass""", script);
+        Assert.Contains(@"set ""APP_PID=4242""", script);
+        Assert.DoesNotContain(@"100%\PejPass", script.Replace("%%", string.Empty));
+        Assert.Contains("goto install_failed", script);
     }
 
     [Fact]
