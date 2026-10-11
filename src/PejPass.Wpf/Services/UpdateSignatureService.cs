@@ -1,7 +1,6 @@
-using System.IO;
+using PejPass.Application.Security;
 using PejPass.Wpf.Records;
 using System.Security.Cryptography;
-using System.Text.Json;
 
 namespace PejPass.Wpf.Services;
 
@@ -10,8 +9,6 @@ namespace PejPass.Wpf.Services;
 /// </summary>
 public static class UpdateSignatureService
 {
-    private const string PayloadSchema = "PejPass.UpdateSignature.v1";
-
     private const string TrustedPublicKeyBase64 =
         "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExWfWThPa8RrjVMZbubArG4H7vwym/rXR3HcXdl2lajZ7lfT0HfnNYItF7JEQmdPB/3Frhx2t42H8VosD+QrvoA==";
 
@@ -19,19 +16,11 @@ public static class UpdateSignatureService
     {
         ArgumentNullException.ThrowIfNull(manifest);
 
-        using var stream = new MemoryStream();
-        using var writer = new Utf8JsonWriter(stream);
-
-        writer.WriteStartObject();
-        writer.WriteString("schema", PayloadSchema);
-        writer.WriteString("version", manifest.Version.Trim());
-        writer.WriteString("released", manifest.Released?.Trim());
-        writer.WriteString("downloadUrl", manifest.DownloadUrl?.Trim());
-        writer.WriteString("sha256", manifest.Sha256?.Trim().ToLowerInvariant());
-        writer.WriteEndObject();
-        writer.Flush();
-
-        return stream.ToArray();
+        return UpdateSigningPayload.Build(
+            manifest.Version,
+            manifest.Released,
+            manifest.DownloadUrl,
+            manifest.Sha256);
     }
 
     public static bool VerifyManifestSignature(UpdateManifest manifest) =>
