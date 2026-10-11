@@ -516,13 +516,17 @@
 						Content="Delete older than..."
 						IsEnabled="{Binding HasHistoryItems}">
 						<Button.ContextMenu>
-							<ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+							<ContextMenu
+								DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+								Style="{StaticResource PejPassContextMenu}">
 								<MenuItem
 									Command="{Binding DeleteHistoryOlderThan90DaysCommand}"
-									Header="90 days" />
+									Header="90 days"
+									Style="{StaticResource PejPassContextMenuItem}" />
 								<MenuItem
 									Command="{Binding DeleteHistoryOlderThanOneYearCommand}"
-									Header="1 year (365 days)" />
+									Header="1 year (365 days)"
+									Style="{StaticResource PejPassContextMenuItem}" />
 							</ContextMenu>
 						</Button.ContextMenu>
 					</Button>
