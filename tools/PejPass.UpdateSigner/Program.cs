@@ -10,7 +10,9 @@ using System.Text.RegularExpressions;
 
 return Signer.Run(args);
 
-internal sealed class SignerException(string message) : Exception(message);
+internal sealed class SignerException(string message) : Exception(message)
+{
+}
 
 internal static class Signer
 {
