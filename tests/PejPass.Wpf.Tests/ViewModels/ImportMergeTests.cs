@@ -101,7 +101,7 @@ public sealed class ImportMergeTests
         var restored = Assert.Single(vault.Entries);
         Assert.Equal(entry.Id, restored.Id);
         Assert.Equal(Totp, restored.TotpSecret);
-        Assert.Equal(["work"], restored.Tags);
+        Assert.Equal(new[] { "work" }, restored.Tags);
         Assert.Equal("Recovery code", Assert.Single(restored.CustomFields).Name);
     }
 
