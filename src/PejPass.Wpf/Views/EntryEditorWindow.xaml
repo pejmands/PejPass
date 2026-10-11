@@ -203,7 +203,7 @@
 					x:Name="TotpSecretBox"
 					Margin="0,0,0,6"
 					PasswordChanged="TotpSecretBox_PasswordChanged"
-					ToolTip="Paste the authenticator secret key (Base32). Leave empty to disable TOTP." />
+					ToolTip="Paste a Base32 secret or otpauth://totp URI. Leave empty to disable TOTP." />
 
 				<TextBlock
 					Margin="0,0,0,6"
