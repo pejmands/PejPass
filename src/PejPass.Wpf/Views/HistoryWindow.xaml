@@ -512,6 +512,23 @@
 
 					<Button
 						Margin="0,0,8,0"
+						Click="DeleteOlderHistoryButton_Click"
+						Content="Delete older than..."
+						IsEnabled="{Binding HasHistoryItems}">
+						<Button.ContextMenu>
+							<ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+								<MenuItem
+									Command="{Binding DeleteHistoryOlderThan90DaysCommand}"
+									Header="90 days" />
+								<MenuItem
+									Command="{Binding DeleteHistoryOlderThanOneYearCommand}"
+									Header="1 year (365 days)" />
+							</ContextMenu>
+						</Button.ContextMenu>
+					</Button>
+
+					<Button
+						Margin="0,0,8,0"
 						Command="{Binding DeleteAllHistoryCommand}"
 						Content="Delete All"
 						IsEnabled="{Binding HasHistoryItems}" />
