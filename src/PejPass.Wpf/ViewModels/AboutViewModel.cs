@@ -24,6 +24,9 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
     public partial bool IsDownloading { get; set; }
 
     [ObservableProperty]
+    public partial bool IsInstalling { get; set; }
+
+    [ObservableProperty]
     public partial bool HasUpdate { get; set; }
 
     [ObservableProperty]
@@ -54,6 +57,8 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
         $"Version {AppInfoService.Version} · {AppInfoService.ReleaseDate}";
 
     public bool IsBusy => IsChecking || IsDownloading;
+
+    public bool IsIndeterminate => IsChecking || IsInstalling;
 
     public AboutViewModel() : this(new UpdateService())
     {
@@ -179,9 +184,12 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
             }
 
             StatusMessage = "Installing update…";
+            IsInstalling = true;
+            NotifyBusy();
+
             try
             {
-                UpdateService.ApplyPortableUpdateAndRestart(
+                await UpdateService.ApplyPortableUpdateAndRestartAsync(
                     path,
                     LatestVersion ?? "0.0.0",
                     DownloadSha256 ?? string.Empty);
@@ -210,6 +218,11 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
                 DialogService.Error(
                     $"Could not apply the update automatically. {ex.Message}\n\nPlease download and install the update manually.",
                     "Install failed");
+            }
+            finally
+            {
+                IsInstalling = false;
+                NotifyBusy();
             }
         }
         catch (OperationCanceledException)
@@ -294,6 +307,7 @@ public partial class AboutViewModel(UpdateService updateService) : ObservableObj
     private void NotifyBusy()
     {
         OnPropertyChanged(nameof(IsBusy));
+        OnPropertyChanged(nameof(IsIndeterminate));
         CheckForUpdatesCommand.NotifyCanExecuteChanged();
         DownloadUpdateCommand.NotifyCanExecuteChanged();
         OpenDownloadPageCommand.NotifyCanExecuteChanged();
