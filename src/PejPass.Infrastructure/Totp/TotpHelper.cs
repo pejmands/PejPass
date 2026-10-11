@@ -228,7 +228,7 @@ public static class TotpHelper
     /// <summary>"123456" becomes "123 456"; "12345678" becomes "1234 5678".</summary>
     public static string FormatForDisplay(string code) => code.Length switch
     {
-        6 => $"{code[..3]} {code[3..]}",
+        6 or 7 => $"{code[..3]} {code[3..]}",
         8 => $"{code[..4]} {code[4..]}",
         _ => code
     };
