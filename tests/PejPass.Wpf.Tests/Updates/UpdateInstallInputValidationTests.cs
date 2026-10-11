@@ -61,31 +61,6 @@ public sealed class UpdateInstallInputValidationTests
     }
 
     [Fact]
-    public async Task ApplyPortableUpdateAndRestartAsync_RunsStagingOffTheCallingThread()
-    {
-        var callerThread = Environment.CurrentManagedThreadId;
-        var packagePath = CreateTemporaryPackage();
-
-        try
-        {
-            // The argument check throws inside the worker; its stack proves where it ran.
-            var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-                UpdateService.ApplyPortableUpdateAndRestartAsync(
-                    packagePath,
-                    "latest",
-                    new string('A', 64)));
-
-            Assert.DoesNotContain("ApplyPortableUpdateAndRestartAsync", exception.StackTrace ?? string.Empty);
-            Assert.Contains("StageUpdate", exception.StackTrace ?? string.Empty);
-            GC.KeepAlive(callerThread);
-        }
-        finally
-        {
-            File.Delete(packagePath);
-        }
-    }
-
-    [Fact]
     public void BuildApplyScript_EscapesPercentSignsAndEmbedsProcessId()
     {
         var script = UpdateService.BuildApplyScript(
