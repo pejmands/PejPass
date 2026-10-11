@@ -83,16 +83,6 @@ public partial class MainViewModel
                 Value = field.Value,
                 IsSecret = field.IsSecret
             })],
-            PasswordHistory = [.. source.PasswordHistory.Select(history => new PasswordHistoryItem
-            {
-                Password = history.Password,
-                ChangedAt = history.ChangedAt
-            })],
-            UsernameHistory = [.. source.UsernameHistory.Select(history => new UsernameHistoryItem
-            {
-                Username = history.Username,
-                ChangedAt = history.ChangedAt
-            })],
             IsFavorite = source.IsFavorite,
             SortOrder = source.SortOrder,
             CreatedAt = source.CreatedAt,
