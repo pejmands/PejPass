@@ -12,5 +12,5 @@
 
 ## History Retention and Storage
 
-- [ ] Keep entry history snapshots indefinitely unless the user explicitly deletes them; do not automatically delete snapshots based on age.
+- [x] Keep entry history snapshots indefinitely unless the user explicitly deletes them; do not automatically delete snapshots based on age.
 - [ ] If history storage becomes a practical concern, consider showing the space used by history and offering user-controlled cleanup instead of silently deleting old snapshots.
