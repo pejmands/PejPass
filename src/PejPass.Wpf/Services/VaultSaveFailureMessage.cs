@@ -27,9 +27,9 @@ internal static class VaultSaveFailureMessage
                 "Empty the Trash or delete entries you no longer need, then try again.",
 
             VaultLimit.TextLength =>
-                $"A field is too long to save ({ex.Subject ?? "text field"}" +
+                $"A field exceeds the vault's maximum text length ({ex.Subject ?? "text field"}" +
                 (string.IsNullOrWhiteSpace(ex.EntryTitle) ? string.Empty : $" in \"{ex.EntryTitle}\"") +
-                $"). Text values can hold at most {VaultLimits.MaxTextCharacters:N0} characters. Shorten it and try again.",
+                $"). Each text value can contain at most {VaultLimits.MaxTextCharacters:N0} characters. Shorten it and try again.",
 
             VaultLimit.CollectionItems =>
                 $"{Capitalize(entry)} has too many {ex.Subject ?? "tags or custom fields"} " +
