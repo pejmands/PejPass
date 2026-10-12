@@ -7,6 +7,7 @@ using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -841,18 +842,32 @@ public partial class MainWindow : Window
             FaviconService.Prefetch(vm.Entries.Select(e => (e.Url, e.Title)));
     }
 
-    private void OnFaviconsBatchReady()
+    private void OnFaviconsBatchReady(IReadOnlyCollection<string> hosts)
     {
-        if (!IsLoaded)
+        if (!IsLoaded || hosts.Count == 0)
             return;
+
+        var affectedHosts = hosts.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         try
         {
-            EntryList.Items.Refresh();
+            // Refresh only realized images for hosts changed in this batch.
+            // Virtualized rows pick up the latest cache value when they are realized.
+            foreach (var image in FindVisualChildren<Image>(this))
+            {
+                if (image.DataContext is not VaultEntry entry)
+                    continue;
+
+                var host = FaviconService.TryGetHost(entry.Url);
+                if (host is null || !affectedHosts.Contains(host))
+                    continue;
+
+                image.GetBindingExpression(Image.SourceProperty)?.UpdateTarget();
+            }
         }
         catch (InvalidOperationException)
         {
-            // The item collection may be changing during shutdown.
+            // The visual tree may be changing during shutdown.
         }
     }
 
