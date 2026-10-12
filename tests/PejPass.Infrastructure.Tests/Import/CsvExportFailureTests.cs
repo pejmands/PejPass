@@ -35,8 +35,10 @@ public sealed class CsvExportFailureTests
         {
             await File.WriteAllTextAsync(file, existingContent);
 
+            var journal = new PlaintextTempJournal(Path.Combine(directory, "journal.txt"));
+
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                export(new CsvExportService(), file, EntriesThatFailAfterOneEntry()));
+                export(new CsvExportService(journal), file, EntriesThatFailAfterOneEntry()));
 
             Assert.Equal(existingContent, await File.ReadAllTextAsync(file));
             Assert.Empty(Directory.GetFiles(directory, $".{Path.GetFileName(file)}.*.tmp"));

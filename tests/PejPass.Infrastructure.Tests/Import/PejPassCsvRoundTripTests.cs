@@ -29,7 +29,7 @@ public sealed class PejPassCsvRoundTripTests
         var file = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.pejpass.csv");
         try
         {
-            await new CsvExportService().ExportPejPassCsvAsync(file, [source], TestContext.Current.CancellationToken);
+            await new CsvExportService(new PlaintextTempJournal(file + ".journal")).ExportPejPassCsvAsync(file, [source], TestContext.Current.CancellationToken);
             var imported = Assert.Single(await new BrowserImportService().ImportPejPassCsvAsync(file, TestContext.Current.CancellationToken));
 
             Assert.Equal(source.Title, imported.Title);
@@ -53,6 +53,9 @@ public sealed class PejPassCsvRoundTripTests
         {
             if (File.Exists(file))
                 File.Delete(file);
+
+            if (File.Exists(file + ".journal"))
+                File.Delete(file + ".journal");
         }
     }
 
@@ -68,7 +71,7 @@ public sealed class PejPassCsvRoundTripTests
         var file = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.pejpass.csv");
         try
         {
-            await new CsvExportService().ExportPejPassCsvAsync(file, [source], TestContext.Current.CancellationToken);
+            await new CsvExportService(new PlaintextTempJournal(file + ".journal")).ExportPejPassCsvAsync(file, [source], TestContext.Current.CancellationToken);
             var imported = Assert.Single(await new BrowserImportService().ImportPejPassCsvAsync(file, TestContext.Current.CancellationToken));
 
             Assert.Equal(source.TotpSecret, imported.TotpSecret);
@@ -77,6 +80,9 @@ public sealed class PejPassCsvRoundTripTests
         {
             if (File.Exists(file))
                 File.Delete(file);
+
+            if (File.Exists(file + ".journal"))
+                File.Delete(file + ".journal");
         }
     }
 }

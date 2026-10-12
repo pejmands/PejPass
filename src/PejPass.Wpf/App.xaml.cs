@@ -124,6 +124,7 @@ public partial class App : System.Windows.Application
 
         PrepareCustomChrome(login);
         FaviconService.StartDiskCacheCleanup();
+        _ = Task.Run(() => PlaintextTempJournal.Default.DeleteLeftovers());
 
         if (!string.IsNullOrWhiteSpace(launchVaultPath) &&
             login.DataContext is LoginViewModel loginVm)
