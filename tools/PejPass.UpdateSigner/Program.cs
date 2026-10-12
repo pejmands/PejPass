@@ -232,10 +232,18 @@ internal static class Signer
                 signingKeys.Add(signingKey);
                 signingKey.ImportFromPem(File.ReadAllText(privateKeyPath));
 
-                if (trusted.Find(signingKey) is null)
+                var isTrustedByCurrentClient = trusted.Find(signingKey) is not null;
+                var isLegacyClientKey = signingKeys.Count == 1
+                    && clientKey is not null
+                    && SameKey(signingKey, clientKey);
+
+                // After retiring an old key from the app's trust list, it may still be used as
+                // the legacy primary signature during the transition. A trusted newer key must
+                // also sign the same payload or final manifest verification will fail.
+                if (!isTrustedByCurrentClient && !isLegacyClientKey)
                 {
                     throw new SignerException(
-                        $"The private key '{Path.GetFileName(privateKeyPath)}' ({Fingerprint(signingKey)}) is NOT among the keys the app trusts.\n" +
+                        $"The private key '{Path.GetFileName(privateKeyPath)}' ({Fingerprint(signingKey)}) is NOT among the keys the app trusts and is not the designated --client-key legacy signer.\n" +
                         "Add its public key to TrustedUpdateKeys.cs and release that app version first. Nothing was written.");
                 }
 
@@ -677,7 +685,9 @@ internal static class Signer
             if (read != bytes.Length)
                 throw new SignerException($"{label}: the public key has trailing data.");
 
-            var imported = key;
+            var imported = key
+                ?? throw new SignerException($"{label}: public key import failed.");
+
             key = null;
             return imported;
         }
