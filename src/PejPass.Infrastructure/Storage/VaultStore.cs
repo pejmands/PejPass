@@ -257,16 +257,23 @@ public sealed class VaultStore(
         }
     }
 
-    public Task<VaultSessionData> OpenSessionAsync(
+    public async Task<VaultSessionData> OpenSessionAsync(
         string path,
         string masterPassword,
-        CancellationToken ct = default) =>
-        OpenCoreAsync(
+        CancellationToken ct = default)
+    {
+        var session = await OpenCoreAsync(
             path,
             (salt, parameters) => _crypto.DeriveKey(masterPassword, salt, parameters),
             expectedMaterial: null,
             migrateLegacy: true,
             ct);
+
+        // Best effort; only after a successful unlock.
+        VaultTempFileCleaner.DeleteStale(path);
+
+        return session;
+    }
 
     public async Task<Vault> OpenAsync(
         string path,
