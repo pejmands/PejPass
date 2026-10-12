@@ -2,6 +2,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using PejPass.Application.Interfaces;
 using PejPass.Domain.Entities;
+using PejPass.Domain.Exceptions;
 using System.Globalization;
 using System.Text;
 
@@ -15,7 +16,7 @@ public sealed partial class BrowserImportService : IBrowserImportService
     private const long MaxCsvFileBytes = 64L * 1024 * 1024;
     private const int MaxCsvRecords = 100_000;
     private const int MaxCsvColumns = 128;
-    private const int MaxCsvFieldCharacters = 1_048_576;
+    private const int MaxCsvFieldCharacters = VaultLimits.MaxTextCharacters;
 
     public async Task<IReadOnlyList<VaultEntry>> ImportFromCsvAsync(
         string filePath,
@@ -59,7 +60,11 @@ public sealed partial class BrowserImportService : IBrowserImportService
                 throw new InvalidDataException($"CSV import exceeds the limit of {MaxCsvRecords} records.");
 
             var cols = csv.Parser.Record?.ToList() ?? [];
-            ValidateCsvRecord(cols, $"record {recordCount}");
+            ValidateCsvRecord(
+                cols,
+                $"record {recordCount}",
+                header,
+                GetCol(cols, map.TitleIndex));
 
             if (cols.Count == 0)
                 continue;
@@ -109,17 +114,61 @@ public sealed partial class BrowserImportService : IBrowserImportService
             throw new InvalidDataException($"CSV file exceeds the {MaxCsvFileBytes / (1024 * 1024)} MiB size limit.");
     }
 
-    private static void ValidateCsvRecord(IReadOnlyList<string> fields, string recordDescription)
+    private static void ValidateCsvRecord(
+        IReadOnlyList<string> fields,
+        string recordDescription,
+        IReadOnlyList<string>? header = null,
+        string? entryTitle = null)
     {
         if (fields.Count > MaxCsvColumns)
             throw new InvalidDataException($"{recordDescription} exceeds the {MaxCsvColumns}-column limit.");
 
         for (var i = 0; i < fields.Count; i++)
         {
-            if (fields[i].Length > MaxCsvFieldCharacters)
+            if (fields[i].Length <= MaxCsvFieldCharacters)
+                continue;
+
+            if (header is null)
+            {
                 throw new InvalidDataException(
                     $"{recordDescription} contains a field exceeding the {MaxCsvFieldCharacters}-character limit.");
+            }
+
+            var fieldName = DescribeCsvField(header.ElementAtOrDefault(i), i);
+            throw new VaultLimitExceededException(
+                VaultLimit.TextLength,
+                $"{recordDescription} contains an oversized {fieldName} field.")
+            {
+                Subject = fieldName,
+                EntryTitle = ShortenTitle(entryTitle)
+            };
         }
+    }
+
+    private static string DescribeCsvField(string? header, int index)
+    {
+        var normalized = (header ?? string.Empty).Trim().ToLowerInvariant();
+
+        return normalized switch
+        {
+            "name" or "title" or "hostname" or "site" or "login_uri" => "entry title",
+            "username" or "user" or "login" or "login_username" or "email" => "username",
+            "password" or "login_password" or "pass" => "password",
+            "url" or "origin" or "formactionorigin" or "http://hostname" => "entry URL",
+            "note" or "notes" or "comment" or "extra" => "notes",
+            "totp_secret" or "totpsecret" => "TOTP secret",
+            "" => $"CSV column {index + 1}",
+            _ => $"CSV field '{ShortenTitle(header)}'"
+        };
+    }
+
+    private static string? ShortenTitle(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            return null;
+
+        var trimmed = title.Trim();
+        return trimmed.Length <= 80 ? trimmed : trimmed[..79] + "…";
     }
 
     private static ColumnMap BuildColumnMap(List<string> header)
