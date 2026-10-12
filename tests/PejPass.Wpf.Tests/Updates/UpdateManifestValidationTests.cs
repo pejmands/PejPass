@@ -31,6 +31,19 @@ public sealed class UpdateManifestValidationTests
     }
 
     [Fact]
+    public void ValidateUpdateManifest_RejectsTooManyAdditionalSignatures()
+    {
+        var manifest = new UpdateManifest
+        {
+            Version = "1.2.0",
+            AdditionalSignatures = [.. Enumerable.Repeat("c2ln", 5)]
+        };
+
+        Assert.Throws<InvalidDataException>(() =>
+            UpdateService.ValidateUpdateManifest(manifest));
+    }
+
+    [Fact]
     public void ValidateUpdateManifest_RejectsTooManyReleases()
     {
         var manifest = new UpdateManifest
