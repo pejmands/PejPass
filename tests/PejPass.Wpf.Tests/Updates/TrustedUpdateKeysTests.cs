@@ -25,6 +25,7 @@ public sealed class TrustedUpdateKeysTests
 
             Assert.Equal(bytes.Length, read);
             Assert.Equal(256, key.KeySize);
+            Assert.Equal("1.2.840.10045.3.1.7", key.ExportParameters(false).Curve.Oid?.Value);
             Assert.True(seen.Add(text), "Duplicate trusted update key.");
         }
     }
