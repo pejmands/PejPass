@@ -3,7 +3,7 @@
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:controls="clr-namespace:PejPass.Wpf.Controls"
-    xmlns:domain="clr-namespace:PejPass.Domain.Exceptions;assembly=PejPass.Domain"
+	xmlns:domain="clr-namespace:PejPass.Domain.Exceptions;assembly=PejPass.Domain"
 	Width="560"
 	Height="760"
 	MinWidth="480"
@@ -266,7 +266,7 @@
 
 				<TextBox
 					x:Name="TagsTextBox"
-				MaxLength="{x:Static domain:VaultLimits.MaxTagsTextCharacters}"
+					MaxLength="{x:Static domain:VaultLimits.MaxTagsTextCharacters}"
 					Margin="0,0,0,6"
 					Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}"
 					TextWrapping="NoWrap"
@@ -354,7 +354,7 @@
 									<TextBox
 										Margin="2,0,6,0"
 										MaxLength="{x:Static domain:VaultLimits.MaxTextCharacters}"
-						Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+							Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
 										TextWrapping="NoWrap"
 										ToolTip="Field value"
 										VerticalScrollBarVisibility="Disabled">
