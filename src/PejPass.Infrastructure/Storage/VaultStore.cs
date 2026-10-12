@@ -641,6 +641,8 @@ public sealed class VaultStore(
         if (vault.KdfParameters != kdfParameters)
             throw new ArgumentException("KDF parameters must match the vault metadata.", nameof(kdfParameters));
 
+        ValidateVaultStructure(vault);
+
         var salt = _crypto.GenerateSalt(SaltLength);
         byte[]? key = null;
 
