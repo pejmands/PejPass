@@ -1,6 +1,7 @@
 using PejPass.Application.Interfaces;
 using PejPass.Application.Security;
 using PejPass.Domain.Entities;
+using PejPass.Domain.Exceptions;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
@@ -49,7 +50,9 @@ public sealed class VaultStore(
             throw new InvalidDataException($"Vault exceeds the limit of {MaxVaultEntries} active and trashed entries.");
 
         if (vault.History.Count > MaxVaultHistoryItems)
-            throw new InvalidDataException($"Vault exceeds the limit of {MaxVaultHistoryItems} history items.");
+            throw new VaultLimitExceededException(
+                VaultLimit.HistoryItems,
+                $"Vault exceeds the limit of {MaxVaultHistoryItems} history items.");
 
         ValidateText(vault.Name, "vault name");
 
@@ -454,7 +457,15 @@ public sealed class VaultStore(
                     vault = JsonSerializer.Deserialize<Vault>(plaintext)
                             ?? throw new InvalidDataException("Vault data is corrupted.");
 
-                    ValidateVaultStructure(vault);
+                    try
+                    {
+                        ValidateVaultStructure(vault);
+                    }
+                    catch (VaultLimitExceededException ex)
+                    {
+                        // Preserve the invalid-file exception contract when validating data read from disk.
+                        throw new InvalidDataException(ex.Message, ex);
+                    }
 
                     if (versionValue == CurrentVersion &&
                         vault.KdfParameters != kdfParameters)
