@@ -55,7 +55,8 @@ public static class FaviconService
     private static bool _startupCleanupStarted;
 
     private static DispatcherTimer? _batchTimer;
-    private static int _batchPending;
+    private static readonly object BatchNotifyLock = new();
+    private static readonly HashSet<string> PendingBatchHosts = new(StringComparer.OrdinalIgnoreCase);
     private static int _diskWarmRunning;
     private static volatile bool _onlineFetchingEnabled;
 
@@ -114,6 +115,9 @@ public static class FaviconService
             }
 
             Failed.Clear();
+
+            lock (BatchNotifyLock)
+                PendingBatchHosts.Clear();
         }
     }
 
@@ -148,7 +152,7 @@ public static class FaviconService
     }
 
     /// <summary>Raised on UI thread after one or more favicons finished (debounced).</summary>
-    public static event Action? FaviconsBatchReady;
+    public static event Action<IReadOnlyCollection<string>>? FaviconsBatchReady;
 
     private static HttpClient CreateClient()
     {
@@ -252,7 +256,7 @@ public static class FaviconService
                         if (fromDisk is not null && generation == Volatile.Read(ref _cacheGeneration))
                         {
                             SetMemory(host, fromDisk);
-                            ScheduleBatchNotify();
+                            ScheduleBatchNotify(host);
                         }
 
                         return ValueTask.CompletedTask;
@@ -349,7 +353,7 @@ public static class FaviconService
 
                 SetMemory(host, fromDisk);
                 Failed.TryRemove(host, out _);
-                ScheduleBatchNotify();
+                ScheduleBatchNotify(host);
                 return;
             }
 
@@ -402,7 +406,7 @@ public static class FaviconService
                 Failed.TryRemove(host, out _);
             }
 
-            ScheduleBatchNotify();
+            ScheduleBatchNotify(host);
         }
         catch
         {
@@ -443,12 +447,17 @@ public static class FaviconService
     internal static void MarkFailed(string host) =>
         Failed[host] = DateTimeOffset.UtcNow;
 
-    private static void ScheduleBatchNotify()
+    private static void ScheduleBatchNotify(string host)
     {
-        Interlocked.Exchange(ref _batchPending, 1);
+        if (string.IsNullOrWhiteSpace(host))
+            return;
+
+        lock (BatchNotifyLock)
+            PendingBatchHosts.Add(host);
 
         var dispatcher = System.Windows.Application.Current?.Dispatcher;
-        if (dispatcher is null) return;
+        if (dispatcher is null)
+            return;
 
         dispatcher.BeginInvoke(() =>
         {
@@ -458,9 +467,18 @@ public static class FaviconService
                 _batchTimer.Tick += (_, _) =>
                 {
                     _batchTimer.Stop();
-                    if (Interlocked.Exchange(ref _batchPending, 0) == 0)
-                        return;
-                    FaviconsBatchReady?.Invoke();
+
+                    string[] hosts;
+                    lock (BatchNotifyLock)
+                    {
+                        if (PendingBatchHosts.Count == 0)
+                            return;
+
+                        hosts = [.. PendingBatchHosts];
+                        PendingBatchHosts.Clear();
+                    }
+
+                    FaviconsBatchReady?.Invoke(hosts);
                 };
             }
 
