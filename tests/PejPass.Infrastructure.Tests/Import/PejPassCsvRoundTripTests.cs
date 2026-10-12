@@ -53,6 +53,9 @@ public sealed class PejPassCsvRoundTripTests
         {
             if (File.Exists(file))
                 File.Delete(file);
+
+            if (File.Exists(file + ".journal"))
+                File.Delete(file + ".journal");
         }
     }
 
@@ -77,6 +80,9 @@ public sealed class PejPassCsvRoundTripTests
         {
             if (File.Exists(file))
                 File.Delete(file);
+
+            if (File.Exists(file + ".journal"))
+                File.Delete(file + ".journal");
         }
     }
 }
