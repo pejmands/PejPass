@@ -459,7 +459,17 @@ internal static class Signer
         if (fields.Sha256 is null || !IsSha256(fields.Sha256))
             throw new SignerException($"{label}: sha256 is missing or invalid.");
 
-        var signatures = new List<byte[]> { DecodeSignature(RequiredString(root, "signature"), label) };
+        if (root["signature"] is not JsonValue primaryValue ||
+            !primaryValue.TryGetValue<string>(out var primarySignature) ||
+            string.IsNullOrWhiteSpace(primarySignature))
+        {
+            throw new SignerException($"{label}: 'signature' must be a non-empty string.");
+        }
+
+        if (primarySignature.Length > 256)
+            throw new SignerException($"{label}: 'signature' exceeds the app's maximum length.");
+
+        var signatures = new List<byte[]> { DecodeSignature(primarySignature.Trim(), label) };
 
         if (root.TryGetPropertyValue("additionalSignatures", out var extra))
         {
@@ -472,7 +482,10 @@ internal static class Signer
                 if (item is not JsonValue value || !value.TryGetValue<string>(out var signatureText))
                     throw new SignerException($"{label}: 'additionalSignatures' must contain only strings.");
 
-                signatures.Add(DecodeSignature(signatureText, label));
+                if (signatureText.Length > 256)
+                    throw new SignerException($"{label}: an additional signature exceeds the app's maximum length.");
+
+                signatures.Add(DecodeSignature(signatureText.Trim(), label));
             }
         }
 
