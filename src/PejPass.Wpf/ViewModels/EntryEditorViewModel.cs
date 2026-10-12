@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PejPass.Domain.Entities;
+using PejPass.Domain.Exceptions;
 using PejPass.Domain.Security;
 using PejPass.Infrastructure.Totp;
 using PejPass.Wpf.Dialogs;
@@ -44,6 +45,9 @@ public partial class EntryEditorViewModel : ObservableObject
 
     [ObservableProperty]
     public partial string TagsText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string? TagsErrorMessage { get; set; }
 
     [ObservableProperty]
     public partial bool IsFavorite { get; set; }
@@ -137,13 +141,43 @@ public partial class EntryEditorViewModel : ObservableObject
         OnTitleChanged(Title);
         ValidateTotpSecret();
 
+        var tagsValid = ValidateTagLimits();
         var customFieldsValid = ValidateCustomFields();
 
         return string.IsNullOrEmpty(UrlErrorMessage) &&
                string.IsNullOrEmpty(TitleErrorMessage) &&
                string.IsNullOrEmpty(TotpErrorMessage) &&
+               tagsValid &&
                customFieldsValid;
     }
+
+    private bool ValidateTagLimits()
+    {
+        var tags = NormalizeTags(TagsText);
+
+        if (tags.Count > VaultLimits.MaxCollectionItemsPerEntry)
+        {
+            TagsErrorMessage =
+                $"An entry can have at most {VaultLimits.MaxCollectionItemsPerEntry:N0} tags.";
+            return false;
+        }
+
+        if (tags.Any(tag => tag.Length > VaultLimits.MaxTagCharacters))
+        {
+            TagsErrorMessage =
+                $"Each tag can contain at most {VaultLimits.MaxTagCharacters:N0} characters.";
+            return false;
+        }
+
+        TagsErrorMessage = null;
+        return true;
+    }
+
+    public string AddCustomFieldToolTip =>
+        $"Add a custom field (maximum {VaultLimits.MaxCollectionItemsPerEntry:N0} per entry).";
+
+    private bool CanAddCustomField() =>
+        CustomFields.Count < VaultLimits.MaxCollectionItemsPerEntry;
 
     private bool ValidateCustomFields()
     {
@@ -316,7 +350,7 @@ public partial class EntryEditorViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanAddCustomField))]
     private void AddCustomField()
     {
         CustomFields.Add(new CustomFieldItem
@@ -382,6 +416,7 @@ public partial class EntryEditorViewModel : ObservableObject
     {
         MoveCustomFieldUpCommand.NotifyCanExecuteChanged();
         MoveCustomFieldDownCommand.NotifyCanExecuteChanged();
+        AddCustomFieldCommand.NotifyCanExecuteChanged();
     }
 
     public void ClearSensitiveInputs()
