@@ -21,6 +21,8 @@ public sealed partial class CsvExportService
             directory,
             $".{Path.GetFileName(destinationPath)}.{Guid.NewGuid():N}.tmp");
 
+        _journal.Add(tempPath);
+
         try
         {
             // PejPass CSV is unencrypted; keep incomplete exports away from the destination.
@@ -69,6 +71,10 @@ public sealed partial class CsvExportService
         {
             TryDeleteTemporaryFile(tempPath);
             throw;
+        }
+        finally
+        {
+            _journal.RemoveIfGone(tempPath);
         }
     }
 
