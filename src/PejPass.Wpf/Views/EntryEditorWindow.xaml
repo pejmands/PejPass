@@ -354,7 +354,7 @@
 									<TextBox
 										Margin="2,0,6,0"
 										MaxLength="{x:Static domain:VaultLimits.MaxTextCharacters}"
-							Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+										Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
 										TextWrapping="NoWrap"
 										ToolTip="Field value"
 										VerticalScrollBarVisibility="Disabled">
