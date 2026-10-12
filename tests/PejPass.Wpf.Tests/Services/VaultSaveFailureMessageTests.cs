@@ -1,3 +1,4 @@
+using PejPass.Domain.Exceptions;
 using PejPass.Wpf.Services;
 using System.IO;
 
@@ -9,7 +10,7 @@ public sealed class VaultSaveFailureMessageTests
     public void ForHistoryLimit_ProvidesManualCleanupGuidance()
     {
         var message = VaultSaveFailureMessage.For(
-            new InvalidDataException("Vault exceeds the limit of 1000000 history items."),
+            new VaultLimitExceededException(VaultLimit.HistoryItems, "any text"),
             "Fallback message");
 
         Assert.Contains("Delete older history snapshots", message);

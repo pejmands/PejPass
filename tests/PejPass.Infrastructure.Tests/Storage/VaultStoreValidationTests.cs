@@ -1,5 +1,6 @@
 ﻿using PejPass.Application.Interfaces;
 using PejPass.Domain.Entities;
+using PejPass.Domain.Exceptions;
 using PejPass.Infrastructure.Storage;
 using System.IO;
 
@@ -7,6 +8,34 @@ namespace PejPass.Infrastructure.Tests.Storage;
 
 public sealed class VaultStoreValidationTests
 {
+    [Fact]
+    public async Task CreateSessionAsync_WhenHistoryExceedsLimit_ThrowsVaultLimitExceededException()
+    {
+        var vault = new Vault
+        {
+            History = Enumerable.Repeat(new EntryHistoryItem(), 1_000_001).ToList()
+        };
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+
+        try
+        {
+            var ex = await Assert.ThrowsAsync<VaultLimitExceededException>(() =>
+                CreateStore().CreateSessionAsync(
+                    path,
+                    "password",
+                    vault,
+                    TestContext.Current.CancellationToken));
+
+            Assert.Equal(VaultLimit.HistoryItems, ex.Limit);
+            Assert.False(File.Exists(path));
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
     [Fact]
     public async Task OpenAsync_WhenSaltLengthIsTooSmall_ThrowsInvalidDataException()
     {
