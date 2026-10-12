@@ -18,6 +18,7 @@ public sealed class UpdateService : IDisposable
     private const long MaxUpdatePackageBytes = 512L * 1024 * 1024;
     private const int MaxUpdateManifestBytes = 4 * 1024 * 1024;
     private const int MaxManifestReleases = 1_000;
+    private const int MaxAdditionalSignatures = 4;
     private const int MaxReleaseNoteItemsPerCategory = 100;
     private const int MaxReleaseNoteItemCharacters = 4_096;
     private const int MaxManifestTextCharacters = 2_000_000;
@@ -676,6 +677,21 @@ public sealed class UpdateService : IDisposable
         ValidateText(manifest.DownloadUrl, "download URL", 2_048);
         ValidateText(manifest.Sha256, "SHA-256 hash", 64);
         ValidateText(manifest.Signature, "signature", 256);
+
+        if (manifest.AdditionalSignatures is null ||
+            manifest.AdditionalSignatures.Count > MaxAdditionalSignatures)
+        {
+            throw new InvalidDataException("Update manifest contains too many signatures.");
+        }
+
+        foreach (var signature in manifest.AdditionalSignatures)
+        {
+            if (signature is null)
+                throw new InvalidDataException("Update manifest contains a null additional signature.");
+
+            ValidateText(signature, "additional signature", 256);
+        }
+
         ValidateNotes(manifest.Notes, "root notes");
 
         foreach (var release in manifest.Releases)
