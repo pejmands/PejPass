@@ -16,6 +16,47 @@ The cache service uses `CryptographicOperations.ZeroMemory` for byte buffers it 
 
 The “Until app closes” timeout disables the elapsed-time limit only; it does not override the Windows lock/disconnect/suspend, password-change, Hello-disable, failure-limit, or app-exit clearing rules.
 
+## Update-signing key rotation
+
+PejPass verifies update manifests using ECDSA P-256 public keys embedded in `src/PejPass.Application/Security/TrustedUpdateKeys.cs`. The private signing keys must never be committed to the repository, included in releases, or shared through chat or email. Keep the trusted-key list small (currently limited by code review guidance to at most three keys).
+
+### Key formats and storage
+
+- A signing key is an ECDSA P-256 private key in PEM format. The matching public key is exported as Base64-encoded SubjectPublicKeyInfo (SPKI), which is the format stored in `TrustedUpdateKeys.cs` and passed to the signer as `--client-key`.
+- Generate a new key only for a planned rotation or a documented incident. Do not regenerate, overwrite, or discard K1 merely to test the workflow.
+- Generate K2 on a trusted machine. Store its private PEM outside the repository in a directory protected by the current Windows account, and keep a securely protected offline backup. Restrict access to the private key and verify the backup before relying on it. The public key may be committed; the private key may not.
+- Record the new key's fingerprint and label (for example, K2) in the rotation notes. Confirm the fingerprint and key pair before using it for a release.
+
+### Planned K1-to-K2 rotation
+
+1. **Prepare K2.** Generate a new ECDSA P-256 key pair and securely back up the private key. Keep K1 available; it remains necessary while installed versions that trust only K1 are supported.
+2. **Add trust before using K2 to sign releases.** Add K2's public SPKI Base64 value to `TrustedUpdateKeys.cs`, retaining K1. Review the key fingerprint and run the full test suite. Build the separate signer project as well as the application; `PejPass.UpdateSigner` is not part of `PejPass.sln`.
+3. **Release a bridge version.** Publish an application version that trusts both K1 and K2, while update manifests are still signed with K1 as the primary `signature`. This gives existing K1-only clients a path to install a version that also trusts K2.
+4. **Dual-sign subsequent manifests.** Once the bridge version is released, sign each manifest with K1 first and K2 second. The signer writes K1's signature to the legacy `signature` field and K2's signature to `additionalSignatures`. Keep the K1 signature first: older clients only read `signature` and ignore `additionalSignatures`. Newer clients can verify either signature against their trusted-key list.
+5. **Verify before publishing.** Work on a copy or staging manifest first; do not experiment on the production `update.json`. Run the tests and build the signer, verify the existing manifest before changes, and verify the newly signed manifest after signing. Confirm both compatibility cases using disposable manifests: a K1-only verifier must accept the primary signature, and a K2-only verifier must accept the additional signature while the primary signature still verifies with K1. Also check the ZIP hash and package contents when preparing a real release. Publish the release ZIP before publishing its manifest.
+6. **Remove K1 from the application's trust list only after the transition is deliberate.** First ensure a released application trusts K2 and that the support policy for older K1-only installations is understood. A K2-only application can continue to accept a dual-signed manifest through `additionalSignatures`, while old K1-only applications can continue to use the K1 primary signature. The signer supports this transition when K1 is explicitly supplied as `--client-key` and a signature from a currently trusted key (K2) is also present. Do not remove K1 from the signing workflow or stop emitting its primary signature while continued updates for K1-only clients are required.
+7. **End legacy compatibility only intentionally.** Switching the primary `signature` to K2 means clients that trust only K1 will no longer be able to verify that manifest. Make that change only after deciding to end support for those clients and documenting the consequence.
+
+### Signer and verification workflow
+
+When both public keys are listed in `TrustedUpdateKeys.cs`, sign a staging manifest with K1 as the first private key and K2 as the second. Supply K1's public key to `--client-key` so the tool checks the legacy primary signature:
+
+```powershell
+dotnet run --project tools\PejPass.UpdateSigner -- <staging-update.json> <K1-private.pem> <K2-private.pem> --client-key <K1-public-base64>
+```
+
+Do not pass `--public-key` for normal production signing: that option replaces the embedded trusted-key list with the one supplied key and is intended for targeted verification or isolated tests. For a disposable test manifest, simulate a K1-only client and a K2-only client separately:
+
+```powershell
+dotnet run --project tools\PejPass.UpdateSigner -- <staging-update.json> --verify-only --public-key <K1-public-base64> --client-key <K1-public-base64>
+dotnet run --project tools\PejPass.UpdateSigner -- <staging-update.json> --verify-only --public-key <K2-public-base64> --client-key <K1-public-base64>
+```
+
+Both checks should succeed on a dual-signed staging manifest. The second check verifies the manifest using K2 while also requiring that the primary `signature` is still valid for K1. These test commands do not replace verification using the actual trusted-key list.
+
+### If a private signing key may be compromised
+
+Treat suspected private-key exposure as an incident, not as an ordinary scheduled rotation. Stop and assess releases, protect the remaining signing keys, and plan an explicit recovery path. Simply deleting K1 from the current source does not revoke it from already installed older applications; those applications still trust K1 and may accept a forged primary signature. Do not claim that a key has been revoked for existing clients unless those clients have a mechanism to receive and enforce that revocation.
 
 ## Single-instance vault-open IPC
 
