@@ -211,6 +211,8 @@ public partial class EntryEditorViewModel
     {
         foreach (var tag in SuggestedTags)
             tag.IsSelected = IsTagSelected(tag.Name);
+
+        ValidateTagLimits();
     }
 }
 
