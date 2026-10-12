@@ -1,4 +1,5 @@
 ﻿using PejPass.Infrastructure.Import;
+using PejPass.Domain.Exceptions;
 using System.IO;
 
 namespace PejPass.Infrastructure.Tests.Import;
@@ -94,14 +95,19 @@ public sealed class BrowserImportServiceTests
     }
 
     [Fact]
-    public async Task ImportCsv_WhenFieldExceedsCharacterLimit_RejectsRecord()
+    public async Task ImportCsv_WhenFieldExceedsCharacterLimit_ReportsFieldAndEntry()
     {
-        var csv = "name,password,notes\nTest,123," + new string('x', 1_048_577);
+        var csv = "name,password,notes\nTest,123," + new string('x', VaultLimits.MaxTextCharacters + 1);
         var file = CreateTempCsv(csv);
+
         try
         {
-            await Assert.ThrowsAsync<InvalidDataException>(
+            var ex = await Assert.ThrowsAsync<VaultLimitExceededException>(
                 () => _service.ImportFromCsvAsync(file, TestContext.Current.CancellationToken));
+
+            Assert.Equal(VaultLimit.TextLength, ex.Limit);
+            Assert.Equal("notes", ex.Subject);
+            Assert.Equal("Test", ex.EntryTitle);
         }
         finally
         {

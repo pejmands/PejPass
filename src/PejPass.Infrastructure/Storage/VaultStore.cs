@@ -35,11 +35,11 @@ public sealed class VaultStore(
     private const int TagLength = 16;
     private const long MaxVaultFileBytes = 128L * 1024 * 1024;
 
-    private const int MaxVaultEntries = 100_000;
-    private const int MaxVaultHistoryItems = 1_000_000;
-    private const int MaxCollectionItemsPerEntry = 256;
-    private const int MaxTextCharacters = 1_048_576;
-    private const int MaxTagCharacters = 4_096;
+    private const int MaxVaultEntries = VaultLimits.MaxEntries;
+    private const int MaxVaultHistoryItems = VaultLimits.MaxHistoryItems;
+    private const int MaxCollectionItemsPerEntry = VaultLimits.MaxCollectionItemsPerEntry;
+    private const int MaxTextCharacters = VaultLimits.MaxTextCharacters;
+    private const int MaxTagCharacters = VaultLimits.MaxTagCharacters;
 
     private static void ValidateVaultStructure(Vault vault)
     {
@@ -47,7 +47,9 @@ public sealed class VaultStore(
             throw new InvalidDataException("Vault contains a missing required collection.");
 
         if (vault.Entries.Count + vault.Trash.Count > MaxVaultEntries)
-            throw new InvalidDataException($"Vault exceeds the limit of {MaxVaultEntries} active and trashed entries.");
+            throw new VaultLimitExceededException(
+                VaultLimit.Entries,
+                $"Vault exceeds the limit of {MaxVaultEntries} active and trashed entries.");
 
         if (vault.History.Count > MaxVaultHistoryItems)
             throw new VaultLimitExceededException(
@@ -72,14 +74,22 @@ public sealed class VaultStore(
             if (history is null)
                 throw new InvalidDataException("Vault contains an invalid history item.");
 
-            ValidateText(history.Title, "history title");
-            ValidateText(history.Username, "history username");
-            ValidateText(history.Password, "history password");
-            ValidateText(history.Url, "history URL");
-            ValidateText(history.TotpSecret, "history TOTP secret");
-            ValidateText(history.Notes, "history notes");
-            ValidateTags(history.Tags);
-            ValidateCustomFields(history.CustomFields);
+            try
+            {
+                ValidateText(history.Title, "history title");
+                ValidateText(history.Username, "history username");
+                ValidateText(history.Password, "history password");
+                ValidateText(history.Url, "history URL");
+                ValidateText(history.TotpSecret, "history TOTP secret");
+                ValidateText(history.Notes, "history notes");
+                ValidateTags(history.Tags);
+                ValidateCustomFields(history.CustomFields);
+            }
+            catch (VaultLimitExceededException ex) when (ex.EntryTitle is null)
+            {
+                ex.EntryTitle = ShortenTitle(history.Title);
+                throw;
+            }
         }
     }
 
@@ -88,33 +98,82 @@ public sealed class VaultStore(
         if (entry is null)
             throw new InvalidDataException("Vault contains an invalid entry.");
 
-        ValidateText(entry.Title, "entry title");
-        ValidateText(entry.Username, "entry username");
-        ValidateText(entry.Password, "entry password");
-        ValidateText(entry.Url, "entry URL");
-        ValidateText(entry.TotpSecret, "entry TOTP secret");
-        ValidateText(entry.Notes, "entry notes");
-        ValidateTags(entry.Tags);
-        ValidateCustomFields(entry.CustomFields);
+        try
+        {
+            ValidateText(entry.Title, "entry title");
+            ValidateText(entry.Username, "entry username");
+            ValidateText(entry.Password, "entry password");
+            ValidateText(entry.Url, "entry URL");
+            ValidateText(entry.TotpSecret, "entry TOTP secret");
+            ValidateText(entry.Notes, "entry notes");
+            ValidateTags(entry.Tags);
+            ValidateCustomFields(entry.CustomFields);
+        }
+        catch (VaultLimitExceededException ex) when (ex.EntryTitle is null)
+        {
+            // Keep the same exception instance so its stack trace is preserved.
+            ex.EntryTitle = ShortenTitle(entry.Title);
+            throw;
+        }
+    }
 
+    private static string? ShortenTitle(string? title)
+    {
+        const int maxLength = 80;
+
+        if (string.IsNullOrWhiteSpace(title))
+            return null;
+
+        var trimmed = title.Trim();
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..(maxLength - 1)] + "…";
     }
 
     private static void ValidateTags(List<string>? tags)
     {
-        if (tags is null || tags.Count > MaxCollectionItemsPerEntry)
-            throw new InvalidDataException("Vault contains an invalid or oversized tag collection.");
+        if (tags is null)
+            throw new InvalidDataException("Vault contains a missing tag collection.");
+
+        if (tags.Count > MaxCollectionItemsPerEntry)
+        {
+            throw new VaultLimitExceededException(
+                VaultLimit.CollectionItems,
+                "Vault contains an entry with too many tags.")
+            {
+                Subject = "tags"
+            };
+        }
 
         foreach (var tag in tags)
         {
-            if (tag is null || tag.Length > MaxTagCharacters)
-                throw new InvalidDataException("Vault contains an invalid or oversized tag.");
+            if (tag is null)
+                throw new InvalidDataException("Vault contains an invalid tag.");
+
+            if (tag.Length > MaxTagCharacters)
+            {
+                throw new VaultLimitExceededException(
+                    VaultLimit.TagLength,
+                    "Vault contains an oversized tag.")
+                {
+                    Subject = "tag"
+                };
+            }
         }
     }
 
     private static void ValidateCustomFields(List<CustomField>? fields)
     {
-        if (fields is null || fields.Count > MaxCollectionItemsPerEntry)
-            throw new InvalidDataException("Vault contains an invalid or oversized custom-field collection.");
+        if (fields is null)
+            throw new InvalidDataException("Vault contains a missing custom-field collection.");
+
+        if (fields.Count > MaxCollectionItemsPerEntry)
+        {
+            throw new VaultLimitExceededException(
+                VaultLimit.CollectionItems,
+                "Vault contains an entry with too many custom fields.")
+            {
+                Subject = "custom fields"
+            };
+        }
 
         foreach (var field in fields)
         {
@@ -128,8 +187,18 @@ public sealed class VaultStore(
 
     private static void ValidateText(string? value, string fieldName)
     {
-        if (value is null || value.Length > MaxTextCharacters)
-            throw new InvalidDataException($"Vault contains an invalid or oversized {fieldName}.");
+        if (value is null)
+            throw new InvalidDataException($"Vault contains a missing {fieldName}.");
+
+        if (value.Length > MaxTextCharacters)
+        {
+            throw new VaultLimitExceededException(
+                VaultLimit.TextLength,
+                $"Vault contains an oversized {fieldName}.")
+            {
+                Subject = fieldName
+            };
+        }
     }
 
     private readonly ICryptoService _crypto = crypto;
@@ -189,6 +258,8 @@ public sealed class VaultStore(
         // still protects against a file that appears while creation is in progress.
         if (File.Exists(path))
             throw new IOException("A vault file already exists at this path.");
+
+        ValidateVaultStructure(vault);
 
         var directory = Path.GetDirectoryName(Path.GetFullPath(path))
                         ?? throw new InvalidOperationException("Vault directory could not be determined.");
@@ -569,6 +640,8 @@ public sealed class VaultStore(
 
         if (vault.KdfParameters != kdfParameters)
             throw new ArgumentException("KDF parameters must match the vault metadata.", nameof(kdfParameters));
+
+        ValidateVaultStructure(vault);
 
         var salt = _crypto.GenerateSalt(SaltLength);
         byte[]? key = null;

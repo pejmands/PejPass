@@ -1,6 +1,9 @@
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Media;
 
 namespace PejPass.Wpf.Views;
 
@@ -30,10 +33,49 @@ public partial class TrashWindow : Window
         e.Handled = true;
     }
 
-    private void OnFaviconsReady()
+    private void OnFaviconsReady(IReadOnlyCollection<string> hosts)
     {
-        try { TrashList.Items.Refresh(); }
-        catch { /* disposing */ }
+        if (!IsLoaded || hosts.Count == 0)
+            return;
+
+        var affectedHosts = hosts.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            foreach (var image in FindVisualChildren<Image>(this))
+            {
+                if (image.DataContext is not TrashRow row)
+                    continue;
+
+                var host = FaviconService.TryGetHost(row.Url);
+                if (host is null || !affectedHosts.Contains(host))
+                    continue;
+
+                image.GetBindingExpression(Image.SourceProperty)?.UpdateTarget();
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // The visual tree may be changing during shutdown.
+        }
+    }
+
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent)
+        where T : DependencyObject
+    {
+        if (parent is null)
+            yield break;
+
+        var count = VisualTreeHelper.GetChildrenCount(parent);
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T match)
+                yield return match;
+
+            foreach (var nested in FindVisualChildren<T>(child))
+                yield return nested;
+        }
     }
 
     private void UpdateSelectedTrashToolbar()

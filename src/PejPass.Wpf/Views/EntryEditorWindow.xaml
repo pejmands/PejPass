@@ -3,6 +3,7 @@
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:controls="clr-namespace:PejPass.Wpf.Controls"
+	xmlns:domain="clr-namespace:PejPass.Domain.Exceptions;assembly=PejPass.Domain"
 	Width="560"
 	Height="760"
 	MinWidth="480"
@@ -71,6 +72,7 @@
 
 						<TextBox
 							x:Name="TitleTextBox"
+							MaxLength="{x:Static domain:VaultLimits.MaxTextCharacters}"
 							Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
 							TextWrapping="NoWrap"
 							VerticalScrollBarVisibility="Disabled" />
@@ -124,6 +126,7 @@
 
 				<TextBox
 					Margin="0,0,0,12"
+					MaxLength="{x:Static domain:VaultLimits.MaxTextCharacters}"
 					Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
 					TextWrapping="NoWrap"
 					VerticalScrollBarVisibility="Disabled" />
@@ -135,6 +138,7 @@
 
 				<TextBox
 					x:Name="UrlTextBox"
+					MaxLength="{x:Static domain:VaultLimits.MaxTextCharacters}"
 					Margin="0,0,0,0"
 					Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}"
 					TextWrapping="NoWrap"
@@ -162,6 +166,7 @@
 				<!--  Password input  -->
 				<controls:PasswordRevealBox
 					x:Name="PasswordBox"
+					MaxLength="{x:Static domain:VaultLimits.MaxTextCharacters}"
 					Margin="0,0,0,8"
 					PasswordChanged="PasswordBox_PasswordChanged" />
 
@@ -201,6 +206,7 @@
 
 				<controls:PasswordRevealBox
 					x:Name="TotpSecretBox"
+					MaxLength="{x:Static domain:VaultLimits.MaxTextCharacters}"
 					Margin="0,0,0,6"
 					PasswordChanged="TotpSecretBox_PasswordChanged"
 					ToolTip="Paste a Base32 secret or otpauth://totp URI. Leave empty to disable TOTP." />
@@ -260,10 +266,17 @@
 
 				<TextBox
 					x:Name="TagsTextBox"
+					MaxLength="{x:Static domain:VaultLimits.MaxTagsTextCharacters}"
 					Margin="0,0,0,6"
 					Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}"
 					TextWrapping="NoWrap"
 					VerticalScrollBarVisibility="Disabled" />
+
+				<TextBlock
+					Margin="0,0,0,6"
+					Style="{StaticResource ValidationErrorText}"
+					Text="{Binding TagsErrorMessage, StringFormat=⚠ {0}}"
+					Visibility="{Binding TagsErrorMessage, Converter={StaticResource NullOrEmptyToVis}}" />
 
 				<controls:TagChipStrip
 					Margin="0,0,0,20"
@@ -303,6 +316,7 @@
 						Padding="10,4"
 						Command="{Binding AddCustomFieldCommand}"
 						Content="+ Add Field"
+						ToolTip="{Binding AddCustomFieldToolTip}"
 						FontSize="{DynamicResource AppFontSize12}"
 						Style="{StaticResource SecondaryButton}" />
 				</Grid>
@@ -330,6 +344,7 @@
 								<TextBox
 									Grid.Row="0"
 									Margin="0,0,6,0"
+									MaxLength="{x:Static domain:VaultLimits.MaxTextCharacters}"
 									Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
 									TextWrapping="NoWrap"
 									ToolTip="Field name"
@@ -338,6 +353,7 @@
 								<Grid Grid.Row="0" Grid.Column="1">
 									<TextBox
 										Margin="2,0,6,0"
+										MaxLength="{x:Static domain:VaultLimits.MaxTextCharacters}"
 										Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
 										TextWrapping="NoWrap"
 										ToolTip="Field value"
@@ -353,7 +369,7 @@
 										</TextBox.Style>
 									</TextBox>
 
-									<controls:PasswordRevealBox Margin="2,0,6,0" Password="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+									<controls:PasswordRevealBox MaxLength="{x:Static domain:VaultLimits.MaxTextCharacters}" Margin="2,0,6,0" Password="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
 										<controls:PasswordRevealBox.Style>
 											<Style TargetType="controls:PasswordRevealBox">
 												<Setter Property="Visibility" Value="Collapsed" />
@@ -435,6 +451,7 @@
 					Text="Notes" />
 
 				<TextBox
+					MaxLength="{x:Static domain:VaultLimits.MaxTextCharacters}"
 					Height="100"
 					MaxHeight="160"
 					VerticalContentAlignment="Top"

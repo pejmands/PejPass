@@ -13,7 +13,7 @@ public sealed class VaultStoreValidationTests
     {
         var vault = new Vault
         {
-            History = Enumerable.Repeat(new EntryHistoryItem(), 1_000_001).ToList()
+            History = Enumerable.Repeat(new EntryHistoryItem(), VaultLimits.MaxHistoryItems + 1).ToList()
         };
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
 
@@ -206,7 +206,7 @@ public sealed class VaultStoreValidationTests
     [Fact]
     public async Task OpenAsync_WhenEntryFieldExceedsLimit_ThrowsInvalidDataException()
     {
-        var oversizedTitle = new string('x', 1_048_577);
+        var oversizedTitle = new string('x', VaultLimits.MaxTextCharacters + 1);
         var json = System.Text.Json.JsonSerializer.Serialize(new Vault
         {
             Entries = [new VaultEntry { Title = oversizedTitle }]
@@ -244,13 +244,109 @@ public sealed class VaultStoreValidationTests
     }
 
     [Fact]
-    public async Task CreateSessionAsync_WhenEntryFieldExceedsLimit_DoesNotCreateVaultFile()
+    public async Task CreateSessionAsync_WhenEntryFieldExceedsLimit_ThrowsTextLengthLimit()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        var ex = await CreateAndExpectLimitAsync(new Vault
+        {
+            Entries = [new VaultEntry { Title = "Router", Notes = new string('x', VaultLimits.MaxTextCharacters + 1) }]
+        });
+
+        Assert.Equal(VaultLimit.TextLength, ex.Limit);
+        Assert.Equal("entry notes", ex.Subject);
+        Assert.Equal("Router", ex.EntryTitle);
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenTitleIsLong_ShortensEntryTitleInTheError()
+    {
+        var ex = await CreateAndExpectLimitAsync(new Vault
+        {
+            Entries =
+            [
+                new VaultEntry
+                {
+                    Title = new string('t', 500),
+                    Notes = new string('x', VaultLimits.MaxTextCharacters + 1)
+                }
+            ]
+        });
+
+        Assert.NotNull(ex.EntryTitle);
+        Assert.True(ex.EntryTitle!.Length <= 80);
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenEntryHasTooManyTags_ThrowsCollectionLimit()
+    {
+        var ex = await CreateAndExpectLimitAsync(new Vault
+        {
+            Entries =
+            [
+                new VaultEntry
+                {
+                    Title = "Tagged",
+                    Tags = [.. Enumerable.Range(0, VaultLimits.MaxCollectionItemsPerEntry + 1).Select(i => $"t{i}")]
+                }
+            ]
+        });
+
+        Assert.Equal(VaultLimit.CollectionItems, ex.Limit);
+        Assert.Equal("tags", ex.Subject);
+        Assert.Equal("Tagged", ex.EntryTitle);
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenEntryHasTooManyCustomFields_ThrowsCollectionLimit()
+    {
+        var ex = await CreateAndExpectLimitAsync(new Vault
+        {
+            Entries =
+            [
+                new VaultEntry
+                {
+                    Title = "Fields",
+                    CustomFields = [.. Enumerable.Range(0, VaultLimits.MaxCollectionItemsPerEntry + 1)
+                        .Select(i => new CustomField { Name = $"n{i}", Value = "v" })]
+                }
+            ]
+        });
+
+        Assert.Equal(VaultLimit.CollectionItems, ex.Limit);
+        Assert.Equal("custom fields", ex.Subject);
+        Assert.Equal("Fields", ex.EntryTitle);
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenTagIsTooLong_ThrowsTagLengthLimit()
+    {
+        var ex = await CreateAndExpectLimitAsync(new Vault
+        {
+            Entries = [new VaultEntry { Title = "Long tag", Tags = [new string('x', VaultLimits.MaxTagCharacters + 1)] }]
+        });
+
+        Assert.Equal(VaultLimit.TagLength, ex.Limit);
+        Assert.Equal("Long tag", ex.EntryTitle);
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenActivePlusTrashedEntriesExceedLimit_ThrowsEntriesLimit()
+    {
         var vault = new Vault
         {
-            Entries = [new VaultEntry { Title = new string('x', 1_048_577) }]
+            Entries = [.. Enumerable.Range(0, 60_000).Select(i => new VaultEntry { Title = "E" + i })],
+            Trash = [.. Enumerable.Range(0, VaultLimits.MaxEntries - 60_000 + 1)
+                .Select(i => new TrashedEntry { Entry = new VaultEntry { Title = "T" + i } })]
         };
+
+        var ex = await CreateAndExpectLimitAsync(vault);
+
+        Assert.Equal(VaultLimit.Entries, ex.Limit);
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenTagCollectionIsMissing_IsStillAnInvalidFile()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
 
         try
         {
@@ -258,7 +354,7 @@ public sealed class VaultStoreValidationTests
                 CreateStore().CreateSessionAsync(
                     path,
                     "password",
-                    vault,
+                    new Vault { Entries = [new VaultEntry { Title = "Broken", Tags = null! }] },
                     TestContext.Current.CancellationToken));
 
             Assert.False(File.Exists(path));
@@ -267,6 +363,35 @@ public sealed class VaultStoreValidationTests
         {
             if (File.Exists(path))
                 File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenFileHasTooManyTags_StillThrowsInvalidDataException()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(new Vault
+        {
+            Entries =
+            [
+                new VaultEntry
+                {
+                    Title = "Tagged",
+                    Tags = [.. Enumerable.Range(0, VaultLimits.MaxCollectionItemsPerEntry + 1).Select(i => $"t{i}")]
+                }
+            ]
+        });
+
+        var path = CreateV2VaultFile(json);
+
+        try
+        {
+            // Size violations discovered while reading a file retain the invalid-file contract.
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                CreateStore().OpenAsync(path, "password", TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
         }
     }
 
@@ -375,6 +500,29 @@ public sealed class VaultStoreValidationTests
         finally
         {
             SynchronizationContext.SetSynchronizationContext(previousContext);
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
+    private static async Task<VaultLimitExceededException> CreateAndExpectLimitAsync(Vault vault)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+
+        try
+        {
+            var ex = await Assert.ThrowsAsync<VaultLimitExceededException>(() =>
+                CreateStore().CreateSessionAsync(
+                    path,
+                    "password",
+                    vault,
+                    TestContext.Current.CancellationToken));
+
+            Assert.False(File.Exists(path));
+            return ex;
+        }
+        finally
+        {
             if (File.Exists(path))
                 File.Delete(path);
         }

@@ -220,6 +220,13 @@ public partial class EntryEditorWindow : Window
                 return;
             }
 
+            if (!string.IsNullOrEmpty(vm.TagsErrorMessage))
+            {
+                TagsTextBox.BringIntoView();
+                TagsTextBox.Focus();
+                return;
+            }
+
             FocusFirstInvalidCustomField(vm);
             return;
         }
