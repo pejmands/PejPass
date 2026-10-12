@@ -84,6 +84,19 @@ public partial class PasswordRevealBox : UserControl
         set => SetValue(PasswordProperty, value ?? string.Empty);
     }
 
+    public static readonly DependencyProperty MaxLengthProperty =
+        DependencyProperty.Register(
+            nameof(MaxLength),
+            typeof(int),
+            typeof(PasswordRevealBox),
+            new PropertyMetadata(0, OnMaxLengthChanged));
+
+    public int MaxLength
+    {
+        get => (int)GetValue(MaxLengthProperty);
+        set => SetValue(MaxLengthProperty, value);
+    }
+
     public static readonly DependencyProperty ShowRevealButtonProperty =
         DependencyProperty.Register(
             nameof(ShowRevealButton),
@@ -136,8 +149,22 @@ public partial class PasswordRevealBox : UserControl
     public PasswordRevealBox()
     {
         InitializeComponent();
+        ApplyMaxLength();
         PasswordBox.Password = Password;
         UpdateVisibility();
+    }
+
+    private static void OnMaxLengthChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is PasswordRevealBox control)
+            control.ApplyMaxLength();
+    }
+
+    private void ApplyMaxLength()
+    {
+        var maxLength = Math.Max(0, MaxLength);
+        PasswordBox.MaxLength = maxLength;
+        TextBox.MaxLength = maxLength;
     }
 
     public void Clear()
