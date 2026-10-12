@@ -334,12 +334,14 @@ public partial class MainViewModel : ObservableObject
                 keyMaterial,
                 vault);
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             if (_vaultSession.IsCurrent(sessionGeneration, vault))
             {
                 DialogService.Error(
-                    "Failed to save expired trash cleanup. Please try again.",
+                    VaultSaveFailureMessage.For(
+                        exception,
+                        "Failed to save expired trash cleanup. Please try again."),
                     "Save failed");
             }
         }
@@ -1514,10 +1516,12 @@ public partial class MainViewModel : ObservableObject
 
             SnackbarService.Show("Encrypted backup exported.");
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             DialogService.Error(
-                "Backup export failed. Check the destination and try again.",
+                VaultSaveFailureMessage.For(
+                    exception,
+                    "Backup export failed. Check the destination and try again."),
                 "Export Backup");
 
             StatusMessage = "Backup failed.";
