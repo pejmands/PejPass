@@ -34,7 +34,7 @@ public sealed class EntryEditorViewModelLimitTests
         Assert.False(viewModel.IsValid());
         Assert.Contains(
             VaultLimits.MaxTagCharacters.ToString("N0"),
-            viewModel.TagsErrorMessage);
+            viewModel.TagsErrorMessage ?? string.Empty);
     }
 
     [Fact]
