@@ -18,13 +18,28 @@ internal static class Signer
 {
     private const string Usage = """
         Usage:
-          Sign:    dotnet run --project tools/PejPass.UpdateSigner -- <update.json> <private-key.pem> [--package <PejPass.zip>] [--public-key <base64>]
-          Verify:  dotnet run --project tools/PejPass.UpdateSigner -- <update.json> --verify-only [--package <PejPass.zip>] [--public-key <base64>]
+          Sign:    dotnet run --project tools/PejPass.UpdateSigner -- <update.json> <key.pem> [<more-keys.pem> ...] [--package <PejPass.zip>] [--client-key <base64>] [--public-key <base64>]
+          Verify:  dotnet run --project tools/PejPass.UpdateSigner -- <update.json> --verify-only [--package <PejPass.zip>] [--client-key <base64>] [--public-key <base64>]
 
         --package      compute SHA-256 from the release zip and check its layout and executable version.
-        --public-key   app-trusted key (Base64 SubjectPublicKeyInfo); defaults to the key embedded in the app source.
+        --public-key   trust only this key (Base64 SubjectPublicKeyInfo) instead of TrustedUpdateKeys.cs.
+        --client-key   the key that the OLDEST app versions in the field trust. The first private key must match
+                       it, because older apps only read the "signature" field. Always pass it while rotating keys.
         --verify-only  verify an existing signed manifest without writing it.
+
+        The first private key becomes "signature"; further keys become "additionalSignatures".
         """;
+
+    private const long MaxManifestBytes = 4L * 1024 * 1024;
+    private const int MaxManifestTextCharacters = 2_000_000;
+    private const int MaxReleases = 1_000;
+    private const int MaxAdditionalSignatures = 4;
+    private const int MaxNoteItems = 100;
+    private const int MaxNoteChars = 4_096;
+    private const long MaxPackageBytes = 512L * 1024 * 1024;
+    private const int MaxArchiveEntries = 4_096;
+    private const long MaxEntryBytes = 256L * 1024 * 1024;
+    private const long MaxUncompressedBytes = 1024L * 1024 * 1024;
 
     private const long MaxManifestBytes = 4L * 1024 * 1024;
     private const int MaxManifestTextCharacters = 2_000_000;
@@ -46,9 +61,10 @@ internal static class Signer
 
     private sealed record Options(
         string ManifestPath,
-        string? PrivateKeyPath,
+        IReadOnlyList<string> PrivateKeyPaths,
         string? PackagePath,
         string? PublicKey,
+        string? ClientKey,
         bool VerifyOnly)
     {
         public static Options Parse(string[] args)
@@ -56,6 +72,7 @@ internal static class Signer
             var positional = new List<string>();
             string? package = null;
             string? publicKey = null;
+            string? clientKey = null;
             var verifyOnly = false;
 
             for (var i = 0; i < args.Length; i++)
@@ -72,6 +89,11 @@ internal static class Signer
                             throw new SignerException("--public-key may be specified only once.");
                         publicKey = Next(args, ref i, "--public-key");
                         break;
+                    case "--client-key":
+                        if (clientKey is not null)
+                            throw new SignerException("--client-key may be specified only once.");
+                        clientKey = Next(args, ref i, "--client-key");
+                        break;
                     case "--verify-only":
                         if (verifyOnly)
                             throw new SignerException("--verify-only may be specified only once.");
@@ -85,14 +107,19 @@ internal static class Signer
                 }
             }
 
-            if (positional.Count != (verifyOnly ? 1 : 2))
+            var validCount = verifyOnly
+                ? positional.Count == 1
+                : positional.Count >= 2 && positional.Count <= 2 + MaxAdditionalSignatures;
+
+            if (!validCount)
                 throw new SignerException(Usage);
 
             return new Options(
                 positional[0],
-                verifyOnly ? null : positional[1],
+                [.. positional.Skip(1)],
                 package,
                 publicKey,
+                clientKey,
                 verifyOnly);
         }
 
@@ -173,75 +200,133 @@ internal static class Signer
         if (!IsSha256(fields.Sha256))
             throw new SignerException("sha256 must be exactly 64 hexadecimal characters.");
 
-        using var trusted = LoadTrustedKey(options.PublicKey, out var trustedSource);
-        Console.WriteLine($"App trusts key {Fingerprint(trusted)} ({trustedSource}).");
+        using var trusted = LoadTrustedKeys(options.PublicKey, out var trustedSource);
+        Console.WriteLine($"App trusts {trusted.Keys.Count} key(s) ({trustedSource}):");
+
+        foreach (var key in trusted.Keys)
+            Console.WriteLine($"  {Fingerprint(key)}");
+
+        using var clientKey = options.ClientKey is null
+            ? null
+            : ImportPublicKey(options.ClientKey, "--client-key");
+
+        if (!options.VerifyOnly && trusted.Keys.Count > 1 && clientKey is null)
+        {
+            warnings.Add(
+                "Several keys are trusted. Pass --client-key <oldest key> so the signer checks that " +
+                "apps already in the field can still verify this manifest.");
+        }
 
         foreach (var warning in warnings)
             Console.Error.WriteLine("WARNING: " + warning);
 
         if (options.VerifyOnly)
         {
-            VerifyManifestText(manifestText, trusted, "Manifest");
-            Console.WriteLine($"OK: the signature of version {fields.Version} verifies with the app's key.");
+            VerifyManifestText(manifestText, trusted, clientKey, "Manifest");
+            Console.WriteLine($"OK: the signature of version {fields.Version} verifies.");
             return 0;
         }
 
-        var privateKeyPath = Path.GetFullPath(options.PrivateKeyPath!);
-        if (!File.Exists(privateKeyPath))
-            throw new SignerException($"Private key not found: {privateKeyPath}");
+        var signingKeys = new List<ECDsa>();
 
-        using var signingKey = ECDsa.Create();
-        signingKey.ImportFromPem(File.ReadAllText(privateKeyPath));
-
-        if (!SameKey(signingKey, trusted))
-        {
-            throw new SignerException(
-                "The private key does NOT match the public key trusted by the app.\n" +
-                $"  private key  -> {Fingerprint(signingKey)}\n" +
-                $"  app trusts   -> {Fingerprint(trusted)}\n" +
-                "Every user would reject this update. Nothing was written.");
-        }
-
-        var payload = UpdateSigningPayload.Build(
-            fields.Version,
-            fields.Released,
-            fields.DownloadUrl,
-            fields.Sha256);
-
-        var signature = Convert.ToBase64String(signingKey.SignData(
-            payload,
-            HashAlgorithmName.SHA256,
-            DSASignatureFormat.Rfc3279DerSequence));
-
-        root["signature"] = signature;
-        var json = root.ToJsonString(JsonOptions) + Environment.NewLine;
-
-        if (Encoding.UTF8.GetByteCount(json) > MaxManifestBytes
-            || json.Length > MaxManifestTextCharacters)
-        {
-            throw new SignerException("The signed manifest would exceed the app's size limits.");
-        }
-
-        // Write beside the target, verify the actual bytes, then replace the manifest atomically.
-        var tempPath = manifestPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
-            File.WriteAllText(tempPath, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-            VerifyManifestText(File.ReadAllText(tempPath), trusted, "Written manifest");
-            File.Move(tempPath, manifestPath, overwrite: true);
+            foreach (var keyPath in options.PrivateKeyPaths)
+            {
+                var privateKeyPath = Path.GetFullPath(keyPath);
+
+                if (!File.Exists(privateKeyPath))
+                    throw new SignerException($"Private key not found: {privateKeyPath}");
+
+                var signingKey = ECDsa.Create();
+                signingKeys.Add(signingKey);
+                signingKey.ImportFromPem(File.ReadAllText(privateKeyPath));
+
+                if (trusted.Find(signingKey) is null)
+                {
+                    throw new SignerException(
+                        $"The private key '{Path.GetFileName(privateKeyPath)}' ({Fingerprint(signingKey)}) is NOT among the keys the app trusts.\n" +
+                        "Add its public key to TrustedUpdateKeys.cs and release that app version first. Nothing was written.");
+                }
+
+                if (signingKeys.Count(existing => SameKey(existing, signingKey)) > 1)
+                    throw new SignerException("The same private key was given twice.");
+            }
+
+            if (clientKey is not null && !SameKey(signingKeys[0], clientKey))
+            {
+                throw new SignerException(
+                    "The first private key does not match --client-key.\n" +
+                    $"  first key    -> {Fingerprint(signingKeys[0])}\n" +
+                    $"  client key   -> {Fingerprint(clientKey)}\n" +
+                    "Apps that only trust the client key read the \"signature\" field and would reject this update. Nothing was written.");
+            }
+
+            var payload = UpdateSigningPayload.Build(
+                fields.Version,
+                fields.Released,
+                fields.DownloadUrl,
+                fields.Sha256);
+
+            var signatures = signingKeys
+                .Select(key => Convert.ToBase64String(key.SignData(
+                    payload,
+                    HashAlgorithmName.SHA256,
+                    DSASignatureFormat.Rfc3279DerSequence)))
+                .ToList();
+
+            root["signature"] = signatures[0];
+
+            if (signatures.Count > 1)
+            {
+                root["additionalSignatures"] = new JsonArray(
+                    [.. signatures.Skip(1).Select(signature => (JsonNode?)JsonValue.Create(signature))]);
+            }
+            else
+            {
+                root.Remove("additionalSignatures");
+            }
+
+            var json = root.ToJsonString(JsonOptions) + Environment.NewLine;
+
+            if (Encoding.UTF8.GetByteCount(json) > MaxManifestBytes
+                || json.Length > MaxManifestTextCharacters)
+            {
+                throw new SignerException("The signed manifest would exceed the app's size limits.");
+            }
+
+            // Write beside the target, verify the actual bytes, then replace the manifest atomically.
+            var tempPath = manifestPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+
+            try
+            {
+                File.WriteAllText(tempPath, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                VerifyManifestText(File.ReadAllText(tempPath), trusted, clientKey, "Written manifest");
+                File.Move(tempPath, manifestPath, overwrite: true);
+            }
+            finally
+            {
+                TryDeleteFile(tempPath);
+            }
+
+            Console.WriteLine("Manifest signed and verified.");
+            Console.WriteLine($"  version     {fields.Version}");
+            Console.WriteLine($"  released    {fields.Released ?? "(none)"}");
+            Console.WriteLine($"  url         {fields.DownloadUrl}");
+            Console.WriteLine($"  sha256      {fields.Sha256.ToLowerInvariant()}");
+            Console.WriteLine($"  signature   key {Fingerprint(signingKeys[0])}");
+
+            foreach (var extra in signingKeys.Skip(1))
+                Console.WriteLine($"  additional  key {Fingerprint(extra)}");
+
+            Console.WriteLine("Publish the zip first, then update.json.");
+            return 0;
         }
         finally
         {
-            TryDeleteFile(tempPath);
+            foreach (var key in signingKeys)
+                key.Dispose();
         }
-
-        Console.WriteLine("Manifest signed and verified.");
-        Console.WriteLine($"  version   {fields.Version}");
-        Console.WriteLine($"  released  {fields.Released ?? "(none)"}");
-        Console.WriteLine($"  url       {fields.DownloadUrl}");
-        Console.WriteLine($"  sha256    {fields.Sha256.ToLowerInvariant()}");
-        Console.WriteLine("Publish the zip first, then update.json.");
-        return 0;
     }
 
     // Manifest validation
@@ -364,7 +449,7 @@ internal static class Signer
         throw new SignerException($"Manifest field '{name}' must be a string.");
     }
 
-    private static void VerifyManifestText(string text, ECDsa trusted, string label)
+    private static void VerifyManifestText(string text, KeySet trusted, ECDsa? clientKey, string label)
     {
         if (Encoding.UTF8.GetByteCount(text) > MaxManifestBytes || text.Length > MaxManifestTextCharacters)
             throw new SignerException($"{label}: manifest exceeds the app's size limits.");
@@ -376,14 +461,21 @@ internal static class Signer
         if (fields.Sha256 is null || !IsSha256(fields.Sha256))
             throw new SignerException($"{label}: sha256 is missing or invalid.");
 
-        byte[] signature;
-        try
+        var signatures = new List<byte[]> { DecodeSignature(RequiredString(root, "signature"), label) };
+
+        if (root.TryGetPropertyValue("additionalSignatures", out var extra))
         {
-            signature = Convert.FromBase64String(RequiredString(root, "signature"));
-        }
-        catch (FormatException)
-        {
-            throw new SignerException($"{label}: the signature is not valid Base64.");
+            if (extra is not JsonArray array || array.Count > MaxAdditionalSignatures)
+                throw new SignerException(
+                    $"{label}: 'additionalSignatures' must be an array of at most {MaxAdditionalSignatures} strings.");
+
+            foreach (var item in array)
+            {
+                if (item is not JsonValue value || !value.TryGetValue<string>(out var signatureText))
+                    throw new SignerException($"{label}: 'additionalSignatures' must contain only strings.");
+
+                signatures.Add(DecodeSignature(signatureText, label));
+            }
         }
 
         var payload = UpdateSigningPayload.Build(
@@ -392,8 +484,39 @@ internal static class Signer
             fields.DownloadUrl,
             fields.Sha256);
 
-        if (!trusted.VerifyData(payload, signature, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence))
-            throw new SignerException($"{label}: the signature does not verify with the app's trusted key.");
+        if (!signatures.Any(signature => trusted.Keys.Any(key => Verifies(key, payload, signature))))
+            throw new SignerException($"{label}: no signature verifies with a key the app trusts.");
+
+        if (clientKey is not null && !Verifies(clientKey, payload, signatures[0]))
+        {
+            throw new SignerException(
+                $"{label}: 'signature' does not verify with the client key ({Fingerprint(clientKey)}). " +
+                "Apps that only trust that key would reject this manifest.");
+        }
+    }
+
+    private static byte[] DecodeSignature(string text, string label)
+    {
+        try
+        {
+            return Convert.FromBase64String(text);
+        }
+        catch (FormatException)
+        {
+            throw new SignerException($"{label}: a signature is not valid Base64.");
+        }
+    }
+
+    private static bool Verifies(ECDsa key, byte[] payload, byte[] signature)
+    {
+        try
+        {
+            return key.VerifyData(payload, signature, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence);
+        }
+        catch (CryptographicException)
+        {
+            return false;
+        }
     }
 
     // Package inspection
@@ -502,71 +625,80 @@ internal static class Signer
 
     // Key verification
 
-    private static ECDsa LoadTrustedKey(string? overrideKey, out string source)
+    private sealed class KeySet(List<ECDsa> keys) : IDisposable
     {
-        string? base64;
+        public IReadOnlyList<ECDsa> Keys { get; } = keys;
+
+        public ECDsa? Find(ECDsa other) => Keys.FirstOrDefault(key => SameKey(key, other));
+
+        public void Dispose()
+        {
+            foreach (var key in Keys)
+                key.Dispose();
+        }
+    }
+
+    private static KeySet LoadTrustedKeys(string? overrideKey, out string source)
+    {
+        IReadOnlyList<string> encoded;
+
         if (overrideKey is not null)
         {
-            base64 = overrideKey;
+            encoded = [overrideKey];
             source = "--public-key";
         }
         else
         {
-            base64 = FindEmbeddedPublicKey(out var file);
-            source = file ?? string.Empty;
+            encoded = TrustedUpdateKeys.PublicKeysBase64;
+            source = "TrustedUpdateKeys.cs";
         }
 
-        if (string.IsNullOrWhiteSpace(base64))
+        var keys = new List<ECDsa>();
+
+        try
         {
-            throw new SignerException(
-                "Could not find the app's embedded public key (TrustedPublicKeyBase64). " +
-                "Run the tool from inside the repository, or pass --public-key <base64>.");
+            foreach (var text in encoded)
+                keys.Add(ImportPublicKey(text, "trusted key"));
         }
+        catch
+        {
+            foreach (var key in keys)
+                key.Dispose();
+
+            throw;
+        }
+
+        if (keys.Count == 0)
+            throw new SignerException("No trusted update keys are configured.");
+
+        return new KeySet(keys);
+    }
+
+    private static ECDsa ImportPublicKey(string base64, string label)
+    {
+        ECDsa? key = null;
 
         try
         {
             var bytes = Convert.FromBase64String(base64.Trim());
-            var key = ECDsa.Create();
+            key = ECDsa.Create();
             key.ImportSubjectPublicKeyInfo(bytes, out var read);
 
             if (read != bytes.Length)
-            {
-                key.Dispose();
-                throw new SignerException("The public key has trailing data.");
-            }
+                throw new SignerException($"{label}: the public key has trailing data.");
 
-            return key;
+            var imported = key;
+            key = null;
+            return imported;
         }
         catch (Exception ex) when (ex is FormatException or CryptographicException)
         {
-            throw new SignerException("The public key is not a valid Base64 SubjectPublicKeyInfo.");
+            throw new SignerException($"{label}: not a valid Base64 SubjectPublicKeyInfo.");
         }
-    }
-
-    private static string? FindEmbeddedPublicKey(out string? file)
-    {
-        foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
+        finally
         {
-            for (var dir = new DirectoryInfo(start); dir is not null; dir = dir.Parent)
-            {
-                var candidate = Path.Combine(
-                    dir.FullName, "src", "PejPass.Wpf", "Services", "UpdateSignatureService.cs");
-                if (!File.Exists(candidate))
-                    continue;
-
-                var match = Regex.Match(
-                    File.ReadAllText(candidate),
-                    "TrustedPublicKeyBase64\\s*=\\s*\\\"([A-Za-z0-9+/=]+)\\\"");
-                if (match.Success)
-                {
-                    file = Path.GetRelativePath(Directory.GetCurrentDirectory(), candidate);
-                    return match.Groups[1].Value;
-                }
-            }
+            key?.Dispose();
         }
-
-        file = null;
-        return null;
     }
 
     private static bool SameKey(ECDsa a, ECDsa b)
