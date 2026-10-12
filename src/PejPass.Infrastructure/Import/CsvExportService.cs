@@ -10,6 +10,17 @@ namespace PejPass.Infrastructure.Import;
 /// </summary>
 public sealed partial class CsvExportService : ICsvExportService
 {
+    private readonly PlaintextTempJournal _journal;
+
+    public CsvExportService() : this(PlaintextTempJournal.Default)
+    {
+    }
+
+    public CsvExportService(PlaintextTempJournal journal)
+    {
+        _journal = journal ?? throw new ArgumentNullException(nameof(journal));
+    }
+
     public async Task ExportToCsvAsync(
         string filePath,
         IEnumerable<VaultEntry> entries,
@@ -24,6 +35,9 @@ public sealed partial class CsvExportService : ICsvExportService
         var tempPath = Path.Combine(
             directory,
             $".{Path.GetFileName(destinationPath)}.{Guid.NewGuid():N}.tmp");
+
+        // Register before creating the file, so a killed process cannot leave it unknown.
+        _journal.Add(tempPath);
 
         try
         {
@@ -62,6 +76,10 @@ public sealed partial class CsvExportService : ICsvExportService
         {
             TryDeleteTemporaryFile(tempPath);
             throw;
+        }
+        finally
+        {
+            _journal.RemoveIfGone(tempPath);
         }
     }
 
