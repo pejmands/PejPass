@@ -41,16 +41,6 @@ internal static class Signer
     private const long MaxEntryBytes = 256L * 1024 * 1024;
     private const long MaxUncompressedBytes = 1024L * 1024 * 1024;
 
-    private const long MaxManifestBytes = 4L * 1024 * 1024;
-    private const int MaxManifestTextCharacters = 2_000_000;
-    private const int MaxReleases = 1_000;
-    private const int MaxNoteItems = 100;
-    private const int MaxNoteChars = 4_096;
-    private const long MaxPackageBytes = 512L * 1024 * 1024;
-    private const int MaxArchiveEntries = 4_096;
-    private const long MaxEntryBytes = 256L * 1024 * 1024;
-    private const long MaxUncompressedBytes = 1024L * 1024 * 1024;
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
