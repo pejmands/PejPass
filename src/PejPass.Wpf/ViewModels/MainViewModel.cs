@@ -6,6 +6,7 @@ using PejPass.Application.Interfaces;
 using PejPass.Application.Security;
 using PejPass.Application.Services;
 using PejPass.Domain.Entities;
+using PejPass.Domain.Exceptions;
 using PejPass.Domain.Settings;
 using PejPass.Infrastructure.Totp;
 using PejPass.Wpf.Dialogs;
@@ -1381,12 +1382,15 @@ public partial class MainViewModel : ObservableObject
                 $"Saved to:\n{_vaultSession.VaultPath}",
                 "Import complete");
         }
-        catch (Exception)
+        catch (Exception exception)
         {
-            DialogService.Error(
-                "Import failed. Check the file format and try again.",
-                "Import Error");
+            var message = exception is VaultLimitExceededException
+                ? VaultSaveFailureMessage.For(
+                    exception,
+                    "Import failed. Check the file format and try again.")
+                : "Import failed. Check the file format and try again.";
 
+            DialogService.Error(message, "Import Error");
             StatusMessage = "Import failed.";
         }
         finally
