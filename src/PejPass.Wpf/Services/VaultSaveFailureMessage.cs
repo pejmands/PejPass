@@ -1,4 +1,4 @@
-using System.IO;
+using PejPass.Domain.Exceptions;
 
 namespace PejPass.Wpf.Services;
 
@@ -9,11 +9,8 @@ internal static class VaultSaveFailureMessage
 
     public static string For(Exception exception, string fallbackMessage)
     {
-        if (exception is InvalidDataException &&
-            exception.Message.Contains("history items", StringComparison.OrdinalIgnoreCase))
-        {
+        if (exception is VaultLimitExceededException { Limit: VaultLimit.HistoryItems })
             return HistoryLimitMessage;
-        }
 
         return fallbackMessage;
     }
