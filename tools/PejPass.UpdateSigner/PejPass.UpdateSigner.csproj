@@ -9,9 +9,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Shared with the app so the signed payload cannot drift. -->
+    <!-- Shared with the app so the signed payload and trusted keys cannot drift. -->
     <Compile Include="..\..\src\PejPass.Application\Security\UpdateSigningPayload.cs"
              Link="UpdateSigningPayload.cs" />
+    <Compile Include="..\..\src\PejPass.Application\Security\TrustedUpdateKeys.cs"
+             Link="TrustedUpdateKeys.cs" />
   </ItemGroup>
 
 </Project>
