@@ -87,7 +87,7 @@ public static class QrTotpImport
             var secret = parameters.ToStorageString();
             var query = ParseQuery(uri.Query);
 
-            string? issuer = query.TryGetValue("issuer", out var iss) ? Uri.UnescapeDataString(iss) : null;
+            string? issuer = query.TryGetValue("issuer", out var iss) ? iss : null;
             string? account = null;
 
             // Path: /Issuer:account or /account
