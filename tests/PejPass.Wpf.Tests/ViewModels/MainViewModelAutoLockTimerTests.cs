@@ -50,10 +50,17 @@ public sealed class MainViewModelAutoLockTimerTests
 
             var timer = Assert.IsType<Timer>(timerField.GetValue(viewModel));
 
-            viewModel.StopBackgroundTimers();
+            try
+            {
+                viewModel.StopBackgroundTimers();
 
-            Assert.Null(timerField.GetValue(viewModel));
-            Assert.Throws<ObjectDisposedException>(() => timer.Start());
+                Assert.Null(timerField.GetValue(viewModel));
+                Assert.Throws<ObjectDisposedException>(() => timer.Start());
+            }
+            finally
+            {
+                viewModel.StopBackgroundTimers();
+            }
         }, TestContext.Current.CancellationToken);
     }
 
