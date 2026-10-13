@@ -317,6 +317,7 @@
 							ItemsSource="{Binding FilteredEntries}"
 							ScrollViewer.HorizontalScrollBarVisibility="Disabled"
 							ScrollViewer.VerticalScrollBarVisibility="Auto"
+							VirtualizingPanel.ScrollUnit="Pixel"
 							SelectedItem="{Binding SelectedEntry}"
 							SelectionMode="Extended">
 
