@@ -24,6 +24,21 @@ public sealed class FaviconServiceTests
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
 
     [Fact]
+    public void DiskCachePruning_RunsOnlyEveryConfiguredNumberOfDownloads()
+    {
+        var count = 0;
+
+        for (var i = 0; i < FaviconService.DiskCachePruneIntervalDownloads - 1; i++)
+            Assert.False(FaviconService.ShouldPruneDiskCacheAfterSuccessfulDownload(ref count));
+
+        Assert.Equal(FaviconService.DiskCachePruneIntervalDownloads - 1, count);
+        Assert.True(FaviconService.ShouldPruneDiskCacheAfterSuccessfulDownload(ref count));
+        Assert.Equal(0, count);
+        Assert.False(FaviconService.ShouldPruneDiskCacheAfterSuccessfulDownload(ref count));
+        Assert.Equal(1, count);
+    }
+
+    [Fact]
     public void DiskCache_PrunesOldestFilesWhenFileCountExceedsLimit()
     {
         var directory = CreateTempDirectory();

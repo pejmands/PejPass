@@ -4,6 +4,7 @@ public enum HealthIssueKind
 {
     DuplicatePassword,
     WeakPassword,
+    PasswordNeedsImprovement,
     UsernameEqualsPassword,
     MissingTotp,
     StalePassword

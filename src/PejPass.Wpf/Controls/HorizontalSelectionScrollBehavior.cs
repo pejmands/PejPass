@@ -10,6 +10,7 @@ public static class HorizontalSelectionScrollBehavior
 {
     private const double EdgeThreshold = 18;
     private const double ScrollStep = 24;
+    internal const int MaxAttachAttempts = 10;
 
     public static readonly DependencyProperty IsEnabledProperty =
         DependencyProperty.RegisterAttached(
@@ -64,16 +65,22 @@ public static class HorizontalSelectionScrollBehavior
             Detach(control);
     }
 
-    private static void Attach(Control control)
+    private static void Attach(Control control, int attempt = 0)
     {
+        if (!control.IsLoaded || !GetIsEnabled(control))
+            return;
+
         control.ApplyTemplate();
 
         var scrollViewer = FindScrollViewer(control);
         if (scrollViewer is null)
         {
+            if (!ShouldRetryAttach(attempt))
+                return;
+
             control.Dispatcher.BeginInvoke(
                 DispatcherPriority.Loaded,
-                () => Attach(control));
+                new Action(() => Attach(control, attempt + 1)));
             return;
         }
 
@@ -81,6 +88,9 @@ public static class HorizontalSelectionScrollBehavior
         control.PreviewMouseMove -= OnPreviewMouseMove;
         control.PreviewMouseMove += OnPreviewMouseMove;
     }
+
+    internal static bool ShouldRetryAttach(int attempt) =>
+        attempt + 1 < MaxAttachAttempts;
 
     private static void Detach(Control control)
     {
