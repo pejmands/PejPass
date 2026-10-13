@@ -121,7 +121,7 @@ public sealed class BrowserImportServiceTests
     {
         var oversizedNotes = new string('x', VaultLimits.MaxTextCharacters + 1);
         var csv =
-            "name,url,username,password,note,totp_secret,tags,custom_fields,pejpass_format\\n" +
+            "name,url,username,password,note,totp_secret,tags,custom_fields,pejpass_format\n" +
             $"Test,https://example.com,user,pass,\"{oversizedNotes}\",,\"[]\",\"[]\",1";
         var file = CreateTempCsv(csv);
 
