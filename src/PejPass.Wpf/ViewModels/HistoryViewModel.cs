@@ -139,7 +139,9 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             if (vault is null)
                 return;
 
-            var entriesById = vault.Entries.ToDictionary(entry => entry.Id);
+            var entriesById = new Dictionary<Guid, VaultEntry>();
+            foreach (var entry in vault.Entries)
+                entriesById.TryAdd(entry.Id, entry);
 
             var trashedEntryIds = vault.Trash
                 .Select(t => t.Entry.Id)
@@ -160,8 +162,8 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             var historyIndexesByEntry = historiesByEntry.ToDictionary(
                 group => group.Key,
                 group => group.Value
-                    .Select((history, index) => (HistoryId: history.Id, Index: index))
-                    .ToDictionary(position => position.HistoryId, position => position.Index));
+                    .Select((history, index) => (History: history, Index: index))
+                    .ToDictionary(position => position.History, position => position.Index));
 
             foreach (var history in visibleHistory
                          .OrderByDescending(h => h.ChangedAt))
@@ -169,7 +171,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
                 entriesById.TryGetValue(history.EntryId, out var entry);
 
                 var historyList = historiesByEntry[history.EntryId];
-                var index = historyIndexesByEntry[history.EntryId][history.Id];
+                var index = historyIndexesByEntry[history.EntryId][history];
                 var newerSnapshot = index > 0 ? historyList[index - 1] : null;
 
                 var changedFields = GetChangedFields(
