@@ -69,9 +69,11 @@ public sealed class VaultHealthViewModelRuleTests
             }
         };
 
-        Assert.Equal(
-            changedAt,
-            VaultHealthViewModel.GetPasswordLastChangedAt(entry, history));
+        var changedAtByEntry = VaultHealthViewModel.BuildPasswordLastChangedAtLookup(
+            [entry],
+            history);
+
+        Assert.Equal(changedAt, changedAtByEntry[entryId]);
     }
 
     [Fact]
@@ -96,8 +98,10 @@ public sealed class VaultHealthViewModelRuleTests
             }
         };
 
-        Assert.Equal(
-            createdAt,
-            VaultHealthViewModel.GetPasswordLastChangedAt(entry, history));
+        var changedAtByEntry = VaultHealthViewModel.BuildPasswordLastChangedAtLookup(
+            [entry],
+            history);
+
+        Assert.Equal(createdAt, changedAtByEntry[entry.Id]);
     }
 }
