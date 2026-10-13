@@ -128,15 +128,16 @@ public static partial class SingleInstance
         RestoreAndFocus(target);
     }
 
-    private static Window? FindActivationTarget(System.Windows.Application app)
+    internal static Window? FindActivationTarget(System.Windows.Application app)
     {
-        if (app.MainWindow is { IsLoaded: true } main)
+        // MainWindow may be a login window that was never shown (--startup); RestoreAndFocus shows it.
+        if (app.MainWindow is { } main && !SystemTrayService.IsHostWindow(main))
             return main;
 
         Window? fallback = null;
         foreach (Window w in app.Windows)
         {
-            if (!w.IsLoaded)
+            if (SystemTrayService.IsHostWindow(w) || !w.IsLoaded)
                 continue;
 
             if (w.IsVisible && w.WindowState != WindowState.Minimized)
