@@ -9,7 +9,7 @@ public static class MasterPasswordPolicy
 {
     public const int MinimumLength = 12;
     public const int MaximumLength = PasswordStrength.MaximumEvaluatedLength;
-    public const int MinimumStrengthScore = 3;
+    public const int MinimumStrengthScore = 4;
 
     public static PasswordValidationResult Validate(string? password)
     {
