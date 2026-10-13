@@ -126,6 +126,8 @@ public partial class ChangeMasterPasswordViewModel(
             return;
         }
 
+        var sessionGeneration = _vaultSession.Generation;
+
         IsBusy = true;
         try
         {
@@ -137,7 +139,13 @@ public partial class ChangeMasterPasswordViewModel(
                 vault,
                 currentKeyMaterial);
 
-            _vaultSession.TryUpdateKeyMaterial(newKeyMaterial);
+            if (!_vaultSession.IsCurrent(sessionGeneration, vault) ||
+                !_vaultSession.TryUpdateKeyMaterial(newKeyMaterial))
+            {
+                return;
+            }
+
+            _vaultSession.RefreshDiskStamp();
             cache.Clear();
 
             Success = true;
