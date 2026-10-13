@@ -343,7 +343,8 @@ public partial class App : System.Windows.Application
 
             foreach (var window in application.Windows
                          .OfType<Window>()
-                         .Where(window => !ReferenceEquals(window, loginWindow))
+                         .Where(window => !ReferenceEquals(window, loginWindow) &&
+                                          !SystemTrayService.IsHostWindow(window))
                          .ToArray())
             {
                 try
