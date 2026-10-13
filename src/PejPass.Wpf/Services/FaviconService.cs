@@ -865,19 +865,25 @@ public static class FaviconService
         return LetterCache.GetOrAdd(letter, static l => CreateLetterAvatarCore(l));
     }
 
+    internal static Color GetLetterAvatarColor(string letter)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(letter));
+        return Color.FromRgb(
+            (byte)(80 + (hash[0] & 0x7F)),
+            (byte)(80 + (hash[1] & 0x7F)),
+            (byte)(80 + (hash[2] & 0x7F)));
+    }
+
     private static RenderTargetBitmap CreateLetterAvatarCore(string letter)
     {
-        var hash = letter.GetHashCode();
-        var r = (byte)(80 + (hash & 0x7F));
-        var g = (byte)(80 + ((hash >> 8) & 0x7F));
-        var b = (byte)(80 + ((hash >> 16) & 0x7F));
+        var color = GetLetterAvatarColor(letter);
 
         const int size = 64;
         var dv = new DrawingVisual();
         using (var dc = dv.RenderOpen())
         {
             dc.DrawEllipse(
-                new SolidColorBrush(Color.FromRgb(r, g, b)),
+                new SolidColorBrush(color),
                 null,
                 new Point(size / 2.0, size / 2.0),
                 size / 2.0 - 1,
