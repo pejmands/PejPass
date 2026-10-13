@@ -28,6 +28,9 @@ public static partial class VaultFileAssociation
             using (var userChoice = Registry.CurrentUser.OpenSubKey(UserChoicePath))
                 userChoiceProgId = userChoice?.GetValue("ProgId") as string;
 
+            if (ShouldPreserveExistingAssociation(null, userChoiceProgId))
+                return;
+
             using var classes = Registry.CurrentUser.OpenSubKey(classesPath);
             var needsRegistration = false;
 
