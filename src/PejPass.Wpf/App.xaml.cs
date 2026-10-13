@@ -10,6 +10,7 @@ using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -28,6 +29,7 @@ public partial class App : System.Windows.Application
     private static WindowsSecurityService? _windowsSecurityService;
     private static SecurityLockCoordinator? _securityLock;
     private static PasswordGeneratorWindow? _passwordGeneratorWindow;
+    private static int _handlingUnhandledException;
 
     private const double WindowCornerRadius = 10;
 
@@ -44,6 +46,9 @@ public partial class App : System.Windows.Application
         }
 
         base.OnStartup(e);
+
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
+        TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
         ShutdownMode = ShutdownMode.OnMainWindowClose;
 
@@ -137,6 +142,168 @@ public partial class App : System.Windows.Application
 
         if (settings.AutoCheckForUpdates)
             _ = CheckForUpdatesInBackgroundAsync();
+    }
+
+    private void OnDispatcherUnhandledException(
+        object sender,
+        DispatcherUnhandledExceptionEventArgs e)
+    {
+        e.Handled = true;
+        HandleUnexpectedException(e.Exception);
+    }
+
+    private void OnUnobservedTaskException(
+        object? sender,
+        UnobservedTaskExceptionEventArgs e)
+    {
+        e.SetObserved();
+
+        var dispatcher = Dispatcher;
+        if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+        {
+            try
+            {
+                Services?.GetService<SessionPasswordCache>()?.Clear();
+            }
+            catch
+            {
+                // The dispatcher is unavailable; best-effort cache cleanup only.
+            }
+
+            return;
+        }
+
+        try
+        {
+            dispatcher.BeginInvoke(
+                DispatcherPriority.Send,
+                new Action(() => HandleUnexpectedException(e.Exception)));
+        }
+        catch
+        {
+            try
+            {
+                Services?.GetService<SessionPasswordCache>()?.Clear();
+            }
+            catch
+            {
+                // Keep the unobserved task marked as observed even if shutdown has started.
+            }
+        }
+    }
+
+    internal static void HandleUnexpectedException(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        if (Interlocked.CompareExchange(ref _handlingUnhandledException, 1, 0) != 0)
+            return;
+
+        try
+        {
+            // Avoid logging exception messages or stack traces that could contain sensitive values.
+            Trace.TraceError(
+                "An unexpected PejPass exception was intercepted ({0}).",
+                exception.GetType().FullName ?? exception.GetType().Name);
+
+            LockVaultForUnexpectedException();
+
+            try
+            {
+                MessageBox.Show(
+                    "PejPass encountered an unexpected error. Any open vault has been locked to protect your data. Reopen the vault to continue.",
+                    "PejPass",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            catch
+            {
+                // The UI may already be shutting down; do not throw from the exception handler.
+            }
+        }
+        finally
+        {
+            Volatile.Write(ref _handlingUnhandledException, 0);
+        }
+    }
+
+    private static void LockVaultForUnexpectedException()
+    {
+        var application = Current;
+        MainWindow? mainWindow = null;
+
+        try
+        {
+            Services?.GetService<SessionPasswordCache>()?.Clear();
+        }
+        catch
+        {
+            // Continue with the vault lock even if cache cleanup fails.
+        }
+
+        try
+        {
+            mainWindow = application?.Windows
+                .OfType<MainWindow>()
+                .FirstOrDefault(window => window.DataContext is MainViewModel);
+
+            if (mainWindow?.DataContext is MainViewModel viewModel)
+                viewModel.Lock(showLogin: true);
+        }
+        catch (Exception lockException)
+        {
+            Trace.TraceWarning(
+                "The main-window lock operation failed ({0}).",
+                lockException.GetType().FullName ?? lockException.GetType().Name);
+        }
+
+        try
+        {
+            Services?.GetService<VaultSession>()?.Clear();
+        }
+        catch (Exception clearException)
+        {
+            Trace.TraceWarning(
+                "The vault session could not be cleared cleanly ({0}).",
+                clearException.GetType().FullName ?? clearException.GetType().Name);
+        }
+
+        try
+        {
+            if (mainWindow is { IsVisible: true })
+                mainWindow.Hide();
+        }
+        catch
+        {
+            // Hiding the former vault window is best-effort cleanup.
+        }
+
+        try
+        {
+            if (application is null || Services is null)
+                return;
+
+            var loginWindow = application.Windows
+                .OfType<LoginWindow>()
+                .FirstOrDefault();
+
+            if (loginWindow is null)
+            {
+                loginWindow = Services.GetRequiredService<LoginWindow>();
+                PrepareCustomChrome(loginWindow);
+            }
+
+            application.MainWindow = loginWindow;
+
+            if (!loginWindow.IsVisible)
+                loginWindow.Show();
+
+            loginWindow.Activate();
+        }
+        catch
+        {
+            // Keep the exception handler itself from becoming another unhandled exception.
+        }
     }
 
     private static void OnTrayShowRequested(object? sender, EventArgs e)
@@ -557,6 +724,8 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        DispatcherUnhandledException -= OnDispatcherUnhandledException;
+        TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
         SingleInstance.Activated -= OnSecondInstanceActivated;
         try { Services.GetRequiredService<SessionPasswordCache>().Clear(); }
         catch { /* Best-effort cleanup on exit. */ }
