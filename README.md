@@ -26,6 +26,7 @@ Built with **C# / .NET 10**, **WPF**, **CommunityToolkit.Mvvm**, and modern auth
 - Requires a zxcvbn score of at least **3** ("Strong")
 - Rejects common and predictable patterns using zxcvbn's bundled dictionaries and pattern matching
 - Spaces are allowed, so strong multi-word passphrases can be used
+- The bundled word dictionaries are English-focused, so common non-English phrases may be overrated.
 
 ## Features
 
