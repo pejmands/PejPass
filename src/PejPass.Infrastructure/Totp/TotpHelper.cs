@@ -65,7 +65,8 @@ public static class TotpHelper
     public const int StepSeconds = 30;
     public const int DefaultDigits = 6;
 
-    private const int MaxInputLength = 2048;
+    /// <summary>Maximum length accepted for a TOTP secret or otpauth URI.</summary>
+    public const int MaxInputLength = 2048;
     private const int MinDigits = 6;
     private const int MaxDigits = 8;
     private const int MinPeriod = 1;
