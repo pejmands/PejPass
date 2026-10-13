@@ -13,7 +13,7 @@ namespace PejPass.Wpf.ViewModels;
 public partial class VaultHealthViewModel : ObservableObject
 {
     private readonly IReadOnlyList<VaultEntry> _entries;
-    private readonly IReadOnlyList<EntryHistoryItem> _history;
+    private readonly IReadOnlyDictionary<Guid, DateTimeOffset> _passwordChangedAtByEntry;
 
     [ObservableProperty]
     public partial int SelectedFilterIndex { get; set; }
@@ -91,7 +91,31 @@ public partial class VaultHealthViewModel : ObservableObject
         IEnumerable<EntryHistoryItem>? history = null)
     {
         _entries = [.. entries];
-        _history = history?.ToList() ?? [];
+
+        var entriesById = _entries.ToDictionary(entry => entry.Id);
+        var latestPasswordChanges = new Dictionary<Guid, DateTimeOffset>();
+
+        foreach (var item in history ?? [])
+        {
+            if (!entriesById.TryGetValue(item.EntryId, out var entry) ||
+                string.Equals(item.Password, entry.Password, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (!latestPasswordChanges.TryGetValue(item.EntryId, out var previousDate) ||
+                item.ChangedAt > previousDate)
+            {
+                latestPasswordChanges[item.EntryId] = item.ChangedAt;
+            }
+        }
+
+        _passwordChangedAtByEntry = _entries.ToDictionary(
+            entry => entry.Id,
+            entry => latestPasswordChanges.TryGetValue(entry.Id, out var changedAt)
+                ? changedAt
+                : entry.CreatedAt);
+
         IsScanning = true;
         IsReady = false;
         ScanProgress = 0;
@@ -225,7 +249,7 @@ public partial class VaultHealthViewModel : ObservableObject
                         filter);
                 }
 
-                var passwordChangedAt = GetPasswordLastChangedAt(e, _history);
+                var passwordChangedAt = _passwordChangedAtByEntry[e.Id];
                 if (utc - passwordChangedAt >= VaultHealthRules.StaleThreshold)
                 {
                     var days = (int)(utc - passwordChangedAt).TotalDays;
