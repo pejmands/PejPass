@@ -1483,7 +1483,7 @@ public partial class MainViewModel : ObservableObject
             EnsureVaultWritableAsync,
             () => SaveVaultAsync(vault, sessionGeneration),
             () => _vaultSession.IsCurrent(sessionGeneration, vault),
-            candidate => Entries.Any(e =>
+            candidate => vault.Entries.Any(e =>
                 string.Equals(
                     EntryContentFingerprint(e),
                     EntryContentFingerprint(candidate),
