@@ -11,6 +11,7 @@ public partial class MainViewModel
     {
         try { _autoLockTimer?.Stop(); } catch { /* ignore */ }
         try { _totpTimer?.Stop(); } catch { /* ignore */ }
+        try { _searchDebouncer.Dispose(); } catch { /* ignore */ }
         try { _passwordRevealTimer.Dispose(); } catch { /* ignore */ }
         try
         {
