@@ -310,6 +310,20 @@ public partial class MainViewModel : ObservableObject
         foreach (var e in vault.Entries)
             Entries.Add(e);
 
+        var hasExpiredTrash = vault.Trash.Any(item =>
+            item.DeletedAt < DateTimeOffset.UtcNow - Vault.TrashRetention);
+
+        if (hasExpiredTrash &&
+            !VaultFileConflictGuard.ConfirmOverwriteIfChanged(
+                _vaultSession,
+                sessionGeneration,
+                vault,
+                vaultPath ?? string.Empty))
+        {
+            StatusMessage = "Cleanup skipped because the vault changed on disk. Reopen the vault to load the latest version.";
+            return;
+        }
+
         var purged = vault.PurgeExpiredTrash();
 
         RebuildTagFilters();
@@ -338,6 +352,9 @@ public partial class MainViewModel : ObservableObject
                 vaultPath,
                 keyMaterial,
                 vault);
+
+            if (_vaultSession.IsCurrent(sessionGeneration, vault))
+                _vaultSession.TryRefreshDiskStamp(sessionGeneration, vaultPath);
         }
         catch (Exception exception)
         {
@@ -1713,6 +1730,15 @@ public partial class MainViewModel : ObservableObject
                 !_vaultSession.IsCurrent(sessionGeneration, vault))
                 return false;
 
+            if (!VaultFileConflictGuard.ConfirmOverwriteIfChanged(
+                    _vaultSession,
+                    sessionGeneration,
+                    vault,
+                    vaultPath))
+            {
+                return false;
+            }
+
             keyMaterial = _vaultSession.CopyKeyMaterial();
 
             await _vaultService.SaveVaultAsync(
@@ -1723,6 +1749,7 @@ public partial class MainViewModel : ObservableObject
             if (!_vaultSession.IsCurrent(sessionGeneration, vault))
                 return false;
 
+            _vaultSession.TryRefreshDiskStamp(sessionGeneration, vaultPath);
             return true;
         }
         catch (Exception exception)
