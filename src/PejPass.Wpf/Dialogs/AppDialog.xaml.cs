@@ -46,7 +46,9 @@ public partial class AppDialog : Window
             PrimaryButton.Style = (Style)FindResource("DestructiveButton");
             PrimaryButton.IsDefault = false;
 
-            if (SecondaryButton.Visibility == Visibility.Visible)
+            if (TertiaryButton.Visibility == Visibility.Visible)
+                TertiaryButton.IsDefault = true;
+            else if (SecondaryButton.Visibility == Visibility.Visible)
                 SecondaryButton.IsDefault = true;
         }
     }
