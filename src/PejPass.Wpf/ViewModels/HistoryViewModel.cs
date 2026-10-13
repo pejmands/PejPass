@@ -620,7 +620,8 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             "Delete this history snapshot?",
             "Delete history",
             yesText: "Delete",
-            noText: "Cancel");
+            noText: "Cancel",
+            isDestructive: true);
 
         if (!confirmed)
             return;
@@ -693,7 +694,8 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
                 $"Delete {count} history snapshot(s) older than {ageDescription}?\n\nThis cannot be undone.",
                 "Delete old history",
                 yesText: "Delete",
-                noText: "Cancel"))
+                noText: "Cancel",
+                isDestructive: true))
         {
             return;
         }
@@ -745,7 +747,8 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             "Delete all history snapshots?\n\nThis action cannot be undone.",
             "Delete all history",
             yesText: "Delete All",
-            noText: "Cancel");
+            noText: "Cancel",
+            isDestructive: true);
 
         if (!confirmed)
             return;
