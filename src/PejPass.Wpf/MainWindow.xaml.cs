@@ -725,6 +725,15 @@ public partial class MainWindow : Window
         var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
 
+        if (vm.IsBusy)
+        {
+            if (IsBusyLockShortcut(e.Key, Keyboard.Modifiers))
+                vm.LockCommand.Execute(null);
+
+            e.Handled = true;
+            return;
+        }
+
         if (IsTypingInInput())
         {
             if (ctrl && e.Key == Key.L)
@@ -928,6 +937,9 @@ public partial class MainWindow : Window
         SearchBox.FocusInput();
         SearchBox.SelectAll();
     }
+
+    internal static bool IsBusyLockShortcut(Key key, ModifierKeys modifiers) =>
+        key == Key.L && modifiers.HasFlag(ModifierKeys.Control);
 
     private static bool IsTypingInInput()
     {
