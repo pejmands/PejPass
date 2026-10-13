@@ -325,6 +325,7 @@ public partial class App : System.Windows.Application
 
             var loginWindow = application.Windows
                 .OfType<LoginWindow>()
+                .OrderByDescending(window => window.IsVisible)
                 .FirstOrDefault();
 
             if (loginWindow is null)
