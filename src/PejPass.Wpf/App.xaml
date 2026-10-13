@@ -549,6 +549,7 @@
 								CornerRadius="6">
 								<ScrollViewer
 									x:Name="PART_ContentHost"
+									CanContentScroll="False"
 									VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
 									HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
 									VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
@@ -590,6 +591,7 @@
 								CornerRadius="6">
 								<ScrollViewer
 									x:Name="PART_ContentHost"
+									CanContentScroll="False"
 									VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
 									HorizontalScrollBarVisibility="Hidden" />
 							</Border>
