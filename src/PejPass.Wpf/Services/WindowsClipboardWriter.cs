@@ -164,7 +164,7 @@ internal static class WindowsClipboardWriter
 
     private static IntPtr GetOwnerWindow()
     {
-        var application = Application.Current;
+        var application = System.Windows.Application.Current;
         if (application is not null)
         {
             var windows = application.Windows
