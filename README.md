@@ -149,7 +149,11 @@ src/
 tests/
  ├── PejPass.Domain.Tests
  ├── PejPass.Infrastructure.Tests
- └── PejPass.Wpf.Tests
+ ├── PejPass.Wpf.Tests
+ └── PejPass.UpdateSigner.Tests
+
+tools/
+ └── PejPass.UpdateSigner
 ```
 
 ## Requirements
