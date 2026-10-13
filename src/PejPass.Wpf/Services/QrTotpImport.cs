@@ -22,14 +22,14 @@ public static class QrTotpImport
         result = null;
         error = null;
 
-        if (IsImageTooLarge(image.PixelWidth, image.PixelHeight))
-        {
-            error = $"Image is too large. Use an image no larger than {MaxImagePixels / (1024 * 1024)} megapixels.";
-            return false;
-        }
-
         try
         {
+            if (IsImageTooLarge(image.PixelWidth, image.PixelHeight))
+            {
+                error = $"Image is too large. Use an image no larger than {MaxImagePixels / (1024 * 1024)} megapixels.";
+                return false;
+            }
+
             var text = DecodeQrText(image);
             if (string.IsNullOrWhiteSpace(text))
             {
