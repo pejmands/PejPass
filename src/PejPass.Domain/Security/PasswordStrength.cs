@@ -26,7 +26,23 @@ public static class PasswordStrength
             ? password[..MaximumEvaluatedLength]
             : password;
 
-        return Core.EvaluatePassword(input).Score;
+        var score = Core.EvaluatePassword(input).Score;
+
+        // Score whitespace-stripped variants when they do not look like intentional multi-word passphrases.
+        // This prevents inserting spaces or tabs into a predictable password from artificially raising its score.
+        if (input.Any(char.IsWhiteSpace))
+        {
+            var words = input.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            var meaningfulWordCount = words.Count(word => word.Count(char.IsLetter) >= 3);
+
+            if (meaningfulWordCount < 3)
+            {
+                var compactInput = string.Concat(input.Where(character => !char.IsWhiteSpace(character)));
+                score = Math.Min(score, Core.EvaluatePassword(compactInput).Score);
+            }
+        }
+
+        return score;
     }
 
     public static PasswordStrengthLevel Evaluate(string? password)
