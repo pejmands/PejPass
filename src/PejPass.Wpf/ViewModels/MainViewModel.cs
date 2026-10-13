@@ -161,7 +161,7 @@ public partial class MainViewModel : ObservableObject
         _sessionPasswordCache = sessionPasswordCache;
         _searchDebouncer = new Debouncer(
             TimeSpan.FromMilliseconds(150),
-            ApplyFilter);
+            () => ApplyFilter());
         _lastAutoLockActivityUtc = DateTime.UtcNow;
         InputManager.Current.PreProcessInput += OnPreProcessInput;
 
