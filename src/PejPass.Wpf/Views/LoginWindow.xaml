@@ -13,14 +13,69 @@
 	SizeToContent="Height"
 	WindowStartupLocation="CenterScreen">
 
-	<Grid>
-		<DockPanel>
+	<DockPanel>
 		<controls:AppTitleBar
 			x:Name="TitleBar"
 			DockPanel.Dock="Top"
 			ShowLoginActions="True"
 			ShowMaximize="false"
 			ShowMinimize="true" />
+
+		<Border
+			x:Name="SnackbarBorder"
+			DockPanel.Dock="Bottom"
+			Width="360"
+			MinHeight="54"
+			MaxHeight="100"
+			Margin="0,0,20,20"
+			HorizontalAlignment="Right"
+			VerticalAlignment="Bottom"
+			Panel.ZIndex="1000"
+			Background="{DynamicResource SurfaceBrush}"
+			BorderBrush="{DynamicResource SuccessBrush}"
+			BorderThickness="1"
+			CornerRadius="8"
+			IsHitTestVisible="False"
+			Visibility="Collapsed">
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="4" />
+					<ColumnDefinition Width="42" />
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
+				<Border
+					x:Name="SnackbarAccent"
+					Grid.Column="0"
+					Background="{DynamicResource SuccessBrush}"
+					CornerRadius="8,0,0,8" />
+				<Border
+					Grid.Column="1"
+					Width="30"
+					Height="30"
+					Margin="12,0,0,0"
+					HorizontalAlignment="Left"
+					VerticalAlignment="Center"
+					Background="{DynamicResource SurfaceAltBrush}"
+					CornerRadius="15">
+					<TextBlock
+						x:Name="SnackbarIcon"
+						HorizontalAlignment="Center"
+						VerticalAlignment="Center"
+						FontFamily="Segoe MDL2 Assets"
+						FontSize="{DynamicResource AppFontSize13}"
+						Foreground="{DynamicResource SuccessBrush}"
+						Text="&#xE73E;" />
+				</Border>
+				<TextBlock
+					x:Name="SnackbarText"
+					Grid.Column="2"
+					Margin="4,11,14,11"
+					VerticalAlignment="Center"
+					FontSize="{DynamicResource AppFontSize13}"
+					Foreground="{DynamicResource TextBrush}"
+					TextWrapping="Wrap" />
+			</Grid>
+		</Border>
 
 		<ScrollViewer
 			Margin="20"
@@ -219,62 +274,5 @@
 
 			</StackPanel>
 		</ScrollViewer>
-
-
-		</DockPanel>
-		<Border
-			x:Name="SnackbarBorder"
-			Width="360"
-			MinHeight="54"
-			MaxHeight="100"
-			Margin="0,0,20,20"
-			HorizontalAlignment="Right"
-			VerticalAlignment="Bottom"
-			Panel.ZIndex="1000"
-			Background="{DynamicResource SurfaceBrush}"
-			BorderBrush="{DynamicResource SuccessBrush}"
-			BorderThickness="1"
-			CornerRadius="8"
-			IsHitTestVisible="False"
-			Visibility="Collapsed">
-			<Grid>
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="4" />
-					<ColumnDefinition Width="42" />
-					<ColumnDefinition Width="*" />
-				</Grid.ColumnDefinitions>
-				<Border
-					x:Name="SnackbarAccent"
-					Grid.Column="0"
-					Background="{DynamicResource SuccessBrush}"
-					CornerRadius="8,0,0,8" />
-				<Border
-					Grid.Column="1"
-					Width="30"
-					Height="30"
-					Margin="12,0,0,0"
-					HorizontalAlignment="Left"
-					VerticalAlignment="Center"
-					Background="{DynamicResource SurfaceAltBrush}"
-					CornerRadius="15">
-					<TextBlock
-						x:Name="SnackbarIcon"
-						HorizontalAlignment="Center"
-						VerticalAlignment="Center"
-						FontFamily="Segoe MDL2 Assets"
-						FontSize="{DynamicResource AppFontSize13}"
-						Foreground="{DynamicResource SuccessBrush}"
-						Text="&#xE73E;" />
-				</Border>
-				<TextBlock
-					x:Name="SnackbarText"
-					Grid.Column="2"
-					Margin="4,11,14,11"
-					VerticalAlignment="Center"
-					FontSize="{DynamicResource AppFontSize13}"
-					Foreground="{DynamicResource TextBrush}"
-					TextWrapping="Wrap" />
-			</Grid>
-		</Border>
-	</Grid>
+	</DockPanel>
 </Window>
