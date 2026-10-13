@@ -11,6 +11,7 @@ public static partial class VaultFileAssociation
 {
     private const string ProgId = "PejPass.Vault";
     private const string Extension = ".pejpass";
+    private const string UserChoicePath = @"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pejpass\UserChoice";
 
     public static void EnsureRegistered()
     {
@@ -23,6 +24,9 @@ public static partial class VaultFileAssociation
             var command = $"\"{exe}\" \"%1\"";
             var icon = $"\"{exe}\",0";
             var classesPath = @"Software\Classes";
+            string? userChoiceProgId;
+            using (var userChoice = Registry.CurrentUser.OpenSubKey(UserChoicePath))
+                userChoiceProgId = userChoice?.GetValue("ProgId") as string;
 
             using var classes = Registry.CurrentUser.OpenSubKey(classesPath);
             var needsRegistration = false;
@@ -35,6 +39,9 @@ public static partial class VaultFileAssociation
             {
                 using var ext = classes.OpenSubKey(Extension);
                 var registeredProgId = ext?.GetValue(null) as string;
+
+                if (ShouldPreserveExistingAssociation(registeredProgId, userChoiceProgId))
+                    return;
 
                 using var prog = classes.OpenSubKey(ProgId);
                 var registeredIcon = prog?.OpenSubKey("DefaultIcon")?.GetValue(null) as string;
@@ -86,6 +93,25 @@ public static partial class VaultFileAssociation
         {
             // File association is best-effort; app must still run without it
         }
+    }
+
+    internal static bool ShouldPreserveExistingAssociation(
+        string? registeredProgId,
+        string? userChoiceProgId)
+    {
+        if (!string.IsNullOrWhiteSpace(userChoiceProgId))
+        {
+            return !string.Equals(
+                userChoiceProgId,
+                ProgId,
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        return !string.IsNullOrWhiteSpace(registeredProgId) &&
+               !string.Equals(
+                   registeredProgId,
+                   ProgId,
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     [LibraryImport("shell32.dll")]
