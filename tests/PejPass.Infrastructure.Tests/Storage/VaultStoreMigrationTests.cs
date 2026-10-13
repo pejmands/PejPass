@@ -12,6 +12,7 @@ public sealed class VaultStoreMigrationTests
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        var backupPath = $"{path}.v1.bak";
 
         try
         {
@@ -19,12 +20,16 @@ public sealed class VaultStoreMigrationTests
             var vault = new Vault { Name = "Legacy V1" };
 
             await CreateLegacyV1VaultAsync(path, "password", vault, cancellationToken);
+            var originalData = await File.ReadAllBytesAsync(path, cancellationToken);
 
             using var session = await store.OpenSessionAsync(path, "password", cancellationToken);
             Assert.Equal("Legacy V1", session.Vault.Name);
 
             var data = await File.ReadAllBytesAsync(path, cancellationToken);
             Assert.Equal(3, data[4]);
+            var backupData = await File.ReadAllBytesAsync(backupPath, cancellationToken);
+            Assert.Equal(originalData, backupData);
+            Assert.Equal(1, backupData[4]);
 
             var reopened = await store.OpenWithKeyAsync(path, session.KeyMaterial, cancellationToken);
             Assert.Equal("Legacy V1", reopened.Name);
@@ -33,6 +38,8 @@ public sealed class VaultStoreMigrationTests
         {
             if (File.Exists(path))
                 File.Delete(path);
+            if (File.Exists(backupPath))
+                File.Delete(backupPath);
         }
     }
 
@@ -41,6 +48,7 @@ public sealed class VaultStoreMigrationTests
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        var backupPath = $"{path}.v2.bak";
 
         try
         {
@@ -57,6 +65,9 @@ public sealed class VaultStoreMigrationTests
 
             var migratedData = await File.ReadAllBytesAsync(path, cancellationToken);
             Assert.Equal(3, migratedData[4]);
+            var backupData = await File.ReadAllBytesAsync(backupPath, cancellationToken);
+            Assert.Equal(originalData, backupData);
+            Assert.Equal(2, backupData[4]);
 
             var reopened = await store.OpenWithKeyAsync(path, session.KeyMaterial, cancellationToken);
             Assert.Equal("Legacy V2", reopened.Name);
@@ -65,6 +76,8 @@ public sealed class VaultStoreMigrationTests
         {
             if (File.Exists(path))
                 File.Delete(path);
+            if (File.Exists(backupPath))
+                File.Delete(backupPath);
         }
     }
 
@@ -73,6 +86,7 @@ public sealed class VaultStoreMigrationTests
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        var backupPath = $"{path}.v1.bak";
 
         try
         {
@@ -85,19 +99,58 @@ public sealed class VaultStoreMigrationTests
             Assert.Equal("Legacy V1", session.Vault.Name);
             var data = await File.ReadAllBytesAsync(path, cancellationToken);
             Assert.Equal(1, data[4]);
+            Assert.Equal(data, await File.ReadAllBytesAsync(backupPath, cancellationToken));
         }
         finally
         {
             if (File.Exists(path))
                 File.Delete(path);
+            if (File.Exists(backupPath))
+                File.Delete(backupPath);
         }
     }
 
     [Fact]
-    public async Task OpenAsync_WhenLegacyMigrationIsDisabled_LeavesBackupFileUnchanged()
+    public async Task OpenSessionAsync_WhenExistingBackupDiffers_DoesNotOverwriteBackupOrMigrate()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        var backupPath = $"{path}.v2.bak";
+        byte[] existingBackup = [9, 8, 7, 6];
+
+        try
+        {
+            var store = new VaultStore(new CryptoService(), new FileMover());
+            await CreateLegacyV2VaultAsync(
+                path,
+                "password",
+                new Vault { Name = "Legacy V2" },
+                cancellationToken);
+
+            await File.WriteAllBytesAsync(backupPath, existingBackup, cancellationToken);
+
+            using var session = await store.OpenSessionAsync(path, "password", cancellationToken);
+
+            Assert.Equal("Legacy V2", session.Vault.Name);
+            var vaultData = await File.ReadAllBytesAsync(path, cancellationToken);
+            Assert.Equal(2, vaultData[4]);
+            Assert.Equal(existingBackup, await File.ReadAllBytesAsync(backupPath, cancellationToken));
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+            if (File.Exists(backupPath))
+                File.Delete(backupPath);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenLegacyMigrationIsDisabled_LeavesLegacyVaultUnchangedAndDoesNotCreateBackup()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        var backupPath = $"{path}.v2.bak";
 
         try
         {
@@ -119,11 +172,14 @@ public sealed class VaultStoreMigrationTests
             Assert.Equal("Legacy backup", opened.Name);
             Assert.Equal(2, originalData[4]);
             Assert.Equal(originalData, await File.ReadAllBytesAsync(path, cancellationToken));
+            Assert.False(File.Exists(backupPath));
         }
         finally
         {
             if (File.Exists(path))
                 File.Delete(path);
+            if (File.Exists(backupPath))
+                File.Delete(backupPath);
         }
     }
 
@@ -160,7 +216,10 @@ public sealed class VaultStoreMigrationTests
     {
         public void Move(string sourcePath, string destinationPath, bool overwrite)
         {
-            throw new IOException("Simulated migration save failure.");
+            if (overwrite)
+                throw new IOException("Simulated migration save failure.");
+
+            new FileMover().Move(sourcePath, destinationPath, overwrite: false);
         }
     }
 
