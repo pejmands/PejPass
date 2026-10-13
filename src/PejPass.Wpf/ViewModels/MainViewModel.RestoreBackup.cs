@@ -103,7 +103,8 @@ public partial class MainViewModel
             "Restore mode",
             primaryText: "Replace",
             secondaryText: "Merge",
-            tertiaryText: "Cancel");
+            tertiaryText: "Cancel",
+            isDestructive: true);
 
         if (!_vaultSession.IsCurrent(operationGeneration, currentVault))
             return;
