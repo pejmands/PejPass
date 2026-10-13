@@ -202,11 +202,25 @@ public partial class App : System.Windows.Application
         try
         {
             // Avoid logging exception messages or stack traces that could contain sensitive values.
-            Trace.TraceError(
-                "An unexpected PejPass exception was intercepted ({0}).",
-                exception.GetType().FullName ?? exception.GetType().Name);
+            try
+            {
+                Trace.TraceError(
+                    "An unexpected PejPass exception was intercepted ({0}).",
+                    exception.GetType().FullName ?? exception.GetType().Name);
+            }
+            catch
+            {
+                // Diagnostics must never interfere with safe exception handling.
+            }
 
-            LockVaultForUnexpectedException();
+            try
+            {
+                LockVaultForUnexpectedException();
+            }
+            catch
+            {
+                // Continue to the generic error message even if emergency locking fails.
+            }
 
             try
             {
@@ -250,22 +264,28 @@ public partial class App : System.Windows.Application
             if (mainWindow?.DataContext is MainViewModel viewModel)
                 viewModel.Lock(showLogin: true);
         }
-        catch (Exception lockException)
+        catch
         {
-            Trace.TraceWarning(
-                "The main-window lock operation failed ({0}).",
-                lockException.GetType().FullName ?? lockException.GetType().Name);
+            // Continue with direct UI cleanup if the normal lock path fails.
+        }
+
+        try
+        {
+            if (mainWindow?.DataContext is MainViewModel viewModel)
+                ClearSensitiveUiBestEffort(viewModel);
+        }
+        catch
+        {
+            // Continue with the session clear if view-model cleanup fails.
         }
 
         try
         {
             Services?.GetService<VaultSession>()?.Clear();
         }
-        catch (Exception clearException)
+        catch
         {
-            Trace.TraceWarning(
-                "The vault session could not be cleared cleanly ({0}).",
-                clearException.GetType().FullName ?? clearException.GetType().Name);
+            // The login window must still be shown even if session cleanup fails.
         }
 
         try
@@ -304,6 +324,35 @@ public partial class App : System.Windows.Application
         {
             // Keep the exception handler itself from becoming another unhandled exception.
         }
+    }
+
+    private static void ClearSensitiveUiBestEffort(MainViewModel viewModel)
+    {
+        try { viewModel.StopBackgroundTimers(); } catch { }
+
+        foreach (var item in viewModel.DisplayCustomFields.ToArray())
+        {
+            try { item.Dispose(); } catch { }
+        }
+
+        try { viewModel.DisplayCustomFields.Clear(); } catch { }
+        try { viewModel.SelectedEntry = null; } catch { }
+        try { viewModel.FilteredEntries.Clear(); } catch { }
+        try { viewModel.Entries.Clear(); } catch { }
+        try { viewModel.SearchText = string.Empty; } catch { }
+        try { viewModel.VaultName = string.Empty; } catch { }
+        try { viewModel.DisplayPassword = string.Empty; } catch { }
+        try { viewModel.TotpCode = string.Empty; } catch { }
+        try { viewModel.TotpCodeFormatted = string.Empty; } catch { }
+        try { viewModel.TotpRemainingSeconds = 0; } catch { }
+        try { viewModel.TotpProgress = 0; } catch { }
+        try { viewModel.HasSelection = false; } catch { }
+        try { viewModel.HasUrl = false; } catch { }
+        try { viewModel.HasTotp = false; } catch { }
+        try { viewModel.HasNotes = false; } catch { }
+        try { viewModel.HasCustomFields = false; } catch { }
+        try { viewModel.HasTags = false; } catch { }
+        try { viewModel.IsFavoriteSelected = false; } catch { }
     }
 
     private static void OnTrayShowRequested(object? sender, EventArgs e)
