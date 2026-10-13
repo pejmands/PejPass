@@ -30,6 +30,7 @@ public partial class App : System.Windows.Application
     private static SecurityLockCoordinator? _securityLock;
     private static PasswordGeneratorWindow? _passwordGeneratorWindow;
     private static int _handlingUnhandledException;
+    private static int _unobservedTaskExceptionPending;
 
     private const double WindowCornerRadius = 10;
 
@@ -161,36 +162,52 @@ public partial class App : System.Windows.Application
     {
         e.SetObserved();
 
-        var dispatcher = Dispatcher;
-        if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
-        {
-            try
-            {
-                Services?.GetService<SessionPasswordCache>()?.Clear();
-            }
-            catch
-            {
-                // The dispatcher is unavailable; best-effort cache cleanup only.
-            }
-
+        if (Interlocked.CompareExchange(ref _unobservedTaskExceptionPending, 1, 0) != 0)
             return;
-        }
 
         try
         {
+            var dispatcher = Dispatcher;
+            if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+            {
+                try
+                {
+                    Services?.GetService<SessionPasswordCache>()?.Clear();
+                }
+                catch
+                {
+                    // The dispatcher is unavailable; best-effort cache cleanup only.
+                }
+
+                Volatile.Write(ref _unobservedTaskExceptionPending, 0);
+                return;
+            }
+
             dispatcher.BeginInvoke(
                 DispatcherPriority.Send,
-                new Action(() => HandleUnexpectedException(e.Exception)));
+                new Action(() =>
+                {
+                    try
+                    {
+                        HandleUnexpectedException(e.Exception);
+                    }
+                    finally
+                    {
+                        Volatile.Write(ref _unobservedTaskExceptionPending, 0);
+                    }
+                }));
         }
         catch
         {
+            Volatile.Write(ref _unobservedTaskExceptionPending, 0);
+
             try
             {
                 Services?.GetService<SessionPasswordCache>()?.Clear();
             }
             catch
             {
-                // Keep the unobserved task marked as observed even if shutdown has started.
+                // Keep the task marked as observed even if the dispatcher is unavailable.
             }
         }
     }
