@@ -566,6 +566,22 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             return;
         }
 
+        if (!VaultFileConflictGuard.ConfirmOverwriteIfChanged(
+                _vaultSession,
+                sessionGeneration,
+                vault,
+                path))
+        {
+            if (_vaultSession.IsCurrent(sessionGeneration, vault))
+            {
+                vault.RestoreSnapshot(snapshot);
+                Load();
+                VaultRollbackCompleted?.Invoke(this, EventArgs.Empty);
+            }
+
+            return;
+        }
+
         try
         {
             IsBusy = true;
@@ -603,6 +619,7 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         if (!_vaultSession.IsCurrent(sessionGeneration, vault))
             return;
 
+        _vaultSession.TryRefreshDiskStamp(sessionGeneration, path);
         Load();
 
         HistoryRestored?.Invoke(
@@ -821,6 +838,22 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             return false;
         }
 
+        if (!VaultFileConflictGuard.ConfirmOverwriteIfChanged(
+                _vaultSession,
+                sessionGeneration,
+                vault,
+                path))
+        {
+            if (_vaultSession.IsCurrent(sessionGeneration, vault))
+            {
+                vault.RestoreSnapshot(snapshot);
+                Load();
+                VaultRollbackCompleted?.Invoke(this, EventArgs.Empty);
+            }
+
+            return false;
+        }
+
         try
         {
             using var keyMaterial = _vaultSession.CopyKeyMaterial();
@@ -829,7 +862,11 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
                 keyMaterial,
                 vault);
 
-            return _vaultSession.IsCurrent(sessionGeneration, vault);
+            if (!_vaultSession.IsCurrent(sessionGeneration, vault))
+                return false;
+
+            _vaultSession.TryRefreshDiskStamp(sessionGeneration, path);
+            return true;
         }
         catch (Exception exception)
         {
