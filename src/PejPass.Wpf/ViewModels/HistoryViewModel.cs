@@ -12,6 +12,7 @@ namespace PejPass.Wpf.ViewModels;
 public partial class HistoryViewModel : ObservableObject, IDisposable
 {
     private bool _isDisposed;
+    private bool _isLoading;
     private readonly VaultSession _vaultSession;
     private readonly VaultService _vaultService;
     private readonly AppSettings _settings;
@@ -108,15 +109,16 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         _settings = settings;
         _showError = showError ?? DialogService.Error;
 
-        Load();
-
         Items.CollectionChanged += (_, _) =>
         {
+            if (_isLoading || _isDisposed)
+                return;
+
             OnPropertyChanged(nameof(HasHistoryItems));
             RefreshFilteredItems();
         };
 
-        RefreshFilteredItems();
+        Load();
     }
 
     private void Load()
@@ -124,56 +126,73 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         if (_isDisposed)
             return;
 
-        ClearFields();
-        SelectedItem = null;
-        ClearItems();
+        _isLoading = true;
 
-        var vault = _vaultSession.Vault;
-
-        if (vault is null)
+        try
         {
+            ClearFields();
             SelectedItem = null;
-            return;
-        }
+            ClearItems();
 
-        var trashedEntryIds = vault.Trash
-            .Select(t => t.Entry.Id)
-            .ToHashSet();
+            var vault = _vaultSession.Vault;
 
-        var visibleHistory = vault.History
-            .Where(h => !trashedEntryIds.Contains(h.EntryId))
-            .ToList();
+            if (vault is null)
+                return;
 
-        var historiesByEntry = visibleHistory
-            .GroupBy(h => h.EntryId)
-            .ToDictionary(
+            var entriesById = new Dictionary<Guid, VaultEntry>();
+            foreach (var entry in vault.Entries)
+                entriesById.TryAdd(entry.Id, entry);
+
+            var trashedEntryIds = vault.Trash
+                .Select(t => t.Entry.Id)
+                .ToHashSet();
+
+            var visibleHistory = vault.History
+                .Where(h => !trashedEntryIds.Contains(h.EntryId))
+                .ToList();
+
+            var historiesByEntry = visibleHistory
+                .GroupBy(h => h.EntryId)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group
+                        .OrderByDescending(h => h.ChangedAt)
+                        .ToList());
+
+            var historyIndexesByEntry = historiesByEntry.ToDictionary(
                 group => group.Key,
-                group => group
-                    .OrderByDescending(h => h.ChangedAt)
-                    .ToList());
+                group => group.Value
+                    .Select((history, index) => (History: history, Index: index))
+                    .ToDictionary(position => position.History, position => position.Index));
 
-        foreach (var history in visibleHistory
-                     .OrderByDescending(h => h.ChangedAt))
-        {
-            var entry = vault.Entries
-                .FirstOrDefault(e => e.Id == history.EntryId);
+            foreach (var history in visibleHistory
+                         .OrderByDescending(h => h.ChangedAt))
+            {
+                entriesById.TryGetValue(history.EntryId, out var entry);
 
-            var historyList = historiesByEntry[history.EntryId];
-            var index = historyList.FindIndex(h => h.Id == history.Id);
-            var newerSnapshot = index > 0 ? historyList[index - 1] : null;
+                var historyList = historiesByEntry[history.EntryId];
+                var index = historyIndexesByEntry[history.EntryId][history];
+                var newerSnapshot = index > 0 ? historyList[index - 1] : null;
 
-            var changedFields = GetChangedFields(
-                history,
-                newerSnapshot,
-                index == 0 ? entry : null);
+                var changedFields = GetChangedFields(
+                    history,
+                    newerSnapshot,
+                    index == 0 ? entry : null);
 
-            Items.Add(new HistoryRow(
-                history,
-                entry?.Title ?? "(Deleted entry)",
-                changedFields));
+                Items.Add(new HistoryRow(
+                    history,
+                    entry?.Title ?? "(Deleted entry)",
+                    changedFields));
+            }
+
+            SelectedItem = null;
         }
-
-        SelectedItem = null;
+        finally
+        {
+            _isLoading = false;
+            OnPropertyChanged(nameof(HasHistoryItems));
+            RefreshFilteredItems();
+        }
     }
 
     private static List<string> GetChangedFields(
