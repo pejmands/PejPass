@@ -67,11 +67,6 @@ public partial class MainWindow : Window
                     DispatcherPriority.Loaded);
             }
 
-            if (e.PropertyName is nameof(MainViewModel.ShowTagFilters))
-            {
-                Dispatcher.BeginInvoke(AttachTagFilterMouseWheel,
-                    DispatcherPriority.Loaded);
-            }
         };
 
         viewModel.RequestLock += (_, e) =>
@@ -185,8 +180,6 @@ public partial class MainWindow : Window
             Dispatcher.BeginInvoke(() =>
             {
                 AttachDropIndicatorAdorner();
-
-                AttachTagFilterMouseWheel();
                 AttachNotesScrollChain();
             }, DispatcherPriority.Loaded);
         };
@@ -956,48 +949,6 @@ public partial class MainWindow : Window
     private static bool IsTypingInInput()
     {
         return Keyboard.FocusedElement is TextBox or PasswordBox;
-    }
-
-    private void AttachTagFilterMouseWheel()
-    {
-        ScrollViewer? target = FindName("TagFilterScroll") as ScrollViewer;
-
-        if (target is null)
-        {
-            foreach (var sv in FindVisualChildren<ScrollViewer>(this))
-            {
-                if (sv.VerticalScrollBarVisibility == ScrollBarVisibility.Disabled
-                    && sv.HorizontalScrollBarVisibility == ScrollBarVisibility.Auto
-                    && sv.Height is >= 36 and <= 52)
-                {
-                    target = sv;
-                    break;
-                }
-            }
-        }
-
-        if (target is null)
-            return;
-
-        target.RemoveHandler(PreviewMouseWheelEvent,
-            (MouseWheelEventHandler)TagFilterScroll_OnPreviewMouseWheel);
-        target.AddHandler(PreviewMouseWheelEvent,
-            (MouseWheelEventHandler)TagFilterScroll_OnPreviewMouseWheel,
-            handledEventsToo: true);
-
-    }
-
-    private void TagFilterScroll_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
-    {
-        if (sender is not ScrollViewer sv)
-            return;
-
-        if (sv.ExtentWidth <= sv.ViewportWidth + 0.5)
-            return;
-
-        var notches = e.Delta / 120.0;
-        sv.ScrollToHorizontalOffset(sv.HorizontalOffset - notches * 48.0);
-        e.Handled = true;
     }
 
     private void AttachNotesScrollChain()
