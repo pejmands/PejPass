@@ -644,6 +644,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception)
         {
+            e.Handled = true;
             App.HandleUnexpectedException(exception);
         }
     }
