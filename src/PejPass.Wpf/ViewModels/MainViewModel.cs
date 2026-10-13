@@ -1575,8 +1575,15 @@ public partial class MainViewModel : ObservableObject
 
     private async void OnHistoryRestored(object? sender, EventArgs e)
     {
-        await LoadVaultAsync();
-        SelectedEntry = null;
+        try
+        {
+            await LoadVaultAsync();
+            SelectedEntry = null;
+        }
+        catch (Exception exception)
+        {
+            App.HandleUnexpectedException(exception);
+        }
     }
 
     private void OnHistoryRollbackCompleted(object? sender, EventArgs e)
