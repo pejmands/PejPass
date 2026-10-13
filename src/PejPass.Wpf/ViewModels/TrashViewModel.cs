@@ -191,7 +191,8 @@ public partial class TrashViewModel : ObservableObject
                 $"This entry will be permanently deleted and cannot be recovered.\n\n\"{row.Title}\"",
                 "Delete permanently",
                 yesText: "Delete permanently",
-                noText: "Cancel"))
+                noText: "Cancel",
+                isDestructive: true))
             return;
 
         if (!await EnsureCurrentAndWritableAsync())
@@ -229,7 +230,8 @@ public partial class TrashViewModel : ObservableObject
                 $"Permanently delete {selected.Count} selected item(s)?\n\nThis cannot be undone.",
                 "Delete selected items permanently",
                 yesText: "Delete permanently",
-                noText: "Cancel"))
+                noText: "Cancel",
+                isDestructive: true))
             return;
 
         if (!await EnsureCurrentAndWritableAsync())
@@ -265,7 +267,8 @@ public partial class TrashViewModel : ObservableObject
                 $"All {_all.Count} item(s) in Trash will be permanently deleted and cannot be recovered.",
                 "Empty Trash permanently",
                 yesText: "Delete all permanently",
-                noText: "Cancel"))
+                noText: "Cancel",
+                isDestructive: true))
             return;
 
         if (!await EnsureCurrentAndWritableAsync())

@@ -70,11 +70,18 @@ public sealed class ThemeService(AppSettings settings) : IDisposable
         if (_settings.Theme != ThemeMode.System)
             return;
 
-        // Marshal to UI thread
+        // Queue the update without blocking the system preference event thread.
         var app = System.Windows.Application.Current;
-        if (app is null) return;
+        if (app is null ||
+            app.Dispatcher.HasShutdownStarted ||
+            app.Dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
 
-        app.Dispatcher.Invoke(() => ApplyMode(ThemeMode.System));
+        app.Dispatcher.BeginInvoke(
+            System.Windows.Threading.DispatcherPriority.Normal,
+            new Action(() => ApplyMode(ThemeMode.System)));
     }
 
     private static void ApplyThemeDictionary(bool dark)

@@ -57,6 +57,21 @@ public sealed class PasswordStrengthTests
         Assert.Equal(expected, PasswordStrength.Evaluate(password));
     }
 
+
+    [Theory]
+    [InlineData(PasswordStrengthLevel.Empty, true)]
+    [InlineData(PasswordStrengthLevel.VeryWeak, true)]
+    [InlineData(PasswordStrengthLevel.Weak, true)]
+    [InlineData(PasswordStrengthLevel.Fair, true)]
+    [InlineData(PasswordStrengthLevel.Strong, false)]
+    [InlineData(PasswordStrengthLevel.VeryStrong, false)]
+    public void IsWeak_UsesEvaluatedLevelWithoutRecomputing(
+        PasswordStrengthLevel level,
+        bool expected)
+    {
+        Assert.Equal(expected, PasswordStrength.IsWeak(level));
+    }
+
     [Fact]
     public void GetScore_UsesZeroToFourZxcvbnScale()
     {

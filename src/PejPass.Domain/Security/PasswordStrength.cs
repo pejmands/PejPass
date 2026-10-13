@@ -63,14 +63,13 @@ public static class PasswordStrength
     /// <summary>
     /// Passwords below zxcvbn's maximum score of 4 are too guessable for the vault health threshold.
     /// </summary>
-    public static bool IsWeak(string? password)
-    {
-        var level = Evaluate(password);
-        return level is PasswordStrengthLevel.Empty
+    public static bool IsWeak(PasswordStrengthLevel level) =>
+        level is PasswordStrengthLevel.Empty
             or PasswordStrengthLevel.VeryWeak
             or PasswordStrengthLevel.Weak
             or PasswordStrengthLevel.Fair;
-    }
+
+    public static bool IsWeak(string? password) => IsWeak(Evaluate(password));
 
     public static string GetLabel(PasswordStrengthLevel level) => level switch
     {

@@ -8,7 +8,8 @@ public partial class AppDialog : Window
     public AppDialogResult Result { get; private set; } = AppDialogResult.None;
 
     public AppDialog(string title, string message, AppDialogType type,
-        string primaryText = "OK", string? secondaryText = null, string? tertiaryText = null)
+        string primaryText = "OK", string? secondaryText = null, string? tertiaryText = null,
+        bool isDestructive = false)
     {
         InitializeComponent();
         App.PrepareCustomChrome(this);
@@ -40,8 +41,16 @@ public partial class AppDialog : Window
             TertiaryButton.IsCancel = true;
         }
 
-        if (primaryText is "Delete" or "Delete All" or "Yes" or "Delete permanently" or "Delete all permanently")
+        if (isDestructive)
+        {
             PrimaryButton.Style = (Style)FindResource("DestructiveButton");
+            PrimaryButton.IsDefault = false;
+
+            if (TertiaryButton.Visibility == Visibility.Visible)
+                TertiaryButton.IsDefault = true;
+            else if (SecondaryButton.Visibility == Visibility.Visible)
+                SecondaryButton.IsDefault = true;
+        }
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)

@@ -103,7 +103,8 @@ public partial class MainViewModel
             "Restore mode",
             primaryText: "Replace",
             secondaryText: "Merge",
-            tertiaryText: "Cancel");
+            tertiaryText: "Cancel",
+            isDestructive: true);
 
         if (!_vaultSession.IsCurrent(operationGeneration, currentVault))
             return;
@@ -132,7 +133,8 @@ public partial class MainViewModel
                         "This cannot be undone unless you have another backup.\n\nContinue?",
                         "Confirm replace",
                         yesText: "Replace vault",
-                        noText: "Cancel"))
+                        noText: "Cancel",
+                        isDestructive: true))
                 {
                     StatusMessage = "Restore cancelled.";
                     return;

@@ -123,7 +123,7 @@ public partial class App : System.Windows.Application
         _windowsSecurityService = Services.GetRequiredService<WindowsSecurityService>();
         _securityLock = new SecurityLockCoordinator(
             clearCache: () => Services.GetRequiredService<SessionPasswordCache>().Clear(),
-            lockVault: LockMainWindowIfOpen,
+            lockVault: LockForWindowsSecurity,
             dispatchToUi: DispatchToUi);
         _windowsSecurityService.SecurityLockRequested += OnWindowsSecurityLockRequested;
         _windowsSecurityService.Start();
@@ -457,6 +457,14 @@ public partial class App : System.Windows.Application
     private static void OnWindowsSecurityLockRequested(object? sender, SecurityLockReason reason)
     {
         _securityLock?.Handle(waitForUi: reason == SecurityLockReason.Suspend);
+    }
+
+    internal static void LockForWindowsSecurity()
+    {
+        foreach (var loginWindow in Current.Windows.OfType<LoginWindow>())
+            loginWindow.ClearPasswordInputs();
+
+        LockMainWindowIfOpen();
     }
 
     /// <summary>Must run on the UI thread. Preserves the current visibility of the main window.</summary>

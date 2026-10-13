@@ -56,9 +56,11 @@ public static class DialogService
     }
 
     public static bool Confirm(string message, string title = "Confirm",
-        string yesText = "Yes", string noText = "Cancel")
+        string yesText = "Yes", string noText = "Cancel", bool isDestructive = false)
     {
-        var dlg = new AppDialog(title, message, AppDialogType.Confirm, yesText, noText)
+        var dlg = new AppDialog(
+            title, message, AppDialogType.Confirm, yesText, noText,
+            isDestructive: isDestructive)
         {
             Owner = Owner
         };
@@ -75,10 +77,11 @@ public static class DialogService
         string title,
         string primaryText,
         string secondaryText,
-        string tertiaryText = "Cancel")
+        string tertiaryText = "Cancel",
+        bool isDestructive = false)
     {
         var dlg = new AppDialog(title, message, AppDialogType.Confirm,
-            primaryText, secondaryText, tertiaryText)
+            primaryText, secondaryText, tertiaryText, isDestructive)
         {
             Owner = Owner
         };
@@ -92,7 +95,8 @@ public static class DialogService
             $"Delete \"{itemName}\"?\n\nThis cannot be undone.",
             "Delete Entry",
             yesText: "Delete",
-            noText: "Cancel");
+            noText: "Cancel",
+            isDestructive: true);
     }
 
     private static void Show(string title, string message, AppDialogType type, string primary)
