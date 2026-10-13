@@ -11,6 +11,8 @@ public sealed class PasswordStrengthTests
     [InlineData("Summer2026!")]
     [InlineData("Qwerty123456!")]
     [InlineData("Aaaaaaaaaaaa1!")]
+    [InlineData("Long Password123!")]
+    [InlineData("Long\tPassword123!")]
     public void Evaluate_DoesNotRateCommonOrPredictablePasswordsAsStrong(string password)
     {
         var level = PasswordStrength.Evaluate(password);
