@@ -356,6 +356,18 @@ public sealed class FaviconServiceTests
     }
 
     [Theory]
+    [InlineData("A", 165, 106, 186)]
+    [InlineData("?", 90, 93, 184)]
+    [InlineData("例", 106, 150, 130)]
+    public void LetterAvatarColor_IsStableForSameLetter(string letter, byte red, byte green, byte blue)
+    {
+        var expected = Color.FromRgb(red, green, blue);
+
+        Assert.Equal(expected, FaviconService.GetLetterAvatarColor(letter));
+        Assert.Equal(expected, FaviconService.GetLetterAvatarColor(letter));
+    }
+
+    [Theory]
     [InlineData("router", false)]
     [InlineData("nas", false)]
     [InlineData("192.168.1.1", false)]
