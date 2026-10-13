@@ -15,210 +15,211 @@
 
 	<Grid>
 		<DockPanel>
-			<controls:AppTitleBar
-				x:Name="TitleBar"
-				DockPanel.Dock="Top"
-				ShowLoginActions="True"
-				ShowMaximize="false"
-				ShowMinimize="true" />
+		<controls:AppTitleBar
+			x:Name="TitleBar"
+			DockPanel.Dock="Top"
+			ShowLoginActions="True"
+			ShowMaximize="false"
+			ShowMinimize="true" />
 
-			<ScrollViewer
-				Margin="20"
-				HorizontalScrollBarVisibility="Disabled"
-				VerticalScrollBarVisibility="Auto">
+		<ScrollViewer
+			Margin="20"
+			HorizontalScrollBarVisibility="Disabled"
+			VerticalScrollBarVisibility="Auto">
 
-				<StackPanel MaxWidth="440" VerticalAlignment="Top">
+			<StackPanel MaxWidth="440" VerticalAlignment="Top">
 
-					<!--  Header: Recents | title  -->
-					<Grid Margin="0,0,0,8">
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="*" />
-							<ColumnDefinition Width="Auto" />
-							<ColumnDefinition Width="*" />
-						</Grid.ColumnDefinitions>
-
-						<Button
-							x:Name="RecentsButton"
-							Grid.Column="0"
-							Height="28"
-							Padding="8,4"
-							HorizontalAlignment="Left"
-							VerticalAlignment="Center"
-							Background="{DynamicResource SurfaceAltBrush}"
-							Click="RecentsButton_Click"
-							Content="Recents ▾"
-							Foreground="{DynamicResource TextBrush}"
-							IsEnabled="{Binding HasRecentVaults}"
-							Style="{StaticResource SecondaryButton}">
-							<Button.ContextMenu>
-								<ContextMenu
-									x:Name="RecentVaultsMenu"
-									DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
-									Placement="Bottom"
-									Style="{StaticResource PejPassContextMenu}" />
-							</Button.ContextMenu>
-						</Button>
-
-						<TextBlock
-							Grid.Column="1"
-							HorizontalAlignment="Center"
-							VerticalAlignment="Center"
-							FontSize="{DynamicResource AppFontSize28}"
-							FontWeight="Bold"
-							Foreground="{DynamicResource TextBrush}"
-							Text="PejPass" />
-					</Grid>
-
-					<TextBlock
-						Margin="0,0,0,28"
-						HorizontalAlignment="Center"
-						FontSize="{DynamicResource AppFontSize13}"
-						Foreground="{DynamicResource MutedBrush}"
-						Text="Local encrypted vault" />
-
-					<!--  Mode  -->
-					<StackPanel
-						Margin="0,0,0,20"
-						HorizontalAlignment="Center"
-						Orientation="Horizontal">
-
-						<RadioButton
-							Margin="0,0,16,0"
-							Checked="VaultMode_Checked"
-							Content="Open vault"
-							GroupName="VaultMode"
-							IsChecked="{Binding IsOpenMode}" />
-
-						<RadioButton
-							Checked="VaultMode_Checked"
-							Content="Create vault"
-							GroupName="VaultMode"
-							IsChecked="{Binding IsCreateMode}" />
-					</StackPanel>
-
-					<!--  Path  -->
-					<TextBlock
-						Margin="0,0,0,6"
-						Foreground="{DynamicResource MutedBrush}"
-						Text="Vault file" />
-
-					<Grid Margin="0,0,0,16">
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="*" />
-							<ColumnDefinition Width="Auto" />
-						</Grid.ColumnDefinitions>
-
-						<TextBox
-							x:Name="VaultPathTextBox"
-							Text="{Binding VaultPath, UpdateSourceTrigger=PropertyChanged}"
-							TextWrapping="NoWrap"
-							VerticalScrollBarVisibility="Disabled" />
-
-						<Button
-							Grid.Column="1"
-							Margin="8,0,0,0"
-							Background="{DynamicResource SurfaceAltBrush}"
-							Command="{Binding BrowseCommand}"
-							Content="Browse…"
-							Foreground="{DynamicResource TextBrush}"
-							Style="{StaticResource SecondaryButton}" />
-					</Grid>
-
-					<TextBlock
-						Margin="0,-4,0,12"
-						Style="{StaticResource ValidationErrorText}"
-						Text="{Binding VaultPathError, StringFormat=⚠ {0}}"
-						Visibility="{Binding VaultPathError, Converter={StaticResource NullOrEmptyToVis}}" />
-
-					<!--  Password  -->
-					<TextBlock
-						Margin="0,0,0,6"
-						Foreground="{DynamicResource MutedBrush}"
-						Text="Master password" />
-
-					<controls:PasswordRevealBox
-						x:Name="MasterPasswordBox"
-						Margin="0,0,0,12"
-						PasswordChanged="MasterPasswordBox_PasswordChanged"
-						ShowRevealButton="{Binding IsCreateMode}"
-						Visibility="Visible" />
-
-					<!--  Confirm password (create mode)  -->
-					<TextBlock
-						Margin="0,0,0,6"
-						Foreground="{DynamicResource MutedBrush}"
-						Text="Confirm master password"
-						Visibility="{Binding IsCreateMode, Converter={StaticResource BoolToVis}}" />
-
-					<controls:PasswordRevealBox
-						x:Name="ConfirmMasterPasswordBox"
-						Margin="0,0,0,12"
-						PasswordChanged="ConfirmMasterPasswordBox_PasswordChanged"
-						ShowRevealButton="{Binding IsCreateMode}"
-						Visibility="{Binding IsCreateMode, Converter={StaticResource BoolToVis}}" />
-
-					<TextBlock
-						Margin="0,0,0,12"
-						Style="{StaticResource ValidationErrorText}"
-						Text="{Binding ConfirmPasswordError, StringFormat=⚠ {0}}"
-						Visibility="{Binding ConfirmPasswordError, Converter={StaticResource NullOrEmptyToVis}}" />
-
-					<!--  Create mode guidance  -->
-					<TextBlock
-						Margin="0,0,0,12"
-						FontSize="{DynamicResource AppFontSize12}"
-						Foreground="{DynamicResource MutedBrush}"
-						Text="This password protects your entire vault. PejPass cannot recover it if you forget it."
-						TextWrapping="Wrap"
-						Visibility="{Binding IsCreateMode, Converter={StaticResource BoolToVis}}" />
-
-					<!--  Strength (create mode)  -->
-					<controls:PasswordStrengthIndicator
-						Margin="0,0,0,20"
-						StrengthLabel="{Binding MasterPasswordStrengthLabel}"
-						StrengthLevel="{Binding MasterPasswordStrengthLevel}"
-						StrengthProgress="{Binding MasterPasswordStrengthProgress}"
-						Visibility="{Binding ShowMasterPasswordStrength, Converter={StaticResource BoolToVis}}" />
-
-					<TextBlock
-						Margin="0,0,0,12"
-						FontSize="{DynamicResource AppFontSize12}"
-						Foreground="{DynamicResource MutedBrush}"
-						Text="Tip: Try a memorable passphrase made of several uncommon words. Spaces are allowed."
-						TextWrapping="Wrap"
-						Visibility="{Binding IsCreateMode, Converter={StaticResource BoolToVis}}" />
-
-					<TextBlock
-						Margin="0,0,0,12"
-						Style="{StaticResource ValidationErrorText}"
-						Text="{Binding PasswordError, StringFormat=⚠ {0}}"
-						Visibility="{Binding PasswordError, Converter={StaticResource NullOrEmptyToVis}}" />
-
-					<TextBlock
-						Margin="0,0,0,12"
-						Foreground="{DynamicResource AccentBrush}"
-						Text="{Binding StatusMessage}"
-						TextWrapping="Wrap" />
+				<!--  Header: Recents | title  -->
+				<Grid Margin="0,0,0,8">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*" />
+						<ColumnDefinition Width="Auto" />
+						<ColumnDefinition Width="*" />
+					</Grid.ColumnDefinitions>
 
 					<Button
-						Height="40"
-						Margin="0,0,0,12"
-						Command="{Binding SubmitCommand}"
-						Content="{Binding SubmitButtonText}"
-						IsDefault="True"
-						Style="{StaticResource PrimaryButton}" />
-
-					<Button
-						Height="40"
+						x:Name="RecentsButton"
+						Grid.Column="0"
+						Height="28"
+						Padding="8,4"
+						HorizontalAlignment="Left"
+						VerticalAlignment="Center"
 						Background="{DynamicResource SurfaceAltBrush}"
-						Command="{Binding UnlockWithHelloCommand}"
-						Content="Unlock with Windows Hello"
+						Click="RecentsButton_Click"
+						Content="Recents ▾"
 						Foreground="{DynamicResource TextBrush}"
-						Style="{StaticResource SecondaryButton}"
-						Visibility="{Binding ShowWindowsHello, Converter={StaticResource BoolToVis}}" />
+						IsEnabled="{Binding HasRecentVaults}"
+						Style="{StaticResource SecondaryButton}">
+						<Button.ContextMenu>
+							<ContextMenu
+								x:Name="RecentVaultsMenu"
+								DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+								Placement="Bottom"
+								Style="{StaticResource PejPassContextMenu}" />
+						</Button.ContextMenu>
+					</Button>
 
+					<TextBlock
+						Grid.Column="1"
+						HorizontalAlignment="Center"
+						VerticalAlignment="Center"
+						FontSize="{DynamicResource AppFontSize28}"
+						FontWeight="Bold"
+						Foreground="{DynamicResource TextBrush}"
+						Text="PejPass" />
+				</Grid>
+
+				<TextBlock
+					Margin="0,0,0,28"
+					HorizontalAlignment="Center"
+					FontSize="{DynamicResource AppFontSize13}"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="Local encrypted vault" />
+
+				<!--  Mode  -->
+				<StackPanel
+					Margin="0,0,0,20"
+					HorizontalAlignment="Center"
+					Orientation="Horizontal">
+
+					<RadioButton
+						Margin="0,0,16,0"
+						Checked="VaultMode_Checked"
+						Content="Open vault"
+						GroupName="VaultMode"
+						IsChecked="{Binding IsOpenMode}" />
+
+					<RadioButton
+						Checked="VaultMode_Checked"
+						Content="Create vault"
+						GroupName="VaultMode"
+						IsChecked="{Binding IsCreateMode}" />
 				</StackPanel>
-			</ScrollViewer>
+
+				<!--  Path  -->
+				<TextBlock
+					Margin="0,0,0,6"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="Vault file" />
+
+				<Grid Margin="0,0,0,16">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*" />
+						<ColumnDefinition Width="Auto" />
+					</Grid.ColumnDefinitions>
+
+					<TextBox
+						x:Name="VaultPathTextBox"
+						Text="{Binding VaultPath, UpdateSourceTrigger=PropertyChanged}"
+						TextWrapping="NoWrap"
+						VerticalScrollBarVisibility="Disabled" />
+
+					<Button
+						Grid.Column="1"
+						Margin="8,0,0,0"
+						Background="{DynamicResource SurfaceAltBrush}"
+						Command="{Binding BrowseCommand}"
+						Content="Browse…"
+						Foreground="{DynamicResource TextBrush}"
+						Style="{StaticResource SecondaryButton}" />
+				</Grid>
+
+				<TextBlock
+					Margin="0,-4,0,12"
+					Style="{StaticResource ValidationErrorText}"
+					Text="{Binding VaultPathError, StringFormat=⚠ {0}}"
+					Visibility="{Binding VaultPathError, Converter={StaticResource NullOrEmptyToVis}}" />
+
+				<!--  Password  -->
+				<TextBlock
+					Margin="0,0,0,6"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="Master password" />
+
+				<controls:PasswordRevealBox
+					x:Name="MasterPasswordBox"
+					Margin="0,0,0,12"
+					PasswordChanged="MasterPasswordBox_PasswordChanged"
+					ShowRevealButton="{Binding IsCreateMode}"
+					Visibility="Visible" />
+
+				<!--  Confirm password (create mode)  -->
+				<TextBlock
+					Margin="0,0,0,6"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="Confirm master password"
+					Visibility="{Binding IsCreateMode, Converter={StaticResource BoolToVis}}" />
+
+				<controls:PasswordRevealBox
+					x:Name="ConfirmMasterPasswordBox"
+					Margin="0,0,0,12"
+					PasswordChanged="ConfirmMasterPasswordBox_PasswordChanged"
+					ShowRevealButton="{Binding IsCreateMode}"
+					Visibility="{Binding IsCreateMode, Converter={StaticResource BoolToVis}}" />
+
+				<TextBlock
+					Margin="0,0,0,12"
+					Style="{StaticResource ValidationErrorText}"
+					Text="{Binding ConfirmPasswordError, StringFormat=⚠ {0}}"
+					Visibility="{Binding ConfirmPasswordError, Converter={StaticResource NullOrEmptyToVis}}" />
+
+				<!--  Create mode guidance  -->
+				<TextBlock
+					Margin="0,0,0,12"
+					FontSize="{DynamicResource AppFontSize12}"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="This password protects your entire vault. PejPass cannot recover it if you forget it."
+					TextWrapping="Wrap"
+					Visibility="{Binding IsCreateMode, Converter={StaticResource BoolToVis}}" />
+
+				<!--  Strength (create mode)  -->
+				<controls:PasswordStrengthIndicator
+					Margin="0,0,0,20"
+					StrengthLabel="{Binding MasterPasswordStrengthLabel}"
+					StrengthLevel="{Binding MasterPasswordStrengthLevel}"
+					StrengthProgress="{Binding MasterPasswordStrengthProgress}"
+					Visibility="{Binding ShowMasterPasswordStrength, Converter={StaticResource BoolToVis}}" />
+
+				<TextBlock
+					Margin="0,0,0,12"
+					FontSize="{DynamicResource AppFontSize12}"
+					Foreground="{DynamicResource MutedBrush}"
+					Text="Tip: Try a memorable passphrase made of several uncommon words. Spaces are allowed."
+					TextWrapping="Wrap"
+					Visibility="{Binding IsCreateMode, Converter={StaticResource BoolToVis}}" />
+
+				<TextBlock
+					Margin="0,0,0,12"
+					Style="{StaticResource ValidationErrorText}"
+					Text="{Binding PasswordError, StringFormat=⚠ {0}}"
+					Visibility="{Binding PasswordError, Converter={StaticResource NullOrEmptyToVis}}" />
+
+				<TextBlock
+					Margin="0,0,0,12"
+					Foreground="{DynamicResource AccentBrush}"
+					Text="{Binding StatusMessage}"
+					TextWrapping="Wrap" />
+
+				<Button
+					Height="40"
+					Margin="0,0,0,12"
+					Command="{Binding SubmitCommand}"
+					Content="{Binding SubmitButtonText}"
+					IsDefault="True"
+					Style="{StaticResource PrimaryButton}" />
+
+				<Button
+					Height="40"
+					Background="{DynamicResource SurfaceAltBrush}"
+					Command="{Binding UnlockWithHelloCommand}"
+					Content="Unlock with Windows Hello"
+					Foreground="{DynamicResource TextBrush}"
+					Style="{StaticResource SecondaryButton}"
+					Visibility="{Binding ShowWindowsHello, Converter={StaticResource BoolToVis}}" />
+
+			</StackPanel>
+		</ScrollViewer>
+
 
 		</DockPanel>
 		<Border
