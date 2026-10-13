@@ -93,6 +93,7 @@ The versions below match the direct package references in the project files on t
 
 | Package | Version | License | Upstream |
 |---|---:|---|---|
+| [Zxcvbn](https://github.com/IsraelIyonsi/Zxcvbn.NET) | 0.1.1 | MIT | [License and notices](https://github.com/IsraelIyonsi/Zxcvbn.NET) |
 | [CsvHelper](https://github.com/JoshClose/CsvHelper) | 33.1.0 | Apache-2.0 (selected from upstream's dual license: MS-PL OR Apache-2.0) | [License](https://github.com/JoshClose/CsvHelper/blob/master/LICENSE.txt) |
 | [Konscious.Security.Cryptography.Argon2](https://github.com/kmaragon/Konscious.Security.Cryptography) | 1.3.1 | MIT | [License](https://github.com/kmaragon/Konscious.Security.Cryptography/blob/master/LICENSE) |
 | [Konscious.Security.Cryptography.Blake2](https://github.com/kmaragon/Konscious.Security.Cryptography) | 1.1.1 (transitive) | MIT | [License](https://github.com/kmaragon/Konscious.Security.Cryptography/blob/master/LICENSE) |
