@@ -360,6 +360,7 @@ public sealed class FaviconServiceTests
     [InlineData("nas", false)]
     [InlineData("192.168.1.1", false)]
     [InlineData("10.0.0.4", false)]
+    [InlineData("8.8.8.8", false)]
     [InlineData("2001:db8::1", false)]
     [InlineData("x.local", false)]
     [InlineData("x.lan", false)]
