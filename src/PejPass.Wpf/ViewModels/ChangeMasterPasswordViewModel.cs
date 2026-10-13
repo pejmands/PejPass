@@ -126,6 +126,17 @@ public partial class ChangeMasterPasswordViewModel(
             return;
         }
 
+        var sessionGeneration = _vaultSession.Generation;
+        if (!_vaultSession.IsCurrent(sessionGeneration, vault) ||
+            !VaultFileConflictGuard.ConfirmOverwriteIfChanged(
+                _vaultSession,
+                sessionGeneration,
+                vault,
+                path))
+        {
+            return;
+        }
+
         IsBusy = true;
         try
         {
@@ -137,7 +148,12 @@ public partial class ChangeMasterPasswordViewModel(
                 vault,
                 currentKeyMaterial);
 
-            _vaultSession.TryUpdateKeyMaterial(newKeyMaterial);
+            if (_vaultSession.TryUpdateKeyMaterial(newKeyMaterial))
+            {
+                var updatedGeneration = _vaultSession.Generation;
+                _vaultSession.TryRefreshDiskStamp(updatedGeneration, path);
+            }
+
             cache.Clear();
 
             Success = true;
