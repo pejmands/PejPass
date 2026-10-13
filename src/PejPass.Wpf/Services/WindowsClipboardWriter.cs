@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Windows;
 using System.Windows.Interop;
@@ -50,7 +51,7 @@ internal static class WindowsClipboardWriter
             {
                 var format = ResolveFormat(payload.FormatName);
                 var memory = AllocateGlobalMemory(payload.Bytes);
-                nativeItems.Add(new NativeClipboardItem(format, memory));
+                nativeItems.Add(new NativeClipboardItem(format, memory, payload.Bytes.Length));
             }
 
             var ownerWindow = GetOwnerWindow();
@@ -81,8 +82,11 @@ internal static class WindowsClipboardWriter
             foreach (var item in nativeItems)
             {
                 if (item.Memory != IntPtr.Zero)
-                    GlobalFree(item.Memory);
+                    EraseAndFreeGlobalMemory(item.Memory, item.Length);
             }
+
+            foreach (var payload in payloads)
+                CryptographicOperations.ZeroMemory(payload.Bytes);
         }
     }
 
@@ -123,8 +127,38 @@ internal static class WindowsClipboardWriter
         }
         catch
         {
-            GlobalFree(memory);
+            EraseAndFreeGlobalMemory(memory, bytes.Length);
             throw;
+        }
+    }
+
+    private static void EraseAndFreeGlobalMemory(IntPtr memory, int length)
+    {
+        if (memory == IntPtr.Zero)
+            return;
+
+        try
+        {
+            var pointer = GlobalLock(memory);
+            if (pointer != IntPtr.Zero)
+            {
+                try
+                {
+                    Marshal.Copy(new byte[length], 0, pointer, length);
+                }
+                finally
+                {
+                    GlobalUnlock(memory);
+                }
+            }
+        }
+        catch
+        {
+            // Continue freeing native clipboard memory even if best-effort zeroing fails.
+        }
+        finally
+        {
+            GlobalFree(memory);
         }
     }
 
@@ -171,7 +205,7 @@ internal static class WindowsClipboardWriter
     private static Win32Exception CreateClipboardException(string message) =>
         new(Marshal.GetLastWin32Error(), message);
 
-    private sealed record NativeClipboardItem(uint Format, IntPtr Memory);
+    private sealed record NativeClipboardItem(uint Format, IntPtr Memory, int Length);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern uint RegisterClipboardFormat(string format);
