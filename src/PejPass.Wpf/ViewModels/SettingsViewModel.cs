@@ -2,10 +2,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PejPass.Application.Services;
 using PejPass.Domain.Settings;
+using PejPass.Infrastructure.Storage;
 using PejPass.Wpf.Controls;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
+using System.IO;
 using System.Windows;
 using ThemeMode = PejPass.Domain.Settings.ThemeMode;
 
@@ -477,6 +479,54 @@ public partial class SettingsViewModel : ObservableObject
             DialogService.Info(
                 "Master password changed successfully.\n\nThe vault is now encrypted with the new password.",
                 "Password changed");
+
+            OfferToDeleteLegacyBackups(_vaultSession.VaultPath);
+        }
+    }
+
+    private static void OfferToDeleteLegacyBackups(string? vaultPath)
+    {
+        if (string.IsNullOrEmpty(vaultPath))
+            return;
+
+        var files = LegacyVaultBackups.Find(vaultPath);
+        if (files.Count == 0)
+            return;
+
+        if (!DialogService.Confirm(
+                "Older-format backup copies of this vault still exist and can be opened with your OLD password:\n\n" +
+                string.Join("\n", files) + "\n\nDelete them now?",
+                "Old backups",
+                yesText: "Delete",
+                noText: "Keep",
+                isDestructive: true))
+        {
+            return;
+        }
+
+        List<string> undeletedFiles = [];
+        foreach (var file in files)
+        {
+            try
+            {
+                File.Delete(file);
+            }
+            catch (IOException)
+            {
+                undeletedFiles.Add(file);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                undeletedFiles.Add(file);
+            }
+        }
+
+        if (undeletedFiles.Count > 0)
+        {
+            DialogService.Warning(
+                "PejPass could not delete these backup files. They may still be opened with your OLD password:\n\n" +
+                string.Join("\n", undeletedFiles),
+                "Old backups remain");
         }
     }
 
