@@ -349,6 +349,8 @@ public partial class MainViewModel : ObservableObject
                 vaultPath,
                 keyMaterial,
                 vault);
+            if (!_vaultSession.IsCurrent(sessionGeneration, vault))
+                return;
             _vaultSession.RefreshDiskStamp();
         }
         catch (Exception exception)
