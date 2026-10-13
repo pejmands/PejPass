@@ -1,3 +1,4 @@
+using System.IO;
 using System.Runtime.CompilerServices;
 
 namespace PejPass.Wpf.Tests;
