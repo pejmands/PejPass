@@ -38,14 +38,14 @@ public static class PasswordStrength
         {
             0 => PasswordStrengthLevel.VeryWeak,
             1 => PasswordStrengthLevel.Weak,
-            2 => PasswordStrengthLevel.Fair,
-            3 => PasswordStrengthLevel.Strong,
-            _ => PasswordStrengthLevel.VeryStrong
+            2 or 3 => PasswordStrengthLevel.Fair,
+            4 => PasswordStrengthLevel.VeryStrong,
+            _ => PasswordStrengthLevel.VeryWeak
         };
     }
 
     /// <summary>
-    /// Passwords below zxcvbn score 3 are too guessable for the vault health threshold.
+    /// Passwords below zxcvbn's maximum score of 4 are too guessable for the vault health threshold.
     /// </summary>
     public static bool IsWeak(string? password)
     {
