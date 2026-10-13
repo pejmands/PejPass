@@ -186,10 +186,7 @@ public sealed class UpdateService : IDisposable
             if (string.IsNullOrEmpty(expected))
                 return false;
 
-            return string.Equals(
-                Normalize(expected),
-                Normalize(CurrentVersion),
-                StringComparison.OrdinalIgnoreCase);
+            return SameVersion(expected, CurrentVersion);
         }
         catch
         {
@@ -798,8 +795,8 @@ public sealed class UpdateService : IDisposable
             ? version
             : $"v{version}";
 
-        var isLatest = string.Equals(norm, latestNorm, StringComparison.OrdinalIgnoreCase);
-        var isInstalled = string.Equals(norm, installedNorm, StringComparison.OrdinalIgnoreCase);
+        var isLatest = SameVersion(norm, latestNorm);
+        var isInstalled = SameVersion(norm, installedNorm);
         var isAvailableUpdate = IsNewerVersion(version, installedNorm);
 
         return new ReleaseNote
@@ -961,15 +958,40 @@ public sealed class UpdateService : IDisposable
         return value.All(Uri.IsHexDigit);
     }
 
+    internal static bool SameVersion(string first, string second)
+    {
+        return TryParseCanonicalVersion(first, out var firstVersion) &&
+               TryParseCanonicalVersion(second, out var secondVersion) &&
+               firstVersion.CompareTo(secondVersion) == 0;
+    }
+
     public static bool IsNewerVersion(string candidate, string current)
     {
-        if (!Version.TryParse(Normalize(candidate), out var next))
+        if (!TryParseCanonicalVersion(candidate, out var next))
             return false;
 
-        if (!Version.TryParse(Normalize(current), out var cur))
+        if (!TryParseCanonicalVersion(current, out var cur))
             return true;
 
-        return next > cur;
+        return next.CompareTo(cur) > 0;
+    }
+
+    private static bool TryParseCanonicalVersion(string? value, out Version version)
+    {
+        if (string.IsNullOrWhiteSpace(value) ||
+            !Version.TryParse(Normalize(value), out var parsed))
+        {
+            version = null!;
+            return false;
+        }
+
+        // Treat omitted trailing components as zero (e.g. 1.2 == 1.2.0).
+        version = new Version(
+            parsed.Major,
+            parsed.Minor,
+            Math.Max(parsed.Build, 0),
+            Math.Max(parsed.Revision, 0));
+        return true;
     }
 
     private static string Normalize(string version)
