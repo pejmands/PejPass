@@ -7,10 +7,12 @@ namespace PejPass.Wpf.Services;
 /// </summary>
 public sealed class ClipboardService(
     IClipboardProvider clipboard,
-    IUiDispatcher dispatcher) : IClipboardService
+    IUiDispatcher dispatcher,
+    TimeProvider? timeProvider = null) : IClipboardService
 {
     private readonly IClipboardProvider _clipboard = clipboard;
     private readonly IUiDispatcher _dispatcher = dispatcher;
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     private readonly object _sync = new();
     private CancellationTokenSource? _cts;
     private string? _copiedText;
@@ -88,7 +90,7 @@ public sealed class ClipboardService(
     {
         try
         {
-            await Task.Delay(timeout, cts.Token).ConfigureAwait(false);
+            await Task.Delay(timeout, _timeProvider, cts.Token).ConfigureAwait(false);
 
             _dispatcher.Invoke(() =>
             {
