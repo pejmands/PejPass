@@ -157,13 +157,19 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
                         .OrderByDescending(h => h.ChangedAt)
                         .ToList());
 
+            var historyIndexesByEntry = historiesByEntry.ToDictionary(
+                group => group.Key,
+                group => group.Value
+                    .Select((history, index) => (HistoryId: history.Id, Index: index))
+                    .ToDictionary(position => position.HistoryId, position => position.Index));
+
             foreach (var history in visibleHistory
                          .OrderByDescending(h => h.ChangedAt))
             {
                 entriesById.TryGetValue(history.EntryId, out var entry);
 
                 var historyList = historiesByEntry[history.EntryId];
-                var index = historyList.FindIndex(h => h.Id == history.Id);
+                var index = historyIndexesByEntry[history.EntryId][history.Id];
                 var newerSnapshot = index > 0 ? historyList[index - 1] : null;
 
                 var changedFields = GetChangedFields(
