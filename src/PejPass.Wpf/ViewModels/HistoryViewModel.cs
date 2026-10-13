@@ -587,7 +587,8 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
                 path,
                 keyMaterial,
                 vault);
-            _vaultSession.RefreshDiskStamp();
+            if (_vaultSession.IsCurrent(sessionGeneration, vault))
+                _vaultSession.RefreshDiskStamp();
         }
         catch (Exception exception)
         {
