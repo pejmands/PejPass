@@ -464,13 +464,6 @@ public sealed class Vault
         Touch();
     }
 
-    public bool RemoveEntry(Guid entryId)
-    {
-        var removed = Entries.RemoveAll(e => e.Id == entryId) > 0;
-        if (removed) Touch();
-        return removed;
-    }
-
     public VaultEntry? FindEntry(Guid entryId) =>
         Entries.FirstOrDefault(e => e.Id == entryId);
 
