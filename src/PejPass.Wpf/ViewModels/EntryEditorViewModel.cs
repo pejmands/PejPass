@@ -105,7 +105,10 @@ public partial class EntryEditorViewModel : ObservableObject
 
     private void ValidateUrl()
     {
+        var unchanged = Original is not null && Url == Original.Url;
+
         UrlErrorMessage = string.IsNullOrWhiteSpace(Url) ||
+                          unchanged ||
                           WebUrlValidator.TryNormalize(Url, out _)
             ? null
             : "Enter a valid HTTP or HTTPS URL.";
