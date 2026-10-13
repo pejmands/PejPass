@@ -8,12 +8,16 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace PejPass.Wpf.Views;
 
 public partial class LoginWindow : Window
 {
     private readonly AppSettings _settings;
+    private readonly DispatcherTimer _snackbarTimer;
+    private bool _isSubscribedToSnackbar;
     private bool _allowClose;
 
     public LoginWindow(LoginViewModel viewModel)
@@ -22,6 +26,17 @@ public partial class LoginWindow : Window
         DataContext = viewModel;
 
         _settings = App.Services.GetRequiredService<AppSettings>();
+
+        _snackbarTimer = new DispatcherTimer();
+        _snackbarTimer.Tick += (_, _) => HideSnackbar();
+
+        IsVisibleChanged += (_, _) => SetSnackbarSubscription(IsVisible);
+        Closed += (_, _) =>
+        {
+            SetSnackbarSubscription(false);
+            _snackbarTimer.Stop();
+            SnackbarBorder.Visibility = Visibility.Collapsed;
+        };
 
         TitleBar.SettingsRequested += (_, _) => OpenSettings();
         TitleBar.AboutRequested += (_, _) => OpenAbout();
@@ -125,6 +140,67 @@ public partial class LoginWindow : Window
                 }
             }
         };
+    }
+
+    private void SetSnackbarSubscription(bool subscribe)
+    {
+        if (_isSubscribedToSnackbar == subscribe)
+            return;
+
+        _isSubscribedToSnackbar = subscribe;
+
+        if (subscribe)
+        {
+            SnackbarService.Shown += OnSnackbarShown;
+            return;
+        }
+
+        SnackbarService.Shown -= OnSnackbarShown;
+        HideSnackbar();
+    }
+
+    private void OnSnackbarShown(object? sender, SnackbarEventArgs e)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(() => OnSnackbarShown(sender, e));
+            return;
+        }
+
+        SnackbarText.Text = e.Message;
+
+        var brushKey = e.Kind switch
+        {
+            SnackbarKind.Info => "AccentBrush",
+            SnackbarKind.Warning => "WarningBrush",
+            SnackbarKind.Error => "DangerBrush",
+            _ => "SuccessBrush"
+        };
+
+        var icon = e.Kind switch
+        {
+            SnackbarKind.Info => "\uE946",
+            SnackbarKind.Warning => "\uE7BA",
+            SnackbarKind.Error => "\uE711",
+            _ => "\uE73E"
+        };
+
+        var brush = (Brush)FindResource(brushKey);
+        SnackbarBorder.BorderBrush = brush;
+        SnackbarAccent.Background = brush;
+        SnackbarIcon.Foreground = brush;
+        SnackbarIcon.Text = icon;
+
+        _snackbarTimer.Stop();
+        _snackbarTimer.Interval = e.Duration;
+        _snackbarTimer.Start();
+        SnackbarBorder.Visibility = Visibility.Visible;
+    }
+
+    private void HideSnackbar()
+    {
+        _snackbarTimer.Stop();
+        SnackbarBorder.Visibility = Visibility.Collapsed;
     }
 
     private void OpenSettings()
