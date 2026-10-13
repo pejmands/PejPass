@@ -1,5 +1,9 @@
 # Security Notes
 
+## Legacy vault migration backups
+
+Migrating a v1 or v2 vault may leave a full `.v1.bak` or `.v2.bak` copy encrypted with the old master password; changing the vault password does not re-encrypt these files, so PejPass offers to remove them after a successful password change, but file deletion does not guarantee secure erasure from the underlying storage.
+
 ## Favicon cache privacy
 
 Favicon cache filenames use HMAC-SHA-256 with a random per-user key protected by Windows DPAPI (`CurrentUser`). Cached image bytes are encrypted with AES-256-GCM using a fresh nonce and the normalized host as authenticated associated data. Invalid or mismatched cache files are rejected. The protected key is stored outside the favicon image directory.
