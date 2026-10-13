@@ -9,6 +9,7 @@ using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Media.Imaging;
 
@@ -176,7 +177,7 @@ public partial class EntryEditorViewModel : ObservableObject
         return true;
     }
 
-    public string AddCustomFieldToolTip =>
+    public static string AddCustomFieldToolTip =>
         $"Add a custom field (maximum {VaultLimits.MaxCollectionItemsPerEntry:N0} per entry).";
 
     private bool CanAddCustomField() =>
