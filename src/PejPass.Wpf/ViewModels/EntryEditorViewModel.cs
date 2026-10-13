@@ -245,14 +245,26 @@ public partial class EntryEditorViewModel : ObservableObject
 
         try
         {
-            var bitmap = new BitmapImage();
-            bitmap.BeginInit();
-            bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.UriSource = new Uri(dlg.FileName, UriKind.Absolute);
-            bitmap.EndInit();
-            bitmap.Freeze();
+            using var stream = File.OpenRead(dlg.FileName);
+            var decoder = BitmapDecoder.Create(
+                stream,
+                BitmapCreateOptions.IgnoreColorProfile,
+                BitmapCacheOption.None);
 
-            ApplyTotpImport(bitmap);
+            if (decoder.Frames.Count == 0)
+            {
+                DialogService.Warning("The image file contains no image frame.", "TOTP import");
+                return;
+            }
+
+            var image = decoder.Frames[0];
+            if (QrTotpImport.IsImageTooLarge(image.PixelWidth, image.PixelHeight))
+            {
+                DialogService.Warning(QrTotpImport.ImageTooLargeMessage, "TOTP import");
+                return;
+            }
+
+            ApplyTotpImport(image);
         }
         catch (Exception)
         {
