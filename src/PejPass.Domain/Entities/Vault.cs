@@ -95,6 +95,21 @@ public sealed class Vault
         };
     }
 
+    /// <summary>
+    /// Replaces user content from another vault while preserving this vault's identity and KDF parameters.
+    /// </summary>
+    public void ReplaceContentFrom(Vault source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        var copy = source.CreateSnapshot();
+        Name = copy.Name;
+        Entries = copy.Entries;
+        History = copy.History;
+        Trash = copy.Trash;
+        Touch();
+    }
+
     public void RestoreSnapshot(Vault snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
