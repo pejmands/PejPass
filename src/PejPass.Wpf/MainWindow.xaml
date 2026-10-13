@@ -185,53 +185,11 @@
 							<ColumnDefinition Width="Auto" />
 						</Grid.ColumnDefinitions>
 
-						<ScrollViewer
+						<controls:TagChipStrip
 							Grid.Column="0"
-							Height="44"
 							Margin="0,0,8,0"
-							Padding="0,0,0,2"
-							HorizontalScrollBarVisibility="Auto"
-							VerticalScrollBarVisibility="Disabled">
-							<ItemsControl ItemsSource="{Binding TagFilters}">
-								<ItemsControl.ItemsPanel>
-									<ItemsPanelTemplate>
-										<StackPanel Orientation="Horizontal" />
-									</ItemsPanelTemplate>
-								</ItemsControl.ItemsPanel>
-
-								<ItemsControl.ItemTemplate>
-									<DataTemplate>
-										<Button
-											Height="30"
-											Margin="0,0,6,0"
-											Padding="11,0"
-											BorderThickness="1"
-											Command="{Binding DataContext.SelectTagFilterCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-											CommandParameter="{Binding}"
-											Content="{Binding DisplayLabel}"
-											Cursor="Hand"
-											FontSize="{DynamicResource AppFontSize12}"
-											FontWeight="SemiBold">
-											<Button.Style>
-												<Style BasedOn="{StaticResource {x:Type Button}}" TargetType="Button">
-													<Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
-													<Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
-													<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-
-													<Style.Triggers>
-														<DataTrigger Binding="{Binding IsSelected}" Value="True">
-															<Setter Property="Background" Value="{DynamicResource AccentBrush}" />
-															<Setter Property="Foreground" Value="{DynamicResource ButtonTextBrush}" />
-															<Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-														</DataTrigger>
-													</Style.Triggers>
-												</Style>
-											</Button.Style>
-										</Button>
-									</DataTemplate>
-								</ItemsControl.ItemTemplate>
-							</ItemsControl>
-						</ScrollViewer>
+							ChipCommand="{Binding SelectTagFilterCommand}"
+							ItemsSource="{Binding TagFilters}" />
 
 						<Button
 							x:Name="TagSortMenuButton"
