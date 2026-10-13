@@ -4,7 +4,7 @@
 
 Built with **C# / .NET 10**, **WPF**, **CommunityToolkit.Mvvm**, and modern authenticated encryption.
 
-> Your secrets stay on your machine. No accounts. No telemetry. Network is used only when you explicitly ask (for example update check or optional favicons).
+> Your secrets stay on your machine. No accounts. No telemetry. Network access is optional: update availability can be checked at startup when enabled in Settings, or manually from About; optional favicon fetching is off by default.
 
 ## Security Model
 
@@ -14,10 +14,12 @@ Built with **C# / .NET 10**, **WPF**, **CommunityToolkit.Mvvm**, and modern auth
 | Encryption | **AES-256-GCM** (authenticated encryption) |
 | Master Password | Never stored |
 | Storage | Local encrypted `.pejpass` vault |
-| Memory Handling | Sensitive data cleared after use |
+| Memory Handling | Best-effort zeroing of owned sensitive byte buffers |
 | Clipboard | Automatic clipboard clearing |
 | Auto-lock | Configurable inactivity timeout |
 | Authentication | Optional Windows Hello unlock |
+
+Best-effort buffer clearing does **not** guarantee that every plaintext copy is removed from process memory. Managed strings and copies held by other components may remain until reclaimed by the runtime.
 
 ### Master Password Policy
 
@@ -79,7 +81,7 @@ PejPass keeps entry history snapshots to protect against accidental changes.
 
 ### Updates & What’s New
 
-Update checks and downloads are **manual only** (from About).
+Update availability is checked in the background at startup only when **Check for updates at startup** is enabled in Settings (off by default). You can also check manually from About. Updates are never installed automatically: downloading and installing a portable update requires user confirmation.
 
 - [x] Check for updates via remote `update.json` manifest
 - [x] Download & install portable update (with user confirmation)
