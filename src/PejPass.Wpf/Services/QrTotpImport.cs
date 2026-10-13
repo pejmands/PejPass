@@ -15,6 +15,9 @@ public static class QrTotpImport
     internal const long MaxImagePixels = 8L * 1024 * 1024;
     internal const int MaxImageDimension = 8192;
 
+    internal static string ImageTooLargeMessage =>
+        $"Image is too large. Use an image no larger than {MaxImagePixels / (1024 * 1024)} megapixels.";
+
     public sealed record Result(string Secret, string? Issuer, string? Account, string? RawText);
 
     public static bool TryDecode(BitmapSource image, out Result? result, out string? error)
@@ -26,7 +29,7 @@ public static class QrTotpImport
         {
             if (IsImageTooLarge(image.PixelWidth, image.PixelHeight))
             {
-                error = $"Image is too large. Use an image no larger than {MaxImagePixels / (1024 * 1024)} megapixels.";
+                error = ImageTooLargeMessage;
                 return false;
             }
 
