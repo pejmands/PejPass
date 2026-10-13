@@ -43,7 +43,8 @@ public sealed class ClipboardServiceTests
     {
         var clipboard = new FakeClipboardProvider();
         var dispatcher = new FakeUiDispatcher();
-        var service = new ClipboardService(clipboard, dispatcher);
+        var clock = new ManualTimeProvider();
+        var service = new ClipboardService(clipboard, dispatcher, clock);
 
         service.CopyWithTimeout("Secret123!", TimeSpan.FromMinutes(1));
         clipboard.SetText("User copied text");
