@@ -31,6 +31,41 @@ public sealed class VaultSessionTests
     }
 
     [Fact]
+    public void DiskStamp_DetectsExternalLengthAndTimestampChangesAndCanBeRefreshed()
+    {
+        using var session = new VaultSession();
+        using var keyMaterial = CreateMaterial();
+        var vaultPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass");
+
+        try
+        {
+            File.WriteAllBytes(vaultPath, [1, 2, 3]);
+
+            session.Open(new Vault(), vaultPath, keyMaterial);
+            var generation = session.Generation;
+
+            Assert.False(session.HasExternalFileChanges(generation, vaultPath));
+
+            File.WriteAllBytes(vaultPath, [1, 2, 3, 4]);
+            Assert.True(session.HasExternalFileChanges(generation, vaultPath));
+
+            Assert.True(session.TryRefreshDiskStamp(generation, vaultPath));
+            Assert.False(session.HasExternalFileChanges(generation, vaultPath));
+
+            var changedTimestamp = File.GetLastWriteTimeUtc(vaultPath).AddMinutes(-2);
+            File.WriteAllBytes(vaultPath, [4, 3, 2, 1]);
+            File.SetLastWriteTimeUtc(vaultPath, changedTimestamp);
+
+            Assert.True(session.HasExternalFileChanges(generation, vaultPath));
+        }
+        finally
+        {
+            if (File.Exists(vaultPath))
+                File.Delete(vaultPath);
+        }
+    }
+
+    [Fact]
     public void ReplacingVaultInvalidatesPriorVaultIdentity()
     {
         using var session = new VaultSession();
