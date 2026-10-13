@@ -322,6 +322,21 @@ public partial class App : System.Windows.Application
                 loginWindow.Show();
 
             loginWindow.Activate();
+
+            foreach (var window in application.Windows
+                         .OfType<Window>()
+                         .Where(window => window is not LoginWindow)
+                         .ToArray())
+            {
+                try
+                {
+                    window.Close();
+                }
+                catch
+                {
+                    try { window.Hide(); } catch { }
+                }
+            }
         }
         catch
         {
