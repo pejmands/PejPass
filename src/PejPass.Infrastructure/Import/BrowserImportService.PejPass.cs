@@ -47,7 +47,11 @@ public sealed partial class BrowserImportService
                     throw new InvalidDataException($"CSV import exceeds the limit of {MaxCsvRecords} records.");
 
                 var cols = csv.Parser.Record?.ToList() ?? [];
-                ValidateCsvRecord(cols, $"record {recordCount}");
+                ValidateCsvRecord(
+                    cols,
+                    $"record {recordCount}",
+                    headerFields,
+                    GetCol(cols, header["name"]));
                 if (cols.Count == 0)
                     continue;
 
