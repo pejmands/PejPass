@@ -6,10 +6,13 @@ namespace PejPass.Wpf.Services;
 
 public sealed class VaultSession : IDisposable
 {
+    private readonly record struct DiskStamp(long Length, DateTime LastWriteTimeUtc);
+
     private readonly object _sync = new();
     private VaultKeyMaterial? _keyMaterial;
     private Vault? _vault;
     private string? _vaultPath;
+    private DiskStamp? _diskStamp;
     private bool _disposed;
     private long _generation;
 
@@ -67,6 +70,7 @@ public sealed class VaultSession : IDisposable
         ArgumentNullException.ThrowIfNull(keyMaterial);
 
         var fullPath = Path.GetFullPath(vaultPath);
+        var diskStamp = TryReadDiskStamp(fullPath);
         var materialCopy = keyMaterial.Clone();
 
         try
@@ -77,6 +81,7 @@ public sealed class VaultSession : IDisposable
                 ClearKeyMaterialCore();
                 _vault = vault;
                 _vaultPath = fullPath;
+                _diskStamp = diskStamp;
                 _keyMaterial = materialCopy;
                 _generation++;
             }
@@ -99,6 +104,83 @@ public sealed class VaultSession : IDisposable
             ThrowIfDisposed();
             _vault = vault;
             _generation++;
+        }
+    }
+
+    internal bool HasExternalFileChanges(long generation, string path)
+    {
+        string fullPath;
+        try
+        {
+            fullPath = Path.GetFullPath(path);
+        }
+        catch
+        {
+            return true;
+        }
+
+        var currentStamp = TryReadDiskStamp(fullPath);
+
+        lock (_sync)
+        {
+            if (_disposed ||
+                generation != _generation ||
+                _vault is null ||
+                _keyMaterial is null ||
+                !string.Equals(_vaultPath, fullPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return _diskStamp is not { } expected ||
+                   currentStamp is not { } current ||
+                   expected != current;
+        }
+    }
+
+    internal bool TryRefreshDiskStamp(long generation, string path)
+    {
+        string fullPath;
+        try
+        {
+            fullPath = Path.GetFullPath(path);
+        }
+        catch
+        {
+            return false;
+        }
+
+        var currentStamp = TryReadDiskStamp(fullPath);
+
+        lock (_sync)
+        {
+            if (_disposed ||
+                generation != _generation ||
+                _vault is null ||
+                _keyMaterial is null ||
+                !string.Equals(_vaultPath, fullPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            _diskStamp = currentStamp;
+            return true;
+        }
+    }
+
+    private static DiskStamp? TryReadDiskStamp(string path)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            info.Refresh();
+            return info.Exists
+                ? new DiskStamp(info.Length, info.LastWriteTimeUtc)
+                : null;
+        }
+        catch
+        {
+            return null;
         }
     }
 
@@ -158,6 +240,7 @@ public sealed class VaultSession : IDisposable
             ClearKeyMaterialCore();
             _vault = null;
             _vaultPath = null;
+            _diskStamp = null;
             _generation++;
             changed = true;
         }
