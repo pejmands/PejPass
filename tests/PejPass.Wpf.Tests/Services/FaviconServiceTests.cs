@@ -359,9 +359,9 @@ public sealed class FaviconServiceTests
     [InlineData("A", 165, 106, 186)]
     [InlineData("?", 90, 93, 184)]
     [InlineData("例", 106, 150, 130)]
-    public void LetterAvatarColor_IsStableForSameLetter(string letter, byte red, byte green, byte blue)
+    public void LetterAvatarColor_IsStableForSameLetter(string letter, int red, int green, int blue)
     {
-        var expected = Color.FromRgb(red, green, blue);
+        var expected = Color.FromRgb((byte)red, (byte)green, (byte)blue);
 
         Assert.Equal(expected, FaviconService.GetLetterAvatarColor(letter));
         Assert.Equal(expected, FaviconService.GetLetterAvatarColor(letter));
