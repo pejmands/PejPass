@@ -212,7 +212,7 @@ public partial class VaultHealthViewModel : ObservableObject
                         filter);
                 }
 
-                if (utc - e.UpdatedAt >= VaultHealthAnalyzer.StaleThreshold)
+                if (utc - e.UpdatedAt >= VaultHealthRules.StaleThreshold)
                 {
                     var days = (int)(utc - e.UpdatedAt).TotalDays;
                     AddIssue(new HealthIssue(
@@ -444,7 +444,6 @@ public sealed class HealthIssueRow
     public string EntryTitle { get; }
     public string KindLabel { get; }
     public string Detail { get; }
-    public string SeverityColor { get; }
     public string GroupKey { get; }
 
     public HealthIssueRow(HealthIssue issue, string groupKey)
@@ -454,14 +453,14 @@ public sealed class HealthIssueRow
         Detail = issue.Detail;
         GroupKey = groupKey;
 
-        (KindLabel, SeverityColor) = issue.Kind switch
+        KindLabel = issue.Kind switch
         {
-            HealthIssueKind.DuplicatePassword => ("Duplicate", "#F38BA8"),
-            HealthIssueKind.WeakPassword => ("Weak", "#F9E2AF"),
-            HealthIssueKind.UsernameEqualsPassword => ("User=Pwd", "#FAB387"),
-            HealthIssueKind.MissingTotp => ("No TOTP", "#89B4FA"),
-            HealthIssueKind.StalePassword => ("Stale", "#A6ADC8"),
-            _ => ("Issue", "#CDD6F4")
+            HealthIssueKind.DuplicatePassword => "Duplicate",
+            HealthIssueKind.WeakPassword => "Weak",
+            HealthIssueKind.UsernameEqualsPassword => "User=Pwd",
+            HealthIssueKind.MissingTotp => "No TOTP",
+            HealthIssueKind.StalePassword => "Stale",
+            _ => "Issue"
         };
     }
 }
