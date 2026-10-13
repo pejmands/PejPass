@@ -183,6 +183,31 @@ public static class FaviconService
         return string.IsNullOrEmpty(host) ? null : host.ToLowerInvariant();
     }
 
+    internal static bool IsPubliclyResolvableHost(string host)
+    {
+        if (string.IsNullOrWhiteSpace(host) ||
+            !host.Contains('.') ||
+            System.Net.IPAddress.TryParse(host, out _))
+        {
+            return false;
+        }
+
+        string[] privateSuffixes =
+        [
+            ".local",
+            ".lan",
+            ".home",
+            ".internal",
+            ".corp",
+            ".localdomain",
+            ".home.arpa"
+        ];
+
+        return !privateSuffixes.Any(s =>
+            host.EndsWith(s, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(host, s[1..], StringComparison.OrdinalIgnoreCase));
+    }
+
     /// <summary>
     /// UI-safe: only touches memory + letter avatars. Never blocks on disk or network.
     /// </summary>
@@ -284,8 +309,12 @@ public static class FaviconService
 
     private static void EnqueueDownload(string host)
     {
-        if (Memory.ContainsKey(host) || IsFailedRecently(host))
+        if (!IsPubliclyResolvableHost(host) ||
+            Memory.ContainsKey(host) ||
+            IsFailedRecently(host))
+        {
             return;
+        }
 
         if (!InFlight.TryAdd(host, 0))
             return;
@@ -356,6 +385,10 @@ public static class FaviconService
                 ScheduleBatchNotify(host);
                 return;
             }
+
+            // Preserve local disk-cache reads, but never send private hosts to favicon providers.
+            if (!IsPubliclyResolvableHost(host))
+                return;
 
             byte[]? bytes =
                 await TryDownloadBytesAsync($"https://icons.duckduckgo.com/ip3/{host}.ico").ConfigureAwait(false)
