@@ -248,7 +248,7 @@ public partial class EntryEditorViewModel : ObservableObject
             using var stream = File.OpenRead(dlg.FileName);
             var decoder = BitmapDecoder.Create(
                 stream,
-                BitmapCreateOptions.IgnoreColorProfile,
+                BitmapCreateOptions.None,
                 BitmapCacheOption.None);
 
             if (decoder.Frames.Count == 0)
