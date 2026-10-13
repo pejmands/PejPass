@@ -355,6 +355,77 @@ public sealed class FaviconServiceTests
         Assert.IsType<RenderTargetBitmap>(image);
     }
 
+    [Theory]
+    [InlineData("router", false)]
+    [InlineData("nas", false)]
+    [InlineData("192.168.1.1", false)]
+    [InlineData("10.0.0.4", false)]
+    [InlineData("2001:db8::1", false)]
+    [InlineData("x.local", false)]
+    [InlineData("x.lan", false)]
+    [InlineData("x.home", false)]
+    [InlineData("x.internal", false)]
+    [InlineData("x.corp", false)]
+    [InlineData("x.localdomain", false)]
+    [InlineData("home.arpa", false)]
+    [InlineData("x.home.arpa", false)]
+    [InlineData("example.com", true)]
+    [InlineData("sub.example.co.uk", true)]
+    public void IsPubliclyResolvableHost_FiltersLocalNamesAndAddresses(string host, bool expected)
+    {
+        Assert.Equal(expected, FaviconService.IsPubliclyResolvableHost(host));
+    }
+
+    [Fact]
+    public void CollectMissingHosts_IncludesLocalHostsForDiskCacheLookup()
+    {
+        var router = $"router-{Guid.NewGuid():N}";
+        var localDomain = $"nas-{Guid.NewGuid():N}.local";
+
+        var hosts = FaviconService.CollectMissingHosts(
+        [
+            ($"https://{router}", "Router"),
+            ($"https://{localDomain}", "NAS")
+        ]);
+
+        Assert.Equal([router, localDomain], hosts);
+    }
+
+    [Fact]
+    public async Task Download_LoadsCachedLocalHostBeforeSkippingExternalLookup()
+    {
+        var host = $"nas-{Guid.NewGuid():N}.local";
+        ConfigureOnlineFetching(true);
+        ClearPendingDownloads();
+
+        var cacheDir = FaviconService.CacheDir;
+        var pathCache = FaviconService.PathCache;
+        var memory = FaviconService.Memory;
+        var cachePath = FaviconService.CachePath(host);
+
+        Directory.CreateDirectory(cacheDir);
+        await WriteEncryptedCacheFileAsync(host, cachePath);
+
+        try
+        {
+            memory.TryRemove(host, out _);
+
+            await FaviconService.DownloadOneAsync(host);
+
+            Assert.True(memory.ContainsKey(host));
+            Assert.False(GetFailed().ContainsKey(host));
+        }
+        finally
+        {
+            memory.TryRemove(host, out _);
+            GetFailed().TryRemove(host, out _);
+            pathCache.TryRemove(host, out _);
+            File.Delete(cachePath);
+            ConfigureOnlineFetching(false);
+            ClearPendingDownloads();
+        }
+    }
+
     private static async Task<byte[]?> ReadContentBytesAsync(HttpContent content)
     {
         var task = FaviconService.ReadContentBytesAsync(content);
