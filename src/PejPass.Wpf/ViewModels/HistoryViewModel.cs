@@ -571,11 +571,23 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
             IsBusy = true;
             BusyMessage = "Restoring history...";
 
+            if (_vaultSession.HasExternalChanges() &&
+                !DialogService.Confirm(
+                    "The vault file has changed on disk since it was opened or last saved. Saving now will overwrite those external changes. Continue?",
+                    "Vault changed on disk",
+                    yesText: "Overwrite vault",
+                    noText: "Cancel",
+                    isDestructive: true))
+            {
+                return;
+            }
+
             using var keyMaterial = _vaultSession.CopyKeyMaterial();
             await _vaultService.SaveVaultAsync(
                 path,
                 keyMaterial,
                 vault);
+            _vaultSession.RefreshDiskStamp();
         }
         catch (Exception exception)
         {
@@ -823,13 +835,27 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
 
         try
         {
+            if (_vaultSession.HasExternalChanges() &&
+                !DialogService.Confirm(
+                    "The vault file has changed on disk since it was opened or last saved. Saving now will overwrite those external changes. Continue?",
+                    "Vault changed on disk",
+                    yesText: "Overwrite vault",
+                    noText: "Cancel",
+                    isDestructive: true))
+            {
+                return false;
+            }
+
             using var keyMaterial = _vaultSession.CopyKeyMaterial();
             await _vaultService.SaveVaultAsync(
                 path,
                 keyMaterial,
                 vault);
 
-            return _vaultSession.IsCurrent(sessionGeneration, vault);
+            var stillCurrent = _vaultSession.IsCurrent(sessionGeneration, vault);
+            if (stillCurrent)
+                _vaultSession.RefreshDiskStamp();
+            return stillCurrent;
         }
         catch (Exception exception)
         {
