@@ -13,6 +13,7 @@ namespace PejPass.Wpf.ViewModels;
 public partial class VaultHealthViewModel : ObservableObject
 {
     private readonly IReadOnlyList<VaultEntry> _entries;
+    private readonly IReadOnlyList<EntryHistoryItem> _history;
 
     [ObservableProperty]
     public partial int SelectedFilterIndex { get; set; }
@@ -25,6 +26,9 @@ public partial class VaultHealthViewModel : ObservableObject
 
     [ObservableProperty]
     public partial int WeakCount { get; set; }
+
+    [ObservableProperty]
+    public partial int NeedsImprovementCount { get; set; }
 
     [ObservableProperty]
     public partial int UsernameEqualsPasswordCount { get; set; }
@@ -57,7 +61,7 @@ public partial class VaultHealthViewModel : ObservableObject
     [
         "All",
         "Duplicate passwords",
-        "Weak passwords",
+        "Weak passwords / needs improvement",
         "Username = password",
         "Missing TOTP",
         "Stale (1+ year)"
@@ -82,9 +86,12 @@ public partial class VaultHealthViewModel : ObservableObject
     private readonly Dictionary<Guid, string> _duplicateGroupKeys = [];
     private CancellationTokenSource? _scanCts;
 
-    public VaultHealthViewModel(IEnumerable<VaultEntry> entries)
+    public VaultHealthViewModel(
+        IEnumerable<VaultEntry> entries,
+        IEnumerable<EntryHistoryItem>? history = null)
     {
         _entries = [.. entries];
+        _history = history?.ToList() ?? [];
         IsScanning = true;
         IsReady = false;
         ScanProgress = 0;
@@ -118,6 +125,7 @@ public partial class VaultHealthViewModel : ObservableObject
         TotalIssues = 0;
         DuplicateCount = 0;
         WeakCount = 0;
+        NeedsImprovementCount = 0;
         UsernameEqualsPasswordCount = 0;
         MissingTotpCount = 0;
         StaleCount = 0;
@@ -178,15 +186,20 @@ public partial class VaultHealthViewModel : ObservableObject
                 }
 
                 var level = PasswordStrength.Evaluate(e.Password);
-                if (PasswordStrength.IsWeak(level))
+                if (GetPasswordIssueKind(level) is { } passwordIssueKind)
                 {
+                    var detail = level switch
+                    {
+                        PasswordStrengthLevel.Empty => "Password is empty",
+                        PasswordStrengthLevel.Fair => "Strength: Fair — needs improvement",
+                        _ => $"Strength: {level}"
+                    };
+
                     AddIssue(new HealthIssue(
-                        HealthIssueKind.WeakPassword,
+                        passwordIssueKind,
                         e.Id,
                         e.Title,
-                        level == PasswordStrengthLevel.Empty
-                            ? "Password is empty"
-                            : $"Strength: {level}"),
+                        detail),
                         filter);
                 }
 
@@ -212,14 +225,15 @@ public partial class VaultHealthViewModel : ObservableObject
                         filter);
                 }
 
-                if (utc - e.UpdatedAt >= VaultHealthRules.StaleThreshold)
+                var passwordChangedAt = GetPasswordLastChangedAt(e, _history);
+                if (utc - passwordChangedAt >= VaultHealthRules.StaleThreshold)
                 {
-                    var days = (int)(utc - e.UpdatedAt).TotalDays;
+                    var days = (int)(utc - passwordChangedAt).TotalDays;
                     AddIssue(new HealthIssue(
                         HealthIssueKind.StalePassword,
                         e.Id,
                         e.Title,
-                        $"Last updated {days} days ago"),
+                        $"Password unchanged for {days} days"),
                         filter);
                 }
 
@@ -336,9 +350,36 @@ public partial class VaultHealthViewModel : ObservableObject
         };
     }
 
-    private static double GetIssueSeverity(HealthIssue issue) => issue.Kind switch
+    internal static HealthIssueKind? GetPasswordIssueKind(PasswordStrengthLevel level) =>
+        level switch
+        {
+            PasswordStrengthLevel.Empty or
+                PasswordStrengthLevel.VeryWeak or
+                PasswordStrengthLevel.Weak => HealthIssueKind.WeakPassword,
+            PasswordStrengthLevel.Fair => HealthIssueKind.PasswordNeedsImprovement,
+            _ => null
+        };
+
+    internal static DateTimeOffset GetPasswordLastChangedAt(
+        VaultEntry entry,
+        IEnumerable<EntryHistoryItem> history)
+    {
+        var lastPasswordChange = history
+            .Where(item =>
+                item.EntryId == entry.Id &&
+                !string.Equals(item.Password, entry.Password, StringComparison.Ordinal))
+            .OrderByDescending(item => item.ChangedAt)
+            .Select(item => (DateTimeOffset?)item.ChangedAt)
+            .FirstOrDefault();
+
+        // CreatedAt is the best available fallback for legacy entries with no matching history.
+        return lastPasswordChange ?? entry.CreatedAt;
+    }
+
+    internal static double GetIssueSeverity(HealthIssue issue) => issue.Kind switch
     {
         HealthIssueKind.WeakPassword => 4.0,
+        HealthIssueKind.PasswordNeedsImprovement => 1.5,
         HealthIssueKind.DuplicatePassword => 3.0,
         HealthIssueKind.UsernameEqualsPassword => 3.0,
         HealthIssueKind.MissingTotp => 1.0,
@@ -354,6 +395,7 @@ public partial class VaultHealthViewModel : ObservableObject
         {
             case HealthIssueKind.DuplicatePassword: DuplicateCount++; break;
             case HealthIssueKind.WeakPassword: WeakCount++; break;
+            case HealthIssueKind.PasswordNeedsImprovement: NeedsImprovementCount++; break;
             case HealthIssueKind.UsernameEqualsPassword: UsernameEqualsPasswordCount++; break;
             case HealthIssueKind.MissingTotp: MissingTotpCount++; break;
             case HealthIssueKind.StalePassword: StaleCount++; break;
@@ -405,7 +447,7 @@ public partial class VaultHealthViewModel : ObservableObject
     private static bool MatchesFilter(HealthIssue issue, int filterIndex) => filterIndex switch
     {
         1 => issue.Kind == HealthIssueKind.DuplicatePassword,
-        2 => issue.Kind == HealthIssueKind.WeakPassword,
+        2 => issue.Kind is HealthIssueKind.WeakPassword or HealthIssueKind.PasswordNeedsImprovement,
         3 => issue.Kind == HealthIssueKind.UsernameEqualsPassword,
         4 => issue.Kind == HealthIssueKind.MissingTotp,
         5 => issue.Kind == HealthIssueKind.StalePassword,
@@ -457,6 +499,7 @@ public sealed class HealthIssueRow
         {
             HealthIssueKind.DuplicatePassword => "Duplicate",
             HealthIssueKind.WeakPassword => "Weak",
+            HealthIssueKind.PasswordNeedsImprovement => "Needs improvement",
             HealthIssueKind.UsernameEqualsPassword => "User=Pwd",
             HealthIssueKind.MissingTotp => "No TOTP",
             HealthIssueKind.StalePassword => "Stale",
