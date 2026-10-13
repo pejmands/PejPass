@@ -22,13 +22,11 @@ Built with **C# / .NET 10**, **WPF**, **CommunityToolkit.Mvvm**, and modern auth
 ### Master Password Policy
 
 - Minimum length: **12 characters**
-- Requires:
-  - Uppercase letter
-  - Lowercase letter
-  - Digit
-  - Special character
-- No spaces
-- Common password rejection
+- Maximum length: **256 characters** (the estimator's evaluation limit)
+- Requires the maximum zxcvbn score of **4** ("Very strong")
+- Rejects common and predictable patterns using zxcvbn's bundled dictionaries and pattern matching
+- Spaces are allowed, so strong multi-word passphrases can be used
+- The bundled word dictionaries are English-focused, so common non-English phrases may be overrated.
 
 ## Features
 

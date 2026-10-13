@@ -18,6 +18,7 @@ public sealed class MasterPasswordPolicyTests
     [InlineData("P@ssw0rd123!")]
     [InlineData("Summer2026!")]
     [InlineData("Qwerty123456!")]
+    [InlineData("Aaaaaaaaaaaa1!")]
     public void Validate_RejectsInvalidOrPredictablePasswords(string? password)
     {
         var result = MasterPasswordPolicy.Validate(password);
@@ -27,13 +28,24 @@ public sealed class MasterPasswordPolicyTests
     }
 
     [Theory]
-    [InlineData("R3dwood!Orbit7")]
-    [InlineData("Boulder#Train48")]
-    public void Validate_AcceptsPasswordsMeetingPolicy(string password)
+    [InlineData("vQ7!nT4#zP9@kR2$wX6")]
+    [InlineData("correct horse battery staple")]
+    public void Validate_AcceptsStrongPasswordsAndPassphrases(string password)
     {
         var result = MasterPasswordPolicy.Validate(password);
 
         Assert.True(result.IsValid);
         Assert.Null(result.ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_RejectsPasswordLongerThanEstimatorLimit()
+    {
+        var password = new string('a', MasterPasswordPolicy.MaximumLength + 1);
+
+        var result = MasterPasswordPolicy.Validate(password);
+
+        Assert.False(result.IsValid);
+        Assert.Contains("256", result.ErrorMessage);
     }
 }
