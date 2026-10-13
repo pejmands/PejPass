@@ -542,13 +542,13 @@
 						<ControlTemplate TargetType="TextBox">
 							<Border
 								x:Name="TextBoxBorder"
-								Padding="{TemplateBinding Padding}"
 								Background="{TemplateBinding Background}"
 								BorderBrush="{TemplateBinding BorderBrush}"
 								BorderThickness="{TemplateBinding BorderThickness}"
 								CornerRadius="6">
 								<ScrollViewer
 									x:Name="PART_ContentHost"
+									Padding="{TemplateBinding Padding}"
 									VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
 									HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
 									VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
@@ -583,13 +583,13 @@
 						<ControlTemplate TargetType="PasswordBox">
 							<Border
 								x:Name="PasswordBoxBorder"
-								Padding="{TemplateBinding Padding}"
 								Background="{TemplateBinding Background}"
 								BorderBrush="{TemplateBinding BorderBrush}"
 								BorderThickness="{TemplateBinding BorderThickness}"
 								CornerRadius="6">
 								<ScrollViewer
 									x:Name="PART_ContentHost"
+									Padding="{TemplateBinding Padding}"
 									VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
 									HorizontalScrollBarVisibility="Hidden" />
 							</Border>
