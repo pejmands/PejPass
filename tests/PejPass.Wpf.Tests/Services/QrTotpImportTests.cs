@@ -19,6 +19,19 @@ public sealed class QrTotpImportTests
         Assert.Equal("alice@example.com", result.Account);
     }
 
+    [Theory]
+    [InlineData("Example%252FService", "Example%2FService")]
+    [InlineData("Example%20Inc", "Example Inc")]
+    public void TryParseTotpPayload_DecodesIssuerExactlyOnce(string encodedIssuer, string expectedIssuer)
+    {
+        var payload = $"otpauth://totp/alice?secret=JBSWY3DPEHPK3PXP&issuer={encodedIssuer}";
+
+        var ok = QrTotpImport.TryParseTotpPayload(payload, out var result, out var error);
+
+        Assert.True(ok, error);
+        Assert.Equal(expectedIssuer, result!.Issuer);
+    }
+
     [Fact]
     public void TryParseTotpPayload_NonDefaultParameters_KeepsThemInStoredSecret()
     {
