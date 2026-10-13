@@ -1,6 +1,6 @@
 using PejPass.Wpf.ViewModels;
 using System.Reflection;
-using System.Timers;
+using Timer = System.Timers.Timer;
 
 namespace PejPass.Wpf.Tests.ViewModels;
 
@@ -24,13 +24,13 @@ public sealed class MainViewModelAutoLockTimerTests
                 var secondTimer = Assert.IsType<Timer>(timerField.GetValue(viewModel));
                 Assert.NotSame(firstTimer, secondTimer);
                 Assert.True(secondTimer.Enabled);
-                Assert.Throws<ObjectDisposedException>(() => firstTimer.Start());
+                Assert.Throws<ObjectDisposedException>((Action)(() => firstTimer.Start()));
 
                 host.Settings.AutoLockMinutes = 0;
                 InvokeStartAutoLockTimer(viewModel);
 
                 Assert.Null(timerField.GetValue(viewModel));
-                Assert.Throws<ObjectDisposedException>(() => secondTimer.Start());
+                Assert.Throws<ObjectDisposedException>((Action)(() => secondTimer.Start()));
             }
             finally
             {
@@ -55,7 +55,7 @@ public sealed class MainViewModelAutoLockTimerTests
                 viewModel.StopBackgroundTimers();
 
                 Assert.Null(timerField.GetValue(viewModel));
-                Assert.Throws<ObjectDisposedException>(() => timer.Start());
+                Assert.Throws<ObjectDisposedException>((Action)(() => timer.Start()));
             }
             finally
             {
