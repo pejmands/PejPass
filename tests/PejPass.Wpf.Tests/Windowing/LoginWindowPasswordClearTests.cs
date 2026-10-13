@@ -1,8 +1,6 @@
-using PejPass.Wpf;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.Reflection;
-using System.Windows;
 
 namespace PejPass.Wpf.Tests.Windowing;
 
@@ -13,7 +11,7 @@ public sealed class LoginWindowPasswordClearTests
     {
         WpfTestHost.Run(host =>
         {
-            var app = Application.Current!;
+            var app = System.Windows.Application.Current!;
             var login = host.CreateLoginWindow();
             app.MainWindow = login;
             login.Show();
