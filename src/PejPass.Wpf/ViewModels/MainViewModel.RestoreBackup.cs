@@ -132,7 +132,8 @@ public partial class MainViewModel
                         "This cannot be undone unless you have another backup.\n\nContinue?",
                         "Confirm replace",
                         yesText: "Replace vault",
-                        noText: "Cancel"))
+                        noText: "Cancel",
+                        isDestructive: true))
                 {
                     StatusMessage = "Restore cancelled.";
                     return;
