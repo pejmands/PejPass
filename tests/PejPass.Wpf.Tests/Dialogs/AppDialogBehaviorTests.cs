@@ -29,6 +29,33 @@ public sealed class AppDialogBehaviorTests
         }, TestContext.Current.CancellationToken);
     }
 
+
+    [Fact(Timeout = 15000)]
+    public void DestructiveChoiceDialog_EnterDefaultsToCancelTertiary()
+    {
+        WpfTestHost.Run(_ =>
+        {
+            var dialog = new AppDialog(
+                "Restore mode",
+                "Choose how to restore.",
+                AppDialogType.Confirm,
+                "Replace",
+                "Merge",
+                "Cancel",
+                isDestructive: true);
+
+            var primary = GetButton(dialog, "PrimaryButton");
+            var secondary = GetButton(dialog, "SecondaryButton");
+            var tertiary = GetButton(dialog, "TertiaryButton");
+
+            Assert.False(primary.IsDefault);
+            Assert.False(secondary.IsDefault);
+            Assert.True(tertiary.IsDefault);
+
+            dialog.Close();
+        }, TestContext.Current.CancellationToken);
+    }
+
     [Fact(Timeout = 15000)]
     public void OrdinaryDialog_EnterStillDefaultsToPrimaryAction()
     {
