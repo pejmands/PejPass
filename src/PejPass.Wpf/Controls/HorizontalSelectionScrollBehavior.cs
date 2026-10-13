@@ -75,7 +75,7 @@ public static class HorizontalSelectionScrollBehavior
         var scrollViewer = FindScrollViewer(control);
         if (scrollViewer is null)
         {
-            if (attempt + 1 >= MaxAttachAttempts)
+            if (!ShouldRetryAttach(attempt))
                 return;
 
             control.Dispatcher.BeginInvoke(
@@ -88,6 +88,9 @@ public static class HorizontalSelectionScrollBehavior
         control.PreviewMouseMove -= OnPreviewMouseMove;
         control.PreviewMouseMove += OnPreviewMouseMove;
     }
+
+    internal static bool ShouldRetryAttach(int attempt) =>
+        attempt + 1 < MaxAttachAttempts;
 
     private static void Detach(Control control)
     {
