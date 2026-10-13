@@ -801,9 +801,15 @@ public partial class MainViewModel : ObservableObject
             return;
 
         var snapshot = vault.CreateSnapshot();
+        var nextSortOrder = _settings.SortMode == EntrySortMode.Manual
+            ? GetNextManualSortOrder(vault.Entries, isFavorite, entry.Id)
+            : entry.SortOrder;
 
         if (!vault.SetFavorite(entry.Id, isFavorite))
             return;
+
+        if (_settings.SortMode == EntrySortMode.Manual)
+            entry.SortOrder = nextSortOrder;
 
         IsFavoriteSelected = isFavorite;
 
@@ -818,6 +824,20 @@ public partial class MainViewModel : ObservableObject
         SnackbarService.Show(isFavorite
             ? "Added to favorites."
             : "Removed from favorites.");
+    }
+
+    internal static int GetNextManualSortOrder(
+        IEnumerable<VaultEntry> entries,
+        bool destinationIsFavorite,
+        Guid movingEntryId)
+    {
+        return entries
+            .Where(entry =>
+                entry.Id != movingEntryId &&
+                entry.IsFavorite == destinationIsFavorite)
+            .Select(entry => entry.SortOrder)
+            .DefaultIfEmpty(-10)
+            .Max() + 10;
     }
 
     [RelayCommand]
@@ -1428,7 +1448,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void OpenHealth()
     {
-        var vm = new VaultHealthViewModel(Entries);
+        var vm = new VaultHealthViewModel(Entries, _vaultSession.Vault?.History);
         var win = new VaultHealthWindow(vm)
         {
             Owner = GetOwnerWindow()
