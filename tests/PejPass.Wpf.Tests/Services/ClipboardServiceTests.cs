@@ -27,7 +27,8 @@ public sealed class ClipboardServiceTests
     {
         var clipboard = new FakeClipboardProvider();
         var dispatcher = new FakeUiDispatcher();
-        var service = new ClipboardService(clipboard, dispatcher);
+        var clock = new ManualTimeProvider();
+        var service = new ClipboardService(clipboard, dispatcher, clock);
 
         service.CopyWithTimeout("Secret123!", TimeSpan.FromMinutes(1));
 
@@ -93,13 +94,13 @@ public sealed class ClipboardServiceTests
 
     private sealed class FakeUiDispatcher : IUiDispatcher
     {
-        public TaskCompletionSource Invoked { get; } =
+        public TaskCompletionSource<bool> Invoked { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public void Invoke(Action action)
         {
             action();
-            Invoked.TrySetResult();
+            Invoked.TrySetResult(true);
         }
     }
 
