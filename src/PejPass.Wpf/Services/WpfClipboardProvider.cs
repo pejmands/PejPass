@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 
 namespace PejPass.Wpf.Services;
 
@@ -6,10 +6,7 @@ public sealed class WpfClipboardProvider : IClipboardProvider
 {
     public void SetText(string text)
     {
-        var data = new DataObject();
-        data.SetData(DataFormats.UnicodeText, text);
-        data.SetData("ExcludeClipboardContentFromMonitorProcessing", true);
-        Clipboard.SetDataObject(data, copy: true);
+        WindowsClipboardWriter.SetText(text);
     }
 
     public bool ContainsText()
