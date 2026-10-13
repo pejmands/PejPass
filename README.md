@@ -23,7 +23,7 @@ Built with **C# / .NET 10**, **WPF**, **CommunityToolkit.Mvvm**, and modern auth
 
 - Minimum length: **12 characters**
 - Maximum length: **256 characters** (the estimator's evaluation limit)
-- Requires a zxcvbn score of at least **3** ("Strong")
+- Requires the maximum zxcvbn score of **4** ("Very strong")
 - Rejects common and predictable patterns using zxcvbn's bundled dictionaries and pattern matching
 - Spaces are allowed, so strong multi-word passphrases can be used
 - The bundled word dictionaries are English-focused, so common non-English phrases may be overrated.
