@@ -1,3 +1,4 @@
+using PejPass.Domain.Policies;
 using PejPass.Domain.Security;
 
 namespace PejPass.Domain.Tests;
@@ -9,19 +10,40 @@ public sealed class PasswordStrengthTests
     [InlineData("P@ssw0rd123!")]
     [InlineData("Summer2026!")]
     [InlineData("Qwerty123456!")]
-    public void Evaluate_DoesNotRateCommonPasswordVariantsAsStrong(string password)
+    [InlineData("Aaaaaaaaaaaa1!")]
+    public void Evaluate_DoesNotRateCommonOrPredictablePasswordsAsStrong(string password)
     {
-        Assert.Equal(PasswordStrengthLevel.Weak, PasswordStrength.Evaluate(password));
+        var level = PasswordStrength.Evaluate(password);
+
+        Assert.True(
+            level is PasswordStrengthLevel.VeryWeak
+                or PasswordStrengthLevel.Weak
+                or PasswordStrengthLevel.Fair);
+        Assert.True(PasswordStrength.GetScore(password) < MasterPasswordPolicy.MinimumStrengthScore);
         Assert.True(PasswordStrength.IsWeak(password));
     }
 
-    [Fact]
-    public void Evaluate_RatesLongMixedUniquePasswordAsStrong()
+    [Theory]
+    [InlineData("vQ7!nT4#zP9@kR2$wX6")]
+    [InlineData("correct horse battery staple")]
+    public void Evaluate_RatesStrongRandomPasswordsAndPassphrasesAsStrong(string password)
     {
-        var level = PasswordStrength.Evaluate("R3dwood!Orbit7");
+        var level = PasswordStrength.Evaluate(password);
 
         Assert.True(level is PasswordStrengthLevel.Strong or PasswordStrengthLevel.VeryStrong);
-        Assert.False(PasswordStrength.IsWeak("R3dwood!Orbit7"));
+        Assert.False(PasswordStrength.IsWeak(password));
+    }
+
+    [Fact]
+    public void Evaluate_UsesPatternMatchingForRepeatedCharacters()
+    {
+        const string password = "Aaaaaaaaaaaa1!";
+
+        Assert.True(PasswordStrength.GetScore(password) < MasterPasswordPolicy.MinimumStrengthScore);
+        Assert.True(PasswordStrength.IsWeak(password));
+        Assert.DoesNotContain(
+            PasswordStrength.Evaluate(password),
+            new[] { PasswordStrengthLevel.Strong, PasswordStrengthLevel.VeryStrong });
     }
 
     [Theory]
@@ -31,5 +53,12 @@ public sealed class PasswordStrengthTests
     public void Evaluate_HandlesEmptyAndShortPasswords(string? password, PasswordStrengthLevel expected)
     {
         Assert.Equal(expected, PasswordStrength.Evaluate(password));
+    }
+
+    [Fact]
+    public void GetScore_UsesZeroToFourZxcvbnScale()
+    {
+        Assert.Equal(0, PasswordStrength.GetScore("password"));
+        Assert.Equal(4, PasswordStrength.GetScore("correct horse battery staple"));
     }
 }
