@@ -91,31 +91,7 @@ public partial class VaultHealthViewModel : ObservableObject
         IEnumerable<EntryHistoryItem>? history = null)
     {
         _entries = [.. entries];
-
-        var entriesById = _entries.ToDictionary(entry => entry.Id);
-        var latestPasswordChanges = new Dictionary<Guid, DateTimeOffset>();
-
-        foreach (var item in history ?? [])
-        {
-            if (!entriesById.TryGetValue(item.EntryId, out var entry) ||
-                string.Equals(item.Password, entry.Password, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            if (!latestPasswordChanges.TryGetValue(item.EntryId, out var previousDate) ||
-                item.ChangedAt > previousDate)
-            {
-                latestPasswordChanges[item.EntryId] = item.ChangedAt;
-            }
-        }
-
-        _passwordChangedAtByEntry = _entries.ToDictionary(
-            entry => entry.Id,
-            entry => latestPasswordChanges.TryGetValue(entry.Id, out var changedAt)
-                ? changedAt
-                : entry.CreatedAt);
-
+        _passwordChangedAtByEntry = BuildPasswordLastChangedAtLookup(_entries, history);
         IsScanning = true;
         IsReady = false;
         ScanProgress = 0;
@@ -384,20 +360,35 @@ public partial class VaultHealthViewModel : ObservableObject
             _ => null
         };
 
-    internal static DateTimeOffset GetPasswordLastChangedAt(
-        VaultEntry entry,
-        IEnumerable<EntryHistoryItem> history)
+    internal static IReadOnlyDictionary<Guid, DateTimeOffset> BuildPasswordLastChangedAtLookup(
+        IEnumerable<VaultEntry> entries,
+        IEnumerable<EntryHistoryItem>? history)
     {
-        var lastPasswordChange = history
-            .Where(item =>
-                item.EntryId == entry.Id &&
-                !string.Equals(item.Password, entry.Password, StringComparison.Ordinal))
-            .OrderByDescending(item => item.ChangedAt)
-            .Select(item => (DateTimeOffset?)item.ChangedAt)
-            .FirstOrDefault();
+        var entryList = entries.ToList();
+        var entriesById = entryList.ToDictionary(entry => entry.Id);
+        var latestPasswordChanges = new Dictionary<Guid, DateTimeOffset>();
+
+        foreach (var item in history ?? Enumerable.Empty<EntryHistoryItem>())
+        {
+            if (!entriesById.TryGetValue(item.EntryId, out var entry) ||
+                string.Equals(item.Password, entry.Password, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (!latestPasswordChanges.TryGetValue(item.EntryId, out var previousDate) ||
+                item.ChangedAt > previousDate)
+            {
+                latestPasswordChanges[item.EntryId] = item.ChangedAt;
+            }
+        }
 
         // CreatedAt is the best available fallback for legacy entries with no matching history.
-        return lastPasswordChange ?? entry.CreatedAt;
+        return entryList.ToDictionary(
+            entry => entry.Id,
+            entry => latestPasswordChanges.TryGetValue(entry.Id, out var changedAt)
+                ? changedAt
+                : entry.CreatedAt);
     }
 
     internal static double GetIssueSeverity(HealthIssue issue) => issue.Kind switch
