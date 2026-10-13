@@ -1,3 +1,4 @@
+using PejPass.Wpf.Services;
 using System.Windows;
 
 namespace PejPass.Wpf.Dialogs;
@@ -17,7 +18,7 @@ public static class DialogService
             Window? best = null;
             foreach (Window w in app.Windows)
             {
-                if (!w.IsVisible || !w.IsLoaded)
+                if (SystemTrayService.IsHostWindow(w) || !w.IsVisible || !w.IsLoaded)
                     continue;
                 if (w.IsActive)
                     return w;
