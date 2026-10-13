@@ -579,6 +579,13 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
                     noText: "Cancel",
                     isDestructive: true))
             {
+                if (_vaultSession.IsCurrent(sessionGeneration, vault))
+                {
+                    vault.RestoreSnapshot(snapshot);
+                    Load();
+                    VaultRollbackCompleted?.Invoke(this, EventArgs.Empty);
+                }
+
                 return;
             }
 
