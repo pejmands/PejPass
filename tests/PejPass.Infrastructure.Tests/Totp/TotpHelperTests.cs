@@ -63,6 +63,30 @@ public sealed class TotpHelperTests
         Assert.Equal(30, remaining);
     }
 
+    [Fact]
+    public void TryParse_AcceptsInputAtMaximumLength()
+    {
+        var input = new string('A', TotpHelper.MaxInputLength);
+
+        var ok = TotpHelper.TryParse(input, out var parameters, out var error);
+
+        Assert.True(ok, error);
+        Assert.NotNull(parameters);
+        Assert.Equal(TotpHelper.MaxInputLength, parameters.Secret.Length);
+    }
+
+    [Fact]
+    public void TryParse_RejectsInputAboveMaximumLength()
+    {
+        var input = new string('A', TotpHelper.MaxInputLength + 1);
+
+        var ok = TotpHelper.TryParse(input, out var parameters, out var error);
+
+        Assert.False(ok);
+        Assert.Null(parameters);
+        Assert.Equal("The TOTP secret is too long.", error);
+    }
+
     [Theory]
     [InlineData("otpauth://totp/t?secret=JBSWY3DPEHPK3PXP&digits=5")]
     [InlineData("otpauth://totp/t?secret=JBSWY3DPEHPK3PXP&digits=9")]
