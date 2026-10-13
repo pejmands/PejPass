@@ -191,67 +191,6 @@
 							Visibility="Collapsed" />
 					</Grid>
 
-					<Popup
-						x:Name="MoreActionsPopup"
-						AllowsTransparency="True"
-						DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
-						HorizontalOffset="0"
-						Placement="Bottom"
-						PlacementTarget="{Binding ElementName=MoreActionsButton}"
-						StaysOpen="False"
-						VerticalOffset="6">
-						<Border Style="{StaticResource ToolbarOverflowBorder}">
-							<StackPanel>
-								<MenuItem
-									Command="{Binding OpenHealthCommand}"
-									Header="Vault Health"
-									InputGestureText="Ctrl+H"
-									Style="{StaticResource ToolbarMenuItem}" />
-								<MenuItem
-									Command="{Binding OpenHistoryCommand}"
-									Header="History"
-									Style="{StaticResource ToolbarMenuItem}" />
-								<MenuItem
-									Command="{Binding OpenTrashCommand}"
-									Header="Trash"
-									InputGestureText="Ctrl+Shift+T"
-									Style="{StaticResource ToolbarMenuItem}" />
-								<Separator Margin="4,5" Background="{DynamicResource BorderBrush}" />
-								<MenuItem
-									Command="{Binding ExportBackupCommand}"
-									Header="Backup"
-									InputGestureText="Ctrl+B"
-									Style="{StaticResource ToolbarMenuItem}" />
-								<MenuItem
-									Command="{Binding RestoreBackupCommand}"
-									Header="Restore"
-									Style="{StaticResource ToolbarMenuItem}" />
-								<Separator Margin="4,5" Background="{DynamicResource BorderBrush}" />
-								<MenuItem
-									Command="{Binding ImportCommand}"
-									Header="Import Browser CSV"
-									Style="{StaticResource ToolbarMenuItem}" />
-								<MenuItem
-									Command="{Binding ImportPejPassCsvCommand}"
-									Header="Import PejPass CSV"
-									Style="{StaticResource ToolbarMenuItem}" />
-								<MenuItem
-									Command="{Binding ExportCsvCommand}"
-									Header="Export Browser CSV"
-									Style="{StaticResource ToolbarMenuItem}" />
-								<MenuItem
-									Command="{Binding ExportPejPassCsvCommand}"
-									Header="Export PejPass CSV"
-									Style="{StaticResource ToolbarMenuItem}" />
-								<Separator Margin="4,5" Background="{DynamicResource BorderBrush}" />
-								<MenuItem
-									x:Name="MoreActionsPopupAboutMenuItem"
-									Command="{Binding OpenAboutCommand}"
-									Header="About PejPass"
-									Style="{StaticResource ToolbarMenuItem}" />
-							</StackPanel>
-						</Border>
-					</Popup>
 
 					<Button
 						x:Name="SettingsButton"

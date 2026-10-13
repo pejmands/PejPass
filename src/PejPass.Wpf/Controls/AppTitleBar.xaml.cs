@@ -195,10 +195,9 @@ public partial class AppTitleBar : UserControl
         if (Host is { } window)
         {
             window.StateChanged -= OnHostStateChanged;
-            window.SourceInitialized -= OnSourceInitialized;
         }
 
-        DetachHook();
+        DetachCaptionMenuHook();
     }
 
     private void AttachCaptionMenuHook(Window window)
@@ -264,7 +263,6 @@ public partial class AppTitleBar : UserControl
 
         MoreActionsAboutMenuItem?.Header = aboutHeader;
 
-        MoreActionsPopupAboutMenuItem?.Header = aboutHeader;
 
         LoginAboutMenuItem?.Header = aboutHeader;
 
@@ -278,29 +276,6 @@ public partial class AppTitleBar : UserControl
             MoreActionsButton?.ToolTip = "More actions";
             LoginMoreButton?.ToolTip = "More";
         }
-    }
-
-    private void OnSourceInitialized(object? sender, EventArgs e)
-    {
-        if (Host is { } window)
-        {
-            var helper = new WindowInteropHelper(window);
-            if (helper.Handle != IntPtr.Zero)
-                AttachHook(helper.Handle);
-        }
-    }
-
-    private void AttachHook(IntPtr hwnd)
-    {
-        DetachHook();
-        _hwndSource = HwndSource.FromHwnd(hwnd);
-        _hwndSource?.AddHook(WndProc);
-    }
-
-    private void DetachHook()
-    {
-        _hwndSource?.RemoveHook(WndProc);
-        _hwndSource = null;
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
