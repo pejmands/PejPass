@@ -20,6 +20,16 @@ The cache service uses `CryptographicOperations.ZeroMemory` for byte buffers it 
 
 The “Until app closes” timeout disables the elapsed-time limit only; it does not override the Windows lock/disconnect/suspend, password-change, Hello-disable, failure-limit, or app-exit clearing rules.
 
+## Update manifest rollback and freshness
+
+The updater verifies the ECDSA signature over the manifest's version, release date, download URL, and package SHA-256, then checks that the manifest version is newer than the installed version. These checks authenticate the signed metadata and the downloaded package, but they do not establish that the manifest is the newest one published.
+
+An attacker able to interfere with update traffic can replay an older, still-valid signed manifest. If that manifest points to a legitimate signed-by-hash release that is newer than the client's installed version but older than the current release, the client may offer that older release for installation. This is a **rollback of update freshness**, not a signature forgery; the attacker cannot alter the authenticated version, URL, or hash without a trusted signing key. The updater checks for updates manually rather than installing them automatically, which limits exposure but does not eliminate it.
+
+**Current status: known limitation; not prevented by the current manifest format.** Do not treat a valid signature alone as proof that an update is current. Until freshness protection is implemented, publish only through the trusted release channel and keep release artifacts and the manifest consistent.
+
+A future mitigation should be designed as a separate compatibility change. A signed `expires` timestamp can bound how long a manifest remains acceptable, but it requires a defined clock policy and a migration plan for clients that do not understand the field; by itself, it does not prevent replay of an older manifest before that manifest expires. Stronger rollback resistance may also require a signed monotonically increasing release sequence and client-side state that remembers the highest accepted sequence. Any design must account for clock rollback, deletion or restoration of local state, offline use, emergency key rotation, and how older installed versions transition to the new schema.
+
 ## Update-signing key rotation
 
 PejPass verifies update manifests using ECDSA P-256 public keys embedded in `src/PejPass.Application/Security/TrustedUpdateKeys.cs`. The private signing keys must never be committed to the repository, included in releases, or shared through chat or email. Keep the trusted-key list small (currently limited by code review guidance to at most three keys).
