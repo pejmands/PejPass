@@ -4,6 +4,7 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:controls="clr-namespace:PejPass.Wpf.Controls"
 	xmlns:domain="clr-namespace:PejPass.Domain.Exceptions;assembly=PejPass.Domain"
+	xmlns:totp="clr-namespace:PejPass.Infrastructure.Totp;assembly=PejPass.Infrastructure"
 	Width="560"
 	Height="760"
 	MinWidth="480"
@@ -206,7 +207,7 @@
 
 				<controls:PasswordRevealBox
 					x:Name="TotpSecretBox"
-					MaxLength="{x:Static domain:VaultLimits.MaxTextCharacters}"
+					MaxLength="{x:Static totp:TotpHelper.MaxInputLength}"
 					Margin="0,0,0,6"
 					PasswordChanged="TotpSecretBox_PasswordChanged"
 					ToolTip="Paste a Base32 secret or otpauth://totp URI. Leave empty to disable TOTP." />
