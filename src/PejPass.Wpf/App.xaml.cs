@@ -325,7 +325,7 @@ public partial class App : System.Windows.Application
 
             foreach (var window in application.Windows
                          .OfType<Window>()
-                         .Where(window => window is not LoginWindow)
+                         .Where(window => !ReferenceEquals(window, loginWindow))
                          .ToArray())
             {
                 try
