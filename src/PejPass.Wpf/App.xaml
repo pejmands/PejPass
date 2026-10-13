@@ -888,7 +888,11 @@
 									<RowDefinition Height="Auto" />
 								</Grid.RowDefinitions>
 
-								<ScrollContentPresenter Grid.Row="0" Grid.Column="0" />
+								<ScrollContentPresenter
+									Grid.Row="0"
+									Grid.Column="0"
+									Margin="{TemplateBinding Padding}"
+									CanContentScroll="{TemplateBinding CanContentScroll}" />
 
 								<ScrollBar
 									x:Name="PART_VerticalScrollBar"
