@@ -264,6 +264,7 @@ public sealed class VaultSession : IDisposable
             ClearKeyMaterialCore();
             _vault = null;
             _vaultPath = null;
+            _diskStamp = null;
             _generation++;
             _disposed = true;
             StateChanged = null;
