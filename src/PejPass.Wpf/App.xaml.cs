@@ -33,6 +33,12 @@ public partial class App : System.Windows.Application
 
     private const double WindowCornerRadius = 10;
 
+    public App()
+    {
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
+        TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         var launchVaultPath = ParseVaultPathArg(e.Args);
@@ -46,9 +52,6 @@ public partial class App : System.Windows.Application
         }
 
         base.OnStartup(e);
-
-        DispatcherUnhandledException += OnDispatcherUnhandledException;
-        TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
         ShutdownMode = ShutdownMode.OnMainWindowClose;
 
@@ -244,7 +247,7 @@ public partial class App : System.Windows.Application
     private static void LockVaultForUnexpectedException()
     {
         var application = Current;
-        MainWindow? mainWindow = null;
+        global::PejPass.Wpf.MainWindow? mainWindow = null;
 
         try
         {
