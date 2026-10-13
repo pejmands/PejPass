@@ -620,6 +620,13 @@ public partial class LoginViewModel : ObservableObject
                 ValidationFailed?.Invoke(this, EventArgs.Empty);
                 return;
             }
+
+            if (string.IsNullOrWhiteSpace(MasterPassword))
+            {
+                PasswordError = "Enter your master password.";
+                ValidationFailed?.Invoke(this, EventArgs.Empty);
+                return;
+            }
         }
 
         IsBusy = true;
