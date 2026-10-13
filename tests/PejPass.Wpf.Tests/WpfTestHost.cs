@@ -89,6 +89,9 @@ internal sealed class WpfTestHost : IDisposable
     public MainWindow CreateMainWindow() =>
         _services.GetRequiredService<MainWindow>();
 
+    public MainViewModel CreateMainViewModel() =>
+        _services.GetRequiredService<MainViewModel>();
+
     public LoginWindow CreateLoginWindow() =>
         _services.GetRequiredService<LoginWindow>();
 
