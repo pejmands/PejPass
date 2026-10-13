@@ -109,6 +109,35 @@ public sealed class VaultSessionTests
         Assert.True(session.IsCurrent(session.Generation, replacementVault));
     }
 
+    [Fact]
+    public void ExternalFileChangeIsDetectedUntilDiskStampIsRefreshed()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass");
+        using var session = new VaultSession();
+        using var keyMaterial = CreateMaterial();
+        var vault = new Vault();
+
+        try
+        {
+            File.WriteAllText(path, "initial");
+            session.Open(vault, path, keyMaterial);
+
+            Assert.False(session.HasExternalChanges());
+
+            File.WriteAllText(path, "external change with a different length");
+
+            Assert.True(session.HasExternalChanges());
+
+            session.RefreshDiskStamp();
+
+            Assert.False(session.HasExternalChanges());
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     private static VaultKeyMaterial CreateMaterial()
     {
         var key = new byte[32];

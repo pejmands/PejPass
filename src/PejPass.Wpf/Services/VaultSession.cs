@@ -12,6 +12,7 @@ public sealed class VaultSession : IDisposable
     private string? _vaultPath;
     private bool _disposed;
     private long _generation;
+    private VaultDiskStamp? _diskStamp;
 
     public event EventHandler? StateChanged;
 
@@ -67,6 +68,7 @@ public sealed class VaultSession : IDisposable
         ArgumentNullException.ThrowIfNull(keyMaterial);
 
         var fullPath = Path.GetFullPath(vaultPath);
+        var diskStamp = CaptureDiskStamp(fullPath);
         var materialCopy = keyMaterial.Clone();
 
         try
@@ -77,6 +79,7 @@ public sealed class VaultSession : IDisposable
                 ClearKeyMaterialCore();
                 _vault = vault;
                 _vaultPath = fullPath;
+                _diskStamp = diskStamp;
                 _keyMaterial = materialCopy;
                 _generation++;
             }
@@ -99,6 +102,25 @@ public sealed class VaultSession : IDisposable
             ThrowIfDisposed();
             _vault = vault;
             _generation++;
+        }
+    }
+
+    public bool HasExternalChanges()
+    {
+        lock (_sync)
+        {
+            ThrowIfDisposed();
+            return _vaultPath is not null &&
+                CaptureDiskStamp(_vaultPath) != _diskStamp;
+        }
+    }
+
+    public void RefreshDiskStamp()
+    {
+        lock (_sync)
+        {
+            ThrowIfDisposed();
+            _diskStamp = _vaultPath is null ? null : CaptureDiskStamp(_vaultPath);
         }
     }
 
@@ -158,6 +180,7 @@ public sealed class VaultSession : IDisposable
             ClearKeyMaterialCore();
             _vault = null;
             _vaultPath = null;
+            _diskStamp = null;
             _generation++;
             changed = true;
         }
@@ -176,6 +199,7 @@ public sealed class VaultSession : IDisposable
             ClearKeyMaterialCore();
             _vault = null;
             _vaultPath = null;
+            _diskStamp = null;
             _generation++;
             _disposed = true;
             StateChanged = null;
@@ -183,6 +207,16 @@ public sealed class VaultSession : IDisposable
 
         GC.SuppressFinalize(this);
     }
+
+    private static VaultDiskStamp? CaptureDiskStamp(string path)
+    {
+        var info = new FileInfo(path);
+        return info.Exists
+            ? new VaultDiskStamp(info.Length, info.LastWriteTimeUtc)
+            : null;
+    }
+
+    private readonly record struct VaultDiskStamp(long Length, DateTime LastWriteTimeUtc);
 
     private void ClearKeyMaterialCore()
     {

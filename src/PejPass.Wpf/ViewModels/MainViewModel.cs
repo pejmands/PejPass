@@ -333,11 +333,25 @@ public partial class MainViewModel : ObservableObject
                 BusyMessage = "Saving vault...";
             }
 
+            if (_vaultSession.HasExternalChanges() &&
+                !DialogService.Confirm(
+                    "The vault file has changed on disk since it was opened or last saved. Saving now will overwrite those external changes. Continue?",
+                    "Vault changed on disk",
+                    yesText: "Overwrite vault",
+                    noText: "Cancel",
+                    isDestructive: true))
+            {
+                return;
+            }
+
             using var keyMaterial = _vaultSession.CopyKeyMaterial();
             await _vaultService.SaveVaultAsync(
                 vaultPath,
                 keyMaterial,
                 vault);
+            if (!_vaultSession.IsCurrent(sessionGeneration, vault))
+                return;
+            _vaultSession.RefreshDiskStamp();
         }
         catch (Exception exception)
         {
@@ -1713,6 +1727,17 @@ public partial class MainViewModel : ObservableObject
                 !_vaultSession.IsCurrent(sessionGeneration, vault))
                 return false;
 
+            if (_vaultSession.HasExternalChanges() &&
+                !DialogService.Confirm(
+                    "The vault file has changed on disk since it was opened or last saved. Saving now will overwrite those external changes. Continue?",
+                    "Vault changed on disk",
+                    yesText: "Overwrite vault",
+                    noText: "Cancel",
+                    isDestructive: true))
+            {
+                return false;
+            }
+
             keyMaterial = _vaultSession.CopyKeyMaterial();
 
             await _vaultService.SaveVaultAsync(
@@ -1723,6 +1748,7 @@ public partial class MainViewModel : ObservableObject
             if (!_vaultSession.IsCurrent(sessionGeneration, vault))
                 return false;
 
+            _vaultSession.RefreshDiskStamp();
             return true;
         }
         catch (Exception exception)
