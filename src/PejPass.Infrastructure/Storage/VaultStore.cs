@@ -398,6 +398,7 @@ public sealed class VaultStore(
         byte[]? ciphertext = null;
         byte[]? key = null;
         byte[]? plaintext = null;
+        var canMigrateLegacy = migrateLegacy;
 
         try
         {
@@ -566,9 +567,26 @@ public sealed class VaultStore(
                     if (associatedData is not null)
                         _crypto.ZeroMemory(associatedData);
                 }
+
+                if (canMigrateLegacy && versionValue != CurrentVersion)
+                {
+                    try
+                    {
+                        await EnsureLegacyBackupAsync(fs, path, versionValue, ct);
+                    }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch
+                    {
+                        // Do not replace a legacy vault unless its original bytes are safely backed up.
+                        canMigrateLegacy = false;
+                    }
+                }
             }
 
-            if (migrateLegacy && versionValue != CurrentVersion)
+            if (canMigrateLegacy && versionValue != CurrentVersion)
             {
                 try
                 {
@@ -609,6 +627,126 @@ public sealed class VaultStore(
                 _crypto.ZeroMemory(tag);
             if (ciphertext is not null)
                 _crypto.ZeroMemory(ciphertext);
+        }
+    }
+
+    private async Task EnsureLegacyBackupAsync(
+        FileStream source,
+        string vaultPath,
+        byte version,
+        CancellationToken ct)
+    {
+        var backupPath = $"{vaultPath}.v{version}.bak";
+        var originalPosition = source.Position;
+
+        try
+        {
+            source.Position = 0;
+
+            if (File.Exists(backupPath))
+            {
+                await using var existingBackup = new FileStream(
+                    backupPath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    bufferSize: 81920,
+                    useAsync: true);
+
+                if (!await StreamsEqualAsync(source, existingBackup, ct))
+                {
+                    throw new IOException(
+                        "An existing legacy vault backup does not match the current vault.");
+                }
+
+                return;
+            }
+
+            var directory = Path.GetDirectoryName(Path.GetFullPath(vaultPath))
+                            ?? throw new InvalidOperationException(
+                                "Vault directory could not be determined.");
+
+            var tempPath = Path.Combine(
+                directory,
+                $".{Path.GetFileName(vaultPath)}.v{version}.{Guid.NewGuid():N}.bak.tmp");
+
+            try
+            {
+                await using (var destination = new FileStream(
+                    tempPath,
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None,
+                    bufferSize: 81920,
+                    useAsync: true))
+                {
+                    source.Position = 0;
+                    await source.CopyToAsync(destination, 81920, ct);
+                    await destination.FlushAsync(ct);
+                    destination.Flush(flushToDisk: true);
+                }
+
+                // Publish the complete backup atomically and never overwrite an existing backup.
+                _fileMover.Move(tempPath, backupPath, overwrite: false);
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(tempPath))
+                        File.Delete(tempPath);
+                }
+                catch
+                {
+                    // Do not hide a backup or cancellation failure if cleanup fails.
+                }
+            }
+        }
+        finally
+        {
+            source.Position = originalPosition;
+        }
+    }
+
+    private static async Task<bool> StreamsEqualAsync(
+        Stream first,
+        Stream second,
+        CancellationToken ct)
+    {
+        if (first.Length != second.Length)
+            return false;
+
+        const int bufferSize = 81920;
+        var firstBuffer = new byte[bufferSize];
+        var secondBuffer = new byte[bufferSize];
+
+        try
+        {
+            var remaining = first.Length;
+
+            while (remaining > 0)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                var length = (int)Math.Min(bufferSize, remaining);
+                await first.ReadExactlyAsync(firstBuffer.AsMemory(0, length), ct);
+                await second.ReadExactlyAsync(secondBuffer.AsMemory(0, length), ct);
+
+                if (!firstBuffer.AsSpan(0, length)
+                        .SequenceEqual(secondBuffer.AsSpan(0, length)))
+                {
+                    return false;
+                }
+
+                remaining -= length;
+            }
+
+            return true;
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(firstBuffer);
+            CryptographicOperations.ZeroMemory(secondBuffer);
         }
     }
 
