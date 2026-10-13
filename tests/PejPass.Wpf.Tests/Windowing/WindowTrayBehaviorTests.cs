@@ -1,3 +1,4 @@
+using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 
 namespace PejPass.Wpf.Tests.Windowing;
@@ -188,4 +189,20 @@ public sealed class WindowTrayBehaviorTests
         }, TestContext.Current.CancellationToken);
     }
 
+
+    [Fact(Timeout = 15000)]
+    public void FindActivationTarget_PrefersMainWindowOverTrayHost_EvenWhenNeverShown()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Tray.Show();
+            var login = host.CreateLoginWindow();
+            System.Windows.Application.Current!.MainWindow = login;
+
+            var target = SingleInstance.FindActivationTarget(
+                System.Windows.Application.Current);
+
+            Assert.Same(login, target);
+        }, TestContext.Current.CancellationToken);
+    }
 }

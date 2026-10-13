@@ -14,6 +14,11 @@ namespace PejPass.Wpf.Services;
 /// </summary>
 public sealed class SystemTrayService : IDisposable
 {
+    internal const string HostWindowTag = "PejPass.TrayHost";
+
+    internal static bool IsHostWindow(Window window) =>
+        window.Tag as string == HostWindowTag;
+
     private readonly ThemeService _themeService;
     private readonly VaultSession _vaultSession;
     private TaskbarIcon? _taskbarIcon;
@@ -67,6 +72,7 @@ public sealed class SystemTrayService : IDisposable
         // (code-only TaskbarIcon never gets Loaded without a visual parent).
         _hostWindow = new Window
         {
+            Tag = HostWindowTag,
             Width = 0,
             Height = 0,
             WindowStyle = WindowStyle.None,
