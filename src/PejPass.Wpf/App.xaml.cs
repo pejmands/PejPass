@@ -459,7 +459,7 @@ public partial class App : System.Windows.Application
         _securityLock?.Handle(waitForUi: reason == SecurityLockReason.Suspend);
     }
 
-    private static void LockForWindowsSecurity()
+    internal static void LockForWindowsSecurity()
     {
         foreach (var loginWindow in Current.Windows.OfType<LoginWindow>())
             loginWindow.ClearPasswordInputs();
