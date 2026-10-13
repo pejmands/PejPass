@@ -12,12 +12,21 @@ namespace PejPass.Wpf.Services;
 /// </summary>
 public static class QrTotpImport
 {
+    internal const long MaxImagePixels = 8L * 1024 * 1024;
+    internal const int MaxImageDimension = 8192;
+
     public sealed record Result(string Secret, string? Issuer, string? Account, string? RawText);
 
     public static bool TryDecode(BitmapSource image, out Result? result, out string? error)
     {
         result = null;
         error = null;
+
+        if (IsImageTooLarge(image.PixelWidth, image.PixelHeight))
+        {
+            error = $"Image is too large. Use an image no larger than {MaxImagePixels / (1024 * 1024)} megapixels.";
+            return false;
+        }
 
         try
         {
@@ -121,6 +130,13 @@ public static class QrTotpImport
         error = "QR content is not a TOTP secret or otpauth:// URI.";
         return false;
     }
+
+    internal static bool IsImageTooLarge(int width, int height) =>
+        width <= 0 ||
+        height <= 0 ||
+        width > MaxImageDimension ||
+        height > MaxImageDimension ||
+        (long)width * height > MaxImagePixels;
 
     private static string? DecodeQrText(BitmapSource source)
     {
