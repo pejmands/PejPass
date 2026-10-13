@@ -451,7 +451,7 @@ public partial class LoginWindow : Window
         }
     }
 
-    private void ClearPasswordInputs()
+    internal void ClearPasswordInputs()
     {
         MasterPasswordBox.Clear();
         ConfirmMasterPasswordBox.Clear();
