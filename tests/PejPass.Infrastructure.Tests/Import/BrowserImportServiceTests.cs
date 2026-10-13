@@ -117,6 +117,29 @@ public sealed class BrowserImportServiceTests
     }
 
     [Fact]
+    public async Task ImportPejPassCsv_WhenFormat2OmitsFavoriteColumn_DoesNotTreatTitleAsFavorite()
+    {
+        var csv =
+            "name,url,username,password,note,totp_secret,tags,custom_fields,pejpass_format\n" +
+            "1,https://example.com,user,pass,,,\"[]\",\"[]\",2";
+        var file = CreateTempCsv(csv);
+
+        try
+        {
+            var result = Assert.Single(
+                await _service.ImportPejPassCsvAsync(file, TestContext.Current.CancellationToken));
+
+            Assert.Equal("1", result.Title);
+            Assert.False(result.IsFavorite);
+        }
+        finally
+        {
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+    }
+
+    [Fact]
     public async Task ImportPejPassCsv_WhenFieldExceedsCharacterLimit_ReportsFieldAndEntry()
     {
         var oversizedNotes = new string('x', VaultLimits.MaxTextCharacters + 1);
