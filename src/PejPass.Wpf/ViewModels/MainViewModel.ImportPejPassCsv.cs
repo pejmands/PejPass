@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using PejPass.Application.Interfaces;
 using PejPass.Domain.Entities;
+using PejPass.Domain.Exceptions;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 
@@ -93,7 +94,7 @@ public partial class MainViewModel
                 "Import complete");
             ResetAutoLockTimer();
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             if (mutationStarted && rollbackSnapshot is not null)
             {
@@ -107,7 +108,13 @@ public partial class MainViewModel
                 }
             }
 
-            DialogService.Error("PejPass CSV import failed. Check the file and try again.", "Import PejPass CSV");
+            DialogService.Error(
+                exception is VaultLimitExceededException
+                    ? VaultSaveFailureMessage.For(
+                        exception,
+                        "PejPass CSV import failed. Check the file and try again.")
+                    : "PejPass CSV import failed. Check the file and try again.",
+                "Import PejPass CSV");
             StatusMessage = "PejPass CSV import failed.";
         }
         finally

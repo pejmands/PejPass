@@ -117,6 +117,31 @@ public sealed class BrowserImportServiceTests
     }
 
     [Fact]
+    public async Task ImportPejPassCsv_WhenFieldExceedsCharacterLimit_ReportsFieldAndEntry()
+    {
+        var oversizedNotes = new string('x', VaultLimits.MaxTextCharacters + 1);
+        var csv =
+            "name,url,username,password,note,totp_secret,tags,custom_fields,pejpass_format\n" +
+            $"Test,https://example.com,user,pass,\"{oversizedNotes}\",,\"[]\",\"[]\",1";
+        var file = CreateTempCsv(csv);
+
+        try
+        {
+            var ex = await Assert.ThrowsAsync<VaultLimitExceededException>(
+                () => _service.ImportPejPassCsvAsync(file, TestContext.Current.CancellationToken));
+
+            Assert.Equal(VaultLimit.TextLength, ex.Limit);
+            Assert.Equal("notes", ex.Subject);
+            Assert.Equal("Test", ex.EntryTitle);
+        }
+        finally
+        {
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+    }
+
+    [Fact]
     public async Task ImportCsv_WhenRecordCountExceedsLimit_RejectsImport()
     {
         var csv = new System.Text.StringBuilder("name,password\n");
