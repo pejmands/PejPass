@@ -64,9 +64,9 @@ public partial class PasswordPromptWindow : Window
             DialogResult = true;
             Close();
         }
-        catch (Exception)
+        catch (Exception exception)
         {
-            ShowError("Could not validate the password. Please try again.");
+            App.HandleUnexpectedException(exception);
         }
         finally
         {

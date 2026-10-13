@@ -638,6 +638,19 @@ public partial class MainWindow : Window
 
     private async void EntryList_Drop(object sender, DragEventArgs e)
     {
+        try
+        {
+            await EntryList_DropAsync(e);
+        }
+        catch (Exception exception)
+        {
+            e.Handled = true;
+            App.HandleUnexpectedException(exception);
+        }
+    }
+
+    private async Task EntryList_DropAsync(DragEventArgs e)
+    {
         if (DataContext is not MainViewModel vm ||
             vm.SelectedSortIndex != (int)EntrySortMode.Manual ||
             e.Data.GetData(typeof(List<VaultEntry>)) is not List<VaultEntry> dragged)
@@ -658,7 +671,6 @@ public partial class MainWindow : Window
             _lastDropTarget = null;
             return;
         }
-
 
         if (EntryList.ItemContainerGenerator
             .ContainerFromItem(target) is not ListBoxItem item)
