@@ -97,10 +97,11 @@ public partial class PasswordGeneratorWindow : Window
             await Task.Delay(500);
             Close();
         }
-        catch
+        catch (Exception exception)
         {
             UseButton.Content = "Copy";
             UseButton.IsEnabled = true;
+            App.HandleUnexpectedException(exception);
         }
     }
 }
