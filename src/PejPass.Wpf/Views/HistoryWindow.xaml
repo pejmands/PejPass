@@ -88,8 +88,11 @@
 					Background="Transparent"
 					BorderThickness="0"
 					ItemsSource="{Binding FilteredItems}"
+					ScrollViewer.CanContentScroll="True"
 					ScrollViewer.HorizontalScrollBarVisibility="Disabled"
 					ScrollViewer.VerticalScrollBarVisibility="Auto"
+					VirtualizingPanel.IsVirtualizing="True"
+					VirtualizingPanel.ScrollUnit="Pixel"
 					SelectedItem="{Binding SelectedItem}">
 					<ListBox.Resources>
 						<Style x:Key="EmptyHistoryTextStyle" TargetType="TextBlock">
