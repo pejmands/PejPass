@@ -6,7 +6,7 @@ namespace PejPass.Wpf.Services;
 
 public sealed class VaultSession : IDisposable
 {
-    private readonly record struct DiskStamp(long Length, DateTime LastWriteTimeUtc);
+    private readonly record struct DiskStamp(bool IsAvailable, bool Exists, long Length, DateTime LastWriteTimeUtc);
 
     private readonly object _sync = new();
     private VaultKeyMaterial? _keyMaterial;
@@ -132,9 +132,14 @@ public sealed class VaultSession : IDisposable
                 return true;
             }
 
-            return _diskStamp is not { } expected ||
-                   currentStamp is not { } current ||
-                   expected != current;
+            if (_diskStamp is not { } expected ||
+                !expected.IsAvailable ||
+                !currentStamp.IsAvailable)
+            {
+                return true;
+            }
+
+            return expected != currentStamp;
         }
     }
 
@@ -168,19 +173,19 @@ public sealed class VaultSession : IDisposable
         }
     }
 
-    private static DiskStamp? TryReadDiskStamp(string path)
+    private static DiskStamp TryReadDiskStamp(string path)
     {
         try
         {
             var info = new FileInfo(path);
             info.Refresh();
             return info.Exists
-                ? new DiskStamp(info.Length, info.LastWriteTimeUtc)
-                : null;
+                ? new DiskStamp(true, true, info.Length, info.LastWriteTimeUtc)
+                : new DiskStamp(true, false, 0, default);
         }
         catch
         {
-            return null;
+            return new DiskStamp(false, false, 0, default);
         }
     }
 
