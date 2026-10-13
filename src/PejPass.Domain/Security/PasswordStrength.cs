@@ -28,8 +28,8 @@ public static class PasswordStrength
 
         var score = Core.EvaluatePassword(input).Score;
 
-        // Score whitespace-stripped variants when they do not look like intentional multi-word passphrases.
-        // This prevents inserting spaces or tabs into a predictable password from artificially raising its score.
+        // Score an alphanumeric-only variant when whitespace does not separate an intentional multi-word passphrase.
+        // This prevents spaces, tabs, or punctuation around predictable patterns from artificially raising the score.
         if (input.Any(char.IsWhiteSpace))
         {
             var words = input.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
@@ -37,7 +37,7 @@ public static class PasswordStrength
 
             if (meaningfulWordCount < 3)
             {
-                var compactInput = string.Concat(input.Where(character => !char.IsWhiteSpace(character)));
+                var compactInput = string.Concat(input.Where(char.IsLetterOrDigit));
                 score = Math.Min(score, Core.EvaluatePassword(compactInput).Score);
             }
         }
