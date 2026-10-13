@@ -211,6 +211,7 @@ public partial class LoginWindow : Window
 
         window.Owner = this;
         window.Title = "Appearance";
+        App.SetCustomWindowTitle(window, "Appearance");
         window.Height = 560;
         window.MinHeight = 480;
         window.ShowDialog();

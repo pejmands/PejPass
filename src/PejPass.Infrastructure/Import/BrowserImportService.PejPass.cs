@@ -60,7 +60,8 @@ public sealed partial class BrowserImportService
                     throw new InvalidDataException("Unsupported or invalid PejPass CSV format version.");
 
                 var isFavorite = format == "2" &&
-                    string.Equals(GetCol(cols, header.GetValueOrDefault("favorite")), "1", StringComparison.Ordinal);
+                    header.TryGetValue("favorite", out var favoriteIndex) &&
+                    string.Equals(GetCol(cols, favoriteIndex), "1", StringComparison.Ordinal);
 
                 List<string> tags;
                 List<CustomField> customFields;

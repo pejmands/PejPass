@@ -297,7 +297,7 @@ public partial class EntryEditorViewModel : ObservableObject
         }
         catch (Exception)
         {
-            DialogService.Warning("Clipboard import failed. Copy a valid TOTP URI or secret and try again.", "TOTP import");
+            DialogService.Warning("Clipboard import failed. Copy a QR-code image and try again.", "TOTP import");
         }
     }
 
