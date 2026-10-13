@@ -186,7 +186,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var originalPassword = "OriginalPassword1!";
-        var newPassword = "NewPassword2@";
+        var newPassword = "vQ7!nT4#zP9@kR2$wX6";
         var originalVault = CreateVault("Original");
 
         var crypto = new TestCryptoService();
@@ -234,7 +234,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var originalPassword = "OriginalPassword1!";
-        var newPassword = "NewPassword2@";
+        var newPassword = "vQ7!nT4#zP9@kR2$wX6";
         var originalVault = CreateVault("Original");
 
         var crypto = new TestCryptoService();
