@@ -715,6 +715,8 @@ public partial class MainViewModel : ObservableObject
 
     private void StartAutoLockTimer()
     {
+        StopAutoLockTimer();
+
         if (_settings.AutoLockMinutes <= 0)
             return;
 
@@ -724,13 +726,27 @@ public partial class MainViewModel : ObservableObject
             AutoReset = false
         };
 
-        _autoLockTimer.Elapsed += (_, _) =>
-        {
-            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
-                Lock(ShouldShowLoginAfterAutoLock()));
-        };
-
+        _autoLockTimer.Elapsed += OnAutoLockTimerElapsed;
         _autoLockTimer.Start();
+    }
+
+    private void OnAutoLockTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            Lock(ShouldShowLoginAfterAutoLock()));
+    }
+
+    private void StopAutoLockTimer()
+    {
+        var timer = _autoLockTimer;
+        _autoLockTimer = null;
+
+        if (timer is null)
+            return;
+
+        timer.Elapsed -= OnAutoLockTimerElapsed;
+        timer.Stop();
+        timer.Dispose();
     }
 
     private static bool ShouldShowLoginAfterAutoLock()
