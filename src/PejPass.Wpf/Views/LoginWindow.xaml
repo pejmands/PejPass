@@ -219,6 +219,7 @@
 
 			</StackPanel>
 		</ScrollViewer>
+	</DockPanel>
 		<Border
 			x:Name="SnackbarBorder"
 			Width="360"
