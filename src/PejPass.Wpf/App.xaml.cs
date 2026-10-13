@@ -225,7 +225,7 @@ public partial class App : System.Windows.Application
             try
             {
                 MessageBox.Show(
-                    "PejPass encountered an unexpected error. Any open vault has been locked to protect your data. Reopen the vault to continue.",
+                    "An unexpected error occurred. PejPass closed any open vault session to protect your data. Reopen the vault to continue.",
                     "PejPass",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -330,9 +330,16 @@ public partial class App : System.Windows.Application
     {
         try { viewModel.StopBackgroundTimers(); } catch { }
 
-        foreach (var item in viewModel.DisplayCustomFields.ToArray())
+        try
         {
-            try { item.Dispose(); } catch { }
+            foreach (var item in viewModel.DisplayCustomFields.ToArray())
+            {
+                try { item.Dispose(); } catch { }
+            }
+        }
+        catch
+        {
+            // Continue clearing the remaining sensitive view-model state.
         }
 
         try { viewModel.DisplayCustomFields.Clear(); } catch { }
