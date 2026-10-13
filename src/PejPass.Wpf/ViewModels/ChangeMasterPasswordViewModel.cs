@@ -113,6 +113,12 @@ public partial class ChangeMasterPasswordViewModel(
             return;
         }
 
+        if (string.Equals(CurrentPassword, NewPassword, StringComparison.Ordinal))
+        {
+            NewPasswordError = "The new password must be different from the current password.";
+            return;
+        }
+
         var validation = MasterPasswordPolicy.Validate(NewPassword);
         if (!validation.IsValid)
         {
