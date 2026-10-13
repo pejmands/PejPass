@@ -148,7 +148,7 @@ public sealed class UpdateService : IDisposable
         return ToReleaseNotes(manifest, CurrentVersion);
     }
 
-    public async Task<IReadOnlyList<ReleaseNote>> LoadReleaseNotesAsync(
+    public async Task<ReleaseNotesLoadResult> LoadReleaseNotesAsync(
         CancellationToken cancellationToken = default)
     {
         var cachedNotes = GetCachedReleaseNotes();
@@ -165,14 +165,14 @@ public sealed class UpdateService : IDisposable
 
                 var notes = ToReleaseNotes(remote, CurrentVersion);
                 if (notes.Count > 0)
-                    return notes;
+                    return new ReleaseNotesLoadResult(notes, IsFromNetwork: true);
             }
         }
         catch
         {
         }
 
-        return cachedNotes;
+        return new ReleaseNotesLoadResult(cachedNotes, IsFromNetwork: false);
     }
 
     public static bool HasPendingWhatsNew()
