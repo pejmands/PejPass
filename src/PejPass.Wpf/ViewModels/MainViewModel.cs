@@ -28,6 +28,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ThemeService _themeService;
     private readonly VaultSession _vaultSession;
     private readonly SessionPasswordCache _sessionPasswordCache;
+    private readonly Debouncer _searchDebouncer;
 
     private static readonly TimeSpan AutoLockActivityThrottle = TimeSpan.FromMilliseconds(500);
     private System.Timers.Timer? _autoLockTimer;
@@ -158,6 +159,9 @@ public partial class MainViewModel : ObservableObject
         _themeService = themeService;
         _vaultSession = vaultSession;
         _sessionPasswordCache = sessionPasswordCache;
+        _searchDebouncer = new Debouncer(
+            TimeSpan.FromMilliseconds(150),
+            ApplyFilter);
         _lastAutoLockActivityUtc = DateTime.UtcNow;
         InputManager.Current.PreProcessInput += OnPreProcessInput;
 
@@ -367,7 +371,11 @@ public partial class MainViewModel : ObservableObject
             : $"{baseMsg} · {extra}";
     }
 
-    partial void OnSearchTextChanged(string value) => ApplyFilter();
+    partial void OnSearchTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(HasActiveEntryFilter));
+        _searchDebouncer.Trigger();
+    }
 
     partial void OnHasTotpFilterChanged(bool value)
     {
@@ -404,6 +412,8 @@ public partial class MainViewModel : ObservableObject
 
     private void ApplyFilter(Guid? preserveSelectionId = null)
     {
+        _searchDebouncer.Cancel();
+
         var keepId = preserveSelectionId ?? SelectedEntry?.Id;
 
         FilteredEntries.Clear();
