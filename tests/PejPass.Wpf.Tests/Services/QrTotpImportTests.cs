@@ -5,6 +5,16 @@ namespace PejPass.Wpf.Tests.Services;
 
 public sealed class QrTotpImportTests
 {
+    [Theory]
+    [InlineData(8192, 1024, false)]
+    [InlineData(4096, 2049, true)]
+    [InlineData(8193, 1, true)]
+    [InlineData(0, 100, true)]
+    public void IsImageTooLarge_EnforcesPixelAndDimensionLimits(int width, int height, bool expected)
+    {
+        Assert.Equal(expected, QrTotpImport.IsImageTooLarge(width, height));
+    }
+
     [Fact]
     public void TryParseTotpPayload_DefaultParameters_StoresBareSecret()
     {

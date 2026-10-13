@@ -9,6 +9,7 @@ using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Media.Imaging;
 
@@ -176,7 +177,7 @@ public partial class EntryEditorViewModel : ObservableObject
         return true;
     }
 
-    public string AddCustomFieldToolTip =>
+    public static string AddCustomFieldToolTip =>
         $"Add a custom field (maximum {VaultLimits.MaxCollectionItemsPerEntry:N0} per entry).";
 
     private bool CanAddCustomField() =>
@@ -245,14 +246,26 @@ public partial class EntryEditorViewModel : ObservableObject
 
         try
         {
-            var bitmap = new BitmapImage();
-            bitmap.BeginInit();
-            bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.UriSource = new Uri(dlg.FileName, UriKind.Absolute);
-            bitmap.EndInit();
-            bitmap.Freeze();
+            using var stream = File.OpenRead(dlg.FileName);
+            var decoder = BitmapDecoder.Create(
+                stream,
+                BitmapCreateOptions.None,
+                BitmapCacheOption.None);
 
-            ApplyTotpImport(bitmap);
+            if (decoder.Frames.Count == 0)
+            {
+                DialogService.Warning("The image file contains no image frame.", "TOTP import");
+                return;
+            }
+
+            var image = decoder.Frames[0];
+            if (QrTotpImport.IsImageTooLarge(image.PixelWidth, image.PixelHeight))
+            {
+                DialogService.Warning(QrTotpImport.ImageTooLargeMessage, "TOTP import");
+                return;
+            }
+
+            ApplyTotpImport(image);
         }
         catch (Exception)
         {
