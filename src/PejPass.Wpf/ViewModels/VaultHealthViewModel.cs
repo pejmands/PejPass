@@ -177,9 +177,9 @@ public partial class VaultHealthViewModel : ObservableObject
                         filter);
                 }
 
-                if (PasswordStrength.IsWeak(e.Password))
+                var level = PasswordStrength.Evaluate(e.Password);
+                if (PasswordStrength.IsWeak(level))
                 {
-                    var level = PasswordStrength.Evaluate(e.Password);
                     AddIssue(new HealthIssue(
                         HealthIssueKind.WeakPassword,
                         e.Id,
