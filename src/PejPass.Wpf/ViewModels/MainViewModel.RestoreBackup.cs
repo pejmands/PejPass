@@ -127,7 +127,7 @@ public partial class MainViewModel
             if (replace)
             {
                 if (!DialogService.Confirm(
-                        "This will overwrite ALL entries in your current vault with the backup.\n\n" +
+                        "This will replace all entries, history, and trash in your current vault with the backup.\n\n" +
                         "The vault file path will not change.\n\n" +
                         "This cannot be undone unless you have another backup.\n\nContinue?",
                         "Confirm replace",
@@ -145,20 +145,7 @@ public partial class MainViewModel
 
                 rollbackSnapshot = currentVault.CreateSnapshot();
                 mutationStarted = true;
-                currentVault.Entries.Clear();
-                currentVault.Trash.Clear();
-                foreach (var e in backupVault.Entries)
-                    currentVault.Entries.Add(CloneEntry(e));
-                foreach (var tr in backupVault.Trash)
-                {
-                    currentVault.Trash.Add(new TrashedEntry
-                    {
-                        Entry = CloneEntry(tr.Entry),
-                        DeletedAt = tr.DeletedAt
-                    });
-                }
-                currentVault.Name = backupVault.Name;
-                currentVault.UpdatedAt = DateTimeOffset.UtcNow;
+                currentVault.ReplaceContentFrom(backupVault);
 
                 Entries.Clear();
                 foreach (var e in currentVault.Entries)
@@ -192,6 +179,8 @@ public partial class MainViewModel
                 rollbackSnapshot = currentVault.CreateSnapshot();
                 mutationStarted = true;
 
+                // History is intentionally not merged: imported entries receive new IDs,
+                // so backup history snapshots cannot be linked safely to the merged entries.
                 // ---- Merge with explicit active-vs-trash rules ----
                 // Map fingerprint → entry (or trashed entry) in the CURRENT vault
                 var activeByFp = new Dictionary<string, VaultEntry>(StringComparer.Ordinal);
