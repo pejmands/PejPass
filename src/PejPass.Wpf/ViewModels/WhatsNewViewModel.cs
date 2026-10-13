@@ -28,7 +28,7 @@ public partial class WhatsNewViewModel(UpdateService updateService) : Observable
         if (cached.Count > 0)
         {
             Releases = cached;
-            Subtitle = FormatSubtitle(cached.Count, offline: true);
+            Subtitle = FormatSubtitle(cached.Count, isFromNetwork: false);
             IsLoading = false;
         }
         else
@@ -40,16 +40,17 @@ public partial class WhatsNewViewModel(UpdateService updateService) : Observable
         // Phase 2 — refresh from update.json; update UI + cache when data arrives.
         try
         {
-            var notes = await _updateService
+            var result = await _updateService
                 .LoadReleaseNotesAsync()
                 .ConfigureAwait(true);
 
+            var notes = result.Notes;
             if (notes.Count > 0)
             {
                 Releases = notes;
                 Subtitle = FormatSubtitle(
                     notes.Count,
-                    offline: _updateService.LastManifest is null);
+                    result.IsFromNetwork);
             }
             else if (cached.Count == 0)
             {
@@ -66,7 +67,7 @@ public partial class WhatsNewViewModel(UpdateService updateService) : Observable
             }
             else
             {
-                Subtitle = FormatSubtitle(cached.Count, offline: true);
+                Subtitle = FormatSubtitle(cached.Count, isFromNetwork: false);
             }
         }
         finally
@@ -75,9 +76,9 @@ public partial class WhatsNewViewModel(UpdateService updateService) : Observable
         }
     }
 
-    private static string FormatSubtitle(int count, bool offline)
+    internal static string FormatSubtitle(int count, bool isFromNetwork)
     {
         var label = count == 1 ? "1 release" : $"{count} releases";
-        return offline ? $"{label} (cached)" : label;
+        return isFromNetwork ? label : $"{label} (cached)";
     }
 }
