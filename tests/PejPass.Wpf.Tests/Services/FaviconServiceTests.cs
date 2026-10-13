@@ -24,6 +24,25 @@ public sealed class FaviconServiceTests
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
 
     [Fact]
+    public void AppDataDirectory_UsesIsolatedTestProfile()
+    {
+        var configuredRoot = Environment.GetEnvironmentVariable("PEJPASS_APPDATA_DIR");
+
+        Assert.False(string.IsNullOrWhiteSpace(configuredRoot));
+
+        var expectedRoot = Path.GetFullPath(configuredRoot!);
+        var tempRoot = Path.GetFullPath(Path.Combine(
+            Path.GetTempPath(),
+            "PejPass-FaviconServiceTests")) + Path.DirectorySeparatorChar;
+
+        Assert.StartsWith(tempRoot, expectedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+
+        _ = FaviconService.CacheMasterKey.Value;
+        Assert.True(File.Exists(Path.Combine(expectedRoot, "favicon-cache-key.dpapi")));
+        Assert.Equal(expectedRoot, Path.GetDirectoryName(FaviconService.CacheDir));
+    }
+
+    [Fact]
     public void DiskCachePruning_RunsOnlyEveryConfiguredNumberOfDownloads()
     {
         var count = 0;

@@ -37,12 +37,24 @@ public static class FaviconService
     private const int MaxDiskCacheAgeDays = 40;
     private const int FailedLookupTtlHours = 24;
 
-    private static readonly string AppDataDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PejPass");
+    private static readonly string AppDataDir = ResolveAppDataDir();
     internal static readonly string CacheDir = Path.Combine(AppDataDir, "favicons");
     private static readonly string CacheKeyPath = Path.Combine(AppDataDir, "favicon-cache-key.dpapi");
     private static readonly byte[] CacheKeyEntropy = Encoding.UTF8.GetBytes("PejPass.FaviconCache.Key.v1");
     internal static readonly Lazy<byte[]> CacheMasterKey = new(LoadOrCreateCacheMasterKey, LazyThreadSafetyMode.ExecutionAndPublication);
+
+    private static string ResolveAppDataDir()
+    {
+        const string environmentVariable = "PEJPASS_APPDATA_DIR";
+        var configuredPath = Environment.GetEnvironmentVariable(environmentVariable);
+
+        if (!string.IsNullOrWhiteSpace(configuredPath))
+            return Path.GetFullPath(configuredPath);
+
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "PejPass");
+    }
     private static readonly byte[] CacheFileMagic = "PFC2"u8.ToArray();
     private const int CacheNonceSize = 12;
     private const int CacheTagSize = 16;
