@@ -31,6 +31,7 @@ public static class FaviconService
     private const int MaxFaviconResponseBytes = 1024 * 1024;
     private const int MaxMemoryCacheEntries = 512;
     private const int MaxDiskCacheFiles = 4096;
+    internal const int DiskCachePruneIntervalDownloads = 32;
     private const long MaxDiskCacheBytes = 128L * 1024 * 1024;
     private const int MinDiskCacheAgeDays = 30;
     private const int MaxDiskCacheAgeDays = 40;
@@ -58,6 +59,7 @@ public static class FaviconService
     private static readonly object BatchNotifyLock = new();
     private static readonly HashSet<string> PendingBatchHosts = new(StringComparer.OrdinalIgnoreCase);
     private static int _diskWarmRunning;
+    private static int _successfulDownloadsSincePrune;
     private static volatile bool _onlineFetchingEnabled;
 
     public static event Action<bool>? OnlineFetchingChanged;
@@ -429,7 +431,12 @@ public static class FaviconService
                     {
                         CryptographicOperations.ZeroMemory(encryptedBytes);
                     }
-                    PruneDiskCache(CacheDir);
+
+                    if (ShouldPruneDiskCacheAfterSuccessfulDownload(
+                            ref _successfulDownloadsSincePrune))
+                    {
+                        PruneDiskCache(CacheDir);
+                    }
                 }
                 catch
                 {
@@ -568,6 +575,18 @@ public static class FaviconService
         {
             return null;
         }
+    }
+
+    internal static bool ShouldPruneDiskCacheAfterSuccessfulDownload(
+        ref int downloadsSinceLastPrune)
+    {
+        downloadsSinceLastPrune++;
+
+        if (downloadsSinceLastPrune < DiskCachePruneIntervalDownloads)
+            return false;
+
+        downloadsSinceLastPrune = 0;
+        return true;
     }
 
     internal static void PruneDiskCache(string directory)
