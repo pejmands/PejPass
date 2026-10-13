@@ -825,8 +825,8 @@ public sealed class UpdateService : IDisposable
 
     private static int CompareVersionsDesc(string a, string b)
     {
-        if (Version.TryParse(Normalize(a), out var va)
-            && Version.TryParse(Normalize(b), out var vb))
+        if (TryParseCanonicalVersion(a, out var va)
+            && TryParseCanonicalVersion(b, out var vb))
         {
             return vb.CompareTo(va);
         }
