@@ -16,27 +16,39 @@ public sealed class HistoryViewModelLoadTests
     {
         WpfTestHost.Run(_ =>
         {
-            const int historyCount = 400;
+            const int entryCount = 400;
+            const int repeatedSnapshots = 400;
+            const int snapshotCount = entryCount + repeatedSnapshots;
 
             using var session = new VaultSession();
             using var material = CreateMaterial();
 
-            var entries = Enumerable.Range(0, historyCount)
+            var entries = Enumerable.Range(0, entryCount)
                 .Select(index => new VaultEntry
                 {
                     Title = $"Current entry {index:D4}"
                 })
                 .ToList();
 
+            var history = entries.Select((entry, index) => new EntryHistoryItem
+            {
+                EntryId = entry.Id,
+                Title = $"Previous entry {index:D4}",
+                ChangedAt = DateTimeOffset.UtcNow.AddSeconds(-index)
+            }).ToList();
+
+            history.AddRange(Enumerable.Range(0, repeatedSnapshots)
+                .Select(index => new EntryHistoryItem
+                {
+                    EntryId = entries[0].Id,
+                    Title = $"Older entry version {index:D4}",
+                    ChangedAt = DateTimeOffset.UtcNow.AddDays(-1).AddSeconds(-index)
+                }));
+
             var vault = new Vault
             {
                 Entries = entries,
-                History = entries.Select((entry, index) => new EntryHistoryItem
-                {
-                    EntryId = entry.Id,
-                    Title = $"Previous entry {index:D4}",
-                    ChangedAt = DateTimeOffset.UtcNow.AddSeconds(-index)
-                }).ToList()
+                History = history
             };
 
             session.Open(
@@ -61,10 +73,10 @@ public sealed class HistoryViewModelLoadTests
             Assert.NotNull(loadMethod);
             loadMethod!.Invoke(viewModel, null);
 
-            Assert.Equal(historyCount, viewModel.Items.Count);
-            Assert.Equal(historyCount, viewModel.FilteredItems.Count);
+            Assert.Equal(snapshotCount, viewModel.Items.Count);
+            Assert.Equal(snapshotCount, viewModel.FilteredItems.Count);
             Assert.True(
-                filteredCollectionChanges <= historyCount + 5,
+                filteredCollectionChanges <= snapshotCount + 5,
                 $"Expected one batch refresh, but observed {filteredCollectionChanges} filtered collection changes.");
 
             var expectedEntry = entries[217];
