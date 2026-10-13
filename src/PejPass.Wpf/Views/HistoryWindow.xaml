@@ -109,7 +109,7 @@
 								<Setter.Value>
 									<ControlTemplate TargetType="ListBox">
 										<Grid>
-											<ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+											<ScrollViewer CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
 												<ItemsPresenter />
 											</ScrollViewer>
 
