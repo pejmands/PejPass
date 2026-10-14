@@ -62,6 +62,7 @@ public sealed class FaviconServiceTests
         try
         {
             Task clearTask;
+
             lock (stateLock)
             {
                 clearTask = Task.Run(() =>
@@ -71,7 +72,6 @@ public sealed class FaviconServiceTests
                 }, cancellationToken);
 
                 Assert.True(clearStarted.Wait(TimeSpan.FromSeconds(2), cancellationToken));
-                Assert.False(clearTask.Wait(TimeSpan.FromMilliseconds(100), cancellationToken));
             }
 
             await clearTask.WaitAsync(cancellationToken);

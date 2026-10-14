@@ -20,6 +20,12 @@ The cache service uses `CryptographicOperations.ZeroMemory` for byte buffers it 
 
 The “Until app closes” timeout disables the elapsed-time limit only; it does not override the Windows lock/disconnect/suspend, password-change, Hello-disable, failure-limit, or app-exit clearing rules.
 
+## Vault locking when hidden to the system tray
+
+When the unlocked main window is minimized to the tray or closed with “Close to system tray” enabled, PejPass schedules a lock after the WPF window event returns. This clears the active vault session and sensitive UI state, closes the unlocked window, and leaves the login window hidden until the user opens PejPass from the tray. This remains in effect when the Auto-lock timer is disabled.
+
+If Windows Hello session caching is enabled, the separate DPAPI-protected key cache may remain available until its configured timeout or one of its documented clearing events. Returning to the hidden login window still requires an explicit unlock with the master password or Windows Hello verification; the previous in-memory vault session is not resumed.
+
 ## Update manifest rollback and freshness
 
 The root `notes` field and per-release `releases[].notes` are not included in the ECDSA-signed payload; they are display-only metadata delivered over HTTPS, so the signature does not independently authenticate that text.

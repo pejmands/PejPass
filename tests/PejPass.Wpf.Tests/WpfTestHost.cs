@@ -83,6 +83,9 @@ internal sealed class WpfTestHost : IDisposable
 
     public AppSettings Settings => _settings;
 
+    public VaultSession VaultSession =>
+        _services.GetRequiredService<VaultSession>();
+
     public SystemTrayService Tray =>
         _services.GetRequiredService<SystemTrayService>();
 

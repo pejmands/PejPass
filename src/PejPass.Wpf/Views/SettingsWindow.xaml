@@ -130,7 +130,7 @@
 								Margin="0,4,12,0"
 								FontSize="{DynamicResource AppFontSize11}"
 								Foreground="{DynamicResource MutedBrush}"
-								Text="When minimized, hide the window to the tray instead of leaving it minimized."
+								Text="When minimized, hide the window to the tray instead of leaving it minimized. The vault is locked and must be unlocked again."
 								TextWrapping="Wrap" />
 						</StackPanel>
 						<CheckBox
@@ -154,7 +154,7 @@
 								Margin="0,4,12,0"
 								FontSize="{DynamicResource AppFontSize11}"
 								Foreground="{DynamicResource MutedBrush}"
-								Text="When closed, hide the window to the tray instead of exiting."
+								Text="When closed, hide the window to the tray instead of exiting. The vault is locked and must be unlocked again."
 								TextWrapping="Wrap" />
 						</StackPanel>
 						<CheckBox
