@@ -15,10 +15,10 @@ public sealed class UpdateServiceHttpTests
     [Fact]
     public async Task CheckForUpdatesAsync_UsesInjectedHttpClient()
     {
-        HttpRequestMessage? requested = null;
+        string? requestedUri = null;
         using var httpClient = new HttpClient(new StubHttpMessageHandler((request, _) =>
         {
-            requested = request;
+            requestedUri = request.RequestUri?.AbsoluteUri;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
             {
                 Content = new StringContent("offline")
@@ -28,8 +28,7 @@ public sealed class UpdateServiceHttpTests
 
         var result = await service.CheckForUpdatesAsync();
 
-        Assert.NotNull(requested);
-        Assert.Equal(ManifestUrl, requested.RequestUri?.AbsoluteUri);
+        Assert.Equal(ManifestUrl, requestedUri);
         Assert.Equal(UpdateCheckStatus.NetworkError, result.Status);
     }
 
