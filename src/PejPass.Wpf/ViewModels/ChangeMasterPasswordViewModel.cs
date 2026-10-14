@@ -10,11 +10,13 @@ namespace PejPass.Wpf.ViewModels;
 public partial class ChangeMasterPasswordViewModel(
     VaultService vaultService,
     VaultSession vaultSession,
-    SessionPasswordCache sessionPasswordCache) : ObservableObject
+    SessionPasswordCache sessionPasswordCache,
+    PendingMasterPasswordChangeNotice pendingMasterPasswordChangeNotice) : ObservableObject
 {
     private readonly VaultService _vaultService = vaultService;
     private readonly VaultSession _vaultSession = vaultSession;
     private readonly SessionPasswordCache cache = sessionPasswordCache;
+    private readonly PendingMasterPasswordChangeNotice _pendingMasterPasswordChangeNotice = pendingMasterPasswordChangeNotice;
 
     [ObservableProperty]
     public partial string CurrentPassword { get; set; } = string.Empty;
@@ -142,6 +144,7 @@ public partial class ChangeMasterPasswordViewModel(
             if (!_vaultSession.IsCurrent(sessionGeneration, vault) ||
                 !_vaultSession.TryUpdateKeyMaterial(newKeyMaterial))
             {
+                _pendingMasterPasswordChangeNotice.Mark(path);
                 cache.Clear();
                 NewPasswordError = "The vault was locked while the password was changing. " +
                                    "The new password is already in effect; unlock with it.";
