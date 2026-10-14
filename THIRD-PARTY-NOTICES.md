@@ -119,7 +119,8 @@ The following MIT copyright notices apply to the packages listed above. Otp.NET 
 ```text
 MIT License
 
-Copyright (c) 2017 Keef Aragon\nCopyright (c) 2024 Keef Aragon
+Copyright (c) 2017 Keef Aragon
+Copyright (c) 2024 Keef Aragon
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -145,7 +146,8 @@ SOFTWARE.
 ```text
 MIT License
 
-Copyright (c) 2017 Kyle Spearrin\nCopyright (C) 2012 Devin Martin (original OtpSharp attribution)
+Copyright (c) 2017 Kyle Spearrin
+Copyright (C) 2012 Devin Martin (original OtpSharp attribution)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -197,7 +199,8 @@ SOFTWARE.
 ```text
 MIT License
 
-Copyright © .NET Foundation and Contributors\nAll rights reserved.
+Copyright © .NET Foundation and Contributors
+All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
