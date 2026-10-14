@@ -99,7 +99,6 @@
 						Padding="8,4"
 						HorizontalAlignment="Left"
 						VerticalAlignment="Center"
-						Background="{DynamicResource SurfaceAltBrush}"
 						Click="RecentsButton_Click"
 						Content="Recents ▾"
 						Foreground="{DynamicResource TextBrush}"
@@ -172,7 +171,6 @@
 					<Button
 						Grid.Column="1"
 						Margin="8,0,0,0"
-						Background="{DynamicResource SurfaceAltBrush}"
 						Command="{Binding BrowseCommand}"
 						Content="Browse…"
 						Foreground="{DynamicResource TextBrush}"
@@ -265,7 +263,6 @@
 
 				<Button
 					Height="40"
-					Background="{DynamicResource SurfaceAltBrush}"
 					Command="{Binding UnlockWithHelloCommand}"
 					Content="Unlock with Windows Hello"
 					Foreground="{DynamicResource TextBrush}"
