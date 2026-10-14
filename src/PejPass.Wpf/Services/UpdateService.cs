@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using PejPass.Domain.Settings;
 using PejPass.Wpf.Records;
 using System.Diagnostics;
@@ -373,8 +374,15 @@ public sealed class UpdateService : IDisposable
 
         WritePendingWhatsNew(staged.TargetVersion);
 
-        System.Windows.Application.Current?.Dispatcher.Invoke(() =>
-            System.Windows.Application.Current.Shutdown());
+        var application = System.Windows.Application.Current;
+        if (application is not null)
+        {
+            application.Dispatcher.Invoke(() =>
+            {
+                App.Services?.GetService<SystemTrayService>()?.PrepareForExit();
+                application.Shutdown();
+            });
+        }
     }
 
     internal static string BuildApplyScript(
