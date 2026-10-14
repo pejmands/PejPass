@@ -13,6 +13,7 @@ using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.Views;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -25,7 +26,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IClipboardService _clipboard;
     private readonly IBrowserImportService _importService;
     private readonly AppSettings _settings;
-    private bool _initializingSortSettings = true;
+    private readonly bool _initializingSortSettings = true;
     private readonly ThemeService _themeService;
     private readonly VaultSession _vaultSession;
     private readonly SessionPasswordCache _sessionPasswordCache;
@@ -1578,6 +1579,20 @@ public partial class MainViewModel : ObservableObject
 
         if (dlg.ShowDialog() != true)
             return;
+
+        var activeVaultPath = _vaultSession.VaultPath;
+        if (!string.IsNullOrWhiteSpace(activeVaultPath) &&
+            string.Equals(
+                Path.GetFullPath(dlg.FileName),
+                Path.GetFullPath(activeVaultPath),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            DialogService.Warning(
+                "The destination is the vault file you already have open.\n\n" +
+                "Choose a different path for the backup.",
+                "Export Backup");
+            return;
+        }
 
         try
         {
