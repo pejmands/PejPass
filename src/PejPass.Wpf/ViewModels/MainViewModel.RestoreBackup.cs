@@ -149,12 +149,8 @@ public partial class MainViewModel
                 mutationStarted = true;
                 currentVault.ReplaceContentFrom(backupVault);
 
-                Entries.Clear();
-                foreach (var e in currentVault.Entries)
-                    Entries.Add(e);
-
                 SelectedEntry = null;
-                ApplyFilter(preserveSelectionId: null);
+                RefreshEntriesFromVault();
                 if (!await SaveVaultAsync(currentVault, operationGeneration))
                 {
                     RestoreVaultSnapshot(rollbackSnapshot!, currentVault, operationGeneration);
@@ -260,12 +256,8 @@ public partial class MainViewModel
 
                 currentVault.UpdatedAt = DateTimeOffset.UtcNow;
 
-                Entries.Clear();
-                foreach (var e in currentVault.Entries)
-                    Entries.Add(e);
-
                 SelectedEntry = null;
-                ApplyFilter(preserveSelectionId: null);
+                RefreshEntriesFromVault();
                 if (!await SaveVaultAsync(currentVault, operationGeneration))
                 {
                     RestoreVaultSnapshot(rollbackSnapshot!, currentVault, operationGeneration);
