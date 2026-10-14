@@ -35,6 +35,7 @@ public sealed class UpdateService : IDisposable
     };
 
     private readonly HttpClient _http;
+    private readonly bool _ownsHttpClient;
     private readonly string _manifestUrl;
 
     public UpdateManifest? LastManifest { get; private set; }
@@ -46,15 +47,29 @@ public sealed class UpdateService : IDisposable
 
     public UpdateService(string manifestUrl)
     {
-        _manifestUrl = manifestUrl;
+        _manifestUrl = manifestUrl ?? throw new ArgumentNullException(nameof(manifestUrl));
+        _http = CreateDefaultHttpClient();
+        _ownsHttpClient = true;
+    }
 
-        _http = new HttpClient
+    internal UpdateService(string manifestUrl, HttpClient httpClient)
+    {
+        _manifestUrl = manifestUrl ?? throw new ArgumentNullException(nameof(manifestUrl));
+        _http = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _ownsHttpClient = false;
+    }
+
+    private static HttpClient CreateDefaultHttpClient()
+    {
+        var http = new HttpClient
         {
             Timeout = TimeSpan.FromSeconds(30)
         };
 
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd(
+        http.DefaultRequestHeaders.UserAgent.ParseAdd(
             $"{AppInfoService.Name}/{AppInfoService.Version}");
+
+        return http;
     }
 
     public static string CurrentVersion => AppInfoService.Version;
@@ -1032,5 +1047,9 @@ public sealed class UpdateService : IDisposable
     public static void OpenReleasesPage() =>
         OpenUrl($"{AppInfoService.RepositoryUrl.TrimEnd('/')}/releases");
 
-    public void Dispose() => _http.Dispose();
+    public void Dispose()
+    {
+        if (_ownsHttpClient)
+            _http.Dispose();
+    }
 }
