@@ -1,4 +1,5 @@
 using PejPass.Application.Security;
+using PejPass.Application.Services;
 using PejPass.Domain.Entities;
 using PejPass.Infrastructure.Crypto;
 using PejPass.Infrastructure.Storage;
@@ -91,6 +92,81 @@ public sealed class VaultStoreSessionKeyTests
 
             await Assert.ThrowsAsync<AuthenticationTagMismatchException>(() =>
                 store.OpenAsync(path, "old-password", cancellationToken));
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ChangeMasterPassword_UpgradesKdfWhenDefaultsDominateCurrentParameters()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        var olderParameters = new Argon2Parameters(32768, 2, 2);
+
+        try
+        {
+            var store = new VaultStore(new CryptoService(), new FileMover());
+            using var session = await store.CreateSessionAsync(
+                path,
+                "old-password",
+                new Vault { Name = "KDF upgrade", KdfParameters = olderParameters },
+                cancellationToken);
+
+            using var newMaterial = await new VaultService(store).ChangeMasterPasswordAsync(
+                path,
+                "old-password",
+                "vQ7!nT4#zP9@kR2$wX6",
+                session.Vault,
+                session.KeyMaterial,
+                cancellationToken);
+
+            Assert.Equal(Argon2Parameters.Default, session.Vault.KdfParameters);
+            Assert.Equal(Argon2Parameters.Default, newMaterial.KdfParameters);
+
+            using var reopened = await store.OpenSessionAsync(
+                path,
+                "vQ7!nT4#zP9@kR2$wX6",
+                cancellationToken);
+            Assert.Equal(Argon2Parameters.Default, reopened.KeyMaterial.KdfParameters);
+            Assert.Equal(Argon2Parameters.Default, reopened.Vault.KdfParameters);
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ChangeMasterPassword_DoesNotDowngradeAnyHigherKdfParameter()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        var strongerParameters = new Argon2Parameters(65536, 3, 8);
+
+        try
+        {
+            var store = new VaultStore(new CryptoService(), new FileMover());
+            using var session = await store.CreateSessionAsync(
+                path,
+                "old-password",
+                new Vault { Name = "Preserve KDF", KdfParameters = strongerParameters },
+                cancellationToken);
+
+            using var newMaterial = await new VaultService(store).ChangeMasterPasswordAsync(
+                path,
+                "old-password",
+                "vQ7!nT4#zP9@kR2$wX6",
+                session.Vault,
+                session.KeyMaterial,
+                cancellationToken);
+
+            Assert.Equal(strongerParameters, session.Vault.KdfParameters);
+            Assert.Equal(strongerParameters, newMaterial.KdfParameters);
         }
         finally
         {
