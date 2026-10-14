@@ -1,6 +1,8 @@
 using PejPass.Wpf.Records;
 using PejPass.Wpf.Services;
+using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography;
 
 namespace PejPass.Wpf.Tests.Updates;
@@ -26,7 +28,7 @@ public sealed class UpdateServiceHttpTests
         }));
         using var service = new UpdateService(ManifestUrl, httpClient);
 
-        var result = await service.CheckForUpdatesAsync();
+        var result = await service.CheckForUpdatesAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(ManifestUrl, requestedUri);
         Assert.Equal(UpdateCheckStatus.NetworkError, result.Status);
@@ -46,7 +48,7 @@ public sealed class UpdateServiceHttpTests
         }));
         using var service = new UpdateService(ManifestUrl, httpClient);
 
-        var result = await service.CheckForUpdatesAsync();
+        var result = await service.CheckForUpdatesAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.InvalidManifest, result.Status);
         Assert.Contains("maximum supported size", result.Message);
@@ -68,10 +70,10 @@ public sealed class UpdateServiceHttpTests
 
         try
         {
-            downloadedPath = await service.DownloadUpdateAsync(PackageUrl, expectedSha256);
+            downloadedPath = await service.DownloadUpdateAsync(PackageUrl, expectedSha256, cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(File.Exists(downloadedPath));
-            Assert.Equal(payload, await File.ReadAllBytesAsync(downloadedPath));
+            Assert.Equal(payload, await File.ReadAllBytesAsync(downloadedPath, TestContext.Current.CancellationToken));
         }
         finally
         {
@@ -95,7 +97,7 @@ public sealed class UpdateServiceHttpTests
         using var service = new UpdateService(ManifestUrl, httpClient);
 
         await Assert.ThrowsAsync<InvalidDataException>(() =>
-            service.DownloadUpdateAsync(PackageUrl, new string('a', 64)));
+            service.DownloadUpdateAsync(PackageUrl, new string('a', 64), cancellationToken: TestContext.Current.CancellationToken));
     }
 
     private sealed class StubHttpMessageHandler(
