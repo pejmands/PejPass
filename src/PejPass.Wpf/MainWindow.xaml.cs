@@ -93,7 +93,10 @@ public partial class MainWindow : Window
             // Only redirect close to the tray when the user enabled the setting.
             var tray = App.Services.GetRequiredService<SystemTrayService>();
             if (_settings.CloseToSystemTray && tray.TryHideToTray(this, e))
+            {
+                ScheduleLockAfterTrayHide();
                 return;
+            }
         };
 
         StateChanged += (_, _) =>
@@ -108,6 +111,7 @@ public partial class MainWindow : Window
             var tray = App.Services.GetRequiredService<SystemTrayService>();
             Hide();
             tray.Show();
+            ScheduleLockAfterTrayHide();
         };
 
         Closed += (_, _) =>
@@ -183,6 +187,16 @@ public partial class MainWindow : Window
                 AttachNotesScrollChain();
             }, DispatcherPriority.Loaded);
         };
+    }
+
+    private void ScheduleLockAfterTrayHide()
+    {
+        if (!_vaultSession.IsActive || DataContext is not MainViewModel viewModel)
+            return;
+
+        // Lock only after the current Closing/StateChanged event has completed.
+        // Lock closes this window as part of the transition to the hidden login window.
+        Dispatcher.BeginInvoke(() => viewModel.Lock(false));
     }
 
     private void AttachDropIndicatorAdorner()
