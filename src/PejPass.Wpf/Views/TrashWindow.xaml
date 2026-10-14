@@ -31,7 +31,6 @@
 
 			<Button
 				HorizontalAlignment="Right"
-				Background="{DynamicResource DangerBrush}"
 				Command="{Binding EmptyTrashCommand}"
 				Content="Empty Trash"
 				Style="{StaticResource DestructiveButton}" />
@@ -165,7 +164,6 @@
 								Height="32"
 								Margin="8,0,0,0"
 								Padding="12,4"
-								Background="{DynamicResource DangerBrush}"
 								Command="{Binding DataContext.PurgeCommand, RelativeSource={RelativeSource AncestorType=Window}}"
 								CommandParameter="{Binding}"
 								Content="Delete permanently"
@@ -248,7 +246,6 @@
 					Style="{StaticResource SecondaryButton}" />
 				<Button
 					x:Name="PurgeSelectedButton"
-					Background="{DynamicResource DangerBrush}"
 					Click="PurgeSelected_Click"
 					Content="Delete selected"
 					IsEnabled="False"
@@ -259,7 +256,6 @@
 			<Button
 				Grid.Column="2"
 				VerticalAlignment="Center"
-				Background="{DynamicResource SurfaceAltBrush}"
 				Click="Close_Click"
 				Content="Close"
 				Foreground="{DynamicResource TextBrush}"
