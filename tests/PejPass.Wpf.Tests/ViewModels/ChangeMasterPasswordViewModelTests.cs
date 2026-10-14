@@ -2,6 +2,7 @@ using PejPass.Application.Interfaces;
 using PejPass.Application.Security;
 using PejPass.Application.Services;
 using PejPass.Domain.Entities;
+using PejPass.Domain.Policies;
 using PejPass.Domain.Settings;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
@@ -60,17 +61,23 @@ public sealed class ChangeMasterPasswordViewModelTests
         cache.Store(path, currentKeyMaterial);
         Assert.True(cache.HasCacheFor(path));
 
+        const string newPassword = "vQ7!nT4#zP9@kR2$wX6";
+        Assert.True(MasterPasswordPolicy.Validate(newPassword).IsValid);
+
         var viewModel = new ChangeMasterPasswordViewModel(vaultService, session, cache)
         {
             CurrentPassword = "CurrentPassword!123",
-            NewPassword = "vQ7!nT4#zP9@kR2$wX6",
-            ConfirmPassword = "vQ7!nT4#zP9@kR2$wX6"
+            NewPassword = newPassword,
+            ConfirmPassword = newPassword
         };
 
         var changeTask = viewModel.ChangeCommand.ExecuteAsync(null);
-        await store.SaveStarted.Task.WaitAsync(
-            TimeSpan.FromSeconds(5),
-            TestContext.Current.CancellationToken);
+        var firstCompleted = await Task.WhenAny(store.SaveStarted.Task, changeTask)
+            .WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        Assert.Same(
+            store.SaveStarted.Task,
+            firstCompleted,
+            "The password-change command ended before reaching the save operation.");
 
         session.Clear();
         store.ReleaseSave.TrySetResult();
