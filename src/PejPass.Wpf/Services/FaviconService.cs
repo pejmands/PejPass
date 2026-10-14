@@ -98,40 +98,46 @@ public static class FaviconService
     {
         lock (ExpirationCleanupLock)
         {
-            Interlocked.Increment(ref _cacheGeneration);
-
-            try
+            // Serialize the generation change and disk deletion with successful downloads.
+            // A download that already entered this lock finishes first, then its file is deleted;
+            // any download that enters later sees the new generation and exits without writing.
+            lock (OnlineFetchingStateLock)
             {
-                if (Directory.Exists(CacheDir))
-                {
-                    foreach (var file in Directory.GetFiles(CacheDir, "*.bin"))
-                    {
-                        try { File.Delete(file); } catch { }
-                    }
+                Interlocked.Increment(ref _cacheGeneration);
 
-                    try
+                try
+                {
+                    if (Directory.Exists(CacheDir))
                     {
-                        File.Delete(Path.Combine(CacheDir, ".last-expiration-cleanup-date"));
-                    }
-                    catch
-                    {
+                        foreach (var file in Directory.GetFiles(CacheDir, "*.bin"))
+                        {
+                            try { File.Delete(file); } catch { }
+                        }
+
+                        try
+                        {
+                            File.Delete(Path.Combine(CacheDir, ".last-expiration-cleanup-date"));
+                        }
+                        catch
+                        {
+                        }
                     }
                 }
-            }
-            catch
-            {
-            }
+                catch
+                {
+                }
 
-            lock (MemoryCacheLock)
-            {
-                Memory.Clear();
-                MemoryEvictionQueue.Clear();
+                lock (MemoryCacheLock)
+                {
+                    Memory.Clear();
+                    MemoryEvictionQueue.Clear();
+                }
+
+                Failed.Clear();
+
+                lock (BatchNotifyLock)
+                    PendingBatchHosts.Clear();
             }
-
-            Failed.Clear();
-
-            lock (BatchNotifyLock)
-                PendingBatchHosts.Clear();
         }
     }
 
