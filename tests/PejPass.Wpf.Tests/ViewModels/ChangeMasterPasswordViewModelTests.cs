@@ -1,5 +1,8 @@
+using PejPass.Application.Interfaces;
 using PejPass.Application.Security;
+using PejPass.Application.Services;
 using PejPass.Domain.Entities;
+using PejPass.Domain.Settings;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using System.IO;
@@ -41,6 +44,50 @@ public sealed class ChangeMasterPasswordViewModelTests
         Assert.True(session.IsActive);
     }
 
+    [Fact]
+    public async Task ChangeAsync_WhenSessionIsInvalidatedAfterPasswordSave_ShowsRecoveryMessageAndClearsCache()
+    {
+        using var currentKeyMaterial = CreateMaterial();
+        using var store = new DelayedPasswordChangeVaultStore(currentKeyMaterial);
+        var vaultService = new VaultService(store);
+        using var session = new VaultSession();
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass");
+        var vault = new Vault();
+
+        session.Open(vault, path, currentKeyMaterial);
+
+        using var cache = new SessionPasswordCache(new AppSettings(), TimeProvider.System);
+        cache.Store(path, currentKeyMaterial);
+        Assert.True(cache.HasCacheFor(path));
+
+        var viewModel = new ChangeMasterPasswordViewModel(vaultService, session, cache)
+        {
+            CurrentPassword = "CurrentPassword!123",
+            NewPassword = "ChangedPassword!456",
+            ConfirmPassword = "ChangedPassword!456"
+        };
+
+        var changeTask = viewModel.ChangeCommand.ExecuteAsync(null);
+        await store.SaveStarted.Task.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+
+        session.Clear();
+        store.ReleaseSave.TrySetResult();
+
+        await changeTask;
+
+        Assert.False(viewModel.Success);
+        Assert.Equal(
+            "The vault was locked while the password was changing. " +
+            "The new password is already in effect; unlock with it.",
+            viewModel.NewPasswordError);
+        Assert.Null(viewModel.CurrentPasswordError);
+        Assert.Null(viewModel.ConfirmPasswordError);
+        Assert.False(cache.HasCacheFor(path));
+        Assert.False(session.IsActive);
+    }
+
     private static VaultKeyMaterial CreateMaterial()
     {
         var key = new byte[32];
@@ -58,5 +105,60 @@ public sealed class ChangeMasterPasswordViewModelTests
             CryptographicOperations.ZeroMemory(key);
             CryptographicOperations.ZeroMemory(salt);
         }
+    }
+
+    private sealed class DelayedPasswordChangeVaultStore(VaultKeyMaterial currentKeyMaterial)
+        : IVaultStore, IDisposable
+    {
+        private readonly VaultKeyMaterial _currentKeyMaterial = currentKeyMaterial.Clone();
+
+        public TaskCompletionSource SaveStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource ReleaseSave { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<VaultSessionData> OpenSessionAsync(
+            string path,
+            string masterPassword,
+            CancellationToken ct = default) =>
+            Task.FromResult(new VaultSessionData(new Vault(), _currentKeyMaterial.Clone()));
+
+        public async Task<VaultKeyMaterial> SaveWithNewPasswordAsync(
+            string path,
+            string masterPassword,
+            Vault vault,
+            Argon2Parameters kdfParameters,
+            CancellationToken ct = default)
+        {
+            SaveStarted.TrySetResult();
+            await ReleaseSave.Task.WaitAsync(ct);
+            return CreateMaterial();
+        }
+
+        public void Dispose() => _currentKeyMaterial.Dispose();
+
+        public Task CreateAsync(string path, string masterPassword, Vault vault, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<VaultSessionData> CreateSessionAsync(string path, string masterPassword, Vault vault, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<Vault> OpenWithKeyAsync(string path, VaultKeyMaterial keyMaterial, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task SaveAsync(string path, VaultKeyMaterial keyMaterial, Vault vault, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<Vault> OpenAsync(string path, string masterPassword, CancellationToken ct = default, bool migrateLegacy = true) =>
+            throw new NotSupportedException();
+
+        public Task SaveAsync(string path, string masterPassword, Vault vault, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task EnsureWritableAsync(string path, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public bool Exists(string path) => true;
     }
 }
