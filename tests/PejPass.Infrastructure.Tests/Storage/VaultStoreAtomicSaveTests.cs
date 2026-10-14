@@ -187,7 +187,9 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         var cancellationToken = TestContext.Current.CancellationToken;
         var originalPassword = "OriginalPassword1!";
         var newPassword = "vQ7!nT4#zP9@kR2$wX6";
+        var legacyParameters = new Argon2Parameters(32768, 2, 2);
         var originalVault = CreateVault("Original");
+        originalVault.KdfParameters = legacyParameters;
 
         var crypto = new TestCryptoService();
         var store = new VaultStore(crypto, new FileMover());
@@ -202,6 +204,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         crypto.FailEncryption = true;
 
         var updatedVault = CreateVault("Updated");
+        updatedVault.KdfParameters = legacyParameters;
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             vaultService.ChangeMasterPasswordAsync(
@@ -211,6 +214,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
                 updatedVault,
                 cancellationToken));
 
+        Assert.Equal(legacyParameters, updatedVault.KdfParameters);
         crypto.FailEncryption = false;
 
         var restoredVault = await store.OpenAsync(
@@ -235,7 +239,9 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         var cancellationToken = TestContext.Current.CancellationToken;
         var originalPassword = "OriginalPassword1!";
         var newPassword = "vQ7!nT4#zP9@kR2$wX6";
+        var legacyParameters = new Argon2Parameters(32768, 2, 2);
         var originalVault = CreateVault("Original");
+        originalVault.KdfParameters = legacyParameters;
 
         var crypto = new TestCryptoService();
 
@@ -248,6 +254,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         var store = new VaultStore(crypto, new FailingFileMover());
         var vaultService = new VaultService(store);
         var updatedVault = CreateVault("Updated");
+        updatedVault.KdfParameters = legacyParameters;
 
         await Assert.ThrowsAsync<IOException>(() =>
             vaultService.ChangeMasterPasswordAsync(
@@ -257,6 +264,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
                 updatedVault,
                 cancellationToken));
 
+        Assert.Equal(legacyParameters, updatedVault.KdfParameters);
         var restoredVault = await store.OpenAsync(
             _vaultPath,
             originalPassword,

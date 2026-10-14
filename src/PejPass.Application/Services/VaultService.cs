@@ -144,11 +144,41 @@ public sealed class VaultService(IVaultStore store)
                 "The vault file no longer matches the active session. Reopen the vault before changing its master password.");
         }
 
-        return await _store.SaveWithNewPasswordAsync(
-            path,
-            newPassword,
-            vault,
-            currentKeyMaterial.KdfParameters,
-            ct);
+        var previousKdfParameters = vault.KdfParameters;
+        var targetKdfParameters = SelectKdfParametersForPasswordChange(
+            currentKeyMaterial.KdfParameters);
+
+        // SaveWithNewPasswordAsync serializes the vault metadata and writes the header together.
+        vault.KdfParameters = targetKdfParameters;
+
+        try
+        {
+            return await _store.SaveWithNewPasswordAsync(
+                path,
+                newPassword,
+                vault,
+                targetKdfParameters,
+                ct);
+        }
+        catch
+        {
+            // A failed atomic save must not leave the live vault metadata out of sync with its key.
+            vault.KdfParameters = previousKdfParameters;
+            throw;
+        }
+    }
+
+    private static Argon2Parameters SelectKdfParametersForPasswordChange(
+        Argon2Parameters currentParameters)
+    {
+        var defaults = Argon2Parameters.Default;
+
+        // Upgrade only when every default parameter is at least as strong as the current one.
+        // Never trade memory, iterations, or parallelism down to improve another dimension.
+        return defaults.MemorySizeKiB >= currentParameters.MemorySizeKiB &&
+               defaults.Iterations >= currentParameters.Iterations &&
+               defaults.DegreeOfParallelism >= currentParameters.DegreeOfParallelism
+            ? defaults
+            : currentParameters;
     }
 }
