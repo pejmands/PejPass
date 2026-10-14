@@ -246,7 +246,14 @@ public sealed class SessionPasswordCache(AppSettings settings, TimeProvider time
             if (_disposed)
                 return;
 
-            ExpireIfNeededCore();
+            // Do not let ScheduleExpiryCore clear an expired cache as a side effect.
+            // This keeps the expiry callback's clear path explicit and independently testable.
+            if (IsExpiredCore())
+            {
+                ExpireIfNeededCore();
+                return;
+            }
+
             if (_protected is { Length: > 0 })
                 ScheduleExpiryCore();
         }
