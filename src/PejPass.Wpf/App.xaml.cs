@@ -263,7 +263,7 @@ public partial class App : System.Windows.Application
     private static void LockVaultForUnexpectedException()
     {
         var application = Current;
-        global::PejPass.Wpf.MainWindow? mainWindow = null;
+        MainWindow? mainWindow = null;
 
         try
         {
@@ -496,9 +496,7 @@ public partial class App : System.Windows.Application
 
         var operation = dispatcher.InvokeAsync(action, DispatcherPriority.Send);
 
-        return wait is { } timeout
-            ? operation.Wait(timeout) == DispatcherOperationStatus.Completed
-            : true;
+        return !(wait is { } timeout) || operation.Wait(timeout) == DispatcherOperationStatus.Completed;
     }
 
     private static async Task CheckForUpdatesInBackgroundAsync()

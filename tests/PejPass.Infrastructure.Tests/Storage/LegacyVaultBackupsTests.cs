@@ -1,5 +1,4 @@
 using PejPass.Infrastructure.Storage;
-using System.IO;
 
 namespace PejPass.Infrastructure.Tests.Storage;
 

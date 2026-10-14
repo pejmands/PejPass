@@ -38,10 +38,10 @@ public sealed class VaultService(IVaultStore store)
     }
 
     public async Task<Vault> OpenVaultAsync(
-        string path,
-        string masterPassword,
-        CancellationToken ct = default,
-        bool migrateLegacy = true)
+    string path,
+    string masterPassword,
+    bool migrateLegacy = true,
+    CancellationToken ct = default)
     {
         if (!_store.Exists(path))
             throw new FileNotFoundException("Vault file not found.", path);

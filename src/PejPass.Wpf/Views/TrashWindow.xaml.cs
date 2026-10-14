@@ -2,7 +2,6 @@ using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Media;
 
 namespace PejPass.Wpf.Views;

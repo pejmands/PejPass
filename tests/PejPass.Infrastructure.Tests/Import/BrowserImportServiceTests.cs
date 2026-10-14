@@ -1,6 +1,5 @@
-﻿using PejPass.Infrastructure.Import;
-using PejPass.Domain.Exceptions;
-using System.IO;
+﻿using PejPass.Domain.Exceptions;
+using PejPass.Infrastructure.Import;
 
 namespace PejPass.Infrastructure.Tests.Import;
 

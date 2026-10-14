@@ -2,7 +2,6 @@
 using PejPass.Domain.Entities;
 using PejPass.Domain.Exceptions;
 using PejPass.Infrastructure.Storage;
-using System.IO;
 
 namespace PejPass.Infrastructure.Tests.Storage;
 

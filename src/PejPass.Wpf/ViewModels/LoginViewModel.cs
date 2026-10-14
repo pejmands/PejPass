@@ -1,9 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
-using PejPass.Application.Services;
 using PejPass.Application.Security;
-using PejPass.Domain.Entities;
+using PejPass.Application.Services;
 using PejPass.Domain.Policies;
 using PejPass.Domain.Security;
 using PejPass.Domain.Settings;

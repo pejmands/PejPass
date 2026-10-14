@@ -1,4 +1,3 @@
-using PejPass.Wpf;
 using PejPass.Wpf.ViewModels;
 using System.Windows;
 using System.Windows.Input;

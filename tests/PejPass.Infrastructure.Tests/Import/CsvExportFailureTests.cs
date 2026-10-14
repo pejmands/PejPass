@@ -1,6 +1,5 @@
 using PejPass.Domain.Entities;
 using PejPass.Infrastructure.Import;
-using System.IO;
 
 namespace PejPass.Infrastructure.Tests.Import;
 

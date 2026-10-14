@@ -1,7 +1,6 @@
 ﻿using PejPass.Domain.Entities;
 using PejPass.Infrastructure.Crypto;
 using PejPass.Infrastructure.Storage;
-using System.IO;
 
 namespace PejPass.Infrastructure.Tests.Storage;
 

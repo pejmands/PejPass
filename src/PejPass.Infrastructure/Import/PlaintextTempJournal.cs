@@ -1,5 +1,3 @@
-using System.IO;
-
 namespace PejPass.Infrastructure.Import;
 
 /// <summary>
@@ -12,7 +10,7 @@ public sealed class PlaintextTempJournal
     private const int GuidLength = 32;
 
     private readonly string _journalPath;
-    private readonly object _sync = new();
+    private readonly Lock _sync = new();
 
     public PlaintextTempJournal(string journalPath)
     {

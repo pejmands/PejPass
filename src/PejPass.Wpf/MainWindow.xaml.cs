@@ -5,14 +5,13 @@ using PejPass.Wpf.Adorners;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
+using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using System.Collections.Specialized;
 
 namespace PejPass.Wpf;
 
@@ -34,7 +33,7 @@ public partial class MainWindow : Window
     /// Prevents minimize-to-tray from cancelling that transition.
     /// </summary>
     private bool _allowClose;
-    private NotifyCollectionChangedEventHandler? _entriesCollectionChangedHandler;
+    private readonly NotifyCollectionChangedEventHandler? _entriesCollectionChangedHandler;
     private readonly Debouncer _prefetchDebouncer;
 
     public MainWindow(MainViewModel viewModel, VaultSession vaultSession)

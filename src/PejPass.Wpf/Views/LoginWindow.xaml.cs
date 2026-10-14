@@ -51,7 +51,7 @@ public partial class LoginWindow : Window
 
             Dispatcher.BeginInvoke(
                 () => MasterPasswordBox.FocusInput(),
-                System.Windows.Threading.DispatcherPriority.Input);
+                DispatcherPriority.Input);
         };
 
         viewModel.ValidationFailed += (_, _) =>
@@ -122,7 +122,7 @@ public partial class LoginWindow : Window
         {
             await Dispatcher.InvokeAsync(
                 () => MasterPasswordBox.FocusInput(),
-                System.Windows.Threading.DispatcherPriority.Input);
+                DispatcherPriority.Input);
 
             await viewModel.RefreshWindowsHelloVisibilityAsync();
 
@@ -382,7 +382,7 @@ public partial class LoginWindow : Window
             var removeButtonStyle = new Style(typeof(Button));
             removeButtonStyle.Setters.Add(new Setter(
                 BackgroundProperty,
-                System.Windows.Media.Brushes.Transparent));
+                Brushes.Transparent));
             removeButtonStyle.Setters.Add(new Setter(
                 ForegroundProperty,
                 new DynamicResourceExtension("MutedBrush")));
@@ -487,7 +487,7 @@ public partial class LoginWindow : Window
 
         Dispatcher.BeginInvoke(
             () => MasterPasswordBox.FocusInput(),
-            System.Windows.Threading.DispatcherPriority.Input);
+            DispatcherPriority.Input);
     }
 
     private void MasterPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
