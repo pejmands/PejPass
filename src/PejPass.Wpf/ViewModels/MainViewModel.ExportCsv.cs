@@ -28,6 +28,8 @@ public partial class MainViewModel
                 "• Do not email or upload this file\n" +
                 "• Delete it after use\n" +
                 "• Prefer encrypted Backup (.pejpass) for safe storage\n\n" +
+                "Spreadsheet warning: Excel may interpret values beginning with =, +, - or @ as formulas. " +
+                "PejPass preserves original values for re-import, so do not open exports containing untrusted text in spreadsheet apps.\n\n" +
                 "Continue with unencrypted CSV export?",
                 "Security warning — unencrypted export",
                 yesText: "Export CSV anyway",
@@ -76,7 +78,10 @@ public partial class MainViewModel
         if (!DialogService.Confirm(
                 "WARNING: PejPass CSV is NOT encrypted.\n\n" +
                 "It contains passwords, TOTP secrets, tags and custom field values in plain text.\n\n" +
-                "Store it securely and delete it after use.\n\nContinue?",
+                "Store it securely and delete it after use.\n\n" +
+                "Spreadsheet warning: Excel may interpret values beginning with =, +, - or @ as formulas. " +
+                "PejPass preserves original values for re-import, so do not open exports containing untrusted text in spreadsheet apps.\n\n" +
+                "Continue?",
                 "Security warning — unencrypted export",
                 yesText: "Export PejPass CSV",
                 noText: "Cancel"))
