@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using PejPass.Domain.Security;
 using PejPass.Domain.Settings;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
@@ -19,11 +20,13 @@ public partial class LoginWindow : Window
     private readonly DispatcherTimer _snackbarTimer;
     private bool _isSubscribedToSnackbar;
     private bool _allowClose;
+    private static int _passwordStrengthWarmupStarted;
 
     public LoginWindow(LoginViewModel viewModel)
     {
         InitializeComponent();
         DataContext = viewModel;
+        StartPasswordStrengthWarmup();
 
         _settings = App.Services.GetRequiredService<AppSettings>();
 
@@ -137,6 +140,24 @@ public partial class LoginWindow : Window
                 }
             }
         };
+    }
+
+    private static void StartPasswordStrengthWarmup()
+    {
+        if (Interlocked.Exchange(ref _passwordStrengthWarmupStarted, 1) != 0)
+            return;
+
+        _ = Task.Run(static () =>
+        {
+            try
+            {
+                _ = PasswordStrength.GetScore("warmup");
+            }
+            catch
+            {
+                // Warm-up is best-effort; normal password evaluation remains unchanged.
+            }
+        });
     }
 
     private void SetSnackbarSubscription(bool subscribe)
