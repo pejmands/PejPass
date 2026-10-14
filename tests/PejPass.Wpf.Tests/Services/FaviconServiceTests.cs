@@ -42,6 +42,49 @@ public sealed class FaviconServiceTests
         Assert.Equal(expectedRoot, Path.GetDirectoryName(FaviconService.CacheDir));
     }
 
+    [Fact(Timeout = 15000)]
+    public async Task ClearCache_WaitsForDownloadStateLockBeforeDeletingCacheFiles()
+    {
+        var cacheDir = FaviconService.CacheDir;
+        Directory.CreateDirectory(cacheDir);
+        var cachePath = Path.Combine(cacheDir, $"v2-{Guid.NewGuid():N}.bin");
+        File.WriteAllBytes(cachePath, [1, 2, 3]);
+
+        var stateLock = typeof(FaviconService).GetField(
+            "OnlineFetchingStateLock",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            ?.GetValue(null) as System.Threading.Lock
+            ?? throw new InvalidOperationException("Online fetching state lock was not found.");
+
+        using var clearStarted = new ManualResetEventSlim();
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        try
+        {
+            Task clearTask;
+            lock (stateLock)
+            {
+                clearTask = Task.Run(() =>
+                {
+                    clearStarted.Set();
+                    FaviconService.ClearCache();
+                }, cancellationToken);
+
+                Assert.True(clearStarted.Wait(TimeSpan.FromSeconds(2), cancellationToken));
+                Assert.False(clearTask.Wait(TimeSpan.FromMilliseconds(100), cancellationToken));
+            }
+
+            await clearTask.WaitAsync(cancellationToken);
+
+            Assert.False(File.Exists(cachePath));
+        }
+        finally
+        {
+            if (File.Exists(cachePath))
+                File.Delete(cachePath);
+        }
+    }
+
     [Fact]
     public void DiskCachePruning_RunsOnlyEveryConfiguredNumberOfDownloads()
     {
