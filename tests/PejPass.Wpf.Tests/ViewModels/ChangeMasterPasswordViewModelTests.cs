@@ -27,6 +27,7 @@ public sealed class ChangeMasterPasswordViewModelTests
         var viewModel = new ChangeMasterPasswordViewModel(
             null!,
             session,
+            null!,
             null!)
         {
             CurrentPassword = "SamePassword!123",
@@ -58,13 +59,14 @@ public sealed class ChangeMasterPasswordViewModelTests
         session.Open(vault, path, currentKeyMaterial);
 
         using var cache = new SessionPasswordCache(new AppSettings(), TimeProvider.System);
+        var pendingNotice = new PendingMasterPasswordChangeNotice();
         cache.Store(path, currentKeyMaterial);
         Assert.True(cache.HasCacheFor(path));
 
         const string newPassword = "vQ7!nT4#zP9@kR2$wX6";
         Assert.True(MasterPasswordPolicy.Validate(newPassword).IsValid);
 
-        var viewModel = new ChangeMasterPasswordViewModel(vaultService, session, cache)
+        var viewModel = new ChangeMasterPasswordViewModel(vaultService, session, cache, pendingNotice)
         {
             CurrentPassword = "CurrentPassword!123",
             NewPassword = newPassword,
@@ -92,6 +94,7 @@ public sealed class ChangeMasterPasswordViewModelTests
         Assert.Null(viewModel.ConfirmPasswordError);
         Assert.False(cache.HasCacheFor(path));
         Assert.False(session.IsActive);
+        Assert.True(pendingNotice.IsPendingFor(path));
     }
 
     private static VaultKeyMaterial CreateMaterial()
