@@ -58,8 +58,15 @@ public sealed class VaultStore(
 
         ValidateText(vault.Name, "vault name");
 
+        var entryIds = new HashSet<Guid>();
+
         foreach (var entry in vault.Entries)
+        {
             ValidateEntry(entry);
+
+            if (!entryIds.Add(entry.Id))
+                throw new InvalidDataException("Vault contains duplicate entry IDs.");
+        }
 
         foreach (var trashedEntry in vault.Trash)
         {
@@ -67,6 +74,9 @@ public sealed class VaultStore(
                 throw new InvalidDataException("Vault contains an invalid trash entry.");
 
             ValidateEntry(trashedEntry.Entry);
+
+            if (!entryIds.Add(trashedEntry.Entry.Id))
+                throw new InvalidDataException("Vault contains duplicate entry IDs.");
         }
 
         foreach (var history in vault.History)

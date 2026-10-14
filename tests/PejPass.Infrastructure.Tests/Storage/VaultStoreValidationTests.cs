@@ -344,6 +344,63 @@ public sealed class VaultStoreValidationTests
     }
 
     [Fact]
+    public async Task CreateSessionAsync_WhenEntryIdsAreDuplicatedAcrossActiveAndTrash_ThrowsInvalidDataException()
+    {
+        var entryId = Guid.NewGuid();
+        var vault = new Vault
+        {
+            Entries = [new VaultEntry { Id = entryId, Title = "Active" }],
+            Trash = [new TrashedEntry { Entry = new VaultEntry { Id = entryId, Title = "Trashed" } }]
+        };
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                CreateStore().CreateSessionAsync(
+                    path,
+                    "password",
+                    vault,
+                    TestContext.Current.CancellationToken));
+
+            Assert.False(File.Exists(path));
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenEntryIdsAreDuplicated_ThrowsInvalidDataException()
+    {
+        var duplicateId = Guid.NewGuid();
+        var json = System.Text.Json.JsonSerializer.Serialize(new Vault
+        {
+            Entries =
+            [
+                new VaultEntry { Id = duplicateId, Title = "First" },
+                new VaultEntry { Id = duplicateId, Title = "Second" }
+            ]
+        });
+        var path = CreateV2VaultFile(json);
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                CreateStore().OpenAsync(
+                    path,
+                    "password",
+                    TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public async Task CreateSessionAsync_WhenTagCollectionIsMissing_IsStillAnInvalidFile()
     {
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
