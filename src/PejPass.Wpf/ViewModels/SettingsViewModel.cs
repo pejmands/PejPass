@@ -289,10 +289,6 @@ public partial class SettingsViewModel : ObservableObject
         _settings.FontSize = (FontSizeMode)SelectedFontSizeIndex;
         _settings.Zoom = ZoomBehavior.ZoomLevels[SelectedZoomIndex];
 
-        // The tray icon is always available. This setting only controls
-        // whether closing or minimizing the main window hides it to the tray.
-        System.Windows.Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-
         if (!AppearanceOnly)
         {
             _settings.AutoCheckForUpdates = AutoCheckForUpdates;
