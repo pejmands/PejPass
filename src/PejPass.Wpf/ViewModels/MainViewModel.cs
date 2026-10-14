@@ -1189,6 +1189,7 @@ public partial class MainViewModel : ObservableObject
             return;
 
         var snapshot = vault.CreateSnapshot();
+        var wasFavorite = entry.IsFavorite;
 
         var dataChanged = vault.UpdateEntry(updated);
         var favoriteChanged = vault.SetFavorite(updated.Id, updated.IsFavorite);
@@ -1200,6 +1201,15 @@ public partial class MainViewModel : ObservableObject
         }
 
         var persistedEntry = vault.FindEntry(updated.Id)!;
+
+        if (_settings.SortMode == EntrySortMode.Manual &&
+            persistedEntry.IsFavorite != wasFavorite)
+        {
+            persistedEntry.SortOrder = GetNextManualSortOrder(
+                vault.Entries,
+                persistedEntry.IsFavorite,
+                persistedEntry.Id);
+        }
 
         if (entryIndex >= 0)
             Entries[entryIndex] = persistedEntry;
