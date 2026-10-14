@@ -22,6 +22,8 @@ The “Until app closes” timeout disables the elapsed-time limit only; it does
 
 ## Update manifest rollback and freshness
 
+The root `notes` field and per-release `releases[].notes` are not included in the ECDSA-signed payload; they are display-only metadata delivered over HTTPS, so the signature does not independently authenticate that text.
+
 The updater verifies the ECDSA signature over the manifest's version, release date, download URL, and package SHA-256, then checks that the manifest version is newer than the installed version. These checks authenticate the signed metadata and the downloaded package, but they do not establish that the manifest is the newest one published.
 
 An attacker able to interfere with update traffic can replay an older, still-valid signed manifest. If that manifest points to a legitimate signed-by-hash release that is newer than the client's installed version but older than the current release, the client may offer that older release for installation. This is a **rollback of update freshness**, not a signature forgery; the attacker cannot alter the authenticated version, URL, or hash without a trusted signing key. The updater checks for updates manually rather than installing them automatically, which limits exposure but does not eliminate it.
