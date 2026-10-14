@@ -132,13 +132,6 @@ public partial class EntryEditorViewModel : ObservableObject
             : error;
     }
 
-    /// <summary>True when empty or a valid Base32 secret or TOTP URI.</summary>
-    public bool IsTotpSecretValid()
-    {
-        ValidateTotpSecret();
-        return string.IsNullOrEmpty(TotpErrorMessage);
-    }
-
     public bool IsValid()
     {
         ValidateUrl();
@@ -333,20 +326,6 @@ public partial class EntryEditorViewModel : ObservableObject
         SnackbarService.Show(string.IsNullOrEmpty(who)
                 ? "TOTP secret imported from QR code."
                 : $"TOTP secret imported.\n{who}");
-    }
-
-    [RelayCommand]
-    private void GeneratePassword()
-    {
-        Password = PasswordGenerator.Generate(new PasswordGeneratorOptions
-        {
-            Length = 20,
-            IncludeLowercase = true,
-            IncludeUppercase = true,
-            IncludeDigits = true,
-            IncludeSymbols = true,
-            ExcludeAmbiguous = true
-        });
     }
 
     [RelayCommand]
