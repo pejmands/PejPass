@@ -74,9 +74,8 @@ public sealed class ChangeMasterPasswordViewModelTests
         var changeTask = viewModel.ChangeCommand.ExecuteAsync(null);
         var firstCompleted = await Task.WhenAny(store.SaveStarted.Task, changeTask)
             .WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-        Assert.Same(
-            store.SaveStarted.Task,
-            firstCompleted,
+        Assert.True(
+            ReferenceEquals(store.SaveStarted.Task, firstCompleted),
             "The password-change command ended before reaching the save operation.");
 
         session.Clear();
