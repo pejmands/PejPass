@@ -79,6 +79,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton(themeService);
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<SessionPasswordCache>();
+        services.AddSingleton<PendingMasterPasswordChangeNotice>();
 
         services.AddSingleton<ICryptoService, CryptoService>();
         services.AddSingleton<IFileMover, FileMover>();
