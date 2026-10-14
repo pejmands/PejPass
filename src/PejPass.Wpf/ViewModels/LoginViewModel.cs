@@ -22,6 +22,7 @@ public partial class LoginViewModel : ObservableObject
     private readonly AppSettings _settings;
     private readonly VaultSession _vaultSession;
     private readonly SessionPasswordCache _sessionPasswordCache;
+    private readonly PendingMasterPasswordChangeNotice _pendingPasswordChangeNotice;
 
     public event EventHandler? RequestClose;
 
@@ -83,12 +84,14 @@ public partial class LoginViewModel : ObservableObject
         VaultService vaultService,
         AppSettings settings,
         VaultSession vaultSession,
-        SessionPasswordCache sessionPasswordCache)
+        SessionPasswordCache sessionPasswordCache,
+        PendingMasterPasswordChangeNotice pendingPasswordChangeNotice)
     {
         _vaultService = vaultService;
         _settings = settings;
         _vaultSession = vaultSession;
         _sessionPasswordCache = sessionPasswordCache;
+        _pendingPasswordChangeNotice = pendingPasswordChangeNotice;
 
         var recentPaths = NormalizeRecentPaths(_settings.RecentVaultPaths);
 
@@ -300,8 +303,16 @@ public partial class LoginViewModel : ObservableObject
     public string SubmitButtonText =>
         IsCreateMode ? "Create Vault" : "Unlock";
 
-    partial void OnVaultPathChanged(string value) =>
+    partial void OnVaultPathChanged(string value)
+    {
+        if (string.Equals(StatusMessage, PendingMasterPasswordChangeNotice.RecoveryHint, StringComparison.Ordinal) &&
+            !_pendingPasswordChangeNotice.IsPendingFor(value))
+        {
+            StatusMessage = string.Empty;
+        }
+
         _ = RefreshWindowsHelloVisibilityAsync();
+    }
 
     partial void OnMasterPasswordChanged(string value) =>
         UpdateMasterPasswordStrength();
@@ -679,6 +690,9 @@ public partial class LoginViewModel : ObservableObject
                 }
             }
 
+            if (!IsCreateMode)
+                _pendingPasswordChangeNotice.ClearFor(VaultPath);
+
             RecordRecentVault(VaultPath);
 
             MasterPassword = string.Empty;
@@ -689,7 +703,9 @@ public partial class LoginViewModel : ObservableObject
         catch (System.Security.Cryptography.AuthenticationTagMismatchException)
         {
             PasswordError = VaultErrorMessages.ForUnlock(authenticationFailed: true);
-            StatusMessage = string.Empty;
+            StatusMessage = !IsCreateMode && _pendingPasswordChangeNotice.IsPendingFor(VaultPath)
+                ? PendingMasterPasswordChangeNotice.RecoveryHint
+                : string.Empty;
         }
         catch (Exception)
         {

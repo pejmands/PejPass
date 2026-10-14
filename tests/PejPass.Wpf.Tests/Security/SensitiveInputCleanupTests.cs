@@ -1,5 +1,6 @@
 using PejPass.Domain.Entities;
 using PejPass.Wpf.Controls;
+using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.Windows.Controls;
@@ -44,7 +45,7 @@ public sealed class SensitiveInputCleanupTests
     {
         WpfTestHost.Run(_ =>
         {
-            var viewModel = new ChangeMasterPasswordViewModel(null!, null!, null!);
+            var viewModel = new ChangeMasterPasswordViewModel(null!, null!, null!, new PendingMasterPasswordChangeNotice());
             var window = new ChangeMasterPasswordWindow(viewModel);
             var currentPasswordBox = Assert.IsType<PasswordBox>(window.FindName("CurrentPasswordBox"));
             var newPasswordBox = Assert.IsType<PasswordRevealBox>(window.FindName("NewPasswordBox"));
