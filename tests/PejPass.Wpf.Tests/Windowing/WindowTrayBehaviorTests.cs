@@ -1,6 +1,5 @@
 using PejPass.Application.Security;
 using PejPass.Domain.Entities;
-using PejPass.Wpf;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
@@ -57,7 +56,7 @@ public sealed class WindowTrayBehaviorTests
             host.Settings.CloseToSystemTray = true;
             OpenTestVault(host);
 
-            var app = Application.Current!;
+            var app = System.Windows.Application.Current!;
             var window = host.CreateMainWindow();
             app.MainWindow = window;
             var wasClosed = false;
@@ -93,7 +92,7 @@ public sealed class WindowTrayBehaviorTests
             host.Settings.MinimizeToSystemTray = true;
             OpenTestVault(host);
 
-            var app = Application.Current!;
+            var app = System.Windows.Application.Current!;
             var window = host.CreateMainWindow();
             app.MainWindow = window;
             var wasClosed = false;
@@ -131,7 +130,7 @@ public sealed class WindowTrayBehaviorTests
 
     private static void DrainDispatcher()
     {
-        var dispatcher = Application.Current!.Dispatcher;
+        var dispatcher = System.Windows.Application.Current!.Dispatcher;
         var frame = new DispatcherFrame();
 
         dispatcher.BeginInvoke(
