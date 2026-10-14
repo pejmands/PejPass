@@ -92,11 +92,8 @@ public partial class LoginWindow : Window
             if (_settings.CloseToSystemTray)
             {
                 var tray = App.Services.GetRequiredService<SystemTrayService>();
-
-                e.Cancel = true;
-                Hide();
-                tray.Show();
-                return;
+                if (tray.TryHideToTray(this, e))
+                    return;
             }
 
             var trayForExit = App.Services.GetService<SystemTrayService>();

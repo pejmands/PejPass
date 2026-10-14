@@ -823,6 +823,12 @@ public partial class App : System.Windows.Application
         return null;
     }
 
+    protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
+    {
+        Services?.GetService<SystemTrayService>()?.PrepareForExit();
+        base.OnSessionEnding(e);
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
         DispatcherUnhandledException -= OnDispatcherUnhandledException;

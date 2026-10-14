@@ -22,6 +22,26 @@ public sealed class WindowTrayBehaviorTests
     }
 
     [Fact(Timeout = 15000)]
+    public void PrepareForExit_MakesTrayStopInterceptingClose()
+    {
+        WpfTestHost.Run(host =>
+        {
+            var window = host.CreateLoginWindow();
+            host.Tray.Show();
+            Assert.True(host.Tray.IsVisible);
+
+            host.Tray.PrepareForExit();
+
+            Assert.False(host.Tray.IsVisible);
+
+            var args = new System.ComponentModel.CancelEventArgs();
+
+            Assert.False(host.Tray.TryHideToTray(window, args));
+            Assert.False(args.Cancel);
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 15000)]
     public void MainWindow_CloseToSystemTray_HidesInsteadOfClosing()
     {
         WpfTestHost.Run(host =>
