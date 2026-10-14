@@ -60,19 +60,21 @@ public sealed class WindowTrayBehaviorTests
             var app = Application.Current!;
             var window = host.CreateMainWindow();
             app.MainWindow = window;
+            var wasClosed = false;
+            window.Closed += (_, _) => wasClosed = true;
             window.Show();
 
             window.Close();
 
             Assert.False(window.IsVisible);
-            Assert.True(window.IsLoaded);
+            Assert.False(wasClosed);
             Assert.True(host.VaultSession.IsActive);
             Assert.True(host.Tray.IsVisible);
 
             DrainDispatcher();
 
             Assert.False(host.VaultSession.IsActive);
-            Assert.False(window.IsLoaded);
+            Assert.True(wasClosed);
             var login = Assert.IsType<LoginWindow>(app.MainWindow);
             Assert.False(login.IsVisible);
 
@@ -94,6 +96,8 @@ public sealed class WindowTrayBehaviorTests
             var app = Application.Current!;
             var window = host.CreateMainWindow();
             app.MainWindow = window;
+            var wasClosed = false;
+            window.Closed += (_, _) => wasClosed = true;
             window.Show();
 
             window.WindowState = WindowState.Minimized;
@@ -106,7 +110,7 @@ public sealed class WindowTrayBehaviorTests
             DrainDispatcher();
 
             Assert.False(host.VaultSession.IsActive);
-            Assert.False(window.IsLoaded);
+            Assert.True(wasClosed);
             var login = Assert.IsType<LoginWindow>(app.MainWindow);
             Assert.False(login.IsVisible);
         }, TestContext.Current.CancellationToken);
