@@ -63,8 +63,8 @@ public sealed class ChangeMasterPasswordViewModelTests
         var viewModel = new ChangeMasterPasswordViewModel(vaultService, session, cache)
         {
             CurrentPassword = "CurrentPassword!123",
-            NewPassword = "ChangedPassword!456",
-            ConfirmPassword = "ChangedPassword!456"
+            NewPassword = "vQ7!nT4#zP9@kR2$wX6",
+            ConfirmPassword = "vQ7!nT4#zP9@kR2$wX6"
         };
 
         var changeTask = viewModel.ChangeCommand.ExecuteAsync(null);
