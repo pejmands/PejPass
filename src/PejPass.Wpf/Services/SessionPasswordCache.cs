@@ -211,16 +211,19 @@ public sealed class SessionPasswordCache(AppSettings settings, TimeProvider time
         _ => TimeSpan.FromHours(4)
     };
 
-    private bool IsExpiredCore()
+    private bool IsExpiredCore(DateTimeOffset now)
     {
         var lifetime = GetCacheLifetime();
         return lifetime.HasValue && _cachedAt.HasValue &&
-            _timeProvider.GetUtcNow() - _cachedAt.Value >= lifetime.Value;
+            now - _cachedAt.Value >= lifetime.Value;
     }
 
-    private void ExpireIfNeededCore()
+    private void ExpireIfNeededCore() =>
+        ExpireIfNeededCore(_timeProvider.GetUtcNow());
+
+    private void ExpireIfNeededCore(DateTimeOffset now)
     {
-        if (_protected is { Length: > 0 } && IsExpiredCore())
+        if (_protected is { Length: > 0 } && IsExpiredCore(now))
             ClearCore();
     }
 
@@ -248,9 +251,10 @@ public sealed class SessionPasswordCache(AppSettings settings, TimeProvider time
 
             // Do not let ScheduleExpiryCore clear an expired cache as a side effect.
             // This keeps the expiry callback's clear path explicit and independently testable.
-            if (IsExpiredCore())
+            var now = _timeProvider.GetUtcNow();
+            if (IsExpiredCore(now))
             {
-                ExpireIfNeededCore();
+                ExpireIfNeededCore(now);
                 return;
             }
 
