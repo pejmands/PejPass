@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using PejPass.Application.Services;
 using PejPass.Domain.Settings;
 using PejPass.Infrastructure.Storage;
@@ -467,7 +468,8 @@ public partial class SettingsViewModel : ObservableObject
         var vm = new ChangeMasterPasswordViewModel(
             _vaultService,
             _vaultSession,
-            _sessionPasswordCache);
+            _sessionPasswordCache,
+            App.Services.GetRequiredService<PendingMasterPasswordChangeNotice>());
 
         var win = new ChangeMasterPasswordWindow(vm) { Owner = owner };
         if (win.ShowDialog() == true)
