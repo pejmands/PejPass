@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using PejPass.Application.Services;
 using PejPass.Domain.Policies;
 using PejPass.Domain.Security;
+using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.Services;
 
 namespace PejPass.Wpf.ViewModels;
@@ -142,6 +143,13 @@ public partial class ChangeMasterPasswordViewModel(
             if (!_vaultSession.IsCurrent(sessionGeneration, vault) ||
                 !_vaultSession.TryUpdateKeyMaterial(newKeyMaterial))
             {
+                cache.Clear();
+
+                DialogService.Warning(
+                    "The vault was locked while the password was being changed.\n\n" +
+                    "The new password is already in effect. Unlock the vault with the new password.",
+                    "Password changed");
+
                 return;
             }
 
