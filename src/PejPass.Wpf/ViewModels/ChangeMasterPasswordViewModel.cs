@@ -142,6 +142,9 @@ public partial class ChangeMasterPasswordViewModel(
             if (!_vaultSession.IsCurrent(sessionGeneration, vault) ||
                 !_vaultSession.TryUpdateKeyMaterial(newKeyMaterial))
             {
+                cache.Clear();
+                NewPasswordError = "The vault was locked while the password was changing. " +
+                                   "The new password is already in effect; unlock with it.";
                 return;
             }
 
