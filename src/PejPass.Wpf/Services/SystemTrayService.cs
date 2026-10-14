@@ -113,6 +113,13 @@ public sealed class SystemTrayService : IDisposable
         _taskbarIcon?.Visibility = Visibility.Collapsed;
     }
 
+    /// <summary>Stops the tray from intercepting window closes (update install, session end).</summary>
+    public void PrepareForExit()
+    {
+        _isExiting = true;
+        Hide();
+    }
+
     public void Exit()
     {
         if (_isExiting)
