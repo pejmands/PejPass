@@ -53,7 +53,7 @@ public sealed class FaviconServiceTests
         var stateLock = typeof(FaviconService).GetField(
             "OnlineFetchingStateLock",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            ?.GetValue(null)
+            ?.GetValue(null) as System.Threading.Lock
             ?? throw new InvalidOperationException("Online fetching state lock was not found.");
 
         using var clearStarted = new ManualResetEventSlim();
