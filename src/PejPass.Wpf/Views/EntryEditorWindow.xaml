@@ -91,12 +91,11 @@
 						Margin="12,0,0,0"
 						Padding="10,0,10,3"
 						VerticalAlignment="Bottom"
-						Background="{DynamicResource SurfaceAltBrush}"
 						BorderThickness="0"
 						Command="{Binding ToggleFavoriteCommand}"
 						Cursor="Hand">
 						<Button.Style>
-							<Style BasedOn="{StaticResource {x:Type Button}}" TargetType="Button">
+							<Style BasedOn="{StaticResource SecondaryButton}" TargetType="Button">
 								<Setter Property="ToolTip" Value="Add to favorites" />
 								<Style.Triggers>
 									<DataTrigger Binding="{Binding IsFavorite}" Value="True">
@@ -423,10 +422,10 @@
 									Height="32"
 									Margin="2,0,0,0"
 									Padding="8,4"
-									Background="{DynamicResource DangerBrush}"
 									Command="{Binding DataContext.RemoveCustomFieldCommand, RelativeSource={RelativeSource AncestorType=Window}}"
 									CommandParameter="{Binding}"
 									Content="✕"
+									Style="{StaticResource DestructiveButton}"
 									ToolTip="Remove field" />
 								<TextBlock
 									Grid.Row="1"
@@ -472,7 +471,6 @@
 
 			<Button
 				Margin="0,0,8,0"
-				Background="{DynamicResource SurfaceBrush}"
 				Click="Cancel_Click"
 				Content="Cancel"
 				Foreground="{DynamicResource TextBrush}"
