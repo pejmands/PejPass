@@ -25,6 +25,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IClipboardService _clipboard;
     private readonly IBrowserImportService _importService;
     private readonly AppSettings _settings;
+    private bool _initializingSortSettings = true;
     private readonly ThemeService _themeService;
     private readonly VaultSession _vaultSession;
     private readonly SessionPasswordCache _sessionPasswordCache;
@@ -167,6 +168,7 @@ public partial class MainViewModel : ObservableObject
 
         SelectedSortIndex = (int)_settings.SortMode;
         SelectedTagSortIndex = (int)_settings.TagSortMode;
+        _initializingSortSettings = false;
 
         _ = LoadVaultAsync();
         StartAutoLockTimer();
@@ -203,7 +205,7 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedSortIndexChanged(int value)
     {
-        if (value < 0 || value > 4) return;
+        if (_initializingSortSettings || value < 0 || value > 4) return;
         _settings.SortMode = (EntrySortMode)value;
         SettingsStore.Save(_settings);
         ApplyFilter();
@@ -211,7 +213,7 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedTagSortIndexChanged(int value)
     {
-        if (value < 0 || value > 1) return;
+        if (_initializingSortSettings || value < 0 || value > 1) return;
         _settings.TagSortMode = (TagSortMode)value;
         SettingsStore.Save(_settings);
         RebuildTagFilters();
