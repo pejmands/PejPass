@@ -64,8 +64,8 @@ public sealed class VaultStoreAuthenticationTests
                 path,
                 cancellationToken);
 
-            // PEJP (4) + version (1) + salt length (2)
-            const int saltOffset = 7;
+            // PEJP (4) + version (1) + algorithm (1) + KDF parameters (12) + salt length (2)
+            const int saltOffset = 20;
 
             data[saltOffset] ^= 0x01;
 
@@ -79,6 +79,34 @@ public sealed class VaultStoreAuthenticationTests
                     path,
                     "password",
                     cancellationToken));
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenKdfParameterIsModified_ThrowsAuthenticationException()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+
+        try
+        {
+            var store = CreateStore();
+            await store.CreateAsync(path, "password", new Vault(), cancellationToken);
+
+            var data = await File.ReadAllBytesAsync(path, cancellationToken);
+
+            // MemorySizeKiB (65536) lives at bytes 6..9. Flipping byte 7 gives 65792,
+            // which remains valid so authentication must reject the modified header.
+            data[7] ^= 0x01;
+            await File.WriteAllBytesAsync(path, data, cancellationToken);
+
+            await Assert.ThrowsAsync<AuthenticationTagMismatchException>(() =>
+                store.OpenAsync(path, "password", cancellationToken));
         }
         finally
         {
