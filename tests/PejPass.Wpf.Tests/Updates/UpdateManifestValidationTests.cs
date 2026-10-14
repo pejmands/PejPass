@@ -48,11 +48,11 @@ public sealed class UpdateManifestValidationTests
     {
         var manifest = new UpdateManifest
         {
+            Version = "1.2.0",
             Releases = [.. Enumerable.Range(0, 1_001).Select(index => new ManifestRelease { Version = $"1.0.{index}" })]
         };
 
-        Assert.Throws<InvalidDataException>(() =>
-            UpdateService.ValidateUpdateManifest(manifest));
+        AssertRejectedFor(manifest);
     }
 
     [Fact]
@@ -60,14 +60,14 @@ public sealed class UpdateManifestValidationTests
     {
         var manifest = new UpdateManifest
         {
+            Version = "1.2.0",
             Notes = new UpdateNotes
             {
                 Added = [new string('x', 4_097)]
             }
         };
 
-        Assert.Throws<InvalidDataException>(() =>
-            UpdateService.ValidateUpdateManifest(manifest));
+        AssertRejectedFor(manifest);
     }
 
     [Fact]
@@ -75,14 +75,14 @@ public sealed class UpdateManifestValidationTests
     {
         var manifest = new UpdateManifest
         {
+            Version = "1.2.0",
             Notes = new UpdateNotes
             {
                 Added = [.. Enumerable.Repeat("note", 101)]
             }
         };
 
-        Assert.Throws<InvalidDataException>(() =>
-            UpdateService.ValidateUpdateManifest(manifest));
+        AssertRejectedFor(manifest);
     }
 
     [Fact]
@@ -109,6 +109,7 @@ public sealed class UpdateManifestValidationTests
         var longNotes = Enumerable.Repeat(new string('x', 4_096), 100).ToList();
         var manifest = new UpdateManifest
         {
+            Version = "1.2.0",
             Releases =
             [
                 new ManifestRelease
@@ -134,7 +135,14 @@ public sealed class UpdateManifestValidationTests
             ]
         };
 
-        Assert.Throws<InvalidDataException>(() =>
+        AssertRejectedFor(manifest);
+    }
+
+    private static void AssertRejectedFor(UpdateManifest manifest)
+    {
+        var ex = Assert.Throws<InvalidDataException>(() =>
             UpdateService.ValidateUpdateManifest(manifest));
+
+        Assert.DoesNotContain("missing its version", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 }
