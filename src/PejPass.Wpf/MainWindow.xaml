@@ -589,7 +589,6 @@
 							x:Name="DeleteSelectedButton"
 							Padding="16,8"
 							HorizontalAlignment="Center"
-							Background="{DynamicResource DangerBrush}"
 							Click="DeleteSelected_Click"
 							Content="Delete selected"
 							Style="{StaticResource DestructiveButton}" />
@@ -683,7 +682,6 @@
 									<Button
 										Grid.Column="1"
 										Margin="8,0,0,0"
-										Background="{DynamicResource SurfaceAltBrush}"
 										Command="{Binding CopyUrlCommand}"
 										Content="Copy"
 										Foreground="{DynamicResource TextBrush}"
@@ -729,7 +727,6 @@
 								<Button
 									Grid.Column="1"
 									Margin="8,0,0,0"
-									Background="{DynamicResource SurfaceAltBrush}"
 									Command="{Binding CopyUsernameCommand}"
 									Content="Copy"
 									Foreground="{DynamicResource TextBrush}"
@@ -770,7 +767,6 @@
 								<Button
 									Grid.Column="1"
 									Margin="8,0,0,0"
-									Background="{DynamicResource SurfaceAltBrush}"
 									Command="{Binding TogglePasswordVisibilityCommand}"
 									Content="{Binding ShowPasswordButtonText}"
 									Foreground="{DynamicResource TextBrush}"
@@ -909,7 +905,6 @@
 													Grid.Column="2"
 													Margin="6,0,0,0"
 													Padding="10,6"
-													Background="{DynamicResource SurfaceAltBrush}"
 													Command="{Binding DataContext.ToggleCustomFieldVisibilityCommand, RelativeSource={RelativeSource AncestorType=Window}}"
 													CommandParameter="{Binding}"
 													Content="{Binding RevealButtonText}"
@@ -921,7 +916,6 @@
 													Grid.Column="3"
 													Margin="6,0,0,0"
 													Padding="10,6"
-													Background="{DynamicResource SurfaceAltBrush}"
 													Command="{Binding DataContext.CopyCustomFieldCommand, RelativeSource={RelativeSource AncestorType=Window}}"
 													CommandParameter="{Binding}"
 													Content="Copy"
@@ -979,7 +973,6 @@
 
 								<Button
 									Padding="20,8"
-									Background="{DynamicResource DangerBrush}"
 									Command="{Binding DeleteEntryCommand}"
 									CommandParameter="{Binding SelectedEntry}"
 									Content="Delete"
