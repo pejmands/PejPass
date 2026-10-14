@@ -224,7 +224,6 @@
 						Height="32"
 						Margin="0,0,8,0"
 						Padding="12,6"
-						Background="{DynamicResource SurfaceAltBrush}"
 						Command="{Binding ImportTotpFromFileCommand}"
 						Content="From image"
 						Foreground="{DynamicResource TextBrush}"
@@ -233,7 +232,6 @@
 					<Button
 						Height="32"
 						Padding="12,6"
-						Background="{DynamicResource SurfaceAltBrush}"
 						Command="{Binding ImportTotpFromClipboardCommand}"
 						Content="From clipboard"
 						Foreground="{DynamicResource TextBrush}"
