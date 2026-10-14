@@ -1579,6 +1579,20 @@ public partial class MainViewModel : ObservableObject
         if (dlg.ShowDialog() != true)
             return;
 
+        var activeVaultPath = _vaultSession.VaultPath;
+        if (!string.IsNullOrWhiteSpace(activeVaultPath) &&
+            string.Equals(
+                Path.GetFullPath(dlg.FileName),
+                Path.GetFullPath(activeVaultPath),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            DialogService.Warning(
+                "The destination is the vault file you already have open.\n\n" +
+                "Choose a different path for the backup.",
+                "Export Backup");
+            return;
+        }
+
         try
         {
             IsBusy = true;
