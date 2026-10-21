@@ -8,6 +8,8 @@ const credentialsStatus = document.getElementById("credentials-status");
 const credentialList = document.getElementById("credential-list");
 const nativeHostName = "com.pejpass.browserhost";
 const protocolVersion = 1;
+let activeTabId = null;
+let activeDomain = null;
 
 version.textContent = chrome.runtime.getManifest().version;
 
@@ -35,6 +37,8 @@ function isValidBaseResponse(response, type) {
 }
 
 function showUnavailable(message) {
+  activeTabId = null;
+  activeDomain = null;
   siteName.textContent = "Unavailable page";
   siteDetail.textContent = message;
   credentialsStatus.textContent = "Credential lookup is unavailable on this page.";
@@ -45,7 +49,7 @@ async function showActiveSite() {
   try {
     const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     const tab = tabs[0];
-    if (!tab || typeof tab.url !== "string") {
+    if (!tab || typeof tab.url !== "string" || !Number.isInteger(tab.id)) {
       showUnavailable("The active tab address is not available."); return;
     }
 
@@ -57,10 +61,11 @@ async function showActiveSite() {
       showUnavailable("Edge does not allow extensions to inspect this page."); return;
     }
 
-    const domain = url.hostname.toLowerCase().replace(/\.$/, "");
-    siteName.textContent = domain;
+    activeTabId = tab.id;
+    activeDomain = url.hostname.toLowerCase().replace(/\.$/, "");
+    siteName.textContent = activeDomain;
     siteDetail.textContent = "Searching PejPass for accounts matching this site…";
-    await lookupCredentials(domain);
+    await lookupCredentials(activeDomain);
   } catch {
     showUnavailable("Could not read the active tab. Try closing and reopening the popup.");
   }
@@ -102,12 +107,10 @@ async function lookupCredentials(domain) {
         app_unavailable: "Open PejPass desktop and try again.",
         invalid_domain: "The active site address is not valid for lookup.",
         lookup_unavailable: "PejPass could not complete the lookup. Try again.",
-        unsupported_request: "The running PejPass desktop version does not support account lookup. Fully exit PejPass, then launch the build from PR 138.",
-        invalid_app_response: "PejPass desktop returned an incompatible account-lookup response. Fully exit PejPass and relaunch the build from PR 138."
+        unsupported_request: "The running PejPass desktop version does not support account lookup. Fully exit PejPass, then launch the latest build.",
+        invalid_app_response: "PejPass desktop returned an incompatible account-lookup response. Fully exit PejPass and relaunch the latest build."
       };
-      credentialsStatus.textContent = messages[response.code] ||
-        "Credential lookup failed because the desktop response was invalid (code: " +
-        String(response.code || "missing") + ").";
+      credentialsStatus.textContent = messages[response.code] || "Credential lookup failed because the desktop response was invalid.";
       return;
     }
 
@@ -134,12 +137,111 @@ async function lookupCredentials(domain) {
       const username = document.createElement("p");
       username.className = "credential-username";
       username.textContent = credential.username || "No username saved";
-      item.append(title, username);
+      const fillButton = document.createElement("button");
+      fillButton.className = "fill-button";
+      fillButton.type = "button";
+      fillButton.textContent = "Fill login";
+      fillButton.addEventListener("click", () => fillCredential(credential));
+      item.append(title, username, fillButton);
       credentialList.append(item);
     }
   } catch {
     credentialsStatus.textContent = "Credential lookup unavailable. Open PejPass desktop and try again.";
   }
+}
+
+async function fillCredential(credential) {
+  if (!activeTabId || !activeDomain || !isValidCredential(credential)) {
+    credentialsStatus.textContent = "The active page is no longer available. Reopen the popup.";
+    return;
+  }
+
+  credentialsStatus.textContent = "Retrieving credentials from PejPass…";
+  try {
+    const response = await sendNativeMessage({
+      type: "fillCredential",
+      protocolVersion,
+      domain: activeDomain,
+      id: credential.id
+    });
+
+    if (response?.type === "error") {
+      const messages = {
+        vault_locked: "Unlock the PejPass vault before filling a login.",
+        app_unavailable: "Open PejPass desktop and try again.",
+        credential_not_found: "That account is no longer available for this site. Reopen the popup.",
+        invalid_domain: "The active site address is not valid for filling.",
+        invalid_request: "The fill request was invalid.",
+        lookup_unavailable: "PejPass could not retrieve this account. Try again."
+      };
+      credentialsStatus.textContent = messages[response.code] || "PejPass could not retrieve this account.";
+      return;
+    }
+
+    if (!isValidBaseResponse(response, "credentialForFill") ||
+        response.domain !== activeDomain || response.id !== credential.id ||
+        typeof response.username !== "string" || response.username.length > 256 ||
+        typeof response.password !== "string" || response.password.length > 4096) {
+      credentialsStatus.textContent = "PejPass returned an invalid fill response.";
+      return;
+    }
+
+    const result = await chrome.scripting.executeScript({
+      target: { tabId: activeTabId },
+      func: fillLoginForm,
+      args: [activeDomain, response.username, response.password]
+    });
+    const outcome = result?.[0]?.result;
+    const messages = {
+      filled: "Login fields filled. Review them and submit the form yourself.",
+      no_password: "No visible password field was found on this page.",
+      wrong_page: "The active page changed. Reopen the popup and try again.",
+      no_username: "Password filled, but no matching username field was found."
+    };
+    credentialsStatus.textContent = messages[outcome] || "Could not fill the login form on this page.";
+  } catch {
+    credentialsStatus.textContent = "Could not fill this page. Check that it is a regular HTTP(S) page and try again.";
+  }
+}
+
+function fillLoginForm(expectedDomain, username, password) {
+  const currentDomain = window.location.hostname.toLowerCase().replace(/\.$/, "");
+  if (currentDomain !== expectedDomain) return "wrong_page";
+
+  const isVisible = (element) => {
+    const style = window.getComputedStyle(element);
+    return style.display !== "none" && style.visibility !== "hidden" &&
+      element.getClientRects().length > 0;
+  };
+  const usable = (element) => !element.disabled && !element.readOnly && isVisible(element);
+  const passwordField = Array.from(document.querySelectorAll('input[type="password"]'))
+    .find(usable);
+  if (!passwordField) return "no_password";
+
+  const form = passwordField.form || passwordField.closest("form") || document;
+  const candidates = Array.from(form.querySelectorAll("input"))
+    .filter((input) => usable(input) && input !== passwordField &&
+      ["text", "email", "tel", "url"].includes((input.type || "text").toLowerCase()));
+
+  const usernameField = candidates.find((input) =>
+    (input.autocomplete || "").toLowerCase().split(/\s+/).includes("username")) ||
+    candidates.filter((input) => {
+      return input.compareDocumentPosition(passwordField) & Node.DOCUMENT_POSITION_FOLLOWING;
+    }).at(-1) ||
+    candidates[0];
+
+  const setValue = (input, value) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    if (setter) setter.call(input, value);
+    else input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+
+  if (usernameField && username) setValue(usernameField, username);
+  setValue(passwordField, password);
+  passwordField.focus();
+  return usernameField && username ? "filled" : "no_username";
 }
 
 function isValidCredential(credential) {
