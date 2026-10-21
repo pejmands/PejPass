@@ -33,7 +33,11 @@ $manifest = @{
     allowed_origins = @("chrome-extension://$ExtensionId/")
 } | ConvertTo-Json -Depth 4
 
-Set-Content -LiteralPath $manifestPath -Value $manifest -Encoding utf8
+[System.IO.File]::WriteAllText(
+    $manifestPath,
+    $manifest,
+    [System.Text.UTF8Encoding]::new($false)
+)
 
 New-Item -Path $registryPath -Force | Out-Null
 Set-Item -Path $registryPath -Value $manifestPath
