@@ -12,7 +12,7 @@
     <header class="header">
       <div class="brand-mark" aria-hidden="true">P</div>
       <div class="brand-copy"><h1>PejPass</h1><p class="subtitle">Browser companion</p></div>
-      <span class="version" id="version">0.4.0</span>
+      <span class="version" id="version">0.5.0</span>
     </header>
     <section class="connection-card generator-card" aria-labelledby="generator-label">
       <p class="eyebrow" id="generator-label">PASSWORD GENERATOR</p>
@@ -53,6 +53,21 @@
       <p class="eyebrow" id="credentials-label">MATCHING ACCOUNTS</p>
       <p class="connection-status" id="credentials-status" role="status" aria-live="polite">Waiting for the active site.</p>
       <ul class="credential-list" id="credential-list" aria-label="Matching accounts"></ul>
+    </section>
+    <section class="connection-card" aria-labelledby="save-label">
+      <p class="eyebrow" id="save-label">SAVE LOGIN</p>
+      <p class="connection-status">Read the current form and review the values before saving. A matching username updates the existing entry and keeps its previous values in history.</p>
+      <button class="fill-button" id="inspect-login" type="button">Read login form</button>
+      <div id="save-fields" hidden>
+        <label class="field-label" for="save-title">Account name</label>
+        <input class="save-input" id="save-title" type="text" maxlength="200" autocomplete="off">
+        <label class="field-label" for="save-username">Username or email</label>
+        <input class="save-input" id="save-username" type="text" maxlength="256" autocomplete="off">
+        <label class="field-label" for="save-password">Password</label>
+        <input class="save-input" id="save-password" type="password" maxlength="4096" autocomplete="off">
+        <button class="fill-button" id="save-login" type="button">Confirm and save</button>
+      </div>
+      <p class="generator-status" id="save-status" role="status" aria-live="polite">Nothing is read or saved until you choose an action.</p>
     </section>
     <footer><span>Passwords retrieved only when you select Fill login · Forms are never submitted automatically</span></footer>
   </main>

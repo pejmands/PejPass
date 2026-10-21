@@ -55,6 +55,16 @@ Best-effort buffer clearing does **not** guarantee that every plaintext copy is 
 - [x] Tags and tag filtering
 - [x] Entry sort modes (favorites stay on top)
 
+### Browser Companion
+
+- [x] Find matching vault credentials for the active site
+- [x] Fill login and TOTP fields only after user action
+- [x] Generate passwords in the extension
+- [x] Inspect and explicitly save/update login credentials after reviewing the detected values
+- [x] Preserve entry history when a saved password changes
+
+The Edge companion never submits forms automatically. Saving requires a separate confirmation, and browser credentials are saved only while the vault is unlocked.
+
 ### Password Features
 
 - [x] Secure password generator

@@ -90,7 +90,9 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IClipboardService, ClipboardService>();
         services.AddSingleton<VaultService>();
         services.AddSingleton<VaultSession>();
-        services.AddSingleton<BrowserStatusPipeService>();
+        services.AddSingleton<BrowserStatusPipeService>(provider => new BrowserStatusPipeService(
+            provider.GetRequiredService<VaultSession>(),
+            provider.GetRequiredService<VaultService>()));
         services.AddSingleton<UpdateService>();
         services.AddSingleton<SystemTrayService>();
         services.AddSingleton<WindowsSecurityService>();

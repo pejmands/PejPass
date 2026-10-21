@@ -192,6 +192,40 @@ public sealed class BrowserStatusPipeServiceTests
         Assert.Null(response.Password);
     }
 
+    [Fact]
+    public void SaveCredential_RejectsUrlFromAnotherHost()
+    {
+        using var session = new VaultSession();
+        using var service = new BrowserStatusPipeService(session);
+        var response = service.CreateResponse(JsonSerializer.Serialize(new
+        {
+            type = "saveCredential",
+            protocolVersion = 1,
+            domain = "example.com",
+            url = "https://attacker.example.com/login",
+            title = "Example",
+            username = "alice",
+            password = "candidate-secret"
+        }));
+
+        Assert.Equal("error", response.Type);
+        Assert.Equal("invalid_request", response.Code);
+        Assert.DoesNotContain("candidate-secret", JsonSerializer.Serialize(response));
+    }
+
+    [Fact]
+    public void SaveCredential_RequiresUnlockedVault()
+    {
+        using var session = new VaultSession();
+        using var service = new BrowserStatusPipeService(session);
+        var response = service.CreateResponse("""{"type":"saveCredential","protocolVersion":1,"domain":"example.com","url":"https://example.com/login","title":"Example","username":"alice","password":"candidate-secret"}""");
+
+        Assert.Equal("error", response.Type);
+        Assert.Equal("vault_locked", response.Code);
+        Assert.Null(response.Password);
+        Assert.DoesNotContain("candidate-secret", JsonSerializer.Serialize(response));
+    }
+
     private static VaultKeyMaterial CreateMaterial()
     {
         var key = new byte[32];
