@@ -1,4 +1,5 @@
 using PejPass.Domain.Entities;
+using PejPass.Infrastructure.Totp;
 using System.IO;
 using System.IO.Pipes;
 using System.Text.Json;
@@ -118,7 +119,8 @@ internal sealed class BrowserStatusPipeService(VaultSession vaultSession) : IDis
             return credential is null
                 ? Error("credential_not_found")
                 : new StatusResponse("credentialForFill", "PejPass", ProtocolVersion,
-                    null, null, domain, null, id.ToString("D"), credential.Username, credential.Password);
+                    null, null, domain, null, id.ToString("D"), credential.Username, credential.Password,
+                    credential.TotpCode);
         }
         catch (Exception) { return Error("lookup_unavailable"); }
     }
@@ -131,7 +133,12 @@ internal sealed class BrowserStatusPipeService(VaultSession vaultSession) : IDis
 
         var password = entry.Password ?? string.Empty;
         if (password.Length > MaximumPasswordLength) return null;
-        return new FillCredential(entry.Username ?? string.Empty, password);
+
+        var totpCode = string.Empty;
+        if (!string.IsNullOrWhiteSpace(entry.TotpSecret))
+            TotpHelper.TryGetCode(entry.TotpSecret, out totpCode, out _);
+
+        return new FillCredential(entry.Username ?? string.Empty, password, totpCode);
     }
 
     private List<CredentialSummary> FindCredentials(string domain)
@@ -206,9 +213,10 @@ internal sealed class BrowserStatusPipeService(VaultSession vaultSession) : IDis
     }
 
     internal sealed record CredentialSummary(string Id, string Title, string Username, string Url);
-    internal sealed record FillCredential(string Username, string Password);
+    internal sealed record FillCredential(string Username, string Password, string TotpCode);
     internal sealed record StatusResponse(
         string Type, string App, int ProtocolVersion, string? Status, string? Code,
         string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null,
-        string? Id = null, string? Username = null, string? Password = null);
+        string? Id = null, string? Username = null, string? Password = null,
+        string? TotpCode = null);
 }
