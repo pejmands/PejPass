@@ -86,3 +86,44 @@ function checkDesktopConnection() {
 
 showActiveSite();
 checkDesktopConnection();
+
+function checkVaultStatus() {
+  const status = document.getElementById("vault-status");
+
+  status.textContent = "Checking vault status…";
+
+  try {
+    chrome.runtime.sendNativeMessage(
+      nativeHostName,
+      { type: "getVaultStatus", protocolVersion },
+      (response) => {
+        const error = chrome.runtime.lastError;
+
+        if (error) {
+          status.textContent = "Vault status unavailable. Open PejPass desktop and try again.";
+          return;
+        }
+
+        if (
+          response?.type === "vaultStatus" &&
+          response?.app === "PejPass" &&
+          response?.protocolVersion === protocolVersion &&
+          (response?.status === "locked" || response?.status === "unlocked")
+        ) {
+          status.textContent = response.status === "unlocked"
+            ? "Vault is unlocked."
+            : "Vault is locked.";
+          return;
+        }
+
+        status.textContent = response?.code === "app_unavailable"
+          ? "Vault status unavailable. Open PejPass desktop and try again."
+          : "Vault status unavailable because the desktop response was invalid.";
+      }
+    );
+  } catch {
+    status.textContent = "Vault status unavailable. Open PejPass desktop and try again.";
+  }
+}
+
+checkVaultStatus();
