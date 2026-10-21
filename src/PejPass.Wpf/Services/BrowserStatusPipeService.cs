@@ -103,10 +103,10 @@ internal sealed class BrowserStatusPipeService : IDisposable
 
             if (builder.Length >= maximumLength)
             {
-                if (character == '\\r')
+                if (character == '\r')
                 {
                     var nextCount = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
-                    if (nextCount > 0 && buffer[0] == '\\n')
+                    if (nextCount > 0 && buffer[0] == '\n')
                         return builder.ToString();
                 }
 
