@@ -445,6 +445,7 @@ internal sealed class BrowserStatusPipeService : IDisposable
 
             return type.GetString() switch
             {
+                "lockVault" => CreateLockVaultResponse(),
                 "getVaultStatus" => new StatusResponse("vaultStatus", "PejPass", ProtocolVersion,
                     _vaultSession.IsActive ? "unlocked" : "locked", null),
                 "getCredentials" => CreateCredentialResponse(root),
@@ -454,6 +455,41 @@ internal sealed class BrowserStatusPipeService : IDisposable
             };
         }
         catch (JsonException) { return Error("invalid_message"); }
+    }
+
+    private StatusResponse CreateLockVaultResponse()
+    {
+        var app = System.Windows.Application.Current;
+        if (!_vaultSession.IsActive)
+            return new StatusResponse("vaultLocked", "PejPass", ProtocolVersion, "locked", null);
+        if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
+            return Error("app_unavailable");
+
+        try
+        {
+            void LockOnUiThread()
+            {
+                var mainWindow = app.Windows.OfType<MainWindow>()
+                    .FirstOrDefault(window => window.DataContext is MainViewModel);
+                if (mainWindow?.DataContext is not MainViewModel viewModel)
+                    throw new InvalidOperationException("The active vault cannot be locked through the main window.");
+
+                viewModel.Lock(showLogin: true);
+            }
+
+            if (app.Dispatcher.CheckAccess())
+                LockOnUiThread();
+            else
+                app.Dispatcher.Invoke(LockOnUiThread, System.Windows.Threading.DispatcherPriority.Send);
+
+            return !_vaultSession.IsActive
+                ? new StatusResponse("vaultLocked", "PejPass", ProtocolVersion, "locked", null)
+                : Error("app_unavailable");
+        }
+        catch (Exception)
+        {
+            return Error("app_unavailable");
+        }
     }
 
     private StatusResponse CreateCredentialResponse(JsonElement root)
