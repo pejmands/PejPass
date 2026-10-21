@@ -229,15 +229,15 @@ public sealed class BrowserStatusPipeServiceTests
     [Fact]
     public async Task ReadBoundedLineAsync_RejectsOversizedMessage()
     {
-        using var reader = new StringReader("12345\\n");
+        using var reader = new StringReader("12345\n");
 
         await Assert.ThrowsAsync<InvalidDataException>(() =>
             BrowserStatusPipeService.ReadBoundedLineAsync(reader, 4, CancellationToken.None));
     }
 
     [Theory]
-    [InlineData("hello\\n", "hello")]
-    [InlineData("hello\\r\\n", "hello")]
+    [InlineData("hello\n", "hello")]
+    [InlineData("hello\r\n", "hello")]
     [InlineData("hello", "hello")]
     [InlineData("", null)]
     public async Task ReadBoundedLineAsync_ReadsSingleBoundedLine(string input, string? expected)
