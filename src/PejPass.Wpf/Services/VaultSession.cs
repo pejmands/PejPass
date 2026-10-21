@@ -7,6 +7,7 @@ namespace PejPass.Wpf.Services;
 public sealed class VaultSession : IDisposable
 {
     private readonly object _sync = new();
+    private readonly SemaphoreSlim _saveGate = new(1, 1);
     private VaultKeyMaterial? _keyMaterial;
     private Vault? _vault;
     private string? _vaultPath;
@@ -15,6 +16,38 @@ public sealed class VaultSession : IDisposable
     private VaultDiskStamp? _diskStamp;
 
     public event EventHandler? StateChanged;
+
+    public async ValueTask<IDisposable?> AcquireSaveLeaseAsync(
+        long generation,
+        Vault vault,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(vault);
+        await _saveGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        lock (_sync)
+        {
+            if (!_disposed &&
+                _generation == generation &&
+                ReferenceEquals(_vault, vault) &&
+                !string.IsNullOrEmpty(_vaultPath) &&
+                _keyMaterial is not null)
+                return new SaveLease(_saveGate);
+        }
+
+        _saveGate.Release();
+        return null;
+    }
+
+    private sealed class SaveLease(SemaphoreSlim gate) : IDisposable
+    {
+        private SemaphoreSlim? _gate = gate;
+
+        public void Dispose()
+        {
+            Interlocked.Exchange(ref _gate, null)?.Release();
+        }
+    }
 
     /// <summary>Changes whenever the active vault session is replaced or invalidated.</summary>
     public long Generation
@@ -68,20 +101,27 @@ public sealed class VaultSession : IDisposable
         ArgumentNullException.ThrowIfNull(keyMaterial);
 
         var fullPath = Path.GetFullPath(vaultPath);
-        var diskStamp = CaptureDiskStamp(fullPath);
         var materialCopy = keyMaterial.Clone();
 
         try
         {
-            lock (_sync)
+            _saveGate.Wait();
+            try
             {
-                ThrowIfDisposed();
-                ClearKeyMaterialCore();
-                _vault = vault;
-                _vaultPath = fullPath;
-                _diskStamp = diskStamp;
-                _keyMaterial = materialCopy;
-                _generation++;
+                lock (_sync)
+                {
+                    ThrowIfDisposed();
+                    ClearKeyMaterialCore();
+                    _vault = vault;
+                    _vaultPath = fullPath;
+                    _diskStamp = CaptureDiskStamp(fullPath);
+                    _keyMaterial = materialCopy;
+                    _generation++;
+                }
+            }
+            finally
+            {
+                _saveGate.Release();
             }
         }
         catch
@@ -97,11 +137,19 @@ public sealed class VaultSession : IDisposable
     {
         ArgumentNullException.ThrowIfNull(vault);
 
-        lock (_sync)
+        _saveGate.Wait();
+        try
         {
-            ThrowIfDisposed();
-            _vault = vault;
-            _generation++;
+            lock (_sync)
+            {
+                ThrowIfDisposed();
+                _vault = vault;
+                _generation++;
+            }
+        }
+        finally
+        {
+            _saveGate.Release();
         }
     }
 
@@ -143,19 +191,27 @@ public sealed class VaultSession : IDisposable
         var materialCopy = keyMaterial.Clone();
         bool updated;
 
-        lock (_sync)
+        _saveGate.Wait();
+        try
         {
-            updated = !_disposed &&
-                _vault is not null &&
-                _vaultPath is not null &&
-                _keyMaterial is not null;
-
-            if (updated)
+            lock (_sync)
             {
-                ClearKeyMaterialCore();
-                _keyMaterial = materialCopy;
-                _generation++;
+                updated = !_disposed &&
+                    _vault is not null &&
+                    _vaultPath is not null &&
+                    _keyMaterial is not null;
+
+                if (updated)
+                {
+                    ClearKeyMaterialCore();
+                    _keyMaterial = materialCopy;
+                    _generation++;
+                }
             }
+        }
+        finally
+        {
+            _saveGate.Release();
         }
 
         if (!updated)
@@ -172,17 +228,25 @@ public sealed class VaultSession : IDisposable
     {
         var changed = false;
 
-        lock (_sync)
+        _saveGate.Wait();
+        try
         {
-            if (_vault is null && _vaultPath is null && _keyMaterial is null)
-                return;
+            lock (_sync)
+            {
+                if (_vault is null && _vaultPath is null && _keyMaterial is null)
+                    return;
 
-            ClearKeyMaterialCore();
-            _vault = null;
-            _vaultPath = null;
-            _diskStamp = null;
-            _generation++;
-            changed = true;
+                ClearKeyMaterialCore();
+                _vault = null;
+                _vaultPath = null;
+                _diskStamp = null;
+                _generation++;
+                changed = true;
+            }
+        }
+        finally
+        {
+            _saveGate.Release();
         }
 
         if (changed)
@@ -191,18 +255,26 @@ public sealed class VaultSession : IDisposable
 
     public void Dispose()
     {
-        lock (_sync)
+        _saveGate.Wait();
+        try
         {
-            if (_disposed)
-                return;
+            lock (_sync)
+            {
+                if (_disposed)
+                    return;
 
-            ClearKeyMaterialCore();
-            _vault = null;
-            _vaultPath = null;
-            _diskStamp = null;
-            _generation++;
-            _disposed = true;
-            StateChanged = null;
+                ClearKeyMaterialCore();
+                _vault = null;
+                _vaultPath = null;
+                _diskStamp = null;
+                _generation++;
+                _disposed = true;
+                StateChanged = null;
+            }
+        }
+        finally
+        {
+            _saveGate.Release();
         }
 
         GC.SuppressFinalize(this);

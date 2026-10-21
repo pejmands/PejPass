@@ -9,14 +9,14 @@ namespace PejPass.Wpf.Services;
 internal sealed class BrowserStatusPipeService : IDisposable
 {
     private readonly VaultSession _vaultSession;
-    private readonly PejPass.Application.Services.VaultService? _vaultService;
+    private readonly Application.Services.VaultService? _vaultService;
 
     internal BrowserStatusPipeService(VaultSession vaultSession)
         : this(vaultSession, null) { }
 
     internal BrowserStatusPipeService(
         VaultSession vaultSession,
-        PejPass.Application.Services.VaultService? vaultService)
+        Application.Services.VaultService? vaultService)
     {
         _vaultSession = vaultSession;
         _vaultService = vaultService;
@@ -96,7 +96,7 @@ internal sealed class BrowserStatusPipeService : IDisposable
             var character = buffer[0];
             if (character == '\n')
             {
-                if (builder.Length > 0 && builder[builder.Length - 1] == '\r')
+                if (builder.Length > 0 && builder[^1] == '\r')
                     builder.Length--;
                 return builder.ToString();
             }
@@ -282,24 +282,32 @@ internal sealed class BrowserStatusPipeService : IDisposable
 
         try
         {
-            using var keyMaterial = _vaultSession.CopyKeyMaterial();
-            await _vaultService.SaveVaultAsync(path, keyMaterial, vault, cancellationToken).ConfigureAwait(false);
-            if (!_vaultSession.IsCurrent(generation, vault))
-                return Error("vault_locked");
-
-            await app.Dispatcher.InvokeAsync(() =>
+            using (var saveLease = await _vaultSession.AcquireSaveLeaseAsync(
+                generation, vault, cancellationToken).ConfigureAwait(false))
             {
-                if (!_vaultSession.IsCurrent(generation, vault))
-                    return;
+                if (saveLease is null)
+                    return Error("vault_locked");
 
-                _vaultSession.RefreshDiskStamp();
+                using var keyMaterial = _vaultSession.CopyKeyMaterial();
+                await _vaultService.SaveVaultAsync(path, keyMaterial, vault, cancellationToken).ConfigureAwait(false);
+            }
 
-                if (app.MainWindow is PejPass.Wpf.MainWindow
-                    { DataContext: PejPass.Wpf.ViewModels.MainViewModel viewModel })
+            if (_vaultSession.IsCurrent(generation, vault))
+            {
+                await app.Dispatcher.InvokeAsync(() =>
                 {
-                    viewModel.RefreshEntriesFromVault();
-                }
-            }, System.Windows.Threading.DispatcherPriority.Send, cancellationToken).Task.ConfigureAwait(false);
+                    if (!_vaultSession.IsCurrent(generation, vault))
+                        return;
+
+                    _vaultSession.RefreshDiskStamp();
+
+                    if (app.MainWindow is MainWindow
+                        { DataContext: ViewModels.MainViewModel viewModel })
+                    {
+                        viewModel.RefreshEntriesFromVault();
+                    }
+                }, System.Windows.Threading.DispatcherPriority.Send, cancellationToken).Task.ConfigureAwait(false);
+            }
 
             return new StatusResponse("credentialSaved", "PejPass", ProtocolVersion,
                 null, null, domain, null, prepared.Id.ToString("D"), null, null, null, prepared.Result);

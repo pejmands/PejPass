@@ -9,6 +9,41 @@ namespace PejPass.Wpf.Tests.Sessions;
 public sealed class VaultSessionTests
 {
     [Fact]
+    public async Task ClearWaitsUntilActiveSaveLeaseIsReleased()
+    {
+        using var session = new VaultSession();
+        using var keyMaterial = CreateMaterial();
+        var vault = new Vault();
+
+        session.Open(
+            vault,
+            Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"),
+            keyMaterial);
+
+        var lease = await session.AcquireSaveLeaseAsync(
+            session.Generation, vault, CancellationToken.None);
+        Assert.NotNull(lease);
+
+        var clearStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var clearTask = Task.Run(() =>
+        {
+            clearStarted.SetResult();
+            session.Clear();
+        }, TestContext.Current.CancellationToken);
+
+        await clearStarted.Task;
+        await Task.Delay(50, TestContext.Current.CancellationToken);
+        Assert.False(clearTask.IsCompleted);
+
+        lease.Dispose();
+        await clearTask.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        Assert.False(session.IsActive);
+        Assert.Null(await session.AcquireSaveLeaseAsync(
+            session.Generation, vault, CancellationToken.None));
+    }
+
+    [Fact]
     public void ClearInvalidatesPreviouslyCapturedSession()
     {
         using var session = new VaultSession();
