@@ -564,6 +564,32 @@ public partial class LoginViewModel : ObservableObject
         }
     }
 
+    public async Task<bool> UnlockFromBrowserAsync(string masterPassword)
+    {
+        if (_vaultSession.IsActive)
+            return true;
+
+        if (string.IsNullOrEmpty(masterPassword) || masterPassword.Length > 4096)
+            return false;
+
+        if (!IsOpenMode)
+            IsOpenMode = true;
+
+        if (string.IsNullOrWhiteSpace(VaultPath) || !File.Exists(VaultPath))
+            return false;
+
+        MasterPassword = masterPassword;
+        try
+        {
+            await SubmitAsync();
+            return _vaultSession.IsActive;
+        }
+        finally
+        {
+            MasterPassword = string.Empty;
+        }
+    }
+
     [RelayCommand]
     private async Task SubmitAsync()
     {
