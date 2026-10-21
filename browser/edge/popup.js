@@ -377,10 +377,30 @@ function readLoginForm(expectedDomain) {
   };
   const inputs = Array.from(document.querySelectorAll("input"))
     .filter((input) => !input.disabled && !input.readOnly && isVisible(input));
-  const passwordField = inputs.find((input) => (input.type || "").toLowerCase() === "password");
+  const passwordHints = (input) => [
+    input.name,
+    input.id,
+    input.getAttribute("aria-label"),
+    input.getAttribute("placeholder"),
+    input.getAttribute("data-testid"),
+    input.getAttribute("data-field")
+  ].filter(Boolean).join(" ");
+
+  const isPasswordField = (input) => {
+    const type = (input.type || "").toLowerCase();
+    const autocomplete = (input.autocomplete || "").toLowerCase().split(/\\s+/);
+    return type === "password" ||
+      autocomplete.includes("current-password") ||
+      autocomplete.includes("new-password") ||
+      /pass(word|wd)?/i.test(passwordHints(input));
+  };
+
+  const passwordField = inputs.find((input) => (input.type || "").toLowerCase() === "password") ||
+    inputs.find(isPasswordField);
   const form = passwordField?.form || passwordField?.closest("form") || document;
   const candidates = Array.from(form.querySelectorAll("input")).filter((input) =>
     !input.disabled && !input.readOnly && isVisible(input) && input !== passwordField &&
+    !isPasswordField(input) &&
     ["text", "email", "tel"].includes((input.type || "text").toLowerCase()));
   const usernameField = candidates.find((input) =>
     (input.autocomplete || "").toLowerCase().split(/\s+/).includes("username")) ||
