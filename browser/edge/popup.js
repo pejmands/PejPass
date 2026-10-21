@@ -120,6 +120,37 @@ async function checkDesktopConnection() {
   } catch { setConnectionStatus(false, "Desktop bridge not installed or unavailable."); }
 }
 
+const toolbarIconCache = new Map();
+
+async function updateToolbarVaultIcon(unlocked) {
+  const state = unlocked ? "unlocked" : "locked";
+  try {
+    let imageData = toolbarIconCache.get(state);
+    if (!imageData) {
+      const image = new Image();
+      image.src = chrome.runtime.getURL(`icons/vault-${state}.svg`);
+      await image.decode();
+
+      imageData = {};
+      for (const size of [16, 32]) {
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) throw new Error("Could not create toolbar icon canvas.");
+        context.drawImage(image, 0, 0, size, size);
+        imageData[size] = context.getImageData(0, 0, size, size);
+      }
+
+      toolbarIconCache.set(state, imageData);
+    }
+
+    await chrome.action.setIcon({ imageData });
+  } catch (error) {
+    console.error("Could not update the PejPass toolbar icon.", error);
+  }
+}
+
 async function checkVaultStatus() {
   vaultStatus.textContent = "Checking vault status…";
   try {
