@@ -48,24 +48,25 @@ internal sealed class BrowserStatusPipeService : IDisposable
                 await pipe.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
                 using var reader = new StreamReader(pipe, leaveOpen: true);
                 await using var writer = new StreamWriter(pipe, leaveOpen: true) { AutoFlush = true };
-                using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                requestTimeout.CancelAfter(TimeSpan.FromSeconds(5));
-
                 string? line;
-                try
+                using (var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
                 {
-                    line = await ReadBoundedLineAsync(reader, MaximumLineLength, requestTimeout.Token)
-                        .ConfigureAwait(false);
-                }
-                catch (InvalidDataException)
-                {
-                    await writer.WriteLineAsync(JsonSerializer.Serialize(Error("invalid_message"), JsonOptions))
-                        .ConfigureAwait(false);
-                    continue;
+                    requestTimeout.CancelAfter(TimeSpan.FromSeconds(5));
+                    try
+                    {
+                        line = await ReadBoundedLineAsync(reader, MaximumLineLength, requestTimeout.Token)
+                            .ConfigureAwait(false);
+                    }
+                    catch (InvalidDataException)
+                    {
+                        await writer.WriteLineAsync(JsonSerializer.Serialize(Error("invalid_message"), JsonOptions))
+                            .ConfigureAwait(false);
+                        continue;
+                    }
                 }
 
                 var response = IsSaveCredentialRequest(line)
-                    ? await CreateSaveCredentialResponseAsync(line, requestTimeout.Token).ConfigureAwait(false)
+                    ? await CreateSaveCredentialResponseAsync(line, cancellationToken).ConfigureAwait(false)
                     : CreateResponse(line);
                 await writer.WriteLineAsync(JsonSerializer.Serialize(response, JsonOptions)).ConfigureAwait(false);
             }
