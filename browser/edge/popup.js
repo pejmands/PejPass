@@ -185,7 +185,9 @@ async function fillCredential(credential) {
     if (!isValidBaseResponse(response, "credentialForFill") ||
         response.domain !== activeDomain || response.id !== credential.id ||
         typeof response.username !== "string" || response.username.length > 256 ||
-        typeof response.password !== "string" || response.password.length > 4096) {
+        typeof response.password !== "string" || response.password.length > 4096 ||
+        (response.totpCode !== undefined && (typeof response.totpCode !== "string" ||
+          response.totpCode.length > 8 || (response.totpCode.length > 0 && !/^\\d+$/.test(response.totpCode))))) {
       credentialsStatus.textContent = "PejPass returned an invalid fill response.";
       return;
     }
@@ -193,17 +195,21 @@ async function fillCredential(credential) {
     const results = await chrome.scripting.executeScript({
       target: { tabId: activeTabId, allFrames: true },
       func: fillLoginForm,
-      args: [activeDomain, response.username, response.password]
+      args: [activeDomain, response.username, response.password, response.totpCode || ""]
     });
     const outcomes = (results || []).map((entry) => entry.result);
     const messages = {
       filled: "Login fields filled. Review them and submit the form yourself.",
-      username_only: "Username filled. Continue on the website, then select Fill login again to fill the password.",
-      no_password: "No visible password or username field was found in the page or its same-site frames.",
+      username_only: "Username filled. Continue on the website, then select Fill login again.",
+      totp_filled: "Login or verification fields filled. Review them and submit the form yourself.",
+      totp_unavailable: "Login fields filled, but PejPass could not generate the TOTP code. Enter it manually.",
+      no_password: "No visible password, username, or verification-code field was found in the page or its same-site frames.",
       wrong_page: "The active page changed. Reopen the popup and try again.",
       no_username: "Password filled, but no matching username field was found."
     };
-    const outcome = outcomes.includes("filled") ? "filled" :
+    const outcome = outcomes.includes("totp_filled") ? "totp_filled" :
+      outcomes.includes("totp_unavailable") ? "totp_unavailable" :
+      outcomes.includes("filled") ? "filled" :
       outcomes.includes("username_only") ? "username_only" :
       outcomes.includes("no_username") ? "no_username" :
       outcomes.includes("wrong_page") ? "wrong_page" : "no_password";
@@ -213,7 +219,7 @@ async function fillCredential(credential) {
   }
 }
 
-function fillLoginForm(expectedDomain, username, password) {
+function fillLoginForm(expectedDomain, username, password, totpCode) {
   const normalizeHost = (host) => host.toLowerCase().replace(/\.$/, "");
   const currentDomain = normalizeHost(window.location.hostname);
   let topDomain;
@@ -241,15 +247,30 @@ function fillLoginForm(expectedDomain, username, password) {
     input.dispatchEvent(new Event("change", { bubbles: true }));
   };
 
-  const passwordField = Array.from(document.querySelectorAll('input[type="password"]'))
-    .find(usable);
+  const inputs = Array.from(document.querySelectorAll("input")).filter(usable);
+  const isTotpField = (input) => {
+    const autocomplete = (input.autocomplete || "").toLowerCase().split(/\\s+/);
+    const hints = [input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
+      input.getAttribute("inputmode"), input.getAttribute("data-testid")].join(" ");
+    return autocomplete.includes("one-time-code") ||
+      /one.?time|otp|totp|auth.?code|verification.?code|security.?code|mfa.?code/i.test(hints);
+  };
+  const isTextLike = (input) =>
+    ["text", "email", "tel", "url", "search", ""].includes((input.type || "text").toLowerCase());
+  const totpFields = inputs.filter((input) => isTotpField(input) && isTextLike(input));
+  const passwordField = inputs.find((input) => (input.type || "").toLowerCase() === "password");
+
+  if (totpFields.length > 0) {
+    if (!totpCode) return "totp_unavailable";
+    setValue(totpFields[0], totpCode);
+    totpFields[0].focus();
+    if (!passwordField) return "totp_filled";
+  }
+
   if (!passwordField) {
-    const usernameCandidates = Array.from(document.querySelectorAll("input"))
-      .filter((input) => usable(input) && !["hidden", "password", "checkbox", "radio",
-        "submit", "button", "reset", "file", "image"].includes((input.type || "text").toLowerCase()) &&
-        ["text", "email", "tel", "url", "search", ""].includes((input.type || "text").toLowerCase()));
+    const usernameCandidates = inputs.filter((input) => !isTotpField(input) && isTextLike(input));
     const usernameField = usernameCandidates.find((input) =>
-      (input.autocomplete || "").toLowerCase().split(/\s+/).includes("username")) ||
+      (input.autocomplete || "").toLowerCase().split(/\\s+/).includes("username")) ||
       usernameCandidates.find((input) => /user|login|email|account/i.test(
         [input.name, input.id, input.placeholder, input.getAttribute("aria-label")].join(" "))) ||
       usernameCandidates.find((input) => (input.type || "").toLowerCase() === "email") ||
@@ -262,11 +283,11 @@ function fillLoginForm(expectedDomain, username, password) {
 
   const form = passwordField.form || passwordField.closest("form") || document;
   const candidates = Array.from(form.querySelectorAll("input"))
-    .filter((input) => usable(input) && input !== passwordField &&
+    .filter((input) => usable(input) && input !== passwordField && !isTotpField(input) &&
       ["text", "email", "tel", "url"].includes((input.type || "text").toLowerCase()));
 
   const usernameField = candidates.find((input) =>
-    (input.autocomplete || "").toLowerCase().split(/\s+/).includes("username")) ||
+    (input.autocomplete || "").toLowerCase().split(/\\s+/).includes("username")) ||
     candidates.filter((input) => {
       return input.compareDocumentPosition(passwordField) & Node.DOCUMENT_POSITION_FOLLOWING;
     }).at(-1) ||
@@ -275,6 +296,7 @@ function fillLoginForm(expectedDomain, username, password) {
   if (usernameField && username) setValue(usernameField, username);
   setValue(passwordField, password);
   passwordField.focus();
+  if (totpFields.length > 0) return "totp_filled";
   return usernameField && username ? "filled" : "no_username";
 }
 
