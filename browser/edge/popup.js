@@ -274,6 +274,18 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
   };
 
   const inputs = Array.from(document.querySelectorAll("input")).filter(usable);
+  const passwordHints = (input) => [
+    input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
+    input.getAttribute("data-testid"), input.getAttribute("data-field")
+  ].filter(Boolean).join(" ");
+  const isPasswordField = (input) => {
+    const type = (input.type || "").toLowerCase();
+    const autocomplete = (input.autocomplete || "").toLowerCase().split(/\s+/);
+    return type === "password" ||
+      autocomplete.includes("current-password") ||
+      autocomplete.includes("new-password") ||
+      /pass(word|wd)?/i.test(passwordHints(input));
+  };
   const isTotpField = (input) => {
     const autocomplete = (input.autocomplete || "").toLowerCase().split(/\s+/);
     const hints = [input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
@@ -285,7 +297,7 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
     ["text", "email", "tel", "url", "search", ""].includes((input.type || "text").toLowerCase());
   const totpFields = inputs.filter((input) => isTotpField(input) &&
     (isTextLike(input) || (input.type || "").toLowerCase() === "number"));
-  const passwordField = inputs.find((input) => (input.type || "").toLowerCase() === "password");
+  const passwordField = inputs.find(isPasswordField);
 
   if (totpFields.length > 0) {
     if (totpCode) {
@@ -319,7 +331,8 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
 
   const form = passwordField.form || passwordField.closest("form") || document;
   const candidates = Array.from(form.querySelectorAll("input"))
-    .filter((input) => usable(input) && input !== passwordField && !isTotpField(input) &&
+    .filter((input) => usable(input) && input !== passwordField && !isPasswordField(input) &&
+      !isTotpField(input) &&
       ["text", "email", "tel", "url"].includes((input.type || "text").toLowerCase()));
 
   const usernameField = candidates.find((input) =>
@@ -672,6 +685,44 @@ unlockPassword.addEventListener("keydown", (event) => {
 });
 launchAppButton.addEventListener("click", launchDesktopApp);
 
+const viewTabs = Array.from(document.querySelectorAll(".view-tab"));
+const viewPanels = {
+  logins: document.getElementById("panel-logins"),
+  save: document.getElementById("panel-save"),
+  generator: document.getElementById("panel-generator")
+};
+
+function setActiveView(view, moveFocus = false) {
+  if (!Object.hasOwn(viewPanels, view)) return;
+
+  for (const tab of viewTabs) {
+    const selected = tab.dataset.view === view;
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    if (selected && moveFocus) tab.focus();
+  }
+
+  for (const [name, panel] of Object.entries(viewPanels)) {
+    panel.hidden = name !== view;
+  }
+}
+
+viewTabs.forEach((tab, index) => {
+  tab.addEventListener("click", () => setActiveView(tab.dataset.view));
+  tab.addEventListener("keydown", (event) => {
+    let nextIndex = index;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % viewTabs.length;
+    else if (event.key === "ArrowLeft") nextIndex = (index - 1 + viewTabs.length) % viewTabs.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = viewTabs.length - 1;
+    else return;
+
+    event.preventDefault();
+    setActiveView(viewTabs[nextIndex].dataset.view, true);
+  });
+});
+
+setActiveView("logins");
 showActiveSite();
 checkDesktopConnection();
 checkVaultStatus();

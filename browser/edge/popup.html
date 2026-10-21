@@ -14,7 +14,60 @@
       <div class="brand-copy"><h1>PejPass</h1><p class="subtitle">Browser companion</p></div>
       <span class="version" id="version">0.5.0</span>
     </header>
-    <section class="connection-card generator-card" aria-labelledby="generator-label">
+    <nav class="view-nav" role="tablist" aria-label="PejPass sections">
+      <button class="view-tab" id="tab-logins" type="button" role="tab" aria-selected="true" aria-controls="panel-logins" tabindex="0" data-view="logins">Logins</button>
+      <button class="view-tab" id="tab-save" type="button" role="tab" aria-selected="false" aria-controls="panel-save" tabindex="-1" data-view="save">Save</button>
+      <button class="view-tab" id="tab-generator" type="button" role="tab" aria-selected="false" aria-controls="panel-generator" tabindex="-1" data-view="generator">Generator</button>
+    </nav>
+    <section class="view-panel" id="panel-logins" role="tabpanel" aria-labelledby="tab-logins">
+<section class="site-card" aria-labelledby="site-label">
+      <p class="eyebrow" id="site-label">CURRENT SITE</p>
+      <p class="site-name" id="site-name">Checking active tab…</p>
+      <p class="site-detail" id="site-detail" role="status" aria-live="polite">Reading the active tab.</p>
+    </section>
+<section class="connection-card" aria-labelledby="connection-label">
+      <p class="eyebrow" id="connection-label">DESKTOP CONNECTION</p>
+      <div class="connection-row">
+        <span class="status-dot" id="connection-dot" aria-hidden="true"></span>
+        <p class="connection-status" id="connection-status" role="status" aria-live="polite">Checking PejPass…</p>
+      </div>
+    </section>
+<section class="connection-card" aria-labelledby="vault-label">
+      <p class="eyebrow" id="vault-label">VAULT STATUS</p>
+      <p class="connection-status" id="vault-status" role="status" aria-live="polite">Checking vault status…</p>
+      <div id="unlock-controls" hidden>
+        <label class="field-label" for="unlock-password">Master password</label>
+        <input class="save-input" id="unlock-password" type="password" maxlength="4096" autocomplete="current-password" spellcheck="false">
+        <button class="fill-button" id="unlock-vault" type="button">Unlock vault</button>
+        <p class="generator-status" id="unlock-status" role="status" aria-live="polite">The password is sent only to the local PejPass desktop bridge for verification.</p>
+      </div>
+      <button class="fill-button secondary-button" id="launch-app" type="button" hidden>Launch PejPass</button>
+    </section>
+<section class="connection-card" aria-labelledby="credentials-label">
+      <p class="eyebrow" id="credentials-label">MATCHING ACCOUNTS</p>
+      <p class="connection-status" id="credentials-status" role="status" aria-live="polite">Waiting for the active site.</p>
+      <ul class="credential-list" id="credential-list" aria-label="Matching accounts"></ul>
+    </section>
+    </section>
+    <section class="view-panel" id="panel-save" role="tabpanel" aria-labelledby="tab-save" hidden>
+<section class="connection-card" aria-labelledby="save-label">
+      <p class="eyebrow" id="save-label">SAVE LOGIN</p>
+      <p class="connection-status">Read the current form and review the values before saving. A matching username updates the existing entry and keeps its previous values in history.</p>
+      <button class="fill-button" id="inspect-login" type="button">Read login form</button>
+      <div id="save-fields" hidden>
+        <label class="field-label" for="save-title">Account name</label>
+        <input class="save-input" id="save-title" type="text" maxlength="200" autocomplete="off">
+        <label class="field-label" for="save-username">Username or email</label>
+        <input class="save-input" id="save-username" type="text" maxlength="256" autocomplete="off">
+        <label class="field-label" for="save-password">Password</label>
+        <input class="save-input" id="save-password" type="password" maxlength="4096" autocomplete="off">
+        <button class="fill-button" id="save-login" type="button">Confirm and save</button>
+      </div>
+      <p class="generator-status" id="save-status" role="status" aria-live="polite">Nothing is read or saved until you choose an action.</p>
+    </section>
+    </section>
+    <section class="view-panel" id="panel-generator" role="tabpanel" aria-labelledby="tab-generator" hidden>
+<section class="connection-card generator-card" aria-labelledby="generator-label">
       <p class="eyebrow" id="generator-label">PASSWORD GENERATOR</p>
       <label class="field-label" for="password-length">Length</label>
       <div class="length-row">
@@ -33,48 +86,6 @@
       <button class="fill-button secondary-button" id="copy-password" type="button" disabled>Copy password</button>
       <p class="generator-status" id="generator-status" role="status" aria-live="polite">Generated locally in this browser. Not saved automatically.</p>
     </section>
-    <section class="site-card" aria-labelledby="site-label">
-      <p class="eyebrow" id="site-label">CURRENT SITE</p>
-      <p class="site-name" id="site-name">Checking active tab…</p>
-      <p class="site-detail" id="site-detail" role="status" aria-live="polite">Reading the active tab.</p>
-    </section>
-    <section class="connection-card" aria-labelledby="connection-label">
-      <p class="eyebrow" id="connection-label">DESKTOP CONNECTION</p>
-      <div class="connection-row">
-        <span class="status-dot" id="connection-dot" aria-hidden="true"></span>
-        <p class="connection-status" id="connection-status" role="status" aria-live="polite">Checking PejPass…</p>
-      </div>
-    </section>
-    <section class="connection-card" aria-labelledby="vault-label">
-      <p class="eyebrow" id="vault-label">VAULT STATUS</p>
-      <p class="connection-status" id="vault-status" role="status" aria-live="polite">Checking vault status…</p>
-      <div id="unlock-controls" hidden>
-        <label class="field-label" for="unlock-password">Master password</label>
-        <input class="save-input" id="unlock-password" type="password" maxlength="4096" autocomplete="current-password" spellcheck="false">
-        <button class="fill-button" id="unlock-vault" type="button">Unlock vault</button>
-        <p class="generator-status" id="unlock-status" role="status" aria-live="polite">The password is sent only to the local PejPass desktop bridge for verification.</p>
-      </div>
-      <button class="fill-button secondary-button" id="launch-app" type="button" hidden>Launch PejPass</button>
-    </section>
-    <section class="connection-card" aria-labelledby="credentials-label">
-      <p class="eyebrow" id="credentials-label">MATCHING ACCOUNTS</p>
-      <p class="connection-status" id="credentials-status" role="status" aria-live="polite">Waiting for the active site.</p>
-      <ul class="credential-list" id="credential-list" aria-label="Matching accounts"></ul>
-    </section>
-    <section class="connection-card" aria-labelledby="save-label">
-      <p class="eyebrow" id="save-label">SAVE LOGIN</p>
-      <p class="connection-status">Read the current form and review the values before saving. A matching username updates the existing entry and keeps its previous values in history.</p>
-      <button class="fill-button" id="inspect-login" type="button">Read login form</button>
-      <div id="save-fields" hidden>
-        <label class="field-label" for="save-title">Account name</label>
-        <input class="save-input" id="save-title" type="text" maxlength="200" autocomplete="off">
-        <label class="field-label" for="save-username">Username or email</label>
-        <input class="save-input" id="save-username" type="text" maxlength="256" autocomplete="off">
-        <label class="field-label" for="save-password">Password</label>
-        <input class="save-input" id="save-password" type="password" maxlength="4096" autocomplete="off">
-        <button class="fill-button" id="save-login" type="button">Confirm and save</button>
-      </div>
-      <p class="generator-status" id="save-status" role="status" aria-live="polite">Nothing is read or saved until you choose an action.</p>
     </section>
     <footer><span>Passwords retrieved only when you select Fill login · Forms are never submitted automatically</span></footer>
   </main>
