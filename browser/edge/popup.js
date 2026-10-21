@@ -187,7 +187,7 @@ async function fillCredential(credential) {
         typeof response.username !== "string" || response.username.length > 256 ||
         typeof response.password !== "string" || response.password.length > 4096 ||
         (response.totpCode != null && (typeof response.totpCode !== "string" ||
-          response.totpCode.length > 8 || (response.totpCode.length > 0 && !/^\\d+$/.test(response.totpCode))))) {
+          response.totpCode.length > 8 || (response.totpCode.length > 0 && !/^\d+$/.test(response.totpCode))))) {
       credentialsStatus.textContent = "PejPass returned an invalid fill response.";
       return;
     }
@@ -249,7 +249,7 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
 
   const inputs = Array.from(document.querySelectorAll("input")).filter(usable);
   const isTotpField = (input) => {
-    const autocomplete = (input.autocomplete || "").toLowerCase().split(/\\s+/);
+    const autocomplete = (input.autocomplete || "").toLowerCase().split(/\s+/);
     const hints = [input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
       input.getAttribute("inputmode"), input.getAttribute("data-testid")].join(" ");
     return autocomplete.includes("one-time-code") ||
@@ -273,7 +273,7 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
   if (!passwordField) {
     const usernameCandidates = inputs.filter((input) => !isTotpField(input) && isTextLike(input));
     const usernameField = usernameCandidates.find((input) =>
-      (input.autocomplete || "").toLowerCase().split(/\\s+/).includes("username")) ||
+      (input.autocomplete || "").toLowerCase().split(/\s+/).includes("username")) ||
       usernameCandidates.find((input) => /user|login|email|account/i.test(
         [input.name, input.id, input.placeholder, input.getAttribute("aria-label")].join(" "))) ||
       usernameCandidates.find((input) => (input.type || "").toLowerCase() === "email") ||
@@ -290,7 +290,7 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
       ["text", "email", "tel", "url"].includes((input.type || "text").toLowerCase()));
 
   const usernameField = candidates.find((input) =>
-    (input.autocomplete || "").toLowerCase().split(/\\s+/).includes("username")) ||
+    (input.autocomplete || "").toLowerCase().split(/\s+/).includes("username")) ||
     candidates.filter((input) => {
       return input.compareDocumentPosition(passwordField) & Node.DOCUMENT_POSITION_FOLLOWING;
     }).at(-1) ||
