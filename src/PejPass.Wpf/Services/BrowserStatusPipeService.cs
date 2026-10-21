@@ -62,7 +62,7 @@ internal sealed class BrowserStatusPipeService : IDisposable
         }
     }
 
-    private StatusResponse CreateResponse(string? line)
+    internal StatusResponse CreateResponse(string? line)
     {
         if (string.IsNullOrWhiteSpace(line) || line.Length > 4096)
             return new StatusResponse("error", "PejPass", ProtocolVersion, null, "invalid_message");
@@ -104,7 +104,7 @@ internal sealed class BrowserStatusPipeService : IDisposable
         _shutdown.Dispose();
     }
 
-    private sealed record StatusResponse(
+    internal sealed record StatusResponse(
         string Type,
         string App,
         int ProtocolVersion,
