@@ -11,10 +11,16 @@ if ($ExtensionId -notmatch '^[a-p]{32}$') {
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $projectPath = Join-Path $repoRoot "src\PejPass.BrowserHost\PejPass.BrowserHost.csproj"
+$desktopProjectPath = Join-Path $repoRoot "src\PejPass.Wpf\PejPass.Wpf.csproj"
 $outputDirectory = Join-Path $repoRoot "src\PejPass.BrowserHost\bin\Release\net10.0-windows"
 $hostExecutable = Join-Path $outputDirectory "PejPass.BrowserHost.exe"
 $manifestPath = Join-Path $outputDirectory "com.pejpass.browserhost.json"
 $registryPath = "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\com.pejpass.browserhost"
+
+dotnet build $desktopProjectPath --configuration Release -p:Platform=x64
+if ($LASTEXITCODE -ne 0) {
+    throw "Building the PejPass desktop app failed."
+}
 
 dotnet build $projectPath --configuration Release
 if ($LASTEXITCODE -ne 0) {
