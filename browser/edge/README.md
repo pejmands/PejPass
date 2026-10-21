@@ -42,6 +42,7 @@ powershell -ExecutionPolicy Bypass -File .\browser\edge\uninstall-dev-host.ps1
 - When locked, the extension shows an unlock message and receives no account metadata.
 - Selecting **Fill login** requests the chosen credential from the desktop app, revalidates the account ID and active hostname, and checks the main document plus accessible same-site frames. If the page is on a username-first step, it fills a likely visible username field and asks you to continue on the site; select **Fill login** again after the password step appears. When a password field is present, it fills the password and a likely username field in the same form when available. If a visible one-time-code field is present, it also fills a current TOTP code when the selected entry has a valid TOTP secret. Cross-origin frames are intentionally not filled.
 - Filling is always user-triggered. The extension does not submit the form. Review the filled fields and submit the login yourself.
+- After a login is successfully saved or updated, the extension clears and hides the temporary save form, including its password field.
 - The extension checks the page hostname again immediately before filling and does not fill if the page changed.
 - The host accepts only version-1 `ping`, `getVaultStatus`, `getCredentials`, and `fillCredential` requests. Requests are validated by both the host and desktop endpoint.
 - The desktop endpoint uses a current-user-only named pipe. Credential lookup is limited to 25 results.
