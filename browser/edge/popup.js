@@ -151,8 +151,8 @@ async function updateToolbarVaultIcon(unlocked) {
   }
 }
 
-async function checkVaultStatus() {
-  vaultStatus.textContent = "Checking vault status…";
+async function checkVaultStatus({ quiet = false } = {}) {
+  if (!quiet) vaultStatus.textContent = "Checking vault status…";
   try {
     const response = await sendNativeMessage({ type: "getVaultStatus", protocolVersion });
     if (isValidBaseResponse(response, "vaultStatus") &&
@@ -162,21 +162,41 @@ async function checkVaultStatus() {
       launchAppButton.hidden = true;
       lockVaultButton.hidden = response.status !== "unlocked";
       await updateToolbarVaultIcon(response.status === "unlocked");
+
+      if (response.status === "locked") {
+        credentialList.replaceChildren();
+        matchingCredentials = [];
+        credentialsStatus.textContent = "Unlock the PejPass vault to view matching accounts.";
+        saveTitle.value = "";
+        saveUsername.value = "";
+        savePassword.value = "";
+        saveFields.hidden = true;
+        saveConfirmation.checked = false;
+        generatedPassword.value = "";
+        copyPasswordButton.disabled = true;
+        generatorStatus.textContent = "Vault locked. Generate a new password when needed.";
+      }
+
       return response.status;
     }
-    const desktopUnavailable = response?.code === "app_unavailable";
-    vaultStatus.textContent = desktopUnavailable
-      ? "PejPass desktop is not running."
-      : "Vault status unavailable because the desktop response was invalid.";
-    unlockControls.hidden = !desktopUnavailable;
-    launchAppButton.hidden = !desktopUnavailable;
-    lockVaultButton.hidden = true;
-    return desktopUnavailable ? "unavailable" : "unknown";
+    if (!quiet) {
+      const desktopUnavailable = response?.code === "app_unavailable";
+      vaultStatus.textContent = desktopUnavailable
+        ? "PejPass desktop is not running."
+        : "Vault status unavailable because the desktop response was invalid.";
+      unlockControls.hidden = !desktopUnavailable;
+      launchAppButton.hidden = !desktopUnavailable;
+      lockVaultButton.hidden = true;
+      return desktopUnavailable ? "unavailable" : "unknown";
+    }
+    return "unknown";
   } catch {
-    vaultStatus.textContent = "Vault status unavailable. Check that the browser host is installed.";
-    unlockControls.hidden = false;
-    launchAppButton.hidden = false;
-    lockVaultButton.hidden = true;
+    if (!quiet) {
+      vaultStatus.textContent = "Vault status unavailable. Check that the browser host is installed.";
+      unlockControls.hidden = false;
+      launchAppButton.hidden = false;
+      lockVaultButton.hidden = true;
+    }
     return "unavailable";
   }
 }
@@ -742,6 +762,17 @@ async function launchDesktopApp() {
     for (let attempt = 0; attempt < 20; attempt++) {
       await new Promise((resolve) => setTimeout(resolve, 500));
       const status = await checkVaultStatus();
+
+let statusPollInProgress = false;
+setInterval(async () => {
+  if (statusPollInProgress) return;
+  statusPollInProgress = true;
+  try {
+    await checkVaultStatus({ quiet: true });
+  } finally {
+    statusPollInProgress = false;
+  }
+}, 5000);
       if (status === "locked" || status === "unlocked") return;
     }
     vaultStatus.textContent = "PejPass is starting. Try checking the vault status again in a moment.";
