@@ -128,7 +128,7 @@ async function updateToolbarVaultIcon(unlocked) {
     let imageData = toolbarIconCache.get(state);
     if (!imageData) {
       const image = new Image();
-      image.src = chrome.runtime.getURL(`icons/vault-${state}.svg`);
+      image.src = chrome.runtime.getURL(unlocked ? "icons/PejPass.ico" : "icons/PejPassLocked.ico");
       await image.decode();
 
       imageData = {};
