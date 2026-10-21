@@ -13,7 +13,7 @@
 
 body {
   width: 320px;
-  min-height: 210px;
+  min-height: 250px;
   margin: 0;
   background: #181a1f;
 }
@@ -67,8 +67,9 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
-.site-card {
-  margin-top: 20px;
+.site-card,
+.connection-card {
+  margin-top: 16px;
   padding: 13px 14px;
   border: 1px solid #353a44;
   border-radius: 12px;
@@ -97,19 +98,37 @@ h1 {
   line-height: 1.45;
 }
 
-footer {
+.connection-row {
   display: flex;
   align-items: center;
-  gap: 7px;
-  margin-top: 15px;
-  color: #969ca8;
-  font-size: 10px;
+  gap: 8px;
 }
 
 .status-dot {
-  width: 6px;
-  height: 6px;
-  flex: 0 0 6px;
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
   border-radius: 50%;
   background: #7b8290;
+}
+
+.status-dot.connected {
+  background: #69c58b;
+}
+
+.status-dot.disconnected {
+  background: #d7a45b;
+}
+
+.connection-status {
+  margin: 0;
+  color: #d6d9df;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+footer {
+  margin-top: 14px;
+  color: #969ca8;
+  font-size: 10px;
 }
