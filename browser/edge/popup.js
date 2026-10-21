@@ -101,10 +101,13 @@ async function lookupCredentials(domain) {
         vault_locked: "Unlock the PejPass vault to view matching accounts.",
         app_unavailable: "Open PejPass desktop and try again.",
         invalid_domain: "The active site address is not valid for lookup.",
-        lookup_unavailable: "PejPass could not complete the lookup. Try again."
+        lookup_unavailable: "PejPass could not complete the lookup. Try again.",
+        unsupported_request: "The running PejPass desktop version does not support account lookup. Fully exit PejPass, then launch the build from PR 138.",
+        invalid_app_response: "PejPass desktop returned an incompatible account-lookup response. Fully exit PejPass and relaunch the build from PR 138."
       };
       credentialsStatus.textContent = messages[response.code] ||
-        "Credential lookup failed because the desktop response was invalid.";
+        "Credential lookup failed because the desktop response was invalid (code: " +
+        String(response.code || "missing") + ").";
       return;
     }
 
