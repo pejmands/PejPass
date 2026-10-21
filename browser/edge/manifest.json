@@ -1,10 +1,11 @@
 {
   "manifest_version": 3,
   "name": "PejPass",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A lightweight browser companion for PejPass.",
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "nativeMessaging"
   ],
   "action": {
     "default_title": "PejPass",
