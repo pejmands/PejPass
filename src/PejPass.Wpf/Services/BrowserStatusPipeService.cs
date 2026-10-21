@@ -93,9 +93,9 @@ internal sealed class BrowserStatusPipeService : IDisposable
                 return builder.Length == 0 ? null : builder.ToString();
 
             var character = buffer[0];
-            if (character == '\\n')
+            if (character == '\n')
             {
-                if (builder.Length > 0 && builder[builder.Length - 1] == '\\r')
+                if (builder.Length > 0 && builder[builder.Length - 1] == '\r')
                     builder.Length--;
                 return builder.ToString();
             }
