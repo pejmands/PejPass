@@ -140,6 +140,7 @@ public sealed class BrowserStatusPipeServiceTests
             Title = "Example",
             Username = "alice",
             Password = "fill-only-secret",
+            TotpSecret = "JBSWY3DPEHPK3PXP",
             Url = "https://example.com/login"
         };
         var vault = new Vault { Entries = [entry] };
@@ -158,6 +159,8 @@ public sealed class BrowserStatusPipeServiceTests
         Assert.Equal(entry.Id.ToString("D"), response.Id);
         Assert.Equal("alice", response.Username);
         Assert.Equal("fill-only-secret", response.Password);
+        Assert.Matches("^\\d{6}$", response.TotpCode);
+        Assert.DoesNotContain("JBSWY3DPEHPK3PXP", JsonSerializer.Serialize(response));
     }
 
     [Fact]
