@@ -226,6 +226,30 @@ public sealed class BrowserStatusPipeServiceTests
         Assert.DoesNotContain("candidate-secret", JsonSerializer.Serialize(response));
     }
 
+    [Fact]
+    public async Task ReadBoundedLineAsync_RejectsOversizedMessage()
+    {
+        using var reader = new StringReader("12345\\n");
+
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            BrowserStatusPipeService.ReadBoundedLineAsync(reader, 4, CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData("hello\\n", "hello")]
+    [InlineData("hello\\r\\n", "hello")]
+    [InlineData("hello", "hello")]
+    [InlineData("", null)]
+    public async Task ReadBoundedLineAsync_ReadsSingleBoundedLine(string input, string? expected)
+    {
+        using var reader = new StringReader(input);
+
+        var result = await BrowserStatusPipeService.ReadBoundedLineAsync(
+            reader, 5, CancellationToken.None);
+
+        Assert.Equal(expected, result);
+    }
+
     private static VaultKeyMaterial CreateMaterial()
     {
         var key = new byte[32];
