@@ -14,6 +14,10 @@ const saveUsername = document.getElementById("save-username");
 const savePassword = document.getElementById("save-password");
 const saveLoginButton = document.getElementById("save-login");
 const saveStatus = document.getElementById("save-status");
+const saveReviewNotice = document.getElementById("save-review-notice");
+const saveConfirmationRow = document.getElementById("save-confirmation-row");
+const saveConfirmation = document.getElementById("save-confirmation");
+let matchingCredentials = [];
 const unlockControls = document.getElementById("unlock-controls");
 const unlockPassword = document.getElementById("unlock-password");
 const unlockButton = document.getElementById("unlock-vault");
@@ -59,6 +63,7 @@ function showUnavailable(message) {
   saveLoginButton.disabled = true;
   saveFields.hidden = true;
   credentialList.replaceChildren();
+  matchingCredentials = [];
 }
 
 async function showActiveSite() {
@@ -142,6 +147,7 @@ async function checkVaultStatus() {
 
 async function lookupCredentials(domain) {
   credentialList.replaceChildren();
+  matchingCredentials = [];
   credentialsStatus.textContent = "Searching…";
   try {
     const response = await sendNativeMessage({ type: "getCredentials", protocolVersion, domain });
@@ -164,6 +170,7 @@ async function lookupCredentials(domain) {
       credentialsStatus.textContent = "Credential lookup returned an invalid response."; return;
     }
 
+    matchingCredentials = response.credentials;
     if (response.credentials.length === 0) {
       credentialsStatus.textContent = "No matching accounts found."; return;
     }
@@ -397,8 +404,10 @@ async function inspectLoginForm() {
     saveUsername.value = candidate.username || "";
     savePassword.value = candidate.password || "";
     saveFields.hidden = false;
+    saveConfirmation.checked = false;
     saveStatus.textContent = "Review or correct these values. They are not saved until you confirm.";
     savePassword.type = "password";
+    updateSaveReview();
   } catch {
     saveStatus.textContent = "Could not inspect this page. Check that it is a regular HTTP(S) page.";
   } finally {
@@ -464,14 +473,53 @@ function readLoginForm(expectedDomain) {
   };
 }
 
+function updateSaveReview() {
+  if (saveFields.hidden) {
+    saveLoginButton.disabled = false;
+    return;
+  }
+
+  const title = saveTitle.value.trim();
+  const username = saveUsername.value.trim();
+  const password = savePassword.value;
+  const matches = username
+    ? matchingCredentials.filter((credential) => credential.username.trim() === username)
+    : [];
+
+  if (!title || !password || password.length > 4096 ||
+      username.length > 256 || title.length > 200) {
+    saveReviewNotice.textContent = !title
+      ? "Enter an account name before saving."
+      : !password
+        ? "A password is required before this login can be saved."
+        : "Check the field lengths before saving.";
+  } else if (matches.length > 1) {
+    saveReviewNotice.textContent = "Several saved accounts use this username on the current site. Change the username or update the account manually in PejPass desktop.";
+  } else if (matches.length === 1) {
+    saveReviewNotice.textContent = "An existing account matches this username: “" +
+      (matches[0].title || "Untitled account") +
+      "”. Saving will update it; previous values will be retained in history.";
+  } else if (!username) {
+    saveReviewNotice.textContent = "The username is blank. Save only if this login legitimately has no username.";
+  } else {
+    saveReviewNotice.textContent = "Review the values carefully. If this username matches an existing account, that account will be updated and its previous values retained in history.";
+  }
+
+  const invalid = !title || !password || password.length > 4096 ||
+    username.length > 256 || title.length > 200 || matches.length > 1;
+  saveLoginButton.disabled = invalid || !saveConfirmation.checked;
+}
+
 async function saveLogin() {
+  updateSaveReview();
   if (!activeTabId || !activeDomain || saveFields.hidden) {
     saveStatus.textContent = "Read and review the login form first.";
     return;
   }
-  if (!savePassword.value || savePassword.value.length > 4096 ||
-      saveUsername.value.length > 256 || saveTitle.value.length > 200) {
-    saveStatus.textContent = "Enter a password (maximum 4096 characters) and check the field lengths.";
+  if (!saveTitle.value.trim() || !savePassword.value || savePassword.value.length > 4096 ||
+      saveUsername.value.length > 256 || saveTitle.value.trim().length > 200 ||
+      saveConfirmation.checked !== true) {
+    saveStatus.textContent = "Complete the required fields, review the warning, and confirm before saving.";
     return;
   }
 
@@ -526,15 +574,24 @@ async function saveLogin() {
     saveTitle.value = "";
     saveUsername.value = "";
     savePassword.value = "";
+    saveConfirmation.checked = false;
     saveFields.hidden = true;
 
     await lookupCredentials(activeDomain);
   } catch {
     saveStatus.textContent = "Could not save the login. Check that PejPass desktop and BrowserHost are running.";
   } finally {
-    saveLoginButton.disabled = false;
+    updateSaveReview();
   }
 }
+
+for (const field of [saveTitle, saveUsername, savePassword]) {
+  field.addEventListener("input", () => {
+    saveConfirmation.checked = false;
+    updateSaveReview();
+  });
+}
+saveConfirmation.addEventListener("change", updateSaveReview);
 
 inspectLoginButton.addEventListener("click", inspectLoginForm);
 saveLoginButton.addEventListener("click", saveLogin);
