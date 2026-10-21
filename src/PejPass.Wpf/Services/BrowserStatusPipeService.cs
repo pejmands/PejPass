@@ -9,8 +9,9 @@ internal sealed class BrowserStatusPipeService(VaultSession vaultSession) : IDis
 {
     internal const string PipeName = "PejPass.BrowserStatus.v1";
     private const int ProtocolVersion = 1;
-    private const int MaximumLineLength = 4096;
+    private const int MaximumLineLength = 8192;
     private const int MaximumCredentialResults = 25;
+    private const int MaximumPasswordLength = 4096;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly VaultSession _vaultSession = vaultSession;
     private readonly CancellationTokenSource _shutdown = new();
@@ -66,6 +67,7 @@ internal sealed class BrowserStatusPipeService(VaultSession vaultSession) : IDis
                 "getVaultStatus" => new StatusResponse("vaultStatus", "PejPass", ProtocolVersion,
                     _vaultSession.IsActive ? "unlocked" : "locked", null),
                 "getCredentials" => CreateCredentialResponse(root),
+                "fillCredential" => CreateFillResponse(root),
                 _ => Error("unsupported_request")
             };
         }
@@ -92,6 +94,44 @@ internal sealed class BrowserStatusPipeService(VaultSession vaultSession) : IDis
                 null, null, domain, credentials);
         }
         catch (Exception) { return Error("lookup_unavailable"); }
+    }
+
+    private StatusResponse CreateFillResponse(JsonElement root)
+    {
+        if (!root.TryGetProperty("domain", out var domainElement) ||
+            domainElement.ValueKind != JsonValueKind.String ||
+            !TryNormalizeDomain(domainElement.GetString(), out var domain) ||
+            !root.TryGetProperty("id", out var idElement) ||
+            idElement.ValueKind != JsonValueKind.String ||
+            !Guid.TryParse(idElement.GetString(), out var id))
+            return Error("invalid_request");
+
+        if (!_vaultSession.IsActive) return Error("vault_locked");
+
+        try
+        {
+            var app = System.Windows.Application.Current;
+            var credential = app is not null && !app.Dispatcher.CheckAccess()
+                ? app.Dispatcher.Invoke(() => FindCredentialForFill(id, domain))
+                : FindCredentialForFill(id, domain);
+
+            return credential is null
+                ? Error("credential_not_found")
+                : new StatusResponse("credentialForFill", "PejPass", ProtocolVersion,
+                    null, null, domain, null, id.ToString("D"), credential.Username, credential.Password);
+        }
+        catch (Exception) { return Error("lookup_unavailable"); }
+    }
+
+    private FillCredential? FindCredentialForFill(Guid id, string domain)
+    {
+        if (!_vaultSession.IsActive || _vaultSession.Vault is not { } vault) return null;
+        var entry = vault.Entries.FirstOrDefault(entry => entry.Id == id);
+        if (entry is null || !EntryMatchesDomain(entry, domain)) return null;
+
+        var password = entry.Password ?? string.Empty;
+        if (password.Length > MaximumPasswordLength) return null;
+        return new FillCredential(entry.Username ?? string.Empty, password);
     }
 
     private List<CredentialSummary> FindCredentials(string domain)
@@ -166,7 +206,9 @@ internal sealed class BrowserStatusPipeService(VaultSession vaultSession) : IDis
     }
 
     internal sealed record CredentialSummary(string Id, string Title, string Username, string Url);
+    internal sealed record FillCredential(string Username, string Password);
     internal sealed record StatusResponse(
         string Type, string App, int ProtocolVersion, string? Status, string? Code,
-        string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null);
+        string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null,
+        string? Id = null, string? Username = null, string? Password = null);
 }
