@@ -151,10 +151,10 @@ internal sealed class BrowserStatusPipeService : IDisposable
             !TryGetWebUrl(url, domain))
             return Error("invalid_request");
 
-        if (_vaultService is null)
-            return Error("app_unavailable");
         if (!_vaultSession.IsActive)
             return Error("vault_locked");
+        if (_vaultService is null)
+            return Error("app_unavailable");
 
         try
         {
@@ -279,8 +279,7 @@ internal sealed class BrowserStatusPipeService : IDisposable
             (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) &&
             string.IsNullOrEmpty(uri.UserInfo) &&
             TryNormalizeDomain(uri.IdnHost, out var host) &&
-            (host.Equals(expectedDomain, StringComparison.OrdinalIgnoreCase) ||
-             host.EndsWith("." + expectedDomain, StringComparison.OrdinalIgnoreCase));
+            host.Equals(expectedDomain, StringComparison.OrdinalIgnoreCase);
     }
 
     private FillCredential? FindCredentialForFill(Guid id, string domain)
