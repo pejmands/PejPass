@@ -6,6 +6,7 @@ const connectionDot = document.getElementById("connection-dot");
 const vaultStatus = document.getElementById("vault-status");
 const credentialsStatus = document.getElementById("credentials-status");
 const credentialList = document.getElementById("credential-list");
+const refreshLoginsButton = document.getElementById("refresh-logins");
 const inspectLoginButton = document.getElementById("inspect-login");
 const saveFields = document.getElementById("save-fields");
 const saveTitle = document.getElementById("save-title");
@@ -78,11 +79,28 @@ async function showActiveSite() {
 
     activeTabId = tab.id;
     activeDomain = url.hostname.toLowerCase().replace(/\.$/, "");
+    inspectLoginButton.disabled = false;
+    saveLoginButton.disabled = false;
     siteName.textContent = activeDomain;
     siteDetail.textContent = "Searching PejPass for accounts matching this site…";
     await lookupCredentials(activeDomain);
   } catch {
     showUnavailable("Could not read the active tab. Try closing and reopening the popup.");
+  }
+}
+
+async function refreshLoginView() {
+  refreshLoginsButton.disabled = true;
+  refreshLoginsButton.textContent = "Refreshing…";
+  try {
+    await Promise.all([
+      showActiveSite(),
+      checkDesktopConnection(),
+      checkVaultStatus()
+    ]);
+  } finally {
+    refreshLoginsButton.disabled = false;
+    refreshLoginsButton.textContent = "Refresh status & accounts";
   }
 }
 
@@ -520,6 +538,7 @@ async function saveLogin() {
 
 inspectLoginButton.addEventListener("click", inspectLoginForm);
 saveLoginButton.addEventListener("click", saveLogin);
+refreshLoginsButton.addEventListener("click", refreshLoginView);
 
 function isValidCredential(credential) {
   return credential !== null && typeof credential === "object" &&
