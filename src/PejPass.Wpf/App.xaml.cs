@@ -90,6 +90,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IClipboardService, ClipboardService>();
         services.AddSingleton<VaultService>();
         services.AddSingleton<VaultSession>();
+        services.AddSingleton<BrowserStatusPipeService>();
         services.AddSingleton<UpdateService>();
         services.AddSingleton<SystemTrayService>();
         services.AddSingleton<WindowsSecurityService>();
@@ -108,6 +109,7 @@ public partial class App : System.Windows.Application
         services.AddTransient<AboutWindow>();
 
         Services = services.BuildServiceProvider();
+        Services.GetRequiredService<BrowserStatusPipeService>().Start();
 
         // Keep the application alive independently of the minimize-to-tray preference.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -831,6 +833,8 @@ public partial class App : System.Windows.Application
         DispatcherUnhandledException -= OnDispatcherUnhandledException;
         TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
         SingleInstance.Activated -= OnSecondInstanceActivated;
+        try { Services.GetRequiredService<BrowserStatusPipeService>().Dispose(); }
+        catch { /* Best-effort shutdown of the browser status endpoint. */ }
         try { Services.GetRequiredService<SessionPasswordCache>().Clear(); }
         catch { /* Best-effort cleanup on exit. */ }
         if (_windowsSecurityService is not null)
