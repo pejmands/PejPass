@@ -9,7 +9,7 @@ internal sealed class BrowserStatusPipeService(VaultSession vaultSession) : IDis
 {
     internal const string PipeName = "PejPass.BrowserStatus.v1";
     private const int ProtocolVersion = 1;
-    private const int MaximumLineLength = 8192;
+    private const int MaximumLineLength = 32768;
     private const int MaximumCredentialResults = 25;
     private const int MaximumPasswordLength = 4096;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
