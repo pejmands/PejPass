@@ -1,6 +1,6 @@
 # PejPass for Microsoft Edge
 
-This directory contains the PejPass browser extension. The extension does not read credentials or page contents. The current native messaging integration only sends a harmless ping to a small local .NET host and checks its response.
+This directory contains the PejPass browser extension. The extension does not read credentials or page contents. The native messaging host supports a versioned connectivity ping and a narrowly scoped vault-status request. The status request is forwarded over a current-user-only named pipe to the running PejPass desktop app; it never requests credentials or vault contents.
 
 ## Requirements
 
@@ -46,4 +46,4 @@ If Edge assigns a different ID after you move or reload the unpacked extension f
 
 ## Current scope
 
-This is a connectivity proof only. It does not connect to the PejPass vault, expose lock state, match credentials, or fill forms.
+The extension can display the desktop vault's lock state only. Credential lookup and form filling remain out of scope.
