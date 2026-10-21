@@ -388,7 +388,7 @@ function readLoginForm(expectedDomain) {
 
   const isPasswordField = (input) => {
     const type = (input.type || "").toLowerCase();
-    const autocomplete = (input.autocomplete || "").toLowerCase().split(/\\s+/);
+    const autocomplete = (input.autocomplete || "").toLowerCase().split(/\s+/);
     return type === "password" ||
       autocomplete.includes("current-password") ||
       autocomplete.includes("new-password") ||
