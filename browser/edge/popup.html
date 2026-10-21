@@ -12,8 +12,27 @@
     <header class="header">
       <div class="brand-mark" aria-hidden="true">P</div>
       <div class="brand-copy"><h1>PejPass</h1><p class="subtitle">Browser companion</p></div>
-      <span class="version" id="version">0.2.0</span>
+      <span class="version" id="version">0.4.0</span>
     </header>
+    <section class="connection-card generator-card" aria-labelledby="generator-label">
+      <p class="eyebrow" id="generator-label">PASSWORD GENERATOR</p>
+      <label class="field-label" for="password-length">Length</label>
+      <div class="length-row">
+        <input id="password-length" type="number" min="8" max="64" value="20" inputmode="numeric">
+        <span class="field-hint">8–64 characters</span>
+      </div>
+      <div class="options-grid">
+        <label><input id="include-lowercase" type="checkbox" checked> Lowercase (a–z)</label>
+        <label><input id="include-uppercase" type="checkbox" checked> Uppercase (A–Z)</label>
+        <label><input id="include-numbers" type="checkbox" checked> Numbers (0–9)</label>
+        <label><input id="include-symbols" type="checkbox" checked> Symbols (!@#…)</label>
+      </div>
+      <button class="fill-button" id="generate-password" type="button">Generate password</button>
+      <label class="field-label password-label" for="generated-password">Generated password</label>
+      <input id="generated-password" class="generated-password" type="text" readonly autocomplete="off" spellcheck="false" aria-label="Generated password">
+      <button class="fill-button secondary-button" id="copy-password" type="button" disabled>Copy password</button>
+      <p class="generator-status" id="generator-status" role="status" aria-live="polite">Generated locally in this browser. Not saved automatically.</p>
+    </section>
     <section class="site-card" aria-labelledby="site-label">
       <p class="eyebrow" id="site-label">CURRENT SITE</p>
       <p class="site-name" id="site-name">Checking active tab…</p>
