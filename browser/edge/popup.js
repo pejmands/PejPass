@@ -23,6 +23,7 @@ const unlockPassword = document.getElementById("unlock-password");
 const unlockButton = document.getElementById("unlock-vault");
 const unlockStatus = document.getElementById("unlock-status");
 const launchAppButton = document.getElementById("launch-app");
+const lockVaultButton = document.getElementById("lock-vault");
 const nativeHostName = "com.pejpass.browserhost";
 const protocolVersion = 1;
 let activeTabId = null;
@@ -128,6 +129,7 @@ async function checkVaultStatus() {
       vaultStatus.textContent = response.status === "unlocked" ? "Vault is unlocked." : "Vault is locked.";
       unlockControls.hidden = response.status !== "locked";
       launchAppButton.hidden = true;
+      lockVaultButton.hidden = response.status !== "unlocked";
       return response.status;
     }
     const desktopUnavailable = response?.code === "app_unavailable";
@@ -136,11 +138,13 @@ async function checkVaultStatus() {
       : "Vault status unavailable because the desktop response was invalid.";
     unlockControls.hidden = !desktopUnavailable;
     launchAppButton.hidden = !desktopUnavailable;
+    lockVaultButton.hidden = true;
     return desktopUnavailable ? "unavailable" : "unknown";
   } catch {
     vaultStatus.textContent = "Vault status unavailable. Check that the browser host is installed.";
     unlockControls.hidden = false;
     launchAppButton.hidden = false;
+    lockVaultButton.hidden = true;
     return "unavailable";
   }
 }
@@ -717,6 +721,49 @@ async function launchDesktopApp() {
   }
 }
 
+async function lockVault() {
+  if (lockVaultButton.disabled)
+    return;
+
+  lockVaultButton.disabled = true;
+  lockVaultButton.textContent = "Locking vault…";
+  vaultStatus.textContent = "Locking the PejPass vault…";
+  try {
+    const response = await sendNativeMessage({ type: "lockVault", protocolVersion });
+    if (!isValidBaseResponse(response, "vaultLocked") || response.status !== "locked") {
+      vaultStatus.textContent = response?.code === "app_unavailable"
+        ? "Could not lock the vault. Open PejPass desktop and try again."
+        : "PejPass returned an invalid vault-lock response.";
+      return;
+    }
+
+    credentialList.replaceChildren();
+    matchingCredentials = [];
+    credentialsStatus.textContent = "Unlock the PejPass vault to view matching accounts.";
+    saveTitle.value = "";
+    saveUsername.value = "";
+    savePassword.value = "";
+    saveFields.hidden = true;
+    saveConfirmation.checked = false;
+    saveStatus.textContent = "Vault locked. Read the login form again after unlocking to save.";
+    unlockPassword.value = "";
+    generatedPassword.value = "";
+    copyPasswordButton.disabled = true;
+    generatorStatus.textContent = "Vault locked. Generate a new password when needed.";
+    vaultStatus.textContent = "Vault is locked.";
+    unlockControls.hidden = false;
+    launchAppButton.hidden = true;
+    lockVaultButton.hidden = true;
+    unlockStatus.textContent = "Enter your master password to unlock the vault.";
+  } catch {
+    vaultStatus.textContent = "Could not connect to PejPass to lock the vault.";
+  } finally {
+    lockVaultButton.disabled = false;
+    lockVaultButton.textContent = "Lock vault";
+    updateSaveReview();
+  }
+}
+
 async function unlockVault() {
   if (!unlockPassword.value || unlockPassword.value.length > 4096) {
     unlockStatus.textContent = "Enter your master password.";
@@ -756,6 +803,7 @@ async function unlockVault() {
 }
 
 unlockButton.addEventListener("click", unlockVault);
+lockVaultButton.addEventListener("click", lockVault);
 unlockPassword.addEventListener("keydown", (event) => {
   if (event.key === "Enter") unlockVault();
 });

@@ -59,6 +59,7 @@ internal static class Program
                 "ping" => new HostResponse("pong", "PejPass", ProtocolVersion, null, null),
                 "launchApp" => LaunchDesktopApp(),
                 "unlockVault" => await UnlockVaultAsync(root).ConfigureAwait(false),
+                "lockVault" => await LockVaultAsync().ConfigureAwait(false),
                 "getVaultStatus" => await GetVaultStatusAsync().ConfigureAwait(false),
                 "getCredentials" => await GetCredentialsAsync(root).ConfigureAwait(false),
                 "fillCredential" => await FillCredentialAsync(root).ConfigureAwait(false),
@@ -124,6 +125,22 @@ internal static class Program
             return Error("invalid_app_response");
 
         return new HostResponse("vaultUnlocked", "PejPass", ProtocolVersion, "unlocked", null);
+    }
+
+    private static async Task<HostResponse> LockVaultAsync()
+    {
+        var response = await SendPipeRequestAsync(
+            new HostRequest("lockVault", ProtocolVersion)).ConfigureAwait(false);
+        if (response.Error is not null)
+            return Error(response.Error);
+
+        var root = response.Root;
+        return HasString(root, "type", "vaultLocked") &&
+               HasString(root, "app", "PejPass") &&
+               HasVersion(root) &&
+               HasString(root, "status", "locked")
+            ? new HostResponse("vaultLocked", "PejPass", ProtocolVersion, "locked", null)
+            : Error("invalid_app_response");
     }
 
     private static async Task<HostResponse> GetVaultStatusAsync()
