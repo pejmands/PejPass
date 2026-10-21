@@ -214,7 +214,12 @@ async function fillCredential(credential) {
 function fillLoginForm(expectedDomain, username, password) {
   const normalizeHost = (host) => host.toLowerCase().replace(/\.$/, "");
   const currentDomain = normalizeHost(window.location.hostname);
-  const topDomain = normalizeHost(window.top.location.hostname);
+  let topDomain;
+  try {
+    topDomain = normalizeHost(window.top.location.hostname);
+  } catch {
+    return "wrong_page";
+  }
   if (topDomain !== expectedDomain) return "wrong_page";
   if (currentDomain !== expectedDomain && !currentDomain.endsWith("." + expectedDomain)) {
     return "wrong_page";
