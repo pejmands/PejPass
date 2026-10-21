@@ -233,8 +233,16 @@ internal sealed class BrowserStatusPipeService : IDisposable
 
             await app.Dispatcher.InvokeAsync(() =>
             {
-                if (_vaultSession.IsCurrent(generation, vault))
-                    _vaultSession.RefreshDiskStamp();
+                if (!_vaultSession.IsCurrent(generation, vault))
+                    return;
+
+                _vaultSession.RefreshDiskStamp();
+
+                if (app.MainWindow is PejPass.Wpf.MainWindow
+                    { DataContext: PejPass.Wpf.ViewModels.MainViewModel viewModel })
+                {
+                    viewModel.RefreshEntriesFromVault();
+                }
             }, System.Windows.Threading.DispatcherPriority.Send, cancellationToken).Task.ConfigureAwait(false);
 
             return new StatusResponse("credentialSaved", "PejPass", ProtocolVersion,
