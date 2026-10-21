@@ -186,7 +186,7 @@ async function fillCredential(credential) {
         response.domain !== activeDomain || response.id !== credential.id ||
         typeof response.username !== "string" || response.username.length > 256 ||
         typeof response.password !== "string" || response.password.length > 4096 ||
-        (response.totpCode !== undefined && (typeof response.totpCode !== "string" ||
+        (response.totpCode != null && (typeof response.totpCode !== "string" ||
           response.totpCode.length > 8 || (response.totpCode.length > 0 && !/^\\d+$/.test(response.totpCode))))) {
       credentialsStatus.textContent = "PejPass returned an invalid fill response.";
       return;
@@ -261,9 +261,12 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
   const passwordField = inputs.find((input) => (input.type || "").toLowerCase() === "password");
 
   if (totpFields.length > 0) {
-    if (!totpCode) return "totp_unavailable";
-    setValue(totpFields[0], totpCode);
-    totpFields[0].focus();
+    if (totpCode) {
+      setValue(totpFields[0], totpCode);
+      totpFields[0].focus();
+    } else if (!passwordField) {
+      return "totp_unavailable";
+    }
     if (!passwordField) return "totp_filled";
   }
 
@@ -296,7 +299,7 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
   if (usernameField && username) setValue(usernameField, username);
   setValue(passwordField, password);
   passwordField.focus();
-  if (totpFields.length > 0) return "totp_filled";
+  if (totpFields.length > 0) return totpCode ? "totp_filled" : "totp_unavailable";
   return usernameField && username ? "filled" : "no_username";
 }
 
