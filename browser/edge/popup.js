@@ -257,12 +257,19 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
   };
   const isTextLike = (input) =>
     ["text", "email", "tel", "url", "search", ""].includes((input.type || "text").toLowerCase());
-  const totpFields = inputs.filter((input) => isTotpField(input) && isTextLike(input));
+  const totpFields = inputs.filter((input) => isTotpField(input) &&
+    (isTextLike(input) || (input.type || "").toLowerCase() === "number"));
   const passwordField = inputs.find((input) => (input.type || "").toLowerCase() === "password");
 
   if (totpFields.length > 0) {
     if (totpCode) {
-      setValue(totpFields[0], totpCode);
+      const splitCodeFields = totpFields.length > 1 && totpFields.length === totpCode.length &&
+        totpFields.every((input) => input.maxLength === 1);
+      if (splitCodeFields) {
+        totpFields.forEach((input, index) => setValue(input, totpCode[index]));
+      } else {
+        setValue(totpFields[0], totpCode);
+      }
       totpFields[0].focus();
     } else if (!passwordField) {
       return "totp_unavailable";
