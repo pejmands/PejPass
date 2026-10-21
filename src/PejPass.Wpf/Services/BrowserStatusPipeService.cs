@@ -252,7 +252,7 @@ internal sealed class BrowserStatusPipeService : IDisposable
     }
 
     private sealed record SavePreparation(
-        object? Snapshot,
+        Vault? Snapshot,
         string? Result,
         Guid Id,
         Vault? Vault,
