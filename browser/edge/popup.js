@@ -763,16 +763,6 @@ async function launchDesktopApp() {
       await new Promise((resolve) => setTimeout(resolve, 500));
       const status = await checkVaultStatus();
 
-let statusPollInProgress = false;
-setInterval(async () => {
-  if (statusPollInProgress) return;
-  statusPollInProgress = true;
-  try {
-    await checkVaultStatus({ quiet: true });
-  } finally {
-    statusPollInProgress = false;
-  }
-}, 5000);
       if (status === "locked" || status === "unlocked") return;
     }
     vaultStatus.textContent = "PejPass is starting. Try checking the vault status again in a moment.";
@@ -914,3 +904,14 @@ setActiveView("logins");
 showActiveSite();
 checkDesktopConnection();
 checkVaultStatus();
+
+let statusPollInProgress = false;
+setInterval(async () => {
+  if (statusPollInProgress) return;
+  statusPollInProgress = true;
+  try {
+    await checkVaultStatus({ quiet: true });
+  } finally {
+    statusPollInProgress = false;
+  }
+}, 5000);
