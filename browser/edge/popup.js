@@ -318,6 +318,91 @@ function isValidCredential(credential) {
     typeof credential.url === "string" && credential.url.length <= 2048;
 }
 
+
+const passwordLength = document.getElementById("password-length");
+const generatedPassword = document.getElementById("generated-password");
+const generatePasswordButton = document.getElementById("generate-password");
+const copyPasswordButton = document.getElementById("copy-password");
+const generatorStatus = document.getElementById("generator-status");
+const characterOptions = [
+  { id: "include-lowercase", characters: "abcdefghijklmnopqrstuvwxyz" },
+  { id: "include-uppercase", characters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ" },
+  { id: "include-numbers", characters: "0123456789" },
+  { id: "include-symbols", characters: "!@#$%^&*()-_=+[]{};:,.?/" }
+];
+
+function secureRandomIndex(maximum) {
+  if (!Number.isInteger(maximum) || maximum < 1 || maximum > 0x100000000) {
+    throw new RangeError("Invalid random range.");
+  }
+
+  const range = 0x100000000;
+  const limit = Math.floor(range / maximum) * maximum;
+  const values = new Uint32Array(1);
+  let value;
+
+  do {
+    crypto.getRandomValues(values);
+    value = values[0];
+  } while (value >= limit);
+
+  return value % maximum;
+}
+
+function generateSecurePassword() {
+  const length = Number(passwordLength.value);
+  const selectedSets = characterOptions
+    .filter((option) => document.getElementById(option.id).checked)
+    .map((option) => option.characters);
+
+  if (!Number.isInteger(length) || length < 8 || length > 64) {
+    throw new Error("Choose a password length between 8 and 64.");
+  }
+  if (selectedSets.length === 0) {
+    throw new Error("Select at least one character type.");
+  }
+
+  const characters = selectedSets.join("");
+  const password = selectedSets.map((set) => set[secureRandomIndex(set.length)]);
+
+  while (password.length < length) {
+    password.push(characters[secureRandomIndex(characters.length)]);
+  }
+
+  for (let index = password.length - 1; index > 0; index--) {
+    const otherIndex = secureRandomIndex(index + 1);
+    [password[index], password[otherIndex]] = [password[otherIndex], password[index]];
+  }
+
+  return password.join("");
+}
+
+generatePasswordButton.addEventListener("click", () => {
+  try {
+    const password = generateSecurePassword();
+    generatedPassword.value = password;
+    copyPasswordButton.disabled = false;
+    generatorStatus.textContent = "Generated locally in this browser. Not saved automatically.";
+  } catch (error) {
+    generatedPassword.value = "";
+    copyPasswordButton.disabled = true;
+    generatorStatus.textContent = error instanceof Error
+      ? error.message
+      : "Could not generate a password.";
+  }
+});
+
+copyPasswordButton.addEventListener("click", async () => {
+  if (!generatedPassword.value) return;
+
+  try {
+    await navigator.clipboard.writeText(generatedPassword.value);
+    generatorStatus.textContent = "Password copied to the clipboard.";
+  } catch {
+    generatorStatus.textContent = "Copy failed. Select and copy the password manually.";
+  }
+});
+
 showActiveSite();
 checkDesktopConnection();
 checkVaultStatus();
