@@ -101,7 +101,6 @@ public sealed class VaultSession : IDisposable
         ArgumentNullException.ThrowIfNull(keyMaterial);
 
         var fullPath = Path.GetFullPath(vaultPath);
-        var diskStamp = CaptureDiskStamp(fullPath);
         var materialCopy = keyMaterial.Clone();
 
         try
@@ -115,7 +114,7 @@ public sealed class VaultSession : IDisposable
                     ClearKeyMaterialCore();
                     _vault = vault;
                     _vaultPath = fullPath;
-                    _diskStamp = diskStamp;
+                    _diskStamp = CaptureDiskStamp(fullPath);
                     _keyMaterial = materialCopy;
                     _generation++;
                 }
