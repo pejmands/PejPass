@@ -190,27 +190,35 @@ async function fillCredential(credential) {
       return;
     }
 
-    const result = await chrome.scripting.executeScript({
-      target: { tabId: activeTabId },
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: activeTabId, allFrames: true },
       func: fillLoginForm,
       args: [activeDomain, response.username, response.password]
     });
-    const outcome = result?.[0]?.result;
+    const outcomes = (results || []).map((entry) => entry.result);
     const messages = {
       filled: "Login fields filled. Review them and submit the form yourself.",
-      no_password: "No visible password field was found on this page.",
+      no_password: "No visible password field was found in the page or its same-site frames.",
       wrong_page: "The active page changed. Reopen the popup and try again.",
       no_username: "Password filled, but no matching username field was found."
     };
-    credentialsStatus.textContent = messages[outcome] || "Could not fill the login form on this page.";
+    const outcome = outcomes.includes("filled") ? "filled" :
+      outcomes.includes("no_username") ? "no_username" :
+      outcomes.includes("wrong_page") ? "wrong_page" : "no_password";
+    credentialsStatus.textContent = messages[outcome];
   } catch {
     credentialsStatus.textContent = "Could not fill this page. Check that it is a regular HTTP(S) page and try again.";
   }
 }
 
 function fillLoginForm(expectedDomain, username, password) {
-  const currentDomain = window.location.hostname.toLowerCase().replace(/\.$/, "");
-  if (currentDomain !== expectedDomain) return "wrong_page";
+  const normalizeHost = (host) => host.toLowerCase().replace(/\.$/, "");
+  const currentDomain = normalizeHost(window.location.hostname);
+  const topDomain = normalizeHost(window.top.location.hostname);
+  if (topDomain !== expectedDomain) return "wrong_page";
+  if (currentDomain !== expectedDomain && !currentDomain.endsWith("." + expectedDomain)) {
+    return "wrong_page";
+  }
 
   const isVisible = (element) => {
     const style = window.getComputedStyle(element);
