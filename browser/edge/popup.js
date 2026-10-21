@@ -475,6 +475,12 @@ async function saveLogin() {
     saveStatus.textContent = response.result === "created" ? "New login saved to PejPass." :
       response.result === "updated" ? "Existing login updated. Previous values were added to history." :
       "This login already contains the same password and URL; nothing changed.";
+
+    saveTitle.value = "";
+    saveUsername.value = "";
+    savePassword.value = "";
+    saveFields.hidden = true;
+
     await lookupCredentials(activeDomain);
   } catch {
     saveStatus.textContent = "Could not save the login. Check that PejPass desktop and BrowserHost are running.";
