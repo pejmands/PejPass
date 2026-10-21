@@ -126,11 +126,13 @@ internal static class Program
         if (!HasString(root, "type", "credentialForFill") || !HasString(root, "app", "PejPass") ||
             !HasVersion(root) || !HasString(root, "domain", domain) || !HasString(root, "id", id) ||
             !TryGetBoundedString(root, "username", 256, out var username) ||
-            !TryGetBoundedString(root, "password", 4096, out var password))
+            !TryGetBoundedString(root, "password", 4096, out var password) ||
+            !TryGetOptionalBoundedString(root, "totpCode", 8, out var totpCode) ||
+            (totpCode.Length > 0 && !totpCode.All(char.IsAsciiDigit)))
             return Error("invalid_app_response");
 
         return new HostResponse("credentialForFill", "PejPass", ProtocolVersion,
-            null, null, domain, null, id, username, password);
+            null, null, domain, null, id, username, password, totpCode);
     }
 
     private static bool TryGetDomain(JsonElement request, out string domain)
@@ -196,7 +198,19 @@ internal static class Program
         return true;
     }
 
-    private static bool IsSafeErrorCode(string? code) => code is
+    private static bool TryGetOptionalBoundedString(JsonElement root, string name, int maximumLength, out string value)
+    {
+        value = string.Empty;
+        if (!root.TryGetProperty(name, out var element))
+            return true;
+        if (element.ValueKind != JsonValueKind.String ||
+            element.GetString() is not { } candidate || candidate.Length > maximumLength)
+            return false;
+        value = candidate;
+        return true;
+    }
+
+    private static bool IsSafeErrorCode(string? code) =>
         "invalid_domain" or "invalid_request" or "credential_not_found" or "vault_locked" or
         "lookup_unavailable" or "app_unavailable" or "invalid_app_response" or
         "unsupported_request" or "invalid_message";
@@ -215,6 +229,7 @@ internal static class Program
     private sealed record HostResponse(
         string Type, string App, int ProtocolVersion, string? Status, string? Code,
         string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null,
-        string? Id = null, string? Username = null, string? Password = null);
+        string? Id = null, string? Username = null, string? Password = null,
+        string? TotpCode = null);
     private readonly record struct PipeResponse(JsonElement Root, string? Error);
 }
