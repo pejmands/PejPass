@@ -15,7 +15,7 @@
         <h1>PejPass</h1>
         <p class="subtitle">Browser companion</p>
       </div>
-      <span class="version" id="version">0.1.0</span>
+      <span class="version" id="version">0.2.0</span>
     </header>
 
     <section class="site-card" aria-labelledby="site-label">
@@ -26,9 +26,18 @@
       </p>
     </section>
 
+    <section class="connection-card" aria-labelledby="connection-label">
+      <p class="eyebrow" id="connection-label">DESKTOP CONNECTION</p>
+      <div class="connection-row">
+        <span class="status-dot" id="connection-dot" aria-hidden="true"></span>
+        <p class="connection-status" id="connection-status" role="status" aria-live="polite">
+          Checking PejPass…
+        </p>
+      </div>
+    </section>
+
     <footer>
-      <span class="status-dot" aria-hidden="true"></span>
-      <span>Local companion · No account connected</span>
+      <span>Local connection test · No credentials accessed</span>
     </footer>
   </main>
 </body>
