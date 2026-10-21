@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PejPass</title>
+  <link rel="stylesheet" href="popup.css">
+  <script src="popup.js" defer></script>
+</head>
+<body>
+  <main class="popup">
+    <header class="header">
+      <div class="brand-mark" aria-hidden="true">P</div>
+      <div class="brand-copy">
+        <h1>PejPass</h1>
+        <p class="subtitle">Browser companion</p>
+      </div>
+      <span class="version" id="version">0.1.0</span>
+    </header>
+
+    <section class="site-card" aria-labelledby="site-label">
+      <p class="eyebrow" id="site-label">CURRENT SITE</p>
+      <p class="site-name" id="site-name">Checking active tab…</p>
+      <p class="site-detail" id="site-detail" role="status" aria-live="polite">
+        Reading the active tab.
+      </p>
+    </section>
+
+    <footer>
+      <span class="status-dot" aria-hidden="true"></span>
+      <span>Local companion · No account connected</span>
+    </footer>
+  </main>
+</body>
+</html>
