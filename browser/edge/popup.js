@@ -274,6 +274,18 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
   };
 
   const inputs = Array.from(document.querySelectorAll("input")).filter(usable);
+  const passwordHints = (input) => [
+    input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
+    input.getAttribute("data-testid"), input.getAttribute("data-field")
+  ].filter(Boolean).join(" ");
+  const isPasswordField = (input) => {
+    const type = (input.type || "").toLowerCase();
+    const autocomplete = (input.autocomplete || "").toLowerCase().split(/\s+/);
+    return type === "password" ||
+      autocomplete.includes("current-password") ||
+      autocomplete.includes("new-password") ||
+      /pass(word|wd)?/i.test(passwordHints(input));
+  };
   const isTotpField = (input) => {
     const autocomplete = (input.autocomplete || "").toLowerCase().split(/\s+/);
     const hints = [input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
@@ -285,7 +297,7 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
     ["text", "email", "tel", "url", "search", ""].includes((input.type || "text").toLowerCase());
   const totpFields = inputs.filter((input) => isTotpField(input) &&
     (isTextLike(input) || (input.type || "").toLowerCase() === "number"));
-  const passwordField = inputs.find((input) => (input.type || "").toLowerCase() === "password");
+  const passwordField = inputs.find(isPasswordField);
 
   if (totpFields.length > 0) {
     if (totpCode) {
@@ -319,7 +331,8 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
 
   const form = passwordField.form || passwordField.closest("form") || document;
   const candidates = Array.from(form.querySelectorAll("input"))
-    .filter((input) => usable(input) && input !== passwordField && !isTotpField(input) &&
+    .filter((input) => usable(input) && input !== passwordField && !isPasswordField(input) &&
+      !isTotpField(input) &&
       ["text", "email", "tel", "url"].includes((input.type || "text").toLowerCase()));
 
   const usernameField = candidates.find((input) =>
