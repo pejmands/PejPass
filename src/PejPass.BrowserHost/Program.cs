@@ -74,7 +74,7 @@ internal static class Program
         var appPath = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..", "..", "..", "..",
-            "PejPass.Wpf", "bin", "Release",
+            "PejPass.Wpf", "bin", "x64", "Release",
             "net10.0-windows10.0.19041.0", "PejPass.exe"));
         if (!File.Exists(appPath))
             return Error("app_unavailable");
@@ -245,7 +245,8 @@ internal static class Program
     {
         try
         {
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            using var timeout = new CancellationTokenSource(
+                request.Type == "unlockVault" ? TimeSpan.FromSeconds(45) : TimeSpan.FromSeconds(1));
             await using var pipe = new NamedPipeClientStream(
                 ".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous,
                 TokenImpersonationLevel.Identification);
