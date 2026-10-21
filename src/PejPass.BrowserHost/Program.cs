@@ -211,9 +211,9 @@ internal static class Program
     }
 
     private static bool IsSafeErrorCode(string? code) =>
-        "invalid_domain" or "invalid_request" or "credential_not_found" or "vault_locked" or
-        "lookup_unavailable" or "app_unavailable" or "invalid_app_response" or
-        "unsupported_request" or "invalid_message";
+        code is "invalid_domain" or "invalid_request" or "credential_not_found" or "vault_locked" or
+            "lookup_unavailable" or "app_unavailable" or "invalid_app_response" or
+            "unsupported_request" or "invalid_message";
 
     private static bool HasString(JsonElement root, string name, string expected) =>
         root.ValueKind == JsonValueKind.Object && root.TryGetProperty(name, out var value) &&
