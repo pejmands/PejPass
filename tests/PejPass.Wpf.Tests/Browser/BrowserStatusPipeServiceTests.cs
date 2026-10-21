@@ -23,6 +23,21 @@ public sealed class BrowserStatusPipeServiceTests
     }
 
     [Fact]
+    public void LockVault_ReturnsLockedWhenSessionIsAlreadyLocked()
+    {
+        using var session = new VaultSession();
+        using var service = new BrowserStatusPipeService(session);
+
+        var response = service.CreateResponse("""{"type":"lockVault","protocolVersion":1}""");
+
+        Assert.Equal("vaultLocked", response.Type);
+        Assert.Equal("PejPass", response.App);
+        Assert.Equal(1, response.ProtocolVersion);
+        Assert.Equal("locked", response.Status);
+        Assert.Null(response.Code);
+    }
+
+    [Fact]
     public void CreateResponse_RejectsUnsupportedRequest()
     {
         using var session = new VaultSession();
