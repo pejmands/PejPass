@@ -1,6 +1,6 @@
 # PejPass for Microsoft Edge
 
-The extension reads only the active HTTP(S) tab hostname and requests matching account metadata from the local PejPass desktop app. Passwords, key material, vault contents, and page contents are not sent to the extension.
+The extension reads the active HTTP(S) tab hostname and requests matching account metadata from the local PejPass desktop app. Passwords are retrieved only after the user explicitly selects **Fill login** for a matching account.
 
 ## Requirements
 
@@ -37,12 +37,15 @@ powershell -ExecutionPolicy Bypass -File .\browser\edge\uninstall-dev-host.ps1
 - The popup displays the active hostname on ordinary HTTP(S) pages; restricted browser pages show an unavailable message.
 - The popup reports the live desktop connection and vault lock state.
 - When unlocked, the popup lists entries whose saved URL host is the active site host or a parent domain of it. Matching is case-insensitive and does not match lookalike sibling domains.
-- Only entry ID, title, username, and saved URL are sent to the extension. Passwords, TOTP secrets, notes, custom fields, and key material are excluded.
+- Only entry ID, title, username, and saved URL are sent for lookup. Passwords, TOTP secrets, notes, custom fields, and key material are excluded from lookup responses.
 - When locked, the extension shows an unlock message and receives no account metadata.
-- The host accepts only version-1 `ping`, `getVaultStatus`, and `getCredentials` requests. Requests are validated by both the host and desktop endpoint.
+- Selecting **Fill login** requests the chosen credential from the desktop app, revalidates the account ID and active hostname, and checks the main document plus accessible same-origin frames for a visible password field and a likely username field in the same form when available. Cross-origin frames are intentionally not filled.
+- Filling is always user-triggered. The extension does not submit the form. Review the filled fields and submit the login yourself.
+- The extension checks the page hostname again immediately before filling and does not fill if the page changed.
+- The host accepts only version-1 `ping`, `getVaultStatus`, `getCredentials`, and `fillCredential` requests. Requests are validated by both the host and desktop endpoint.
 - The desktop endpoint uses a current-user-only named pipe. Credential lookup is limited to 25 results.
-- The extension requests only `activeTab` and `nativeMessaging`; it does not read page contents or inject scripts.
+- The extension requests only `activeTab`, `nativeMessaging`, and `scripting`; it does not run a persistent content script or read page contents in the background.
 
 ## Current scope
 
-This change lists matching account metadata only. Password copy and form filling are not implemented.
+Autofill supports visible username-like and password inputs in the main page document. It does not automatically submit forms or handle login fields inside cross-origin frames.
