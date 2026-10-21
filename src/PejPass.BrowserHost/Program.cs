@@ -1,4 +1,6 @@
 using System.Buffers.Binary;
+using System.Diagnostics;
+using System.IO;
 using System.IO.Pipes;
 using System.Security.Principal;
 using System.Text.Json;
@@ -55,6 +57,8 @@ internal static class Program
             return typeElement.GetString() switch
             {
                 "ping" => new HostResponse("pong", "PejPass", ProtocolVersion, null, null),
+                "launchApp" => LaunchDesktopApp(),
+                "unlockVault" => await UnlockVaultAsync(root).ConfigureAwait(false),
                 "getVaultStatus" => await GetVaultStatusAsync().ConfigureAwait(false),
                 "getCredentials" => await GetCredentialsAsync(root).ConfigureAwait(false),
                 "fillCredential" => await FillCredentialAsync(root).ConfigureAwait(false),
@@ -63,6 +67,63 @@ internal static class Program
             };
         }
         catch (JsonException) { return Error("invalid_message"); }
+    }
+
+    private static HostResponse LaunchDesktopApp()
+    {
+        var appPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..",
+            "PejPass.Wpf", "bin", "x64", "Release",
+            "net10.0-windows10.0.19041.0", "PejPass.exe"));
+        if (!File.Exists(appPath))
+            return Error("app_unavailable");
+
+        try
+        {
+            Process.Start(new ProcessStartInfo { FileName = appPath, UseShellExecute = true });
+            return new HostResponse("appLaunched", "PejPass", ProtocolVersion, null, null);
+        }
+        catch
+        {
+            return Error("app_unavailable");
+        }
+    }
+
+    private static async Task<HostResponse> UnlockVaultAsync(JsonElement request)
+    {
+        if (!TryGetBoundedString(request, "masterPassword", 4096, out var masterPassword) ||
+            string.IsNullOrEmpty(masterPassword))
+            return Error("invalid_request");
+
+        var hostRequest = new HostRequest("unlockVault", ProtocolVersion, MasterPassword: masterPassword);
+        var response = await SendPipeRequestAsync(hostRequest).ConfigureAwait(false);
+        if (response.Error == "app_unavailable")
+        {
+            var launchResponse = LaunchDesktopApp();
+            if (launchResponse.Type == "error")
+                return launchResponse;
+
+            for (var attempt = 0; attempt < 25; attempt++)
+            {
+                await Task.Delay(400).ConfigureAwait(false);
+                response = await SendPipeRequestAsync(hostRequest).ConfigureAwait(false);
+                if (response.Error != "app_unavailable")
+                    break;
+            }
+        }
+
+        if (response.Error is not null)
+            return Error(response.Error);
+
+        var root = response.Root;
+        if (!HasString(root, "type", "vaultUnlocked") ||
+            !HasString(root, "app", "PejPass") ||
+            !HasVersion(root) ||
+            !HasString(root, "status", "unlocked"))
+            return Error("invalid_app_response");
+
+        return new HostResponse("vaultUnlocked", "PejPass", ProtocolVersion, "unlocked", null);
     }
 
     private static async Task<HostResponse> GetVaultStatusAsync()
@@ -184,7 +245,8 @@ internal static class Program
     {
         try
         {
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            using var timeout = new CancellationTokenSource(
+                request.Type == "unlockVault" ? TimeSpan.FromSeconds(45) : TimeSpan.FromSeconds(1));
             await using var pipe = new NamedPipeClientStream(
                 ".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous,
                 TokenImpersonationLevel.Identification);
@@ -251,7 +313,7 @@ internal static class Program
         code is "invalid_domain" or "invalid_request" or "credential_not_found" or "vault_locked" or
             "lookup_unavailable" or "app_unavailable" or "invalid_app_response" or
             "unsupported_request" or "invalid_message" or "save_unavailable" or "vault_changed" or
-            "multiple_matching_accounts";
+            "multiple_matching_accounts" or "unlock_failed";
 
     private static bool HasString(JsonElement root, string name, string expected) =>
         root.ValueKind == JsonValueKind.Object && root.TryGetProperty(name, out var value) &&
@@ -264,7 +326,8 @@ internal static class Program
     private static HostResponse Error(string code) => new("error", "PejPass", ProtocolVersion, null, code);
     private sealed record HostRequest(
         string Type, int ProtocolVersion, string? Domain = null, string? Id = null,
-        string? Url = null, string? Title = null, string? Username = null, string? Password = null);
+        string? Url = null, string? Title = null, string? Username = null, string? Password = null,
+        string? MasterPassword = null);
     private sealed record CredentialSummary(string Id, string Title, string Username, string Url);
     private sealed record HostResponse(
         string Type, string App, int ProtocolVersion, string? Status, string? Code,

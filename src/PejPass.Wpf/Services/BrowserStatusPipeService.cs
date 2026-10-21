@@ -1,5 +1,8 @@
 using PejPass.Domain.Entities;
 using PejPass.Infrastructure.Totp;
+using Microsoft.Extensions.DependencyInjection;
+using PejPass.Wpf.ViewModels;
+using PejPass.Wpf.Views;
 using System.IO;
 using System.IO.Pipes;
 using System.Text.Json;
@@ -67,7 +70,9 @@ internal sealed class BrowserStatusPipeService : IDisposable
 
                 var response = IsSaveCredentialRequest(line)
                     ? await CreateSaveCredentialResponseAsync(line, cancellationToken).ConfigureAwait(false)
-                    : CreateResponse(line);
+                    : IsUnlockVaultRequest(line)
+                        ? await CreateUnlockVaultResponseAsync(line).ConfigureAwait(false)
+                        : CreateResponse(line);
                 await writer.WriteLineAsync(JsonSerializer.Serialize(response, JsonOptions)).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { break; }
@@ -133,6 +138,87 @@ internal sealed class BrowserStatusPipeService : IDisposable
         catch (JsonException)
         {
             return false;
+        }
+    }
+
+    private static bool IsUnlockVaultRequest(string? line)
+    {
+        if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
+            return false;
+
+        try
+        {
+            using var document = JsonDocument.Parse(line);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                document.RootElement.TryGetProperty("type", out var type) &&
+                type.ValueKind == JsonValueKind.String &&
+                type.GetString() == "unlockVault";
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private async Task<StatusResponse> CreateUnlockVaultResponseAsync(string? line)
+    {
+        if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
+            return Error("invalid_message");
+
+        string masterPassword;
+        try
+        {
+            using var document = JsonDocument.Parse(line);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("protocolVersion", out var version) ||
+                !version.TryGetInt32(out var protocolVersion) ||
+                protocolVersion != ProtocolVersion ||
+                !TryGetBoundedString(root, "masterPassword", 4096, out masterPassword) ||
+                string.IsNullOrEmpty(masterPassword))
+                return Error("invalid_request");
+        }
+        catch (JsonException)
+        {
+            return Error("invalid_message");
+        }
+
+        if (_vaultSession.IsActive)
+            return new StatusResponse("vaultUnlocked", "PejPass", ProtocolVersion, "unlocked", null);
+
+        var app = System.Windows.Application.Current;
+        if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
+            return Error("app_unavailable");
+
+        try
+        {
+            var unlockTask = await app.Dispatcher.InvokeAsync(() =>
+            {
+                var loginWindow = app.Windows.OfType<LoginWindow>().FirstOrDefault();
+                if (loginWindow is null)
+                {
+                    loginWindow = App.Services.GetRequiredService<LoginWindow>();
+                    App.PrepareCustomChrome(loginWindow);
+                }
+
+                app.MainWindow = loginWindow;
+                if (!loginWindow.IsVisible)
+                    loginWindow.Show();
+                loginWindow.Activate();
+
+                return loginWindow.DataContext is LoginViewModel viewModel
+                    ? viewModel.UnlockFromBrowserAsync(masterPassword)
+                    : Task.FromResult(false);
+            }, System.Windows.Threading.DispatcherPriority.Send).Task.ConfigureAwait(false);
+
+            var unlocked = await unlockTask.ConfigureAwait(false);
+            return unlocked && _vaultSession.IsActive
+                ? new StatusResponse("vaultUnlocked", "PejPass", ProtocolVersion, "unlocked", null)
+                : Error("unlock_failed");
+        }
+        catch (Exception)
+        {
+            return Error("unlock_failed");
         }
     }
 
@@ -328,6 +414,7 @@ internal sealed class BrowserStatusPipeService : IDisposable
             }
         }
 
+        NotifyBrowserActivity();
         return new StatusResponse("credentialSaved", "PejPass", ProtocolVersion,
             null, null, domain, null, prepared.Id.ToString("D"), null, null, null, prepared.Result);
     }
@@ -410,6 +497,9 @@ internal sealed class BrowserStatusPipeService : IDisposable
                 ? app.Dispatcher.Invoke(() => FindCredentialForFill(id, domain))
                 : FindCredentialForFill(id, domain);
 
+            if (credential is not null)
+                NotifyBrowserActivity();
+
             return credential is null
                 ? Error("credential_not_found")
                 : new StatusResponse("credentialForFill", "PejPass", ProtocolVersion,
@@ -454,6 +544,31 @@ internal sealed class BrowserStatusPipeService : IDisposable
             string.IsNullOrEmpty(uri.UserInfo) &&
             TryNormalizeDomain(uri.IdnHost, out var host) &&
             host.Equals(expectedDomain, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void NotifyBrowserActivity()
+    {
+        var app = System.Windows.Application.Current;
+        if (app is null)
+            return;
+
+        void Notify()
+        {
+            if (app.MainWindow is MainWindow { DataContext: MainViewModel viewModel })
+                viewModel.NotifyBrowserActivity();
+        }
+
+        try
+        {
+            if (app.Dispatcher.CheckAccess())
+                Notify();
+            else
+                app.Dispatcher.Invoke(Notify, System.Windows.Threading.DispatcherPriority.Send);
+        }
+        catch (Exception)
+        {
+            // Browser activity must not fail a completed credential operation.
+        }
     }
 
     private FillCredential? FindCredentialForFill(Guid id, string domain)

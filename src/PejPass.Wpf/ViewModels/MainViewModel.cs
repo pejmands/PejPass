@@ -775,6 +775,11 @@ public partial class MainViewModel : ObservableObject
                window.IsVisible;
     }
 
+    public void NotifyBrowserActivity()
+    {
+        ResetAutoLockTimer();
+    }
+
     private void ResetAutoLockTimer()
     {
         if (!_vaultSession.IsActive || _settings.AutoLockMinutes <= 0)
