@@ -1,6 +1,6 @@
 # PejPass for Microsoft Edge
 
-This directory contains the PejPass browser extension. The extension does not read credentials or page contents. The native messaging host supports a versioned connectivity ping and a narrowly scoped vault-status request. The status request is forwarded over a current-user-only named pipe to the running PejPass desktop app; it never requests credentials or vault contents.
+The extension reads only the active HTTP(S) tab hostname and requests matching account metadata from the local PejPass desktop app. Passwords, key material, vault contents, and page contents are not sent to the extension.
 
 ## Requirements
 
@@ -32,20 +32,17 @@ To remove the registration later:
 powershell -ExecutionPolicy Bypass -File .\browser\edge\uninstall-dev-host.ps1
 ```
 
-If Edge assigns a different ID after you move or reload the unpacked extension from a different location, run the installer again with the current ID.
-
 ## Manual checks
 
-- The popup displays its version and the active tab hostname on ordinary HTTP(S) pages.
-- Restricted pages such as `edge://extensions` show an unavailable-page message.
-- With the host registered, the popup shows **PejPass desktop bridge connected**.
-- With PejPass running, the popup shows **Vault is locked** or **Vault is unlocked** based on the live `VaultSession.IsActive` state.
-- If the host is missing, PejPass is not running, or the response is invalid, the popup reports the vault status as unavailable rather than guessing.
-- The host accepts only version-1 `ping` and `getVaultStatus` requests. The latter returns only `locked` or `unlocked`.
-- The desktop endpoint uses a current-user-only named pipe and rejects unknown requests or protocol versions.
-- The extension requests only `activeTab` and `nativeMessaging`.
-- No credentials, key material, vault contents, or page contents are read, sent, or changed.
+- The popup displays the active hostname on ordinary HTTP(S) pages; restricted browser pages show an unavailable message.
+- The popup reports the live desktop connection and vault lock state.
+- When unlocked, the popup lists entries whose saved URL host is the active site host or a parent domain of it. Matching is case-insensitive and does not match lookalike sibling domains.
+- Only entry ID, title, username, and saved URL are sent to the extension. Passwords, TOTP secrets, notes, custom fields, and key material are excluded.
+- When locked, the extension shows an unlock message and receives no account metadata.
+- The host accepts only version-1 `ping`, `getVaultStatus`, and `getCredentials` requests. Requests are validated by both the host and desktop endpoint.
+- The desktop endpoint uses a current-user-only named pipe. Credential lookup is limited to 25 results.
+- The extension requests only `activeTab` and `nativeMessaging`; it does not read page contents or inject scripts.
 
 ## Current scope
 
-The extension can display the desktop vault's lock state only. Credential lookup and form filling remain out of scope.
+This change lists matching account metadata only. Password copy and form filling are not implemented.
