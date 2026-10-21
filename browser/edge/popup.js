@@ -6,6 +6,13 @@ const connectionDot = document.getElementById("connection-dot");
 const vaultStatus = document.getElementById("vault-status");
 const credentialsStatus = document.getElementById("credentials-status");
 const credentialList = document.getElementById("credential-list");
+const inspectLoginButton = document.getElementById("inspect-login");
+const saveFields = document.getElementById("save-fields");
+const saveTitle = document.getElementById("save-title");
+const saveUsername = document.getElementById("save-username");
+const savePassword = document.getElementById("save-password");
+const saveLoginButton = document.getElementById("save-login");
+const saveStatus = document.getElementById("save-status");
 const nativeHostName = "com.pejpass.browserhost";
 const protocolVersion = 1;
 let activeTabId = null;
@@ -42,6 +49,9 @@ function showUnavailable(message) {
   siteName.textContent = "Unavailable page";
   siteDetail.textContent = message;
   credentialsStatus.textContent = "Credential lookup is unavailable on this page.";
+  inspectLoginButton.disabled = true;
+  saveLoginButton.disabled = true;
+  saveFields.hidden = true;
   credentialList.replaceChildren();
 }
 
@@ -309,6 +319,152 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
   if (totpFields.length > 0) return totpCode ? "totp_filled" : "totp_unavailable";
   return usernameField && username ? "filled" : "no_username";
 }
+
+async function inspectLoginForm() {
+  if (!activeTabId || !activeDomain) {
+    saveStatus.textContent = "Open a regular HTTP(S) login page first.";
+    return;
+  }
+
+  inspectLoginButton.disabled = true;
+  saveStatus.textContent = "Reading visible login fields…";
+  saveFields.hidden = true;
+  try {
+    const tabId = activeTabId;
+    const domain = activeDomain;
+    const results = await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      func: readLoginForm,
+      args: [domain]
+    });
+    const candidates = (results || []).map((entry) => entry.result)
+      .filter((result) => result && result.found && result.domain === domain);
+    const candidate = candidates.find((result) => result.password) ||
+      candidates.find((result) => result.username);
+    if (!candidate) {
+      saveStatus.textContent = "No visible username or password field was found. Fill the form first, then try again.";
+      return;
+    }
+
+    saveTitle.value = document.getElementById("site-name").textContent || domain;
+    saveUsername.value = candidate.username || "";
+    savePassword.value = candidate.password || "";
+    saveFields.hidden = false;
+    saveStatus.textContent = "Review or correct these values. They are not saved until you confirm.";
+    savePassword.type = "password";
+  } catch {
+    saveStatus.textContent = "Could not inspect this page. Check that it is a regular HTTP(S) page.";
+  } finally {
+    inspectLoginButton.disabled = false;
+  }
+}
+
+function readLoginForm(expectedDomain) {
+  const normalizeHost = (host) => host.toLowerCase().replace(/\\.$/, "");
+  const currentDomain = normalizeHost(window.location.hostname);
+  let topDomain;
+  try { topDomain = normalizeHost(window.top.location.hostname); }
+  catch { return { found: false }; }
+  if (topDomain !== expectedDomain ||
+      (currentDomain !== expectedDomain && !currentDomain.endsWith("." + expectedDomain))) {
+    return { found: false };
+  }
+
+  const isVisible = (element) => {
+    const style = window.getComputedStyle(element);
+    return style.display !== "none" && style.visibility !== "hidden" &&
+      element.getClientRects().length > 0;
+  };
+  const inputs = Array.from(document.querySelectorAll("input"))
+    .filter((input) => !input.disabled && !input.readOnly && isVisible(input));
+  const passwordField = inputs.find((input) => (input.type || "").toLowerCase() === "password");
+  const form = passwordField?.form || passwordField?.closest("form") || document;
+  const candidates = Array.from(form.querySelectorAll("input")).filter((input) =>
+    !input.disabled && !input.readOnly && isVisible(input) && input !== passwordField &&
+    ["text", "email", "tel"].includes((input.type || "text").toLowerCase()));
+  const usernameField = candidates.find((input) =>
+    (input.autocomplete || "").toLowerCase().split(/\\s+/).includes("username")) ||
+    candidates.filter((input) => passwordField &&
+      (input.compareDocumentPosition(passwordField) & Node.DOCUMENT_POSITION_FOLLOWING)).at(-1) ||
+    candidates.find((input) => (input.type || "").toLowerCase() === "email") ||
+    candidates[0];
+
+  return {
+    found: Boolean(passwordField || usernameField),
+    domain: currentDomain,
+    username: usernameField?.value || "",
+    password: passwordField?.value || ""
+  };
+}
+
+async function saveLogin() {
+  if (!activeTabId || !activeDomain || saveFields.hidden) {
+    saveStatus.textContent = "Read and review the login form first.";
+    return;
+  }
+  if (!savePassword.value || savePassword.value.length > 4096 ||
+      saveUsername.value.length > 256 || saveTitle.value.length > 200) {
+    saveStatus.textContent = "Enter a password (maximum 4096 characters) and check the field lengths.";
+    return;
+  }
+
+  saveLoginButton.disabled = true;
+  saveStatus.textContent = "Saving to the unlocked PejPass vault…";
+  try {
+    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    const url = new URL(tabs[0]?.url || "");
+    const domain = url.hostname.toLowerCase().replace(/\\.$/, "");
+    if (tabs[0]?.id !== activeTabId || domain !== activeDomain ||
+        !["http:", "https:"].includes(url.protocol)) {
+      saveStatus.textContent = "The active page changed. Reopen the popup and inspect the form again.";
+      return;
+    }
+
+    const response = await sendNativeMessage({
+      type: "saveCredential",
+      protocolVersion,
+      domain: activeDomain,
+      url: url.href,
+      title: saveTitle.value.trim(),
+      username: saveUsername.value.trim(),
+      password: savePassword.value
+    });
+    if (response?.type === "error") {
+      const messages = {
+        vault_locked: "Unlock the PejPass vault before saving a login.",
+        app_unavailable: "Open the latest PejPass desktop build and try again.",
+        invalid_domain: "The active site address is invalid.",
+        invalid_request: "Check the login fields and try again.",
+        vault_changed: "The vault changed on disk. Reopen it in PejPass before saving.",
+        multiple_matching_accounts: "More than one account matches this username and site. Update the account manually in PejPass.",
+        save_unavailable: "PejPass could not save the login. Check that the vault is writable and try again.",
+        unsupported_request: "The running PejPass desktop or BrowserHost is outdated. Rebuild and reinstall the latest version.",
+        invalid_app_response: "PejPass returned an incompatible save response. Rebuild both desktop and BrowserHost."
+      };
+      saveStatus.textContent = messages[response.code] || "Could not save the login.";
+      return;
+    }
+
+    if (!isValidBaseResponse(response, "credentialSaved") ||
+        response.domain !== activeDomain || typeof response.id !== "string" ||
+        !["created", "updated", "unchanged"].includes(response.result)) {
+      saveStatus.textContent = "PejPass returned an invalid save response.";
+      return;
+    }
+
+    saveStatus.textContent = response.result === "created" ? "New login saved to PejPass." :
+      response.result === "updated" ? "Existing login updated. Previous values were added to history." :
+      "This login already contains the same password and URL; nothing changed.";
+    await lookupCredentials(activeDomain);
+  } catch {
+    saveStatus.textContent = "Could not save the login. Check that PejPass desktop and BrowserHost are running.";
+  } finally {
+    saveLoginButton.disabled = false;
+  }
+}
+
+inspectLoginButton.addEventListener("click", inspectLoginForm);
+saveLoginButton.addEventListener("click", saveLogin);
 
 function isValidCredential(credential) {
   return credential !== null && typeof credential === "object" &&
