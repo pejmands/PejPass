@@ -6,15 +6,27 @@ using System.Text.Json;
 
 namespace PejPass.Wpf.Services;
 
-internal sealed class BrowserStatusPipeService(VaultSession vaultSession) : IDisposable
+internal sealed class BrowserStatusPipeService : IDisposable
 {
+    private readonly VaultSession _vaultSession;
+    private readonly PejPass.Application.Services.VaultService? _vaultService;
+
+    internal BrowserStatusPipeService(VaultSession vaultSession)
+        : this(vaultSession, null) { }
+
+    internal BrowserStatusPipeService(
+        VaultSession vaultSession,
+        PejPass.Application.Services.VaultService? vaultService)
+    {
+        _vaultSession = vaultSession;
+        _vaultService = vaultService;
+    }
     internal const string PipeName = "PejPass.BrowserStatus.v1";
     private const int ProtocolVersion = 1;
     private const int MaximumLineLength = 32768;
     private const int MaximumCredentialResults = 25;
     private const int MaximumPasswordLength = 4096;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private readonly VaultSession _vaultSession = vaultSession;
     private readonly CancellationTokenSource _shutdown = new();
     private Task? _serverTask;
 
@@ -69,6 +81,7 @@ internal sealed class BrowserStatusPipeService(VaultSession vaultSession) : IDis
                     _vaultSession.IsActive ? "unlocked" : "locked", null),
                 "getCredentials" => CreateCredentialResponse(root),
                 "fillCredential" => CreateFillResponse(root),
+                "saveCredential" => CreateSaveCredentialResponse(root),
                 _ => Error("unsupported_request")
             };
         }
@@ -123,6 +136,151 @@ internal sealed class BrowserStatusPipeService(VaultSession vaultSession) : IDis
                     credential.TotpCode);
         }
         catch (Exception) { return Error("lookup_unavailable"); }
+    }
+
+    private StatusResponse CreateSaveCredentialResponse(JsonElement root)
+    {
+        if (!root.TryGetProperty("domain", out var domainElement) ||
+            domainElement.ValueKind != JsonValueKind.String ||
+            !TryNormalizeDomain(domainElement.GetString(), out var domain) ||
+            !TryGetBoundedString(root, "url", 2048, out var url) ||
+            !TryGetBoundedString(root, "title", 200, out var title) ||
+            !TryGetBoundedString(root, "username", 256, out var username) ||
+            !TryGetBoundedString(root, "password", MaximumPasswordLength, out var password) ||
+            string.IsNullOrWhiteSpace(password) ||
+            !TryGetWebUrl(url, domain))
+            return Error("invalid_request");
+
+        if (_vaultService is null)
+            return Error("app_unavailable");
+        if (!_vaultSession.IsActive)
+            return Error("vault_locked");
+
+        try
+        {
+            var app = System.Windows.Application.Current;
+            var response = app is not null && !app.Dispatcher.CheckAccess()
+                ? app.Dispatcher.Invoke(() => SaveCredential(domain, url, title, username, password))
+                : SaveCredential(domain, url, title, username, password);
+            return response;
+        }
+        catch (InvalidOperationException)
+        {
+            return Error("vault_changed");
+        }
+        catch (Exception)
+        {
+            return Error("save_unavailable");
+        }
+    }
+
+    private StatusResponse SaveCredential(string domain, string url, string title, string username, string password)
+    {
+        if (!_vaultSession.IsActive || _vaultSession.Vault is not { } vault ||
+            string.IsNullOrWhiteSpace(_vaultSession.VaultPath))
+            return Error("vault_locked");
+
+        if (_vaultSession.HasExternalChanges())
+            return Error("vault_changed");
+
+        var generation = _vaultSession.Generation;
+        var path = _vaultSession.VaultPath!;
+        _vaultService!.EnsureVaultWritableAsync(path).GetAwaiter().GetResult();
+        if (!_vaultSession.IsCurrent(generation, vault))
+            return Error("vault_locked");
+
+        var snapshot = vault.CreateSnapshot();
+        var matches = vault.Entries.Where(entry =>
+            EntryMatchesDomain(entry, domain) &&
+            string.Equals(entry.Username, username, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        string resultType;
+        Guid savedId;
+        if (matches.Count > 1)
+            return Error("multiple_matching_accounts");
+
+        if (matches.Count == 1)
+        {
+            var existing = matches[0];
+            var updated = new VaultEntry
+            {
+                Id = existing.Id,
+                Title = string.IsNullOrWhiteSpace(title) ? existing.Title : title,
+                Username = username,
+                Password = password,
+                Url = url,
+                TotpSecret = existing.TotpSecret,
+                Notes = existing.Notes,
+                Tags = [.. existing.Tags],
+                CustomFields = [.. existing.CustomFields],
+                IsFavorite = existing.IsFavorite,
+                SortOrder = existing.SortOrder,
+                CreatedAt = existing.CreatedAt,
+                UpdatedAt = DateTimeOffset.UtcNow
+            };
+
+            if (!vault.UpdateEntry(updated))
+            {
+                if (string.Equals(existing.Password, password, StringComparison.Ordinal) &&
+                    string.Equals(existing.Url, url, StringComparison.Ordinal))
+                    return new StatusResponse("credentialSaved", "PejPass", ProtocolVersion,
+                        null, null, domain, null, existing.Id.ToString("D"), null, null, null, "unchanged");
+                return Error("save_unavailable");
+            }
+
+            resultType = "updated";
+            savedId = existing.Id;
+        }
+        else
+        {
+            var entry = new VaultEntry
+            {
+                Title = string.IsNullOrWhiteSpace(title) ? domain : title,
+                Username = username,
+                Password = password,
+                Url = url
+            };
+            vault.AddEntry(entry);
+            resultType = "created";
+            savedId = entry.Id;
+        }
+
+        try
+        {
+            using var keyMaterial = _vaultSession.CopyKeyMaterial();
+            _vaultService.SaveVaultAsync(path, keyMaterial, vault).GetAwaiter().GetResult();
+            if (!_vaultSession.IsCurrent(generation, vault))
+                return Error("vault_locked");
+            _vaultSession.RefreshDiskStamp();
+            return new StatusResponse("credentialSaved", "PejPass", ProtocolVersion,
+                null, null, domain, null, savedId.ToString("D"), null, null, null, resultType);
+        }
+        catch
+        {
+            if (_vaultSession.IsCurrent(generation, vault))
+                vault.RestoreSnapshot(snapshot);
+            return Error("save_unavailable");
+        }
+    }
+
+    private static bool TryGetBoundedString(JsonElement root, string name, int maximumLength, out string value)
+    {
+        value = string.Empty;
+        if (!root.TryGetProperty(name, out var element) || element.ValueKind != JsonValueKind.String ||
+            element.GetString() is not { } candidate || candidate.Length > maximumLength)
+            return false;
+        value = candidate;
+        return true;
+    }
+
+    private static bool TryGetWebUrl(string value, string expectedDomain)
+    {
+        return Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+            (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) &&
+            string.IsNullOrEmpty(uri.UserInfo) &&
+            TryNormalizeDomain(uri.IdnHost, out var host) &&
+            (host.Equals(expectedDomain, StringComparison.OrdinalIgnoreCase) ||
+             host.EndsWith("." + expectedDomain, StringComparison.OrdinalIgnoreCase));
     }
 
     private FillCredential? FindCredentialForFill(Guid id, string domain)
@@ -218,5 +376,5 @@ internal sealed class BrowserStatusPipeService(VaultSession vaultSession) : IDis
         string Type, string App, int ProtocolVersion, string? Status, string? Code,
         string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null,
         string? Id = null, string? Username = null, string? Password = null,
-        string? TotpCode = null);
+        string? TotpCode = null, string? Result = null);
 }
