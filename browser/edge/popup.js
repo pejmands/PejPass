@@ -172,9 +172,13 @@ async function fillCredential(credential) {
         credential_not_found: "That account is no longer available for this site. Reopen the popup.",
         invalid_domain: "The active site address is not valid for filling.",
         invalid_request: "The fill request was invalid.",
-        lookup_unavailable: "PejPass could not retrieve this account. Try again."
+        lookup_unavailable: "PejPass could not retrieve this account. Try again.",
+        unsupported_request: "The installed PejPass browser host is outdated. Rebuild the BrowserHost and rerun install-dev-host.ps1.",
+        invalid_app_response: "The browser host received an incompatible response from PejPass. Rebuild both PejPass and BrowserHost, then reinstall the host.",
+        invalid_message: "The browser host rejected the fill message. Rebuild BrowserHost and reinstall the host."
       };
-      credentialsStatus.textContent = messages[response.code] || "PejPass could not retrieve this account.";
+      credentialsStatus.textContent = messages[response.code] ||
+        `PejPass could not retrieve this account (error: ${String(response.code || "unknown")}).`;
       return;
     }
 
