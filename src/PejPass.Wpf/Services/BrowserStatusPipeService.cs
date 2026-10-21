@@ -48,7 +48,23 @@ internal sealed class BrowserStatusPipeService : IDisposable
                 await pipe.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
                 using var reader = new StreamReader(pipe, leaveOpen: true);
                 await using var writer = new StreamWriter(pipe, leaveOpen: true) { AutoFlush = true };
-                var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+                string? line;
+                using (var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+                {
+                    requestTimeout.CancelAfter(TimeSpan.FromSeconds(5));
+                    try
+                    {
+                        line = await ReadBoundedLineAsync(reader, MaximumLineLength, requestTimeout.Token)
+                            .ConfigureAwait(false);
+                    }
+                    catch (InvalidDataException)
+                    {
+                        await writer.WriteLineAsync(JsonSerializer.Serialize(Error("invalid_message"), JsonOptions))
+                            .ConfigureAwait(false);
+                        continue;
+                    }
+                }
+
                 var response = IsSaveCredentialRequest(line)
                     ? await CreateSaveCredentialResponseAsync(line, cancellationToken).ConfigureAwait(false)
                     : CreateResponse(line);
@@ -58,6 +74,46 @@ internal sealed class BrowserStatusPipeService : IDisposable
             catch (IOException) { }
             catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested) { break; }
             catch (Exception) { }
+        }
+    }
+
+    internal static async Task<string?> ReadBoundedLineAsync(
+        TextReader reader,
+        int maximumLength,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumLength);
+
+        var buffer = new char[1];
+        var builder = new System.Text.StringBuilder(Math.Min(maximumLength, 256));
+        while (true)
+        {
+            var count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
+            if (count == 0)
+                return builder.Length == 0 ? null : builder.ToString();
+
+            var character = buffer[0];
+            if (character == '\n')
+            {
+                if (builder.Length > 0 && builder[builder.Length - 1] == '\r')
+                    builder.Length--;
+                return builder.ToString();
+            }
+
+            if (builder.Length >= maximumLength)
+            {
+                if (character == '\r')
+                {
+                    var nextCount = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
+                    if (nextCount > 0 && buffer[0] == '\n')
+                        return builder.ToString();
+                }
+
+                throw new InvalidDataException("The browser pipe message exceeds the maximum length.");
+            }
+
+            builder.Append(character);
         }
     }
 
