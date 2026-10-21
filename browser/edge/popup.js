@@ -130,6 +130,7 @@ async function checkVaultStatus() {
       unlockControls.hidden = response.status !== "locked";
       launchAppButton.hidden = true;
       lockVaultButton.hidden = response.status !== "unlocked";
+      await updateToolbarVaultIcon(response.status === "unlocked");
       return response.status;
     }
     const desktopUnavailable = response?.code === "app_unavailable";
@@ -751,6 +752,7 @@ async function lockVault() {
     copyPasswordButton.disabled = true;
     generatorStatus.textContent = "Vault locked. Generate a new password when needed.";
     vaultStatus.textContent = "Vault is locked.";
+    await updateToolbarVaultIcon(false);
     unlockControls.hidden = false;
     launchAppButton.hidden = true;
     lockVaultButton.hidden = true;
