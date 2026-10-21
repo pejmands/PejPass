@@ -67,3 +67,6 @@ footer { margin-top: 14px; color: #969ca8; font-size: 10px; line-height: 1.4; }
 }
 #save-fields[hidden] { display: none; }
 #save-fields .fill-button { margin-top: 12px; }
+
+#unlock-controls .fill-button { margin-top: 10px; }
+#launch-app { margin-top: 10px; }
