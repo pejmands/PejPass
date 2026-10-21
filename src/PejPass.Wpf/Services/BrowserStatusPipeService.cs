@@ -41,7 +41,7 @@ internal sealed class BrowserStatusPipeService : IDisposable
 
                 var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
                 var response = CreateResponse(line);
-                await writer.WriteLineAsync(JsonSerializer.Serialize(response)).ConfigureAwait(false);
+                await writer.WriteLineAsync(JsonSerializer.Serialize(response, new JsonSerializerOptions(JsonSerializerDefaults.Web))).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
