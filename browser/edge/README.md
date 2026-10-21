@@ -39,10 +39,12 @@ If Edge assigns a different ID after you move or reload the unpacked extension f
 - The popup displays its version and the active tab hostname on ordinary HTTP(S) pages.
 - Restricted pages such as `edge://extensions` show an unavailable-page message.
 - With the host registered, the popup shows **PejPass desktop bridge connected**.
-- Without the host installed, the popup shows a clear disconnected status.
-- The host accepts only a version-1 `ping` message and returns a `pong` response.
+- With PejPass running, the popup shows **Vault is locked** or **Vault is unlocked** based on the live `VaultSession.IsActive` state.
+- If the host is missing, PejPass is not running, or the response is invalid, the popup reports the vault status as unavailable rather than guessing.
+- The host accepts only version-1 `ping` and `getVaultStatus` requests. The latter returns only `locked` or `unlocked`.
+- The desktop endpoint uses a current-user-only named pipe and rejects unknown requests or protocol versions.
 - The extension requests only `activeTab` and `nativeMessaging`.
-- No credentials, vault data, or page contents are read, sent, or changed.
+- No credentials, key material, vault contents, or page contents are read, sent, or changed.
 
 ## Current scope
 
