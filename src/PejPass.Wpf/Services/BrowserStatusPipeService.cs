@@ -1,6 +1,7 @@
 using PejPass.Domain.Entities;
 using PejPass.Infrastructure.Totp;
 using Microsoft.Extensions.DependencyInjection;
+using PejPass.Wpf;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.IO;
