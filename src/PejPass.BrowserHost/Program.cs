@@ -169,8 +169,7 @@ internal static class Program
             (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) &&
             string.IsNullOrEmpty(uri.UserInfo) &&
             TryNormalizeDomain(uri.IdnHost, out var host) &&
-            (host.Equals(expectedDomain, StringComparison.OrdinalIgnoreCase) ||
-             host.EndsWith("." + expectedDomain, StringComparison.OrdinalIgnoreCase));
+            host.Equals(expectedDomain, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryGetDomain(JsonElement request, out string domain)
