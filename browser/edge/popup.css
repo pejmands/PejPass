@@ -1,0 +1,115 @@
+:root {
+  color-scheme: light dark;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: #181a1f;
+  color: #f1f2f4;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 320px;
+  min-height: 210px;
+  margin: 0;
+  background: #181a1f;
+}
+
+.popup {
+  padding: 18px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.brand-mark {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  border: 1px solid #555b68;
+  border-radius: 11px;
+  background: #292d35;
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.brand-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+h1 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: 0.1px;
+}
+
+.subtitle {
+  margin: 3px 0 0;
+  color: #a7acb7;
+  font-size: 12px;
+}
+
+.version {
+  align-self: flex-start;
+  color: #9da3af;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-card {
+  margin-top: 20px;
+  padding: 13px 14px;
+  border: 1px solid #353a44;
+  border-radius: 12px;
+  background: #202329;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #a7acb7;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.site-name {
+  overflow-wrap: anywhere;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.site-detail {
+  margin: 7px 0 0;
+  color: #a7acb7;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+footer {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 15px;
+  color: #969ca8;
+  font-size: 10px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: #7b8290;
+}
