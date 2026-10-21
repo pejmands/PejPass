@@ -1,6 +1,7 @@
 using PejPass.Application.Security;
 using PejPass.Domain.Entities;
 using PejPass.Wpf.Services;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
 

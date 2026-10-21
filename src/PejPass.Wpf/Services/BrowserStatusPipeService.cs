@@ -1,22 +1,20 @@
 using PejPass.Domain.Entities;
+using System.IO;
 using System.IO.Pipes;
 using System.Text.Json;
-using System.Windows;
 
 namespace PejPass.Wpf.Services;
 
-internal sealed class BrowserStatusPipeService : IDisposable
+internal sealed class BrowserStatusPipeService(VaultSession vaultSession) : IDisposable
 {
     internal const string PipeName = "PejPass.BrowserStatus.v1";
     private const int ProtocolVersion = 1;
     private const int MaximumLineLength = 4096;
     private const int MaximumCredentialResults = 25;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private readonly VaultSession _vaultSession;
+    private readonly VaultSession _vaultSession = vaultSession;
     private readonly CancellationTokenSource _shutdown = new();
     private Task? _serverTask;
-
-    public BrowserStatusPipeService(VaultSession vaultSession) => _vaultSession = vaultSession;
 
     public void Start()
     {
@@ -85,7 +83,7 @@ internal sealed class BrowserStatusPipeService : IDisposable
 
         try
         {
-            var app = Application.Current;
+            var app = System.Windows.Application.Current;
             var credentials = app is not null && !app.Dispatcher.CheckAccess()
                 ? app.Dispatcher.Invoke(() => FindCredentials(domain))
                 : FindCredentials(domain);
@@ -96,19 +94,18 @@ internal sealed class BrowserStatusPipeService : IDisposable
         catch (Exception) { return Error("lookup_unavailable"); }
     }
 
-    private IReadOnlyList<CredentialSummary> FindCredentials(string domain)
+    private List<CredentialSummary> FindCredentials(string domain)
     {
         if (!_vaultSession.IsActive || _vaultSession.Vault is not { } vault) return [];
 
-        return vault.Entries
+        return [.. vault.Entries
             .Where(entry => EntryMatchesDomain(entry, domain))
             .OrderByDescending(entry => entry.IsFavorite)
             .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
             .Take(MaximumCredentialResults)
             .Select(entry => new CredentialSummary(
                 entry.Id.ToString("D"), Limit(entry.Title, 200),
-                Limit(entry.Username, 256), Limit(entry.Url, 2048)))
-            .ToArray();
+                Limit(entry.Username, 256), Limit(entry.Url, 2048)))];
     }
 
     internal static bool EntryMatchesDomain(VaultEntry entry, string domain)
