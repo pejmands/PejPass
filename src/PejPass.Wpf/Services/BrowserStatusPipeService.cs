@@ -291,8 +291,22 @@ internal sealed class BrowserStatusPipeService : IDisposable
                 using var keyMaterial = _vaultSession.CopyKeyMaterial();
                 await _vaultService.SaveVaultAsync(path, keyMaterial, vault, cancellationToken).ConfigureAwait(false);
             }
+        }
+        catch
+        {
+            await app.Dispatcher.InvokeAsync(() =>
+            {
+                if (_vaultSession.IsCurrent(generation, vault) && prepared.Snapshot is not null)
+                    vault.RestoreSnapshot(prepared.Snapshot);
+            }, System.Windows.Threading.DispatcherPriority.Send, CancellationToken.None).Task.ConfigureAwait(false);
+            return Error("save_unavailable");
+        }
 
-            if (_vaultSession.IsCurrent(generation, vault))
+        // Persistence has succeeded. A later UI refresh failure must not roll back
+        // the in-memory vault while leaving the saved file updated.
+        if (_vaultSession.IsCurrent(generation, vault))
+        {
+            try
             {
                 await app.Dispatcher.InvokeAsync(() =>
                 {
@@ -306,21 +320,16 @@ internal sealed class BrowserStatusPipeService : IDisposable
                     {
                         viewModel.RefreshEntriesFromVault();
                     }
-                }, System.Windows.Threading.DispatcherPriority.Send, cancellationToken).Task.ConfigureAwait(false);
+                }, System.Windows.Threading.DispatcherPriority.Send, CancellationToken.None).Task.ConfigureAwait(false);
             }
-
-            return new StatusResponse("credentialSaved", "PejPass", ProtocolVersion,
-                null, null, domain, null, prepared.Id.ToString("D"), null, null, null, prepared.Result);
-        }
-        catch
-        {
-            await app.Dispatcher.InvokeAsync(() =>
+            catch (Exception)
             {
-                if (_vaultSession.IsCurrent(generation, vault) && prepared.Snapshot is not null)
-                    vault.RestoreSnapshot(prepared.Snapshot);
-            }, System.Windows.Threading.DispatcherPriority.Send, CancellationToken.None).Task.ConfigureAwait(false);
-            return Error("save_unavailable");
+                // The credential is already persisted; keep the successful save result.
+            }
         }
+
+        return new StatusResponse("credentialSaved", "PejPass", ProtocolVersion,
+            null, null, domain, null, prepared.Id.ToString("D"), null, null, null, prepared.Result);
     }
 
     private sealed record SavePreparation(
