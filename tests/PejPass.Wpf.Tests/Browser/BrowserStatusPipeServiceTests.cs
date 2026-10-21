@@ -118,6 +118,77 @@ public sealed class BrowserStatusPipeServiceTests
         Assert.Equal("invalid_domain", response.Code);
     }
 
+    [Fact]
+    public void FillCredential_RequiresUnlockedVault()
+    {
+        using var session = new VaultSession();
+        using var service = new BrowserStatusPipeService(session);
+        var response = service.CreateResponse("""{"type":"fillCredential","protocolVersion":1,"domain":"example.com","id":"11111111-1111-1111-1111-111111111111"}""");
+        Assert.Equal("error", response.Type);
+        Assert.Equal("vault_locked", response.Code);
+        Assert.Null(response.Password);
+    }
+
+    [Fact]
+    public void FillCredential_ReturnsSecretOnlyForMatchingAccountAndDomain()
+    {
+        using var session = new VaultSession();
+        using var keyMaterial = CreateMaterial();
+        using var service = new BrowserStatusPipeService(session);
+        var entry = new VaultEntry
+        {
+            Title = "Example",
+            Username = "alice",
+            Password = "fill-only-secret",
+            Url = "https://example.com/login"
+        };
+        var vault = new Vault { Entries = [entry] };
+        session.Open(vault, Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"), keyMaterial);
+
+        var response = service.CreateResponse(JsonSerializer.Serialize(new
+        {
+            type = "fillCredential",
+            protocolVersion = 1,
+            domain = "login.example.com",
+            id = entry.Id.ToString("D")
+        }));
+
+        Assert.Equal("credentialForFill", response.Type);
+        Assert.Equal("login.example.com", response.Domain);
+        Assert.Equal(entry.Id.ToString("D"), response.Id);
+        Assert.Equal("alice", response.Username);
+        Assert.Equal("fill-only-secret", response.Password);
+    }
+
+    [Fact]
+    public void FillCredential_RejectsAccountFromAnotherDomain()
+    {
+        using var session = new VaultSession();
+        using var keyMaterial = CreateMaterial();
+        using var service = new BrowserStatusPipeService(session);
+        var entry = new VaultEntry
+        {
+            Title = "Example",
+            Username = "alice",
+            Password = "must-not-be-returned",
+            Url = "https://example.com/login"
+        };
+        session.Open(new Vault { Entries = [entry] },
+            Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"), keyMaterial);
+
+        var response = service.CreateResponse(JsonSerializer.Serialize(new
+        {
+            type = "fillCredential",
+            protocolVersion = 1,
+            domain = "attacker.test",
+            id = entry.Id.ToString("D")
+        }));
+
+        Assert.Equal("error", response.Type);
+        Assert.Equal("credential_not_found", response.Code);
+        Assert.Null(response.Password);
+    }
+
     private static VaultKeyMaterial CreateMaterial()
     {
         var key = new byte[32];
