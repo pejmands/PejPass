@@ -1540,7 +1540,7 @@ public partial class MainViewModel : ObservableObject
         RefreshEntriesFromVault();
     }
 
-    private void RefreshEntriesFromVault()
+    internal void RefreshEntriesFromVault()
     {
         var vault = _vaultSession.Vault;
         if (vault is null)
