@@ -1,6 +1,6 @@
 # PejPass for Microsoft Edge
 
-The extension reads the active HTTP(S) tab hostname and requests matching account metadata from the local PejPass desktop app. Passwords and a current TOTP code are retrieved only after the user explicitly selects **Fill login** for a matching account.
+The extension reads the active HTTP(S) tab hostname and requests matching account metadata from the local PejPass desktop app. Passwords and a current TOTP code are retrieved only after the user explicitly selects **Fill login** for a matching account. It can also generate passwords locally in the popup using the browser's cryptographic random number generator.
 
 ## Requirements
 
@@ -34,6 +34,7 @@ powershell -ExecutionPolicy Bypass -File .\browser\edge\uninstall-dev-host.ps1
 
 ## Manual checks
 
+- The password generator supports lengths from 8 to 64 characters, configurable lowercase, uppercase, numeric, and symbol sets, and ensures at least one character from each selected set. It uses `crypto.getRandomValues`, rejection sampling to avoid modulo bias, and a cryptographic shuffle. Generated passwords are not saved automatically.
 - The popup displays the active hostname on ordinary HTTP(S) pages; restricted browser pages show an unavailable message.
 - The popup reports the live desktop connection and vault lock state.
 - When unlocked, the popup lists entries whose saved URL host is the active site host or a parent domain of it. Matching is case-insensitive and does not match lookalike sibling domains.
@@ -44,7 +45,7 @@ powershell -ExecutionPolicy Bypass -File .\browser\edge\uninstall-dev-host.ps1
 - The extension checks the page hostname again immediately before filling and does not fill if the page changed.
 - The host accepts only version-1 `ping`, `getVaultStatus`, `getCredentials`, and `fillCredential` requests. Requests are validated by both the host and desktop endpoint.
 - The desktop endpoint uses a current-user-only named pipe. Credential lookup is limited to 25 results.
-- The extension requests only `activeTab`, `nativeMessaging`, and `scripting`; it does not run a persistent content script or read page contents in the background.
+- The extension requests `activeTab`, `clipboardWrite`, `nativeMessaging`, and `scripting`; it does not run a persistent content script or read page contents in the background.
 
 ## Current scope
 
