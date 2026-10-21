@@ -198,11 +198,13 @@ async function fillCredential(credential) {
     const outcomes = (results || []).map((entry) => entry.result);
     const messages = {
       filled: "Login fields filled. Review them and submit the form yourself.",
-      no_password: "No visible password field was found in the page or its same-site frames.",
+      username_only: "Username filled. Continue on the website, then select Fill login again to fill the password.",
+      no_password: "No visible password or username field was found in the page or its same-site frames.",
       wrong_page: "The active page changed. Reopen the popup and try again.",
       no_username: "Password filled, but no matching username field was found."
     };
     const outcome = outcomes.includes("filled") ? "filled" :
+      outcomes.includes("username_only") ? "username_only" :
       outcomes.includes("no_username") ? "no_username" :
       outcomes.includes("wrong_page") ? "wrong_page" : "no_password";
     credentialsStatus.textContent = messages[outcome];
@@ -231,9 +233,32 @@ function fillLoginForm(expectedDomain, username, password) {
       element.getClientRects().length > 0;
   };
   const usable = (element) => !element.disabled && !element.readOnly && isVisible(element);
+  const setValue = (input, value) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    if (setter) setter.call(input, value);
+    else input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+
   const passwordField = Array.from(document.querySelectorAll('input[type="password"]'))
     .find(usable);
-  if (!passwordField) return "no_password";
+  if (!passwordField) {
+    const usernameCandidates = Array.from(document.querySelectorAll("input"))
+      .filter((input) => usable(input) && !["hidden", "password", "checkbox", "radio",
+        "submit", "button", "reset", "file", "image"].includes((input.type || "text").toLowerCase()) &&
+        ["text", "email", "tel", "url", "search", ""].includes((input.type || "text").toLowerCase()));
+    const usernameField = usernameCandidates.find((input) =>
+      (input.autocomplete || "").toLowerCase().split(/\s+/).includes("username")) ||
+      usernameCandidates.find((input) => /user|login|email|account/i.test(
+        [input.name, input.id, input.placeholder, input.getAttribute("aria-label")].join(" "))) ||
+      usernameCandidates.find((input) => (input.type || "").toLowerCase() === "email") ||
+      usernameCandidates.find((input) => (input.type || "").toLowerCase() === "text");
+    if (!usernameField || !username) return "no_password";
+    setValue(usernameField, username);
+    usernameField.focus();
+    return "username_only";
+  }
 
   const form = passwordField.form || passwordField.closest("form") || document;
   const candidates = Array.from(form.querySelectorAll("input"))
@@ -246,14 +271,6 @@ function fillLoginForm(expectedDomain, username, password) {
       return input.compareDocumentPosition(passwordField) & Node.DOCUMENT_POSITION_FOLLOWING;
     }).at(-1) ||
     candidates[0];
-
-  const setValue = (input, value) => {
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-    if (setter) setter.call(input, value);
-    else input.value = value;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-  };
 
   if (usernameField && username) setValue(usernameField, username);
   setValue(passwordField, password);
