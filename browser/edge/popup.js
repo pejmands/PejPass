@@ -672,6 +672,44 @@ unlockPassword.addEventListener("keydown", (event) => {
 });
 launchAppButton.addEventListener("click", launchDesktopApp);
 
+const viewTabs = Array.from(document.querySelectorAll(".view-tab"));
+const viewPanels = {
+  logins: document.getElementById("panel-logins"),
+  save: document.getElementById("panel-save"),
+  generator: document.getElementById("panel-generator")
+};
+
+function setActiveView(view, moveFocus = false) {
+  if (!Object.hasOwn(viewPanels, view)) return;
+
+  for (const tab of viewTabs) {
+    const selected = tab.dataset.view === view;
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    if (selected && moveFocus) tab.focus();
+  }
+
+  for (const [name, panel] of Object.entries(viewPanels)) {
+    panel.hidden = name !== view;
+  }
+}
+
+viewTabs.forEach((tab, index) => {
+  tab.addEventListener("click", () => setActiveView(tab.dataset.view));
+  tab.addEventListener("keydown", (event) => {
+    let nextIndex = index;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % viewTabs.length;
+    else if (event.key === "ArrowLeft") nextIndex = (index - 1 + viewTabs.length) % viewTabs.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = viewTabs.length - 1;
+    else return;
+
+    event.preventDefault();
+    setActiveView(viewTabs[nextIndex].dataset.view, true);
+  });
+});
+
+setActiveView("logins");
 showActiveSite();
 checkDesktopConnection();
 checkVaultStatus();
