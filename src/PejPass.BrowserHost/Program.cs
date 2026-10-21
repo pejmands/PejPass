@@ -7,6 +7,7 @@ internal static class Program
 {
     private const int MaximumMessageLength = 1024 * 1024;
     private const int ProtocolVersion = 1;
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private static int Main()
     {
@@ -33,7 +34,7 @@ internal static class Program
             input.ReadExactly(messageBytes);
 
             var response = CreateResponse(messageBytes);
-            var responseBytes = JsonSerializer.SerializeToUtf8Bytes(response);
+            var responseBytes = JsonSerializer.SerializeToUtf8Bytes(response, JsonOptions);
 
             BinaryPrimitives.WriteInt32LittleEndian(header, responseBytes.Length);
             output.Write(header);
