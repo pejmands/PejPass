@@ -91,3 +91,6 @@ footer { margin-top: 14px; color: #969ca8; font-size: 10px; line-height: 1.4; }
 }
 .save-confirmation[hidden] { display: none; }
 .save-confirmation input { margin: 2px 0 0; flex: 0 0 auto; accent-color: #9bbcff; }
+
+.lock-vault-button { border-color: #755e5e; background: #382b2d; }
+.lock-vault-button:hover:not(:disabled) { background: #4a3437; }
