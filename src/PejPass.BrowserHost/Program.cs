@@ -57,6 +57,7 @@ internal static class Program
                 "ping" => new HostResponse("pong", "PejPass", ProtocolVersion, null, null),
                 "getVaultStatus" => await GetVaultStatusAsync().ConfigureAwait(false),
                 "getCredentials" => await GetCredentialsAsync(root).ConfigureAwait(false),
+                "fillCredential" => await FillCredentialAsync(root).ConfigureAwait(false),
                 _ => Error("unsupported_request")
             };
         }
@@ -81,10 +82,7 @@ internal static class Program
 
     private static async Task<HostResponse> GetCredentialsAsync(JsonElement request)
     {
-        if (!request.TryGetProperty("domain", out var domainElement) ||
-            domainElement.ValueKind != JsonValueKind.String ||
-            !TryNormalizeDomain(domainElement.GetString(), out var domain))
-            return Error("invalid_domain");
+        if (!TryGetDomain(request, out var domain)) return Error("invalid_domain");
 
         var response = await SendPipeRequestAsync(
             new HostRequest("getCredentials", ProtocolVersion, domain)).ConfigureAwait(false);
@@ -112,6 +110,35 @@ internal static class Program
 
         return new HostResponse("credentialMatches", "PejPass", ProtocolVersion,
             null, null, domain, credentials);
+    }
+
+    private static async Task<HostResponse> FillCredentialAsync(JsonElement request)
+    {
+        if (!TryGetDomain(request, out var domain) ||
+            !TryGetBoundedString(request, "id", 64, out var id) || !Guid.TryParse(id, out _))
+            return Error("invalid_request");
+
+        var response = await SendPipeRequestAsync(
+            new HostRequest("fillCredential", ProtocolVersion, domain, id)).ConfigureAwait(false);
+        if (response.Error is not null) return Error(response.Error);
+
+        var root = response.Root;
+        if (!HasString(root, "type", "credentialForFill") || !HasString(root, "app", "PejPass") ||
+            !HasVersion(root) || !HasString(root, "domain", domain) || !HasString(root, "id", id) ||
+            !TryGetBoundedString(root, "username", 256, out var username) ||
+            !TryGetBoundedString(root, "password", 4096, out var password))
+            return Error("invalid_app_response");
+
+        return new HostResponse("credentialForFill", "PejPass", ProtocolVersion,
+            null, null, domain, null, id, username, password);
+    }
+
+    private static bool TryGetDomain(JsonElement request, out string domain)
+    {
+        domain = string.Empty;
+        return request.TryGetProperty("domain", out var domainElement) &&
+               domainElement.ValueKind == JsonValueKind.String &&
+               TryNormalizeDomain(domainElement.GetString(), out domain);
     }
 
     private static async Task<PipeResponse> SendPipeRequestAsync(HostRequest request)
@@ -170,8 +197,9 @@ internal static class Program
     }
 
     private static bool IsSafeErrorCode(string? code) => code is
-        "invalid_domain" or "vault_locked" or "lookup_unavailable" or "app_unavailable" or
-        "invalid_app_response" or "unsupported_request" or "invalid_message";
+        "invalid_domain" or "invalid_request" or "credential_not_found" or "vault_locked" or
+        "lookup_unavailable" or "app_unavailable" or "invalid_app_response" or
+        "unsupported_request" or "invalid_message";
 
     private static bool HasString(JsonElement root, string name, string expected) =>
         root.ValueKind == JsonValueKind.Object && root.TryGetProperty(name, out var value) &&
@@ -182,10 +210,11 @@ internal static class Program
         value.TryGetInt32(out var version) && version == ProtocolVersion;
 
     private static HostResponse Error(string code) => new("error", "PejPass", ProtocolVersion, null, code);
-    private sealed record HostRequest(string Type, int ProtocolVersion, string? Domain = null);
+    private sealed record HostRequest(string Type, int ProtocolVersion, string? Domain = null, string? Id = null);
     private sealed record CredentialSummary(string Id, string Title, string Username, string Url);
     private sealed record HostResponse(
         string Type, string App, int ProtocolVersion, string? Status, string? Code,
-        string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null);
+        string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null,
+        string? Id = null, string? Username = null, string? Password = null);
     private readonly record struct PipeResponse(JsonElement Root, string? Error);
 }
