@@ -9,14 +9,14 @@ namespace PejPass.Wpf.Services;
 internal sealed class BrowserStatusPipeService : IDisposable
 {
     private readonly VaultSession _vaultSession;
-    private readonly PejPass.Application.Services.VaultService? _vaultService;
+    private readonly Application.Services.VaultService? _vaultService;
 
     internal BrowserStatusPipeService(VaultSession vaultSession)
         : this(vaultSession, null) { }
 
     internal BrowserStatusPipeService(
         VaultSession vaultSession,
-        PejPass.Application.Services.VaultService? vaultService)
+        Application.Services.VaultService? vaultService)
     {
         _vaultSession = vaultSession;
         _vaultService = vaultService;
@@ -96,7 +96,7 @@ internal sealed class BrowserStatusPipeService : IDisposable
             var character = buffer[0];
             if (character == '\n')
             {
-                if (builder.Length > 0 && builder[builder.Length - 1] == '\r')
+                if (builder.Length > 0 && builder[^1] == '\r')
                     builder.Length--;
                 return builder.ToString();
             }
@@ -301,8 +301,8 @@ internal sealed class BrowserStatusPipeService : IDisposable
 
                     _vaultSession.RefreshDiskStamp();
 
-                    if (app.MainWindow is PejPass.Wpf.MainWindow
-                        { DataContext: PejPass.Wpf.ViewModels.MainViewModel viewModel })
+                    if (app.MainWindow is MainWindow
+                        { DataContext: ViewModels.MainViewModel viewModel })
                     {
                         viewModel.RefreshEntriesFromVault();
                     }

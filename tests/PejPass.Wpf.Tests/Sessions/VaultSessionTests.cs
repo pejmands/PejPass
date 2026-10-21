@@ -29,14 +29,14 @@ public sealed class VaultSessionTests
         {
             clearStarted.SetResult();
             session.Clear();
-        });
+        }, TestContext.Current.CancellationToken);
 
         await clearStarted.Task;
-        await Task.Delay(50);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
         Assert.False(clearTask.IsCompleted);
 
         lease.Dispose();
-        await clearTask.WaitAsync(TimeSpan.FromSeconds(5));
+        await clearTask.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.False(session.IsActive);
         Assert.Null(await session.AcquireSaveLeaseAsync(
