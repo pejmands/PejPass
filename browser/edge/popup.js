@@ -360,7 +360,7 @@ async function inspectLoginForm() {
 }
 
 function readLoginForm(expectedDomain) {
-  const normalizeHost = (host) => host.toLowerCase().replace(/\\.$/, "");
+  const normalizeHost = (host) => host.toLowerCase().replace(/\.$/, "");
   const currentDomain = normalizeHost(window.location.hostname);
   let topDomain;
   try { topDomain = normalizeHost(window.top.location.hostname); }
@@ -383,7 +383,7 @@ function readLoginForm(expectedDomain) {
     !input.disabled && !input.readOnly && isVisible(input) && input !== passwordField &&
     ["text", "email", "tel"].includes((input.type || "text").toLowerCase()));
   const usernameField = candidates.find((input) =>
-    (input.autocomplete || "").toLowerCase().split(/\\s+/).includes("username")) ||
+    (input.autocomplete || "").toLowerCase().split(/\s+/).includes("username")) ||
     candidates.filter((input) => passwordField &&
       (input.compareDocumentPosition(passwordField) & Node.DOCUMENT_POSITION_FOLLOWING)).at(-1) ||
     candidates.find((input) => (input.type || "").toLowerCase() === "email") ||
@@ -413,7 +413,7 @@ async function saveLogin() {
   try {
     const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     const url = new URL(tabs[0]?.url || "");
-    const domain = url.hostname.toLowerCase().replace(/\\.$/, "");
+    const domain = url.hostname.toLowerCase().replace(/\.$/, "");
     if (tabs[0]?.id !== activeTabId || domain !== activeDomain ||
         !["http:", "https:"].includes(url.protocol)) {
       saveStatus.textContent = "The active page changed. Reopen the popup and inspect the form again.";
