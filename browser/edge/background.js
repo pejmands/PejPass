@@ -67,6 +67,12 @@ function applyStatus(status) {
         if (Number.isInteger(tab.id)) clearMatchBadge(tab.id);
       }
     }).catch(() => {});
+  } else {
+    void chrome.tabs.query({ active: true }).then((tabs) => {
+      for (const tab of tabs) {
+        if (Number.isInteger(tab.id)) void refreshMatchCount(tab.id);
+      }
+    }).catch(() => {});
   }
   void chrome.runtime.sendMessage({ type: "vaultStateChanged", status }).catch(() => {
     // No popup is open to receive the state change.
