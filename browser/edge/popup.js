@@ -297,8 +297,8 @@ async function fillCredential(credential) {
 
     const results = await chrome.scripting.executeScript({
       target: { tabId: activeTabId, allFrames: true },
-      func: fillLoginForm,
-      args: [activeDomain, response.username, response.password, response.totpCode || ""]
+      func: processLoginForm,
+      args: ["fill", activeDomain, response.username, response.password, response.totpCode || ""]
     });
     const outcomes = (results || []).map((entry) => entry.result);
     const messages = {
@@ -322,18 +322,19 @@ async function fillCredential(credential) {
   }
 }
 
-function fillLoginForm(expectedDomain, username, password, totpCode) {
+function processLoginForm(action, expectedDomain, username = "", password = "", totpCode = "") {
   const normalizeHost = (host) => host.toLowerCase().replace(/\.$/, "");
   const currentDomain = normalizeHost(window.location.hostname);
   let topDomain;
   try {
     topDomain = normalizeHost(window.top.location.hostname);
   } catch {
-    return "wrong_page";
+    return action === "read" ? { found: false } : "wrong_page";
   }
-  if (topDomain !== expectedDomain) return "wrong_page";
-  if (currentDomain !== expectedDomain && !currentDomain.endsWith("." + expectedDomain)) {
-    return "wrong_page";
+
+  if (topDomain !== expectedDomain ||
+      (currentDomain !== expectedDomain && !currentDomain.endsWith("." + expectedDomain))) {
+    return action === "read" ? { found: false } : "wrong_page";
   }
 
   const isVisible = (element) => {
@@ -341,15 +342,7 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
     return style.display !== "none" && style.visibility !== "hidden" &&
       element.getClientRects().length > 0;
   };
-  const usable = (element) => !element.disabled && !element.readOnly && isVisible(element);
-  const setValue = (input, value) => {
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-    if (setter) setter.call(input, value);
-    else input.value = value;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-  };
-
+  const usable = (input) => !input.disabled && !input.readOnly && isVisible(input);
   const inputs = Array.from(document.querySelectorAll("input")).filter(usable);
   const passwordHints = (input) => [
     input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
@@ -361,20 +354,52 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
     return type === "password" ||
       autocomplete.includes("current-password") ||
       autocomplete.includes("new-password") ||
-      /pass(word|wd)?/i.test(passwordHints(input));
+      /\b(pass(word|wd)?|pwd)\b/i.test(passwordHints(input));
   };
   const isTotpField = (input) => {
     const autocomplete = (input.autocomplete || "").toLowerCase().split(/\s+/);
-    const hints = [input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
-      input.getAttribute("inputmode"), input.getAttribute("data-testid")].join(" ");
+    const hints = [
+      input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
+      input.getAttribute("inputmode"), input.getAttribute("data-testid")
+    ].filter(Boolean).join(" ");
     return autocomplete.includes("one-time-code") ||
-      /one.?time|otp|totp|auth.?code|verification.?code|security.?code|mfa.?code/i.test(hints);
+      /\b(one.?time|otp|totp|auth.?code|verification.?code|security.?code|mfa.?code)\b/i.test(hints);
   };
   const isTextLike = (input) =>
     ["text", "email", "tel", "url", "search", ""].includes((input.type || "text").toLowerCase());
+  const passwordField = inputs.find((input) => (input.type || "").toLowerCase() === "password") ||
+    inputs.find(isPasswordField);
+  const form = passwordField?.form || passwordField?.closest("form") || document;
+  const candidates = Array.from(form.querySelectorAll("input"))
+    .filter((input) => usable(input) && input !== passwordField &&
+      !isPasswordField(input) && !isTotpField(input) && isTextLike(input));
+  const usernameField = candidates.find((input) =>
+    (input.autocomplete || "").toLowerCase().split(/\s+/).includes("username")) ||
+    candidates.filter((input) => passwordField &&
+      (input.compareDocumentPosition(passwordField) & Node.DOCUMENT_POSITION_FOLLOWING)).at(-1) ||
+    candidates.find((input) => /\b(user(name)?|login|email|account)\b/i.test(
+      [input.name, input.id, input.placeholder, input.getAttribute("aria-label")].filter(Boolean).join(" "))) ||
+    candidates.find((input) => (input.type || "").toLowerCase() === "email") ||
+    candidates[0];
+
+  if (action === "read") {
+    return {
+      found: Boolean(passwordField || usernameField),
+      domain: currentDomain,
+      username: usernameField?.value || "",
+      password: passwordField?.value || ""
+    };
+  }
+
+  const setValue = (input, value) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    if (setter) setter.call(input, value);
+    else input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  };
   const totpFields = inputs.filter((input) => isTotpField(input) &&
     (isTextLike(input) || (input.type || "").toLowerCase() === "number"));
-  const passwordField = inputs.find(isPasswordField);
 
   if (totpFields.length > 0) {
     if (totpCode) {
@@ -394,30 +419,18 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
 
   if (!passwordField) {
     const usernameCandidates = inputs.filter((input) => !isTotpField(input) && isTextLike(input));
-    const usernameField = usernameCandidates.find((input) =>
+    const usernameOnlyField = usernameCandidates.find((input) =>
       (input.autocomplete || "").toLowerCase().split(/\s+/).includes("username")) ||
-      usernameCandidates.find((input) => /user|login|email|account/i.test(
-        [input.name, input.id, input.placeholder, input.getAttribute("aria-label")].join(" "))) ||
+      usernameCandidates.find((input) => /\b(user(name)?|login|email|account)\b/i.test(
+        [input.name, input.id, input.placeholder, input.getAttribute("aria-label")].filter(Boolean).join(" "))) ||
       usernameCandidates.find((input) => (input.type || "").toLowerCase() === "email") ||
-      usernameCandidates.find((input) => (input.type || "").toLowerCase() === "text");
-    if (!usernameField || !username) return "no_password";
-    setValue(usernameField, username);
-    usernameField.focus();
+      usernameCandidates.find((input) => (input.type || "").toLowerCase() === "text") ||
+      usernameCandidates[0];
+    if (!usernameOnlyField || !username) return "no_password";
+    setValue(usernameOnlyField, username);
+    usernameOnlyField.focus();
     return "username_only";
   }
-
-  const form = passwordField.form || passwordField.closest("form") || document;
-  const candidates = Array.from(form.querySelectorAll("input"))
-    .filter((input) => usable(input) && input !== passwordField && !isPasswordField(input) &&
-      !isTotpField(input) &&
-      ["text", "email", "tel", "url"].includes((input.type || "text").toLowerCase()));
-
-  const usernameField = candidates.find((input) =>
-    (input.autocomplete || "").toLowerCase().split(/\s+/).includes("username")) ||
-    candidates.filter((input) => {
-      return input.compareDocumentPosition(passwordField) & Node.DOCUMENT_POSITION_FOLLOWING;
-    }).at(-1) ||
-    candidates[0];
 
   if (usernameField && username) setValue(usernameField, username);
   setValue(passwordField, password);
@@ -425,7 +438,6 @@ function fillLoginForm(expectedDomain, username, password, totpCode) {
   if (totpFields.length > 0) return totpCode ? "totp_filled" : "totp_unavailable";
   return usernameField && username ? "filled" : "no_username";
 }
-
 async function inspectLoginForm() {
   if (!activeTabId || !activeDomain) {
     saveStatus.textContent = "Open a regular HTTP(S) login page first.";
@@ -440,8 +452,8 @@ async function inspectLoginForm() {
     const domain = activeDomain;
     const results = await chrome.scripting.executeScript({
       target: { tabId, allFrames: true },
-      func: readLoginForm,
-      args: [domain]
+      func: processLoginForm,
+      args: ["read", domain]
     });
     const candidates = (results || []).map((entry) => entry.result)
       .filter((result) => result && result.found && result.domain === domain);
@@ -467,63 +479,6 @@ async function inspectLoginForm() {
   }
 }
 
-function readLoginForm(expectedDomain) {
-  const normalizeHost = (host) => host.toLowerCase().replace(/\.$/, "");
-  const currentDomain = normalizeHost(window.location.hostname);
-  let topDomain;
-  try { topDomain = normalizeHost(window.top.location.hostname); }
-  catch { return { found: false }; }
-  if (topDomain !== expectedDomain ||
-      (currentDomain !== expectedDomain && !currentDomain.endsWith("." + expectedDomain))) {
-    return { found: false };
-  }
-
-  const isVisible = (element) => {
-    const style = window.getComputedStyle(element);
-    return style.display !== "none" && style.visibility !== "hidden" &&
-      element.getClientRects().length > 0;
-  };
-  const inputs = Array.from(document.querySelectorAll("input"))
-    .filter((input) => !input.disabled && !input.readOnly && isVisible(input));
-  const passwordHints = (input) => [
-    input.name,
-    input.id,
-    input.getAttribute("aria-label"),
-    input.getAttribute("placeholder"),
-    input.getAttribute("data-testid"),
-    input.getAttribute("data-field")
-  ].filter(Boolean).join(" ");
-
-  const isPasswordField = (input) => {
-    const type = (input.type || "").toLowerCase();
-    const autocomplete = (input.autocomplete || "").toLowerCase().split(/\s+/);
-    return type === "password" ||
-      autocomplete.includes("current-password") ||
-      autocomplete.includes("new-password") ||
-      /pass(word|wd)?/i.test(passwordHints(input));
-  };
-
-  const passwordField = inputs.find((input) => (input.type || "").toLowerCase() === "password") ||
-    inputs.find(isPasswordField);
-  const form = passwordField?.form || passwordField?.closest("form") || document;
-  const candidates = Array.from(form.querySelectorAll("input")).filter((input) =>
-    !input.disabled && !input.readOnly && isVisible(input) && input !== passwordField &&
-    !isPasswordField(input) &&
-    ["text", "email", "tel"].includes((input.type || "text").toLowerCase()));
-  const usernameField = candidates.find((input) =>
-    (input.autocomplete || "").toLowerCase().split(/\s+/).includes("username")) ||
-    candidates.filter((input) => passwordField &&
-      (input.compareDocumentPosition(passwordField) & Node.DOCUMENT_POSITION_FOLLOWING)).at(-1) ||
-    candidates.find((input) => (input.type || "").toLowerCase() === "email") ||
-    candidates[0];
-
-  return {
-    found: Boolean(passwordField || usernameField),
-    domain: currentDomain,
-    username: usernameField?.value || "",
-    password: passwordField?.value || ""
-  };
-}
 
 function updateSaveReview() {
   if (saveFields.hidden) {
