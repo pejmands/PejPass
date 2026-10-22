@@ -49,7 +49,12 @@ internal static class Program
             return 0;
         }
         catch (InvalidDataException) { return 1; }
-        catch (IOException) { return 0; }
+        catch (IOException)
+        {
+            shutdown.Cancel();
+            try { await Task.WhenAll(activeTasks.Values.ToArray()).ConfigureAwait(false); } catch { }
+            return 0;
+        }
         finally
         {
             shutdown.Cancel();
