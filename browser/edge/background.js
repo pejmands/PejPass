@@ -64,6 +64,8 @@ function applyStatus(status) {
 }
 
 function onNativeMessage(message) {
+  if (message?.type === "hostHeartbeat") return;
+
   if (message?.type === "vaultStateChanged") {
     applyStatus(message.status);
     return;
