@@ -121,7 +121,22 @@ async function checkDesktopConnection() {
 async function checkVaultStatus({ quiet = false } = {}) {
   if (!quiet) vaultStatus.textContent = "Checking vault status…";
   try {
-    const response = await sendNativeMessage({ type: "getVaultStatus", protocolVersion });
+    let response;
+    try {
+      const cached = await chrome.runtime.sendMessage({ target: "pejpass-state" });
+      if (cached?.status === "locked" || cached?.status === "unlocked") {
+        response = { type: "vaultStatus", app: "PejPass", protocolVersion, status: cached.status };
+      } else if (cached?.status === "unavailable") {
+        response = { type: "error", code: "app_unavailable" };
+      }
+    } catch {
+      // Fall back to the native host if the background state is unavailable.
+    }
+
+    if (!response) {
+      response = await sendNativeMessage({ type: "getVaultStatus", protocolVersion });
+    }
+
     if (isValidBaseResponse(response, "vaultStatus") &&
         (response.status === "locked" || response.status === "unlocked")) {
       vaultStatus.textContent = response.status === "unlocked" ? "Vault is unlocked." : "Vault is locked.";

@@ -13,9 +13,10 @@ internal static class Program
     private const int MaximumPipeLineLength = 65536;
     private const int ProtocolVersion = 1;
     private const string PipeName = "PejPass.BrowserStatus.v1";
+    private const string EventsPipeName = "PejPass.BrowserEvents.v1";
+    private const int MaximumEventLineLength = 512;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly SemaphoreSlim PipeRequestGate = new(1, 1);
-    private static int _unlockInFlight;
 
     private static async Task<int> Main()
     {
@@ -25,7 +26,7 @@ internal static class Program
         var writeLock = new SemaphoreSlim(1, 1);
         var activeTasks = new ConcurrentDictionary<long, Task>();
         long nextTaskId = 0;
-        var watcher = WatchVaultStatusAsync(output, writeLock, shutdown.Token);
+        var watcher = ListenForVaultEventsAsync(output, writeLock, shutdown.Token);
 
         try
         {
@@ -149,68 +150,110 @@ internal static class Program
         catch (JsonException) { return null; }
     }
 
-    private static async Task WatchVaultStatusAsync(
+    /// <summary>
+    /// Listens for desktop vault-state events. Reconnection attempts are periodic only while
+    /// the desktop event pipe is unavailable; no status polling is performed while connected.
+    /// </summary>
+    private static async Task ListenForVaultEventsAsync(
         Stream output, SemaphoreSlim writeLock, CancellationToken cancellationToken)
     {
-        string? lastStatus = null;
-        var lastHeartbeat = Stopwatch.GetTimestamp();
+        string? lastSent = null;
+        var retryDelay = TimeSpan.FromSeconds(1);
+
+        async Task PublishAsync(string status)
+        {
+            if (status == lastSent) return;
+            lastSent = status;
+            await WriteAsync(output, writeLock, new HostResponse(
+                "vaultStateChanged", "PejPass", ProtocolVersion, status, null)).ConfigureAwait(false);
+        }
 
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                if (Volatile.Read(ref _unlockInFlight) == 0)
+                await using var pipe = new NamedPipeClientStream(
+                    ".", EventsPipeName, PipeDirection.InOut,
+                    PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly,
+                    TokenImpersonationLevel.Identification);
+
+                await pipe.ConnectAsync(500, cancellationToken).ConfigureAwait(false);
+                retryDelay = TimeSpan.FromSeconds(1);
+
+                using var reader = new StreamReader(pipe, leaveOpen: true);
+                while (await ReadBoundedEventLineAsync(reader, MaximumEventLineLength, cancellationToken)
+                    .ConfigureAwait(false) is { } line)
                 {
-                    var currentStatus = await GetCurrentStatusAsync(cancellationToken).ConfigureAwait(false);
-                    if (currentStatus != lastStatus)
-                    {
-                        lastStatus = currentStatus;
-                        await WriteAsync(output, writeLock, new HostResponse(
-                            "vaultStateChanged", "PejPass", ProtocolVersion, currentStatus, null))
-                            .ConfigureAwait(false);
-                    }
+                    var status = ParseEventStatus(line);
+                    if (status is not null)
+                        await PublishAsync(status).ConfigureAwait(false);
                 }
             }
-            catch (OperationCanceledException) { break; }
-            catch { /* Retry temporary status failures on the next interval. */ }
-
-            if (Stopwatch.GetElapsedTime(lastHeartbeat) >= TimeSpan.FromSeconds(20))
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                try
-                {
-                    await WriteAsync(output, writeLock, new HostResponse(
-                        "hostHeartbeat", "PejPass", ProtocolVersion, null, null)).ConfigureAwait(false);
-                    lastHeartbeat = Stopwatch.GetTimestamp();
-                }
-                catch (OperationCanceledException) { break; }
-                catch { /* The browser may have closed the native port. */ }
+                break;
+            }
+            catch (Exception ex) when (ex is TimeoutException or IOException
+                or UnauthorizedAccessException or InvalidDataException)
+            {
+                // Retry when the desktop is unavailable or an event connection fails.
             }
 
-            try { await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken).ConfigureAwait(false); }
+            try { await PublishAsync("unavailable").ConfigureAwait(false); }
+            catch (IOException) { break; }
+
+            try { await Task.Delay(retryDelay, cancellationToken).ConfigureAwait(false); }
             catch (OperationCanceledException) { break; }
+
+            if (retryDelay < TimeSpan.FromSeconds(3))
+                retryDelay += TimeSpan.FromSeconds(1);
         }
     }
 
-    private static async Task<string> GetCurrentStatusAsync(CancellationToken cancellationToken)
+    private static async Task<string?> ReadBoundedEventLineAsync(
+        TextReader reader, int maximumLength, CancellationToken cancellationToken)
     {
-        var response = await SendPipeRequestAsync(
-            new HostRequest("getVaultStatus", ProtocolVersion), cancellationToken).ConfigureAwait(false);
+        var buffer = new char[1];
+        var builder = new System.Text.StringBuilder(Math.Min(maximumLength, 128));
 
-        if (response.Error == "app_unavailable") return "unavailable";
-        if (response.Error is not null) return "unknown";
+        while (true)
+        {
+            var count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
+            if (count == 0)
+                return builder.Length == 0 ? null : builder.ToString();
 
-        return response.Root.TryGetProperty("status", out var status) &&
-               status.ValueKind == JsonValueKind.String &&
-               status.GetString() is "locked" or "unlocked"
-            ? status.GetString()!
-            : "unknown";
+            if (buffer[0] == '\n')
+            {
+                if (builder.Length > 0 && builder[^1] == '\r')
+                    builder.Length--;
+                return builder.ToString();
+            }
+
+            if (builder.Length >= maximumLength)
+                throw new InvalidDataException("The event pipe line exceeds the maximum length.");
+
+            builder.Append(buffer[0]);
+        }
     }
 
-    private static async Task<HostResponse> UnlockTrackedAsync(JsonElement root)
+    private static string? ParseEventStatus(string line)
     {
-        Interlocked.Increment(ref _unlockInFlight);
-        try { return await UnlockVaultAsync(root).ConfigureAwait(false); }
-        finally { Interlocked.Decrement(ref _unlockInFlight); }
+        try
+        {
+            using var document = JsonDocument.Parse(line);
+            var root = document.RootElement;
+
+            if (!HasString(root, "type", "vaultStateChanged") ||
+                !HasString(root, "app", "PejPass") ||
+                !HasVersion(root) ||
+                !root.TryGetProperty("status", out var statusElement) ||
+                statusElement.ValueKind != JsonValueKind.String)
+                return null;
+
+            var status = statusElement.GetString();
+            return status is "locked" or "unlocked" ? status : null;
+        }
+        catch (JsonException) { return null; }
     }
 
     private static async Task<HostResponse> CreateResponseAsync(byte[] messageBytes)
@@ -230,7 +273,7 @@ internal static class Program
             {
                 "ping" => new HostResponse("pong", "PejPass", ProtocolVersion, null, null),
                 "launchApp" => LaunchDesktopApp(),
-                "unlockVault" => await UnlockTrackedAsync(root).ConfigureAwait(false),
+                "unlockVault" => await UnlockVaultAsync(root).ConfigureAwait(false),
                 "lockVault" => await LockVaultAsync().ConfigureAwait(false),
                 "getVaultStatus" => await GetVaultStatusAsync().ConfigureAwait(false),
                 "getCredentials" => await GetCredentialsAsync(root).ConfigureAwait(false),

@@ -9,7 +9,7 @@ using System.Text.Json;
 
 namespace PejPass.Wpf.Services;
 
-internal sealed class BrowserStatusPipeService : IDisposable
+internal sealed partial class BrowserStatusPipeService : IDisposable
 {
     private readonly VaultSession _vaultSession;
     private readonly Application.Services.VaultService? _vaultService;
@@ -23,6 +23,7 @@ internal sealed class BrowserStatusPipeService : IDisposable
     {
         _vaultSession = vaultSession;
         _vaultService = vaultService;
+        _vaultSession.StateChanged += OnVaultStateChanged;
     }
     internal const string PipeName = "PejPass.BrowserStatus.v1";
     private const int ProtocolVersion = 1;
@@ -37,6 +38,7 @@ internal sealed class BrowserStatusPipeService : IDisposable
     {
         if (_serverTask is not null) return;
         _serverTask = Task.Run(() => RunAsync(_shutdown.Token));
+        _eventsTask = Task.Run(() => RunEventsAsync(_shutdown.Token));
     }
 
     private async Task RunAsync(CancellationToken cancellationToken)
@@ -688,9 +690,16 @@ internal sealed class BrowserStatusPipeService : IDisposable
 
     public void Dispose()
     {
+        _vaultSession.StateChanged -= OnVaultStateChanged;
         _shutdown.Cancel();
-        try { _serverTask?.Wait(TimeSpan.FromSeconds(1)); }
+
+        try
+        {
+            var tasks = new[] { _serverTask, _eventsTask }.OfType<Task>().ToArray();
+            Task.WaitAll(tasks, TimeSpan.FromSeconds(1));
+        }
         catch (AggregateException) { }
+
         _shutdown.Dispose();
     }
 
