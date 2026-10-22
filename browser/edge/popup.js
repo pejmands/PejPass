@@ -230,6 +230,7 @@ async function checkVaultStatus({ quiet = false } = {}) {
       lockVaultButton.hidden = response.status !== "unlocked";
 
       if (response.status === "locked") {
+        updateMatchBadge(0);
         credentialList.replaceChildren();
         matchingCredentials = [];
         fillNowButton.hidden = true;
@@ -1187,6 +1188,7 @@ async function lockVault() {
       return;
     }
 
+    updateMatchBadge(0);
     credentialList.replaceChildren();
     matchingCredentials = [];
     credentialsStatus.textContent = "Unlock the PejPass vault to view matching accounts.";
