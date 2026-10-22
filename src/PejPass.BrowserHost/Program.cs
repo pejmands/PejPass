@@ -531,11 +531,17 @@ internal static class Program
             return Error(response.Error);
 
         var root = response.Root;
-        return HasString(root, "type", "clipboardCopied") &&
-               HasString(root, "app", "PejPass") &&
-               HasVersion(root)
-            ? new HostResponse("clipboardCopied", "PejPass", ProtocolVersion, null, null)
-            : Error("invalid_app_response");
+        if (!HasString(root, "type", "clipboardCopied") ||
+            !HasString(root, "app", "PejPass") ||
+            !HasVersion(root) ||
+            !root.TryGetProperty("clipboardClearSeconds", out var timeoutElement) ||
+            !timeoutElement.TryGetInt32(out var timeoutSeconds) ||
+            timeoutSeconds is < 5 or > 300)
+            return Error("invalid_app_response");
+
+        return new HostResponse(
+            "clipboardCopied", "PejPass", ProtocolVersion, null, null,
+            ClipboardClearSeconds: timeoutSeconds);
     }
 
     private static bool TryGetWebUrl(string value, string expectedDomain)
@@ -672,6 +678,6 @@ internal static class Program
         string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null,
         string? Id = null, string? Username = null, string? Password = null,
         string? TotpCode = null, string? Result = null, string? RequestId = null,
-        int? RetryAfterSeconds = null);
+        int? RetryAfterSeconds = null, int? ClipboardClearSeconds = null);
     private readonly record struct PipeResponse(JsonElement Root, string? Error, int RetryAfterSeconds = 0);
 }
