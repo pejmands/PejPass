@@ -3,6 +3,16 @@ const protocolVersion = 1;
 const statusAlarmName = "refresh-vault-toolbar-icon";
 const pollIntervalMinutes = 0.5;
 
+async function setToolbarVaultIcon(unlocked) {
+  const iconPath = unlocked ? "icons/PejPass.ico" : "icons/PejPassLocked.ico";
+  await chrome.action.setIcon({
+    path: {
+      16: iconPath,
+      32: iconPath
+    }
+  });
+}
+
 async function refreshToolbarVaultIcon() {
   try {
     const response = await chrome.runtime.sendNativeMessage(nativeHostName, {
@@ -10,25 +20,23 @@ async function refreshToolbarVaultIcon() {
       protocolVersion
     });
 
-    if (response?.type !== "vaultStatus" ||
-        response.app !== "PejPass" ||
-        response.protocolVersion !== protocolVersion ||
-        !["locked", "unlocked"].includes(response.status)) {
+    if (response?.type === "vaultStatus" &&
+        response.app === "PejPass" &&
+        response.protocolVersion === protocolVersion &&
+        ["locked", "unlocked"].includes(response.status)) {
+      await setToolbarVaultIcon(response.status === "unlocked");
       return;
     }
 
-    const iconPath = response.status === "unlocked"
-      ? "icons/PejPass.ico"
-      : "icons/PejPassLocked.ico";
-
-    await chrome.action.setIcon({
-      path: {
-        16: iconPath,
-        32: iconPath
-      }
-    });
+    // If the desktop app cannot confirm an unlocked vault, do not leave the unlocked icon visible.
+    await setToolbarVaultIcon(false);
   } catch {
-    // Keep the last confirmed icon when the desktop app is unavailable.
+    // The desktop app or native host is unavailable; use the conservative locked icon.
+    try {
+      await setToolbarVaultIcon(false);
+    } catch {
+      // The browser may be shutting down.
+    }
   }
 }
 
