@@ -134,6 +134,8 @@ function sendNative(payload, timeoutMs) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id) return false;
+
   if (message?.target === "pejpass-fill") {
     const { tabId, domain, id } = message;
     if (!Number.isInteger(tabId) || tabId < 0 ||
@@ -157,7 +159,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             response.password.length > 4096 ||
             (response.totpCode != null && (typeof response.totpCode !== "string" ||
               response.totpCode.length > 8 ||
-              (response.totpCode.length > 0 && !/^\\d+$/.test(response.totpCode))))) {
+              (response.totpCode.length > 0 && !/^\d+$/.test(response.totpCode))))) {
           sendResponse({ type: "error", code: "invalid_app_response" });
           return;
         }
@@ -195,8 +197,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-
-  if (sender.id !== chrome.runtime.id) return false;
 
   if (message?.target === "pejpass-state") {
     ensureConnectedQuietly();
