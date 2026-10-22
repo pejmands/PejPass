@@ -1,8 +1,8 @@
 :root {
-  color-scheme: dark;
+  color-scheme: light dark;
   font-family: "Segoe UI", system-ui, sans-serif;
-  background: #1e1e2e;
-  color: #cdd6f4;
+  background: var(--base);
+  color: var(--text);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   --base: #303446;
@@ -18,6 +18,31 @@
   --green: #a6e3a1;
   --yellow: #f9e2af;
   --red: #f38ba8;
+  --lock-border: #eba0ac;
+  --lock-bg: #442b35;
+  --lock-hover-bg: #5b3444;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --base: #eff1f5;
+    --mantle: #e6e9ef;
+    --surface0: #ccd0da;
+    --surface1: #bcc0cc;
+    --surface2: #acb0be;
+    --overlay0: #6c6f85;
+    --subtext0: #5c5f77;
+    --text: #4c4f69;
+    --blue: #1e66f5;
+    --lavender: #7287fd;
+    --green: #40a02b;
+    --yellow: #8c5a00;
+    --red: #d20f39;
+    --lock-border: #d20f39;
+    --lock-bg: #fce4e8;
+    --lock-hover-bg: #f7c6ce;
+  }
 }
 * { box-sizing: border-box; }
 body {
@@ -241,6 +266,6 @@ footer {
 }
 .save-confirmation[hidden] { display: none; }
 .save-confirmation input { margin: 2px 0 0; flex: 0 0 auto; accent-color: var(--blue); }
-.lock-vault-button { border-color: #eba0ac; background: #442b35; }
-.lock-vault-button:hover:not(:disabled) { background: #5b3444; }
+.lock-vault-button { border-color: var(--lock-border); background: var(--lock-bg); }
+.lock-vault-button:hover:not(:disabled) { background: var(--lock-hover-bg); }
 #save-target[hidden] { display: none; }
