@@ -48,7 +48,7 @@ powershell -ExecutionPolicy Bypass -File .\browser\edge\uninstall-dev-host.ps1
 - The host accepts version-1 `ping`, `launchApp`, `unlockVault`, `lockVault`, `getVaultStatus`, `getCredentials`, `fillCredential`, and `saveCredential` requests. Requests are validated by both the host and desktop endpoint.
 - Successful credential fill and save operations reset the desktop AutoLock timer. Passive status checks and credential metadata lookups do not reset it.
 - The desktop endpoint uses a current-user-only named pipe. BrowserHost serializes requests to this single-instance desktop pipe while allowing correlated native-messaging requests. Credential lookup is limited to 25 results.
-- The extension requests `activeTab`, `clipboardWrite`, `nativeMessaging`, and `scripting`; it does not run a persistent content script or read page contents in the background.
+- The extension requests `activeTab`, `alarms`, `clipboardWrite`, `nativeMessaging`, and `scripting`; it does not run a persistent content script or read page contents in the background.
 
 ## Current scope
 
