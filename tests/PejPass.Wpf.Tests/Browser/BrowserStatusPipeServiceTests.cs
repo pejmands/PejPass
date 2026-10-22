@@ -84,10 +84,36 @@ public sealed class BrowserStatusPipeServiceTests
     [InlineData("login.example.com", true)]
     [InlineData("example.com.attacker.test", false)]
     [InlineData("notexample.com", false)]
-    public void EntryMatchesDomain_OnlyMatchesExactHostOrItsSubdomains(string domain, bool expected)
+    public void EntryMatchesDomain_MatchesTheSameRegistrableDomain(string domain, bool expected)
     {
         var entry = new VaultEntry { Url = "https://example.com/login" };
         Assert.Equal(expected, BrowserStatusPipeService.EntryMatchesDomain(entry, domain));
+    }
+
+    [Theory]
+    [InlineData("github.io", "attacker.github.io", false)]
+    [InlineData("alice.github.io", "attacker.github.io", false)]
+    [InlineData("alice.github.io", "login.alice.github.io", true)]
+    [InlineData("blogspot.com", "attacker.blogspot.com", false)]
+    [InlineData("alice.blogspot.com", "attacker.blogspot.com", false)]
+    [InlineData("example.co.uk", "login.example.co.uk", true)]
+    [InlineData("example.co.uk", "attacker.co.uk", false)]
+    public void EntryMatchesDomain_RespectsPublicSuffixBoundaries(
+        string entryHost, string requestedDomain, bool expected)
+    {
+        var entry = new VaultEntry { Url = $"https://{entryHost}/login" };
+        Assert.Equal(expected, BrowserStatusPipeService.EntryMatchesDomain(entry, requestedDomain));
+    }
+
+    [Theory]
+    [InlineData("github.io", null)]
+    [InlineData("blogspot.com", null)]
+    [InlineData("alice.github.io", "alice.github.io")]
+    [InlineData("example.com", "example.com")]
+    [InlineData("login.example.com", "example.com")]
+    public void GetRegistrableDomain_UsesKnownPublicSuffixBoundaries(string host, string? expected)
+    {
+        Assert.Equal(expected, BrowserStatusPipeService.GetRegistrableDomain(host));
     }
 
     [Fact]
