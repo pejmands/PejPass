@@ -27,10 +27,17 @@ h1 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: .1px; }
 .subtitle { margin: 3px 0 0; color: #a7acb7; font-size: 12px; }
 .version { align-self: flex-start; color: #9da3af; font-size: 11px; font-variant-numeric: tabular-nums; }
 .site-card, .connection-card {
-  margin-top: 16px; padding: 13px 14px; border: 1px solid #353a44;
+  margin-top: 10px; padding: 10px 12px; border: 1px solid #353a44;
   border-radius: 12px; background: #202329;
 }
-.eyebrow { margin: 0 0 8px; color: #a7acb7; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
+.eyebrow { margin: 0 0 5px; color: #a7acb7; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
+.status-card { padding-top: 11px; padding-bottom: 11px; }
+.status-card .connection-row { min-height: 18px; }
+.status-card .status-subtext { margin-top: 6px; }
+.status-details { margin-top: 7px; color: #a7acb7; font-size: 11px; line-height: 1.45; }
+.status-details summary { width: fit-content; cursor: pointer; color: #a7acb7; }
+.status-details p { margin: 6px 0 0; overflow-wrap: anywhere; }
+.status-details[hidden] { display: none; }
 .site-name { overflow-wrap: anywhere; margin: 0; font-size: 14px; font-weight: 600; }
 .site-detail { margin: 7px 0 0; color: #a7acb7; font-size: 12px; line-height: 1.45; }
 .connection-row { display: flex; align-items: center; gap: 8px; }
@@ -96,3 +103,6 @@ footer { margin-top: 14px; color: #969ca8; font-size: 10px; line-height: 1.4; }
 .lock-vault-button:hover:not(:disabled) { background: #4a3437; }
 
 #save-target[hidden] { display: none; }
+
+#unlock-hello { margin-top: 8px; }
+#unlock-controls[hidden] { display: none; }
