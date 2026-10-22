@@ -117,23 +117,12 @@ async function refreshLoginView() {
   try {
     await Promise.all([
       showActiveSite(),
-      checkDesktopConnection(),
       checkVaultStatus()
     ]);
   } finally {
     refreshLoginsButton.disabled = false;
     refreshLoginsButton.textContent = "Refresh status & accounts";
   }
-}
-
-async function checkDesktopConnection() {
-  try {
-    const response = await sendNativeMessage({ type: "ping", protocolVersion });
-    if (isValidBaseResponse(response, "pong")) {
-      setConnectionStatus(true, "PejPass desktop bridge connected."); return;
-    }
-    setConnectionStatus(false, "Desktop bridge returned an unexpected response.");
-  } catch { setConnectionStatus(false, "Desktop bridge not installed or unavailable."); }
 }
 
 async function checkVaultStatus({ quiet = false } = {}) {
@@ -143,8 +132,10 @@ async function checkVaultStatus({ quiet = false } = {}) {
     try {
       const cached = await chrome.runtime.sendMessage({ target: "pejpass-state" });
       if (cached?.status === "locked" || cached?.status === "unlocked") {
+        setConnectionStatus(true, "PejPass desktop bridge connected.");
         response = { type: "vaultStatus", app: "PejPass", protocolVersion, status: cached.status };
       } else if (cached?.status === "unavailable") {
+        setConnectionStatus(false, "Desktop bridge not installed or unavailable.");
         response = { type: "error", code: "app_unavailable" };
       }
     } catch {
@@ -153,6 +144,7 @@ async function checkVaultStatus({ quiet = false } = {}) {
 
     if (!response) {
       response = await sendNativeMessage({ type: "getVaultStatus", protocolVersion });
+      setConnectionStatus(true, "PejPass desktop bridge connected.");
     }
 
     if (isValidBaseResponse(response, "vaultStatus") &&
@@ -189,6 +181,7 @@ async function checkVaultStatus({ quiet = false } = {}) {
     }
     return response?.code === "app_unavailable" ? "unavailable" : "unknown";
   } catch {
+    setConnectionStatus(false, "Desktop bridge not installed or unavailable.");
     if (!quiet) {
       vaultStatus.textContent = "Vault status unavailable. Check that the browser host is installed.";
       unlockControls.hidden = false;
@@ -912,7 +905,6 @@ viewTabs.forEach((tab, index) => {
 
 setActiveView("logins");
 showActiveSite();
-checkDesktopConnection();
 checkVaultStatus();
 
 chrome.runtime.onMessage.addListener((message) => {

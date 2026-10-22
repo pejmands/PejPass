@@ -32,6 +32,9 @@ internal sealed partial class BrowserStatusPipeService
 
     private void OnVaultStateChanged(object? sender, EventArgs e)
     {
+        if (!_vaultSession.IsActive)
+            ClearCredentialIndex();
+
         lock (_eventsSync)
             RefreshStatusLocked();
     }

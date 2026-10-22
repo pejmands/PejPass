@@ -68,6 +68,11 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     private const int MaximumPasswordLength = 4096;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly CancellationTokenSource _shutdown = new();
+    private readonly object _credentialIndexSync = new();
+    private Vault? _credentialIndexVault;
+    private DateTimeOffset _credentialIndexUpdatedAt;
+    private Dictionary<string, List<VaultEntry>> _credentialIndexByRegistrableDomain =
+        new(StringComparer.OrdinalIgnoreCase);
     private Task? _serverTask;
 
     public void Start()
@@ -134,35 +139,50 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         ArgumentNullException.ThrowIfNull(reader);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumLength);
 
-        var buffer = new char[1];
-        var builder = new System.Text.StringBuilder(Math.Min(maximumLength, 256));
+        var buffer = new char[1024];
+        var builder = new System.Text.StringBuilder(Math.Min(maximumLength, 1024));
         while (true)
         {
             var count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
             if (count == 0)
                 return builder.Length == 0 ? null : builder.ToString();
 
-            var character = buffer[0];
-            if (character == '\n')
+            for (var index = 0; index < count; index++)
             {
-                if (builder.Length > 0 && builder[^1] == '\r')
-                    builder.Length--;
-                return builder.ToString();
-            }
-
-            if (builder.Length >= maximumLength)
-            {
-                if (character == '\r')
+                var character = buffer[index];
+                if (character == '\n')
                 {
-                    var nextCount = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
-                    if (nextCount > 0 && buffer[0] == '\n')
-                        return builder.ToString();
+                    if (builder.Length > 0 && builder[^1] == '\r')
+                        builder.Length--;
+                    return builder.ToString();
                 }
 
-                throw new InvalidDataException("The browser pipe message exceeds the maximum length.");
-            }
+                if (builder.Length >= maximumLength)
+                {
+                    if (character == '\r')
+                    {
+                        var hasNextBufferedCharacter = index + 1 < count;
+                        var nextCharacter = hasNextBufferedCharacter
+                            ? buffer[index + 1]
+                            : '\0';
 
-            builder.Append(character);
+                        if (!hasNextBufferedCharacter)
+                        {
+                            var nextCount = await reader.ReadAsync(
+                                buffer.AsMemory(0, 1), cancellationToken).ConfigureAwait(false);
+                            if (nextCount > 0)
+                                nextCharacter = buffer[0];
+                        }
+
+                        if (nextCharacter == '\n')
+                            return builder.ToString();
+                    }
+
+                    throw new InvalidDataException("The browser pipe message exceeds the maximum length.");
+                }
+
+                builder.Append(character);
+            }
         }
     }
 
@@ -839,14 +859,60 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     {
         if (!_vaultSession.IsActive || _vaultSession.Vault is not { } vault) return [];
 
-        return [.. vault.Entries
-            .Where(entry => EntryMatchesDomain(entry, domain))
+        var registrableDomain = GetRegistrableDomain(domain);
+        if (registrableDomain is null) return [];
+
+        EnsureCredentialIndex(vault);
+        if (!_credentialIndexByRegistrableDomain.TryGetValue(registrableDomain, out var entries))
+            return [];
+
+        return [.. entries
             .OrderByDescending(entry => entry.IsFavorite)
             .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
             .Take(MaximumCredentialResults)
             .Select(entry => new CredentialSummary(
                 entry.Id.ToString("D"), Limit(entry.Title, 200),
                 Limit(entry.Username, 256), Limit(entry.Url, 2048)))];
+    }
+
+    private void EnsureCredentialIndex(Vault vault)
+    {
+        lock (_credentialIndexSync)
+        {
+            if (ReferenceEquals(_credentialIndexVault, vault) &&
+                _credentialIndexUpdatedAt == vault.UpdatedAt)
+                return;
+
+            var index = new Dictionary<string, List<VaultEntry>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var entry in vault.Entries)
+            {
+                if (!TryGetEntryHost(entry.Url, out var host) ||
+                    GetRegistrableDomain(host) is not { } registrableDomain)
+                    continue;
+
+                if (!index.TryGetValue(registrableDomain, out var entries))
+                {
+                    entries = [];
+                    index.Add(registrableDomain, entries);
+                }
+
+                entries.Add(entry);
+            }
+
+            _credentialIndexByRegistrableDomain = index;
+            _credentialIndexVault = vault;
+            _credentialIndexUpdatedAt = vault.UpdatedAt;
+        }
+    }
+
+    private void ClearCredentialIndex()
+    {
+        lock (_credentialIndexSync)
+        {
+            _credentialIndexVault = null;
+            _credentialIndexUpdatedAt = default;
+            _credentialIndexByRegistrableDomain.Clear();
+        }
     }
 
     internal static bool EntryMatchesDomain(VaultEntry entry, string domain)
