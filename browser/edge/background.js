@@ -146,11 +146,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return false;
     }
 
-    const text = count === 0 ? "" : String(count);
+    const text = count === 0 ? "" : count === 25 ? "25+" : String(count);
     void chrome.action.setBadgeText({ text, tabId }).catch(() => {});
     void chrome.action.setBadgeBackgroundColor({ color: "#8caaee", tabId }).catch(() => {});
     void chrome.action.setTitle({
-      title: count === 0 ? "PejPass" : `PejPass — ${count} matching account${count === 1 ? "" : "s"}`,
+      title: count === 0 ? "PejPass" : `PejPass — ${count === 25 ? "25+" : count} matching account${count === 1 ? "" : "s"}`,
       tabId
     }).catch(() => {});
     sendResponse({ ok: true });
@@ -383,6 +383,12 @@ function ensureConnectedQuietly() {
 function scheduleReconnectAlarm() {
   chrome.alarms.create(keepAliveAlarm, { periodInMinutes: 0.5 });
 }
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (typeof changeInfo.url !== "string") return;
+  void chrome.action.setBadgeText({ text: "", tabId }).catch(() => {});
+  void chrome.action.setTitle({ title: "PejPass", tabId }).catch(() => {});
+});
 
 chrome.runtime.onInstalled.addListener(() => {
   scheduleReconnectAlarm();
