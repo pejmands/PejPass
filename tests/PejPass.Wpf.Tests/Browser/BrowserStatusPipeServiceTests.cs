@@ -160,6 +160,21 @@ public sealed class BrowserStatusPipeServiceTests
     }
 
     [Fact]
+    public void CreateResponse_DoesNotServeFillCredentialSynchronously()
+    {
+        using var session = new VaultSession();
+        using var service = new BrowserStatusPipeService(session);
+
+        var response = service.CreateResponse(
+            """{"type":"fillCredential","protocolVersion":1,"domain":"example.com","id":"11111111-1111-1111-1111-111111111111"}""");
+
+        Assert.Equal("error", response.Type);
+        Assert.Equal("async_required", response.Code);
+        Assert.Null(response.Password);
+        Assert.Null(response.TotpCode);
+    }
+
+    [Fact]
     public async Task FillCredential_RequiresUnlockedVault()
     {
         using var session = new VaultSession();
