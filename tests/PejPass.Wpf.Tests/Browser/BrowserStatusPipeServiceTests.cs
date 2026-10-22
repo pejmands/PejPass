@@ -117,6 +117,34 @@ public sealed class BrowserStatusPipeServiceTests
     }
 
     [Fact]
+    public void GetCredentials_RebuildsIndexWhenVaultContentChanges()
+    {
+        using var session = new VaultSession();
+        using var keyMaterial = CreateMaterial();
+        using var service = new BrowserStatusPipeService(session);
+        var entry = new VaultEntry
+        {
+            Title = "Example",
+            Username = "alice",
+            Url = "https://example.com/login"
+        };
+        var vault = new Vault { Entries = [entry] };
+        session.Open(vault, Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"), keyMaterial);
+
+        var first = service.CreateResponse("""{"type":"getCredentials","protocolVersion":1,"domain":"example.com"}""");
+        Assert.Single(first.Credentials!);
+
+        entry.Url = "https://changed.example/login";
+        vault.Touch();
+
+        var oldDomain = service.CreateResponse("""{"type":"getCredentials","protocolVersion":1,"domain":"example.com"}""");
+        var newDomain = service.CreateResponse("""{"type":"getCredentials","protocolVersion":1,"domain":"changed.example"}""");
+
+        Assert.Empty(oldDomain.Credentials!);
+        Assert.Single(newDomain.Credentials!);
+    }
+
+    [Fact]
     public void GetCredentials_ReturnsMatchingMetadataWithoutSecrets()
     {
         using var session = new VaultSession();
