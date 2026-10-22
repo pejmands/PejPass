@@ -18,6 +18,7 @@ let port = null;
 let nextRequestId = 1;
 let cachedStatus = "unknown";
 const pending = new Map();
+const matchRefreshVersions = new Map();
 
 const toolbarIconCache = new Map();
 
@@ -60,6 +61,19 @@ function applyStatus(status) {
 
   cachedStatus = status;
   void setToolbarVaultIcon(status === "unlocked");
+  if (status !== "unlocked") {
+    void chrome.tabs.query({}).then((tabs) => {
+      for (const tab of tabs) {
+        if (Number.isInteger(tab.id)) clearMatchBadge(tab.id);
+      }
+    }).catch(() => {});
+  } else {
+    void chrome.tabs.query({ active: true }).then((tabs) => {
+      for (const tab of tabs) {
+        if (Number.isInteger(tab.id)) void refreshMatchCount(tab.id);
+      }
+    }).catch(() => {});
+  }
   void chrome.runtime.sendMessage({ type: "vaultStateChanged", status }).catch(() => {
     // No popup is open to receive the state change.
   });
@@ -82,6 +96,73 @@ function onNativeMessage(message) {
   const response = { ...message };
   delete response.requestId;
   request.resolve(response);
+}
+
+
+function setMatchBadge(tabId, count) {
+  const text = count === 0 ? "" : count === 25 ? "25+" : String(count);
+  void chrome.action.setBadgeText({ text, tabId }).catch(() => {});
+  void chrome.action.setBadgeBackgroundColor({ color: "#8caaee", tabId }).catch(() => {});
+  void chrome.action.setTitle({
+    title: count === 0 ? "PejPass" : `PejPass — ${count === 25 ? "25+" : count} matching account${count === 1 ? "" : "s"}`,
+    tabId
+  }).catch(() => {});
+}
+
+function clearMatchBadge(tabId) {
+  setMatchBadge(tabId, 0);
+}
+
+async function refreshMatchCount(tabId) {
+  if (!Number.isInteger(tabId) || tabId < 0) return;
+  const version = (matchRefreshVersions.get(tabId) || 0) + 1;
+  matchRefreshVersions.set(tabId, version);
+  clearMatchBadge(tabId);
+
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    if (matchRefreshVersions.get(tabId) !== version || typeof tab.url !== "string") return;
+
+    let url;
+    try {
+      url = new URL(tab.url);
+    } catch {
+      return;
+    }
+
+    if (url.protocol !== "http:" && url.protocol !== "https:") return;
+    const domain = url.hostname.toLowerCase().replace(/\.$/, "");
+    if (!domain) return;
+
+    const status = await sendNative({ type: "getVaultStatus" }, 6_000);
+    if (matchRefreshVersions.get(tabId) !== version) return;
+    if (status?.type !== "vaultStatus" || status.app !== "PejPass" ||
+        status.protocolVersion !== protocolVersion ||
+        !["locked", "unlocked"].includes(status.status)) {
+      return;
+    }
+
+    applyStatus(status.status);
+    if (status.status !== "unlocked") return;
+
+    const response = await sendNative({ type: "getCredentials", domain }, 6_000);
+    if (matchRefreshVersions.get(tabId) !== version) return;
+    if (response?.type !== "credentialMatches" || response.app !== "PejPass" ||
+        response.protocolVersion !== protocolVersion || response.domain !== domain ||
+        !Array.isArray(response.credentials) || response.credentials.length > 25) {
+      return;
+    }
+
+    const currentTab = await chrome.tabs.get(tabId);
+    if (matchRefreshVersions.get(tabId) !== version || typeof currentTab.url !== "string") return;
+    const currentUrl = new URL(currentTab.url);
+    if ((currentUrl.protocol !== "http:" && currentUrl.protocol !== "https:") ||
+        currentUrl.hostname.toLowerCase().replace(/\.$/, "") !== domain) return;
+
+    setMatchBadge(tabId, response.credentials.length);
+  } catch {
+    // Keep the badge empty if the tab, vault, or native host is unavailable.
+  }
 }
 
 function ensurePort() {
@@ -137,6 +218,19 @@ function sendNative(payload, timeoutMs) {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return false;
+
+  if (message?.target === "pejpass-match-count") {
+    const { tabId, count } = message;
+    if (!Number.isInteger(tabId) || tabId < 0 ||
+        !Number.isInteger(count) || count < 0 || count > 25) {
+      sendResponse({ ok: false });
+      return false;
+    }
+
+    setMatchBadge(tabId, count);
+    sendResponse({ ok: true });
+    return false;
+  }
 
   if (message?.target === "pejpass-fill") {
     const { tabId, domain, id } = message;
@@ -365,6 +459,26 @@ function scheduleReconnectAlarm() {
   chrome.alarms.create(keepAliveAlarm, { periodInMinutes: 0.5 });
 }
 
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (typeof changeInfo.url === "string") {
+    const version = (matchRefreshVersions.get(tabId) || 0) + 1;
+    matchRefreshVersions.set(tabId, version);
+    clearMatchBadge(tabId);
+  }
+
+  if (changeInfo.status === "complete") {
+    void refreshMatchCount(tabId);
+  }
+});
+
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  void refreshMatchCount(tabId);
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  matchRefreshVersions.delete(tabId);
+});
+
 chrome.runtime.onInstalled.addListener(() => {
   scheduleReconnectAlarm();
   ensureConnectedQuietly();
@@ -373,6 +487,9 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onStartup.addListener(() => {
   scheduleReconnectAlarm();
   ensureConnectedQuietly();
+  void chrome.tabs.query({ active: true, lastFocusedWindow: true }).then((tabs) => {
+    for (const tab of tabs) if (Number.isInteger(tab.id)) void refreshMatchCount(tab.id);
+  }).catch(() => {});
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {

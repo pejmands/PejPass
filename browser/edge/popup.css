@@ -269,3 +269,58 @@ footer {
 .lock-vault-button { border-color: var(--lock-border); background: var(--lock-bg); }
 .lock-vault-button:hover:not(:disabled) { background: var(--lock-hover-bg); }
 #save-target[hidden] { display: none; }
+
+.view-tab:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+.unavailable-guide {
+  margin-block-start: 12px;
+  padding: 12px;
+  border: 1px solid var(--surface1);
+  border-radius: 10px;
+  background: var(--surface0);
+  color: var(--subtext0);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.unavailable-guide[hidden] { display: none; }
+.unavailable-guide p { margin: 0; }
+.unavailable-guide .unavailable-guide-title {
+  margin-block-end: 5px;
+  color: var(--text);
+  font-weight: 650;
+}
+.credential-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.credential-avatar {
+  position: relative;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--surface2);
+  border-radius: 9px;
+  background: var(--mantle);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+}
+.credential-avatar-initial { line-height: 1; }
+.credential-favicon {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 5px;
+  background: var(--mantle);
+  object-fit: contain;
+}
+.credential-favicon[hidden] { display: none; }
+.credential-details { min-width: 0; flex: 1; }
+.credential-fill-button { width: auto; flex: 0 0 auto; }

@@ -10,8 +10,10 @@ const fillNowButton = document.getElementById("fill-now");
 const refreshLoginsButton = document.getElementById("refresh-logins");
 const inspectLoginButton = document.getElementById("inspect-login");
 const saveFields = document.getElementById("save-fields");
+const tabLogins = document.getElementById("tab-logins");
 const tabSave = document.getElementById("tab-save");
 const saveBadge = document.getElementById("save-badge");
+const unavailableGuide = document.getElementById("unavailable-guide");
 const toggleSavePassword = document.getElementById("toggle-save-password");
 const saveDiff = document.getElementById("save-diff");
 const saveDiffList = document.getElementById("save-diff-list");
@@ -111,14 +113,30 @@ function isValidBaseResponse(response, type) {
     response?.protocolVersion === protocolVersion;
 }
 
+function updateMatchBadge(count, tabId = activeTabId) {
+  if (!Number.isInteger(tabId) || tabId < 0) return;
+  const safeCount = Number.isInteger(count) ? Math.max(0, Math.min(count, 25)) : 0;
+  void chrome.runtime.sendMessage({
+    target: "pejpass-match-count",
+    tabId,
+    count: safeCount
+  }).catch(() => {});
+}
+
 function showUnavailable(message) {
+  const previousTabId = activeTabId;
+  if (Number.isInteger(previousTabId)) updateMatchBadge(0, previousTabId);
   activeTabId = null;
   activeDomain = null;
-  siteName.textContent = "Unavailable page";
+  siteName.textContent = "PejPass works on websites";
   siteDetail.textContent = message;
-  credentialsStatus.textContent = "Credential lookup is unavailable on this page.";
+  unavailableGuide.hidden = false;
+  credentialsStatus.textContent = "Open a regular website to see matching accounts.";
+  tabLogins.disabled = true;
+  tabSave.disabled = true;
   inspectLoginButton.disabled = true;
   saveLoginButton.disabled = true;
+  refreshLoginsButton.disabled = true;
   generateFillPasswordButton.disabled = true;
   saveFields.hidden = true;
   saveBadge.hidden = true;
@@ -163,13 +181,20 @@ async function showActiveSite() {
     catch { showUnavailable("The active tab address could not be read."); return; }
 
     if (url.protocol !== "http:" && url.protocol !== "https:") {
-      showUnavailable("Edge does not allow extensions to inspect this page."); return;
+      const message = url.protocol === "file:"
+        ? "This is a local file. PejPass can work with regular websites that use HTTP or HTTPS."
+        : "This is a browser-managed or special page. Open a regular website to use Logins and Save.";
+      showUnavailable(message); return;
     }
 
     activeTabId = tab.id;
     activeDomain = url.hostname.toLowerCase().replace(/\.$/, "");
+    unavailableGuide.hidden = true;
+    tabLogins.disabled = false;
+    tabSave.disabled = false;
     inspectLoginButton.disabled = false;
     saveLoginButton.disabled = false;
+    refreshLoginsButton.disabled = false;
     generateFillPasswordButton.disabled = false;
     siteName.textContent = activeDomain;
     siteDetail.textContent = "Searching PejPass for accounts matching this site…";
@@ -230,6 +255,7 @@ async function checkVaultStatus({ quiet = false } = {}) {
       lockVaultButton.hidden = response.status !== "unlocked";
 
       if (response.status === "locked") {
+        updateMatchBadge(0);
         credentialList.replaceChildren();
         matchingCredentials = [];
         fillNowButton.hidden = true;
@@ -283,6 +309,7 @@ async function checkVaultStatus({ quiet = false } = {}) {
 async function lookupCredentials(domain) {
   credentialList.replaceChildren();
   matchingCredentials = [];
+  updateMatchBadge(0);
   fillNowButton.hidden = true;
   credentialsStatus.textContent = "Searching…";
   try {
@@ -306,7 +333,8 @@ async function lookupCredentials(domain) {
       credentialsStatus.textContent = "Credential lookup returned an invalid response."; return;
     }
 
-    matchingCredentials = response.credentials;
+    matchingCredentials = await sortMatchingCredentials(response.credentials, domain);
+    updateMatchBadge(matchingCredentials.length);
     refreshSaveTargets();
     if (response.credentials.length === 0) {
       fillNowButton.hidden = true;
@@ -324,9 +352,38 @@ async function lookupCredentials(domain) {
       fillNowButton.textContent = "Fill now";
     }
 
-    for (const credential of response.credentials) {
+    let activeFaviconUrl = "";
+    try {
+      const activeTab = Number.isInteger(activeTabId) ? await chrome.tabs.get(activeTabId) : null;
+      if (typeof activeTab?.favIconUrl === "string" && activeTab.favIconUrl.length <= 4096) {
+        activeFaviconUrl = activeTab.favIconUrl;
+      }
+    } catch {
+      // Account initials remain visible when the active tab favicon is unavailable.
+    }
+
+    for (const credential of matchingCredentials) {
       const item = document.createElement("li");
       item.className = singleLoginMatch ? "credential-item single-match" : "credential-item";
+      const avatar = document.createElement("div");
+      avatar.className = "credential-avatar";
+      avatar.setAttribute("aria-hidden", "true");
+      const initial = document.createElement("span");
+      initial.className = "credential-avatar-initial";
+      initial.textContent = Array.from((credential.title || credential.username || "?").trim())[0]?.toUpperCase() || "?";
+      avatar.append(initial);
+
+      if (activeFaviconUrl) {
+        const favicon = document.createElement("img");
+        favicon.className = "credential-favicon";
+        favicon.alt = "";
+        favicon.src = activeFaviconUrl;
+        favicon.addEventListener("error", () => { favicon.hidden = true; });
+        avatar.append(favicon);
+      }
+
+      const details = document.createElement("div");
+      details.className = "credential-details";
       const title = document.createElement("p");
       title.className = "credential-title";
       title.dir = "auto";
@@ -335,13 +392,15 @@ async function lookupCredentials(domain) {
       username.className = "credential-username";
       username.dir = "auto";
       username.textContent = credential.username || "No username saved";
+      details.append(title, username);
+
       const fillButton = document.createElement("button");
-      fillButton.className = "fill-button";
+      fillButton.className = "fill-button credential-fill-button";
       fillButton.type = "button";
       fillButton.textContent = "Fill login";
       fillButton.setAttribute("aria-label", `Fill login for ${credential.title || "Untitled account"}`);
       fillButton.addEventListener("click", () => fillCredential(credential));
-      item.append(title, username, fillButton);
+      item.append(avatar, details, fillButton);
       credentialList.append(item);
     }
   } catch {
@@ -406,6 +465,11 @@ async function fillCredential(credential) {
       no_username: "Password filled, but no matching username field was found."
     };
     credentialsStatus.textContent = messages[response.outcome];
+
+    if (["filled", "username_only", "totp_filled", "totp_unavailable", "no_username"].includes(response.outcome)) {
+      await recordCredentialUse(credential.id);
+      window.setTimeout(() => window.close(), 350);
+    }
   } catch {
     credentialsStatus.textContent = "Could not fill this page. Check that it is a regular HTTP(S) page and try again.";
   }
@@ -884,6 +948,59 @@ function isValidCredential(credential) {
     typeof credential.url === "string" && credential.url.length <= 2048;
 }
 
+function getCredentialHost(credential) {
+  try {
+    return new URL(credential.url).hostname.toLowerCase().replace(/\.$/, "");
+  } catch {
+    return "";
+  }
+}
+
+function getDomainMatchRank(credential, domain) {
+  const host = getCredentialHost(credential);
+  if (!host) return 3;
+  if (host === domain) return 0;
+  if (domain.endsWith("." + host)) return 1;
+  if (host.endsWith("." + domain)) return 2;
+  return 3;
+}
+
+async function sortMatchingCredentials(credentials, domain) {
+  let lastUsedByCredential = {};
+  try {
+    const stored = await chrome.storage.local.get("lastUsedByCredential");
+    if (stored?.lastUsedByCredential && typeof stored.lastUsedByCredential === "object") {
+      lastUsedByCredential = stored.lastUsedByCredential;
+    }
+  } catch {
+    // Sorting still works when local usage history is unavailable.
+  }
+
+  return [...credentials].sort((left, right) => {
+    const domainDifference = getDomainMatchRank(left, domain) - getDomainMatchRank(right, domain);
+    if (domainDifference !== 0) return domainDifference;
+
+    const leftUsed = Number(lastUsedByCredential[left.id]) || 0;
+    const rightUsed = Number(lastUsedByCredential[right.id]) || 0;
+    if (leftUsed !== rightUsed) return rightUsed - leftUsed;
+
+    return (left.title || "").localeCompare(right.title || "", undefined, { sensitivity: "base" });
+  });
+}
+
+async function recordCredentialUse(credentialId) {
+  try {
+    const stored = await chrome.storage.local.get("lastUsedByCredential");
+    const history = stored?.lastUsedByCredential && typeof stored.lastUsedByCredential === "object"
+      ? stored.lastUsedByCredential
+      : {};
+    history[credentialId] = Date.now();
+    await chrome.storage.local.set({ lastUsedByCredential: history });
+  } catch {
+    // Filling should not fail if the browser cannot persist usage metadata.
+  }
+}
+
 
 function secureRandomIndex(maximum) {
   if (!Number.isInteger(maximum) || maximum < 1 || maximum > 0x100000000) {
@@ -1186,6 +1303,7 @@ async function lockVault() {
       return;
     }
 
+    updateMatchBadge(0);
     credentialList.replaceChildren();
     matchingCredentials = [];
     credentialsStatus.textContent = "Unlock the PejPass vault to view matching accounts.";
@@ -1344,7 +1462,7 @@ launchAppButton.addEventListener("click", launchDesktopApp);
 const viewTabs = Array.from(document.querySelectorAll(".view-tab"));
 
 function setActiveView(view, moveFocus = false) {
-  if (!Object.hasOwn(viewPanels, view)) return;
+  if (!Object.hasOwn(viewPanels, view) || viewTabs.find((tab) => tab.dataset.view === view)?.disabled) return;
 
   for (const tab of viewTabs) {
     const selected = tab.dataset.view === view;
@@ -1358,18 +1476,22 @@ function setActiveView(view, moveFocus = false) {
   }
 }
 
-viewTabs.forEach((tab, index) => {
+viewTabs.forEach((tab) => {
   tab.addEventListener("click", () => setActiveView(tab.dataset.view));
   tab.addEventListener("keydown", (event) => {
-    let nextIndex = index;
-    if (event.key === "ArrowRight") nextIndex = (index + 1) % viewTabs.length;
-    else if (event.key === "ArrowLeft") nextIndex = (index - 1 + viewTabs.length) % viewTabs.length;
+    const enabledTabs = viewTabs.filter((candidate) => !candidate.disabled);
+    const currentIndex = enabledTabs.indexOf(tab);
+    if (currentIndex < 0) return;
+
+    let nextIndex = currentIndex;
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % enabledTabs.length;
+    else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + enabledTabs.length) % enabledTabs.length;
     else if (event.key === "Home") nextIndex = 0;
-    else if (event.key === "End") nextIndex = viewTabs.length - 1;
+    else if (event.key === "End") nextIndex = enabledTabs.length - 1;
     else return;
 
     event.preventDefault();
-    setActiveView(viewTabs[nextIndex].dataset.view, true);
+    setActiveView(enabledTabs[nextIndex].dataset.view, true);
   });
 });
 
