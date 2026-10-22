@@ -618,6 +618,9 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             using var document = JsonDocument.Parse(line);
             var root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("type", out var type) ||
+                type.ValueKind != JsonValueKind.String ||
+                type.GetString() != "fillCredential" ||
                 !root.TryGetProperty("protocolVersion", out var version) ||
                 !version.TryGetInt32(out var protocolVersion) ||
                 protocolVersion != ProtocolVersion ||
@@ -727,8 +730,9 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             return WindowsHelloVerificationResult.Unavailable;
 
         var owner = app.Windows.OfType<System.Windows.Window>()
-            .Where(window => !SystemTrayService.IsHostWindow(window) && window.IsVisible && window.IsLoaded)
-            .OrderByDescending(window => window.IsActive)
+            .Where(window => !SystemTrayService.IsHostWindow(window) && window.IsLoaded)
+            .OrderByDescending(window => window.IsVisible)
+            .ThenByDescending(window => window.IsActive)
             .FirstOrDefault();
         if (owner is null || !await WindowsHelloHelper.IsAvailableAsync())
             return WindowsHelloVerificationResult.Unavailable;
