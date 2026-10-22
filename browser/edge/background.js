@@ -1,30 +1,36 @@
 const nativeHostName = "com.pejpass.browserhost";
 const protocolVersion = 1;
-const statusAlarmName = "refresh-vault-toolbar-icon";
-const pollIntervalMinutes = 0.5;
+const keepAliveAlarm = "pejpass-native-keepalive";
+const allowedTypes = new Set([
+  "ping",
+  "launchApp",
+  "unlockVault",
+  "lockVault",
+  "getVaultStatus",
+  "getCredentials",
+  "fillCredential",
+  "saveCredential"
+]);
+
+let port = null;
+let nextRequestId = 1;
+let cachedStatus = "unknown";
+const pending = new Map();
 
 const toolbarIconCache = new Map();
 
 async function loadToolbarIcon(imagePath) {
-  if (toolbarIconCache.has(imagePath)) {
-    return toolbarIconCache.get(imagePath);
-  }
+  if (toolbarIconCache.has(imagePath)) return toolbarIconCache.get(imagePath);
 
   const response = await fetch(chrome.runtime.getURL(imagePath));
-  if (!response.ok) {
-    throw new Error("Unable to load toolbar icon.");
-  }
-
+  if (!response.ok) throw new Error("Unable to load toolbar icon.");
   const image = await createImageBitmap(await response.blob());
 
   const imageData = {};
   for (const size of [16, 32]) {
     const canvas = new OffscreenCanvas(size, size);
     const context = canvas.getContext("2d");
-    if (!context) {
-      throw new Error("Unable to create toolbar icon canvas.");
-    }
-
+    if (!context) throw new Error("Unable to create toolbar icon canvas.");
     context.clearRect(0, 0, size, size);
     context.drawImage(image, 0, 0, size, size);
     imageData[size] = context.getImageData(0, 0, size, size);
@@ -36,50 +42,151 @@ async function loadToolbarIcon(imagePath) {
 }
 
 async function setToolbarVaultIcon(unlocked) {
-  const imagePath = unlocked ? "icons/PejPass.ico" : "icons/PejPassLocked.ico";
-  const imageData = await loadToolbarIcon(imagePath);
-  await chrome.action.setIcon({ imageData });
+  try {
+    const imageData = await loadToolbarIcon(
+      unlocked ? "icons/PejPass.ico" : "icons/PejPassLocked.ico"
+    );
+    await chrome.action.setIcon({ imageData });
+  } catch {
+    // The browser may be shutting down.
+  }
 }
 
-async function refreshToolbarVaultIcon() {
-  try {
-    const response = await chrome.runtime.sendNativeMessage(nativeHostName, {
-      type: "getVaultStatus",
-      protocolVersion
-    });
+function applyStatus(status) {
+  if (!["locked", "unlocked", "unavailable", "unknown"].includes(status)) return;
+  if (status === cachedStatus) return;
 
-    if (response?.type === "vaultStatus" &&
-        response.app === "PejPass" &&
-        response.protocolVersion === protocolVersion &&
-        ["locked", "unlocked"].includes(response.status)) {
-      await setToolbarVaultIcon(response.status === "unlocked");
+  cachedStatus = status;
+  void setToolbarVaultIcon(status === "unlocked");
+  void chrome.runtime.sendMessage({ type: "vaultStateChanged", status }).catch(() => {
+    // No popup is open to receive the state change.
+  });
+}
+
+function onNativeMessage(message) {
+  if (message?.type === "vaultStateChanged") {
+    applyStatus(message.status);
+    return;
+  }
+
+  const requestId = message?.requestId;
+  const request = typeof requestId === "string" ? pending.get(requestId) : undefined;
+  if (!request) return;
+
+  clearTimeout(request.timer);
+  pending.delete(requestId);
+  const response = { ...message };
+  delete response.requestId;
+  request.resolve(response);
+}
+
+function ensurePort() {
+  if (port) return port;
+
+  const connectedPort = chrome.runtime.connectNative(nativeHostName);
+  port = connectedPort;
+
+  connectedPort.onMessage.addListener(onNativeMessage);
+  connectedPort.onDisconnect.addListener(() => {
+    const reason = chrome.runtime.lastError?.message || "Native host disconnected.";
+    if (port === connectedPort) port = null;
+
+    for (const [requestId, request] of pending) {
+      clearTimeout(request.timer);
+      request.reject(new Error(reason));
+      pending.delete(requestId);
+    }
+
+    applyStatus("unavailable");
+  });
+
+  return connectedPort;
+}
+
+function sendNative(payload, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    let activePort;
+    try {
+      activePort = ensurePort();
+    } catch (error) {
+      reject(error);
       return;
     }
 
-    // If the desktop app cannot confirm an unlocked vault, do not leave the unlocked icon visible.
-    await setToolbarVaultIcon(false);
-  } catch {
-    // The desktop app or native host is unavailable; use the conservative locked icon.
+    const requestId = String(nextRequestId++);
+    const timer = setTimeout(() => {
+      pending.delete(requestId);
+      reject(new Error("Native host request timed out."));
+    }, timeoutMs);
+
+    pending.set(requestId, { resolve, reject, timer });
+
     try {
-      await setToolbarVaultIcon(false);
-    } catch {
-      // The browser may be shutting down.
+      activePort.postMessage({ ...payload, protocolVersion, requestId });
+    } catch (error) {
+      clearTimeout(timer);
+      pending.delete(requestId);
+      reject(error);
     }
+  });
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id) return false;
+
+  if (message?.target === "pejpass-state") {
+    ensureConnectedQuietly();
+    sendResponse({ status: cachedStatus });
+    return false;
+  }
+
+  if (message?.target !== "pejpass-native") return false;
+
+  const payload = message.payload;
+  if (!payload || typeof payload.type !== "string" || !allowedTypes.has(payload.type)) {
+    sendResponse({ type: "error", code: "unsupported_request" });
+    return false;
+  }
+
+  const timeoutMs = payload.type === "unlockVault" ? 50_000 : 6_000;
+  sendNative(payload, timeoutMs)
+    .then(sendResponse)
+    .catch((error) => {
+      sendResponse({
+        type: "error",
+        code: "host_unavailable",
+        message: String(error?.message || error)
+      });
+    });
+
+  return true;
+});
+
+function ensureConnectedQuietly() {
+  try {
+    ensurePort();
+  } catch {
+    applyStatus("unavailable");
   }
 }
 
+function scheduleReconnectAlarm() {
+  chrome.alarms.create(keepAliveAlarm, { periodInMinutes: 0.5 });
+}
+
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.alarms.create(statusAlarmName, { periodInMinutes: pollIntervalMinutes });
-  void refreshToolbarVaultIcon();
+  scheduleReconnectAlarm();
+  ensureConnectedQuietly();
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  chrome.alarms.create(statusAlarmName, { periodInMinutes: pollIntervalMinutes });
-  void refreshToolbarVaultIcon();
+  scheduleReconnectAlarm();
+  ensureConnectedQuietly();
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === statusAlarmName) {
-    void refreshToolbarVaultIcon();
-  }
+  if (alarm.name === keepAliveAlarm) ensureConnectedQuietly();
 });
+
+// Re-establish the native connection whenever the service worker starts.
+ensureConnectedQuietly();
