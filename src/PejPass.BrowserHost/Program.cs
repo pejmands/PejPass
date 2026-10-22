@@ -274,6 +274,7 @@ internal static class Program
                 "ping" => new HostResponse("pong", "PejPass", ProtocolVersion, null, null),
                 "launchApp" => LaunchDesktopApp(),
                 "unlockVault" => await UnlockVaultAsync(root).ConfigureAwait(false),
+                "unlockWithHello" => await UnlockWithHelloAsync().ConfigureAwait(false),
                 "lockVault" => await LockVaultAsync().ConfigureAwait(false),
                 "getVaultStatus" => await GetVaultStatusAsync().ConfigureAwait(false),
                 "getCredentials" => await GetCredentialsAsync(root).ConfigureAwait(false),
@@ -362,6 +363,37 @@ internal static class Program
             return Error("invalid_app_response");
 
         return new HostResponse("vaultUnlocked", "PejPass", ProtocolVersion, "unlocked", null);
+    }
+
+    private static async Task<HostResponse> UnlockWithHelloAsync()
+    {
+        var request = new HostRequest("unlockWithHello", ProtocolVersion);
+        var response = await SendPipeRequestAsync(request).ConfigureAwait(false);
+        if (response.Error == "app_unavailable")
+        {
+            var launchResponse = LaunchDesktopApp();
+            if (launchResponse.Type == "error")
+                return launchResponse;
+
+            for (var attempt = 0; attempt < 25; attempt++)
+            {
+                await Task.Delay(400).ConfigureAwait(false);
+                response = await SendPipeRequestAsync(request).ConfigureAwait(false);
+                if (response.Error != "app_unavailable")
+                    break;
+            }
+        }
+
+        if (response.Error is not null)
+            return Error(response.Error);
+
+        var root = response.Root;
+        return HasString(root, "type", "vaultUnlocked") &&
+               HasString(root, "app", "PejPass") &&
+               HasVersion(root) &&
+               HasString(root, "status", "unlocked")
+            ? new HostResponse("vaultUnlocked", "PejPass", ProtocolVersion, "unlocked", null)
+            : Error("invalid_app_response");
     }
 
     private static async Task<HostResponse> LockVaultAsync()
@@ -522,7 +554,7 @@ internal static class Program
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(request.Type switch
             {
-                "unlockVault" => TimeSpan.FromSeconds(45),
+                "unlockVault" or "unlockWithHello" => TimeSpan.FromSeconds(45),
                 "fillCredential" => TimeSpan.FromSeconds(60),
                 _ => TimeSpan.FromSeconds(1)
             });
