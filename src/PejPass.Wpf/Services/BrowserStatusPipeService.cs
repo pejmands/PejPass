@@ -15,14 +15,16 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     private readonly VaultSession _vaultSession;
     private readonly Application.Services.VaultService? _vaultService;
     private readonly Func<string, string, string, bool>? _fillConfirmation;
+    private readonly Func<string, Task<WindowsHelloVerificationResult>>? _fillHelloVerification;
 
     internal BrowserStatusPipeService(VaultSession vaultSession)
         : this(vaultSession, (Application.Services.VaultService?)null) { }
 
     internal BrowserStatusPipeService(
         VaultSession vaultSession,
-        Func<string, string, string, bool> fillConfirmation)
-        : this(vaultSession, null, EventsPipeName, fillConfirmation) { }
+        Func<string, string, string, bool> fillConfirmation,
+        Func<string, Task<WindowsHelloVerificationResult>> fillHelloVerification)
+        : this(vaultSession, null, EventsPipeName, fillConfirmation, fillHelloVerification) { }
 
     internal BrowserStatusPipeService(
         VaultSession vaultSession,
@@ -33,19 +35,28 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         VaultSession vaultSession,
         Application.Services.VaultService? vaultService,
         string eventsPipeName)
-        : this(vaultSession, vaultService, eventsPipeName, null) { }
+        : this(vaultSession, vaultService, eventsPipeName, null, null) { }
 
     internal BrowserStatusPipeService(
         VaultSession vaultSession,
         Application.Services.VaultService? vaultService,
         string eventsPipeName,
         Func<string, string, string, bool>? fillConfirmation)
+        : this(vaultSession, vaultService, eventsPipeName, fillConfirmation, null) { }
+
+    internal BrowserStatusPipeService(
+        VaultSession vaultSession,
+        Application.Services.VaultService? vaultService,
+        string eventsPipeName,
+        Func<string, string, string, bool>? fillConfirmation,
+        Func<string, Task<WindowsHelloVerificationResult>>? fillHelloVerification = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(eventsPipeName);
         _vaultSession = vaultSession;
         _vaultService = vaultService;
         _eventsPipeName = eventsPipeName;
         _fillConfirmation = fillConfirmation;
+        _fillHelloVerification = fillHelloVerification;
         _vaultSession.StateChanged += OnVaultStateChanged;
     }
 
@@ -103,7 +114,9 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     ? await CreateSaveCredentialResponseAsync(line, cancellationToken).ConfigureAwait(false)
                     : IsUnlockVaultRequest(line)
                         ? await CreateUnlockVaultResponseAsync(line).ConfigureAwait(false)
-                        : CreateResponse(line);
+                        : IsFillCredentialRequest(line)
+                            ? await CreateFillCredentialResponseAsync(line).ConfigureAwait(false)
+                            : CreateResponse(line);
                 await writer.WriteLineAsync(JsonSerializer.Serialize(response, JsonOptions)).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { break; }
@@ -184,6 +197,25 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 document.RootElement.TryGetProperty("type", out var type) &&
                 type.ValueKind == JsonValueKind.String &&
                 type.GetString() == "unlockVault";
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool IsFillCredentialRequest(string? line)
+    {
+        if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
+            return false;
+
+        try
+        {
+            using var document = JsonDocument.Parse(line);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                document.RootElement.TryGetProperty("type", out var type) &&
+                type.ValueKind == JsonValueKind.String &&
+                type.GetString() == "fillCredential";
         }
         catch (JsonException)
         {
@@ -509,7 +541,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 "getVaultStatus" => new StatusResponse("vaultStatus", "PejPass", ProtocolVersion,
                     _vaultSession.IsActive ? "unlocked" : "locked", null),
                 "getCredentials" => CreateCredentialResponse(root),
-                "fillCredential" => CreateFillResponse(root),
+                "fillCredential" => Error("async_required"),
                 "saveCredential" => CreateSaveCredentialResponse(root),
                 _ => Error("unsupported_request")
             };
@@ -574,47 +606,80 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         catch (Exception) { return Error("lookup_unavailable"); }
     }
 
-    private StatusResponse CreateFillResponse(JsonElement root)
+    internal async Task<StatusResponse> CreateFillCredentialResponseAsync(string? line)
     {
-        if (!root.TryGetProperty("domain", out var domainElement) ||
-            domainElement.ValueKind != JsonValueKind.String ||
-            !TryNormalizeDomain(domainElement.GetString(), out var domain) ||
-            !root.TryGetProperty("id", out var idElement) ||
-            idElement.ValueKind != JsonValueKind.String ||
-            !Guid.TryParse(idElement.GetString(), out var id))
-            return Error("invalid_request");
+        if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
+            return Error("invalid_message");
 
-        if (!_vaultSession.IsActive) return Error("vault_locked");
+        Guid id;
+        string domain;
+        try
+        {
+            using var document = JsonDocument.Parse(line);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("protocolVersion", out var version) ||
+                !version.TryGetInt32(out var protocolVersion) ||
+                protocolVersion != ProtocolVersion ||
+                !root.TryGetProperty("domain", out var domainElement) ||
+                domainElement.ValueKind != JsonValueKind.String ||
+                !TryNormalizeDomain(domainElement.GetString(), out domain) ||
+                !root.TryGetProperty("id", out var idElement) ||
+                idElement.ValueKind != JsonValueKind.String ||
+                !Guid.TryParse(idElement.GetString(), out id))
+                return Error("invalid_request");
+        }
+        catch (JsonException)
+        {
+            return Error("invalid_message");
+        }
+
+        if (!_vaultSession.IsActive)
+            return Error("vault_locked");
 
         try
         {
+            (FillCredential? Credential, string? ErrorCode) result;
             var app = System.Windows.Application.Current;
-            var result = app is not null && !app.Dispatcher.CheckAccess()
-                ? app.Dispatcher.Invoke(() => FindAndConfirmCredentialForFill(id, domain))
-                : FindAndConfirmCredentialForFill(id, domain);
+            if (_fillConfirmation is not null && _fillHelloVerification is not null)
+            {
+                result = await FindAndConfirmCredentialForFillAsync(id, domain).ConfigureAwait(false);
+            }
+            else
+            {
+                if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
+                    return Error("app_unavailable");
 
-            if (result.Denied)
-                return Error("fill_denied");
+                var operation = app.Dispatcher.CheckAccess()
+                    ? FindAndConfirmCredentialForFillAsync(id, domain)
+                    : await app.Dispatcher.InvokeAsync(
+                        () => FindAndConfirmCredentialForFillAsync(id, domain),
+                        System.Windows.Threading.DispatcherPriority.Send).Task.Unwrap().ConfigureAwait(false);
+
+                result = await operation.ConfigureAwait(false);
+            }
+
+            if (result.ErrorCode is not null)
+                return Error(result.ErrorCode);
 
             var credential = result.Credential;
-            if (credential is not null)
-                NotifyBrowserActivity();
+            if (credential is null)
+                return Error("credential_not_found");
 
-            return credential is null
-                ? Error("credential_not_found")
-                : new StatusResponse("credentialForFill", "PejPass", ProtocolVersion,
-                    null, null, domain, null, id.ToString("D"), credential.Username, credential.Password,
-                    credential.TotpCode);
+            NotifyBrowserActivity();
+            return new StatusResponse("credentialForFill", "PejPass", ProtocolVersion,
+                null, null, domain, null, id.ToString("D"), credential.Username, credential.Password,
+                credential.TotpCode);
         }
         catch (Exception) { return Error("lookup_unavailable"); }
     }
 
-    private (FillCredential? Credential, bool Denied) FindAndConfirmCredentialForFill(
+    private async Task<(FillCredential? Credential, string? ErrorCode)> FindAndConfirmCredentialForFillAsync(
         Guid id, string domain)
     {
         var entry = FindEntryForFill(id, domain);
         if (entry is null)
-            return (null, false);
+            return (null, "credential_not_found");
 
         bool approved;
         if (_fillConfirmation is not null)
@@ -623,10 +688,6 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         }
         else
         {
-            var app = System.Windows.Application.Current;
-            if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
-                return (null, true);
-
             approved = DialogService.Confirm(
                 $"Allow PejPass to provide the username and password for this site?\n\n" +
                 $"Site: {domain}\nAccount: {Limit(entry.Title, 200)}\nUsername: {Limit(entry.Username, 256)}\n\n" +
@@ -637,11 +698,42 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         }
 
         if (!approved)
-            return (null, true);
+            return (null, "fill_denied");
 
-        // Re-read the credential after approval so a stale or expired TOTP code is not returned.
-        var credential = FindCredentialForFill(id, domain);
-        return (credential, false);
+        var helloResult = await VerifyBrowserAutofillWithWindowsHelloAsync(domain);
+        if (helloResult != WindowsHelloVerificationResult.Verified)
+        {
+            var code = helloResult switch
+            {
+                WindowsHelloVerificationResult.AuthenticationFailed => "hello_failed",
+                WindowsHelloVerificationResult.Cancelled => "hello_cancelled",
+                _ => "hello_unavailable"
+            };
+            return (null, code);
+        }
+
+        // Re-read the credential after both approvals so no stale or expired TOTP code is returned.
+        return (FindCredentialForFill(id, domain), null);
+    }
+
+    private async Task<WindowsHelloVerificationResult> VerifyBrowserAutofillWithWindowsHelloAsync(
+        string domain)
+    {
+        if (_fillHelloVerification is not null)
+            return await _fillHelloVerification(domain);
+
+        var app = System.Windows.Application.Current;
+        if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
+            return WindowsHelloVerificationResult.Unavailable;
+
+        var owner = app.Windows.OfType<System.Windows.Window>()
+            .Where(window => !SystemTrayService.IsHostWindow(window) && window.IsVisible && window.IsLoaded)
+            .OrderByDescending(window => window.IsActive)
+            .FirstOrDefault();
+        if (owner is null || !await WindowsHelloHelper.IsAvailableAsync())
+            return WindowsHelloVerificationResult.Unavailable;
+
+        return await WindowsHelloHelper.VerifyAsync(owner, $"Confirm autofill for {domain}");
     }
 
     private StatusResponse CreateSaveCredentialResponse(JsonElement root)
