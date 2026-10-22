@@ -278,15 +278,23 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 !TryGetBoundedString(root, "username", 256, out var username) ||
                 !TryGetBoundedString(root, "password", MaximumPasswordLength, out var password) ||
                 string.IsNullOrWhiteSpace(password) ||
+                !TryGetBoundedString(root, "mode", 16, out var mode) ||
+                mode is not ("create" or "update") ||
+                (mode == "update" &&
+                    (!TryGetBoundedString(root, "entryId", 64, out var requestedEntryId) ||
+                     !Guid.TryParse(requestedEntryId, out _))) ||
                 !TryGetWebUrl(url, domain))
                 return Error("invalid_request");
+
+            url = SanitizeCredentialUrl(url);
 
             if (!_vaultSession.IsActive)
                 return Error("vault_locked");
             if (_vaultService is null)
                 return Error("app_unavailable");
 
-            return await SaveCredentialAsync(domain, url, title, username, password, cancellationToken)
+            var entryId = mode == "update" ? root.GetProperty("entryId").GetString() : null;
+            return await SaveCredentialAsync(domain, url, title, username, password, mode, entryId, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (JsonException)
@@ -309,6 +317,8 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         string title,
         string username,
         string password,
+        string mode,
+        string? entryId,
         CancellationToken cancellationToken)
     {
         if (!_vaultSession.IsActive || _vaultSession.Vault is not { } vault ||
@@ -332,20 +342,24 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             if (!_vaultSession.IsCurrent(generation, vault) || _vaultSession.HasExternalChanges())
                 return new SavePreparation(null, null, Guid.Empty, null, "vault_changed");
 
-            var matches = vault.Entries.Where(entry =>
-                EntryMatchesDomain(entry, domain) &&
-                string.Equals(entry.Username, username, StringComparison.OrdinalIgnoreCase)).ToList();
+            VaultEntry? existing = null;
+            if (mode == "update")
+            {
+                if (!Guid.TryParse(entryId, out var targetId))
+                    return new SavePreparation(null, null, Guid.Empty, null, "invalid_request");
 
-            if (matches.Count > 1)
-                return new SavePreparation(null, null, Guid.Empty, null, "multiple_matching_accounts");
+                existing = vault.Entries.FirstOrDefault(entry =>
+                    entry.Id == targetId && EntryMatchesDomain(entry, domain));
+                if (existing is null)
+                    return new SavePreparation(null, null, Guid.Empty, null, "credential_not_found");
+            }
 
             var snapshot = vault.CreateSnapshot();
             string resultType;
             Guid savedId;
 
-            if (matches.Count == 1)
+            if (existing is not null)
             {
-                var existing = matches[0];
                 var updated = new VaultEntry
                 {
                     Id = existing.Id,
@@ -611,6 +625,16 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             string.IsNullOrEmpty(uri.UserInfo) &&
             TryNormalizeDomain(uri.IdnHost, out var host) &&
             host.Equals(expectedDomain, StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static string SanitizeCredentialUrl(string value)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            throw new ArgumentException("A valid HTTP or HTTPS URL is required.", nameof(value));
+
+        var builder = new UriBuilder(uri) { Query = string.Empty, Fragment = string.Empty };
+        return builder.Uri.AbsoluteUri;
     }
 
     private void NotifyBrowserActivity()

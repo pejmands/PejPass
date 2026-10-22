@@ -12,6 +12,8 @@ const saveFields = document.getElementById("save-fields");
 const saveTitle = document.getElementById("save-title");
 const saveUsername = document.getElementById("save-username");
 const savePassword = document.getElementById("save-password");
+const saveMode = document.getElementById("save-mode");
+const saveTarget = document.getElementById("save-target");
 const saveLoginButton = document.getElementById("save-login");
 const saveStatus = document.getElementById("save-status");
 const saveReviewNotice = document.getElementById("save-review-notice");
@@ -223,6 +225,7 @@ async function lookupCredentials(domain) {
     }
 
     matchingCredentials = response.credentials;
+    refreshSaveTargets();
     if (response.credentials.length === 0) {
       credentialsStatus.textContent = "No matching accounts found."; return;
     }
@@ -477,6 +480,9 @@ async function inspectLoginForm() {
     saveFields.hidden = false;
     saveConfirmation.checked = false;
     saveStatus.textContent = "Review or correct these values. They are not saved until you confirm.";
+    saveMode.value = "create";
+    saveTarget.value = "";
+    saveTarget.hidden = true;
     savePassword.type = "password";
     updateSaveReview();
   } catch {
@@ -487,6 +493,18 @@ async function inspectLoginForm() {
 }
 
 
+function refreshSaveTargets() {
+  const selectedId = saveTarget.value;
+  saveTarget.replaceChildren(new Option("Choose an account to update", ""));
+  for (const credential of matchingCredentials) {
+    const label = (credential.title || "Untitled account") +
+      (credential.username ? " — " + credential.username : " — blank username");
+    saveTarget.add(new Option(label, credential.id));
+  }
+  if ([...saveTarget.options].some((option) => option.value === selectedId))
+    saveTarget.value = selectedId;
+}
+
 function updateSaveReview() {
   if (saveFields.hidden) {
     saveLoginButton.disabled = false;
@@ -496,9 +514,10 @@ function updateSaveReview() {
   const title = saveTitle.value.trim();
   const username = saveUsername.value.trim();
   const password = savePassword.value;
-  const matches = username
-    ? matchingCredentials.filter((credential) => credential.username.trim() === username)
-    : [];
+  const mode = saveMode.value;
+  const target = matchingCredentials.find((credential) => credential.id === saveTarget.value);
+  const matches = matchingCredentials.filter((credential) =>
+    credential.username.trim().toLowerCase() === username.toLowerCase());
 
   if (!title || !password || password.length > 4096 ||
       username.length > 256 || title.length > 200) {
@@ -507,20 +526,24 @@ function updateSaveReview() {
       : !password
         ? "A password is required before this login can be saved."
         : "Check the field lengths before saving.";
-  } else if (matches.length > 1) {
-    saveReviewNotice.textContent = "Several saved accounts use this username on the current site. Change the username or update the account manually in PejPass desktop.";
-  } else if (matches.length === 1) {
-    saveReviewNotice.textContent = "An existing account matches this username: “" +
-      (matches[0].title || "Untitled account") +
-      "”. Saving will update it; previous values will be retained in history.";
+  } else if (mode === "update" && !target) {
+    saveReviewNotice.textContent = "Choose the exact saved account you want to update. Its previous values will be retained in history.";
+  } else if (mode === "update") {
+    saveReviewNotice.textContent = "You selected “" + (target.title || "Untitled account") +
+      "” for update. Review carefully; this exact entry will be changed and previous values retained in history.";
+  } else if (matches.length > 0) {
+    saveReviewNotice.textContent = matches.length === 1
+      ? "A saved account has the same username, but this action will create a separate new entry."
+      : "Several saved accounts use this username. This action will create a separate new entry; no existing account will be changed.";
   } else if (!username) {
     saveReviewNotice.textContent = "The username is blank. Save only if this login legitimately has no username.";
   } else {
-    saveReviewNotice.textContent = "Review the values carefully. If this username matches an existing account, that account will be updated and its previous values retained in history.";
+    saveReviewNotice.textContent = "This action creates a new entry. Existing accounts will not be changed.";
   }
 
   const invalid = !title || !password || password.length > 4096 ||
-    username.length > 256 || title.length > 200 || matches.length > 1;
+    username.length > 256 || title.length > 200 ||
+    (mode === "update" && !target);
   saveLoginButton.disabled = invalid || !saveConfirmation.checked;
 }
 
@@ -532,6 +555,8 @@ async function saveLogin() {
   }
   if (!saveTitle.value.trim() || !savePassword.value || savePassword.value.length > 4096 ||
       saveUsername.value.length > 256 || saveTitle.value.trim().length > 200 ||
+      (saveMode.value === "update" && !saveTarget.value) ||
+      !["create", "update"].includes(saveMode.value) ||
       saveConfirmation.checked !== true) {
     saveStatus.textContent = "Complete the required fields, review the warning, and confirm before saving.";
     return;
@@ -553,10 +578,12 @@ async function saveLogin() {
       type: "saveCredential",
       protocolVersion,
       domain: activeDomain,
-      url: url.href,
+      url: new URL(url.href).toString().split(/[?#]/, 1)[0],
       title: saveTitle.value.trim(),
       username: saveUsername.value.trim(),
-      password: savePassword.value
+      password: savePassword.value,
+      mode: saveMode.value,
+      ...(saveMode.value === "update" ? { entryId: saveTarget.value } : {})
     });
     if (response?.type === "error") {
       const messages = {
@@ -565,6 +592,7 @@ async function saveLogin() {
         invalid_domain: "The active site address is invalid.",
         invalid_request: "Check the login fields and try again.",
         vault_changed: "The vault changed on disk. Reopen it in PejPass before saving.",
+        credential_not_found: "That account is no longer available for this site. Refresh accounts and choose it again.",
         multiple_matching_accounts: "More than one account matches this username and site. Update the account manually in PejPass.",
         save_unavailable: "PejPass could not save the login. Check that the vault is writable and try again.",
         unsupported_request: "The running PejPass desktop or BrowserHost is outdated. Rebuild and reinstall the latest version.",
@@ -588,6 +616,9 @@ async function saveLogin() {
     saveTitle.value = "";
     saveUsername.value = "";
     savePassword.value = "";
+    saveMode.value = "create";
+    saveTarget.value = "";
+    saveTarget.hidden = true;
     saveConfirmation.checked = false;
     saveFields.hidden = true;
 
@@ -605,6 +636,16 @@ for (const field of [saveTitle, saveUsername, savePassword]) {
     updateSaveReview();
   });
 }
+saveMode.addEventListener("change", () => {
+  saveConfirmation.checked = false;
+  saveTarget.hidden = saveMode.value !== "update";
+  if (saveMode.value === "update") refreshSaveTargets();
+  updateSaveReview();
+});
+saveTarget.addEventListener("change", () => {
+  saveConfirmation.checked = false;
+  updateSaveReview();
+});
 saveConfirmation.addEventListener("change", updateSaveReview);
 
 inspectLoginButton.addEventListener("click", inspectLoginForm);

@@ -54,7 +54,7 @@
     <section class="view-panel" id="panel-save" role="tabpanel" aria-labelledby="tab-save" hidden>
 <section class="connection-card" aria-labelledby="save-label">
       <p class="eyebrow" id="save-label">SAVE LOGIN</p>
-      <p class="connection-status">Read the current form and review the values before saving. If the username matches an existing account, saving updates that entry and keeps its previous values in history. Review the warning and confirm before saving.</p>
+      <p class="connection-status">Read the current form, review the values, then explicitly choose whether to create a new entry or update a specific existing account. Previous values are retained in history when updating.</p>
       <button class="fill-button" id="inspect-login" type="button">Read login form</button>
       <div id="save-fields" hidden>
         <label class="field-label" for="save-title">Account name</label>
@@ -63,6 +63,15 @@
         <input class="save-input" id="save-username" type="text" maxlength="256" autocomplete="off">
         <label class="field-label" for="save-password">Password</label>
         <input class="save-input" id="save-password" type="password" maxlength="4096" autocomplete="off">
+        <label class="field-label" for="save-mode">Action</label>
+        <select class="save-input" id="save-mode">
+          <option value="create">Create a new entry</option>
+          <option value="update">Update an existing entry</option>
+        </select>
+        <label class="field-label" for="save-target">Account to update</label>
+        <select class="save-input" id="save-target" hidden>
+          <option value="">Choose an account to update</option>
+        </select>
         <p class="save-notice" id="save-review-notice" role="status" aria-live="polite">Read the form and review every value before saving.</p>
         <label class="save-confirmation" id="save-confirmation-row" for="save-confirmation">
           <input id="save-confirmation" type="checkbox">

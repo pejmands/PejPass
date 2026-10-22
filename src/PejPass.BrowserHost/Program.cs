@@ -439,11 +439,19 @@ internal static class Program
             !TryGetBoundedString(request, "title", 200, out var title) ||
             !TryGetBoundedString(request, "username", 256, out var username) ||
             !TryGetBoundedString(request, "password", 4096, out var password) ||
+            !TryGetBoundedString(request, "mode", 16, out var mode) ||
+            mode is not ("create" or "update") ||
+            (mode == "update" &&
+                (!TryGetBoundedString(request, "entryId", 64, out var targetId) ||
+                 !Guid.TryParse(targetId, out _))) ||
             string.IsNullOrWhiteSpace(password) || !TryGetWebUrl(url, domain))
             return Error("invalid_request");
 
+        url = SanitizeCredentialUrl(url);
+        var entryId = mode == "update" ? request.GetProperty("entryId").GetString() : null;
         var response = await SendPipeRequestAsync(
-            new HostRequest("saveCredential", ProtocolVersion, domain, null, url, title, username, password))
+            new HostRequest("saveCredential", ProtocolVersion, domain, null, url, title, username, password,
+                Mode: mode, EntryId: entryId))
             .ConfigureAwait(false);
         if (response.Error is not null) return Error(response.Error);
 
@@ -466,6 +474,16 @@ internal static class Program
             string.IsNullOrEmpty(uri.UserInfo) &&
             TryNormalizeDomain(uri.IdnHost, out var host) &&
             host.Equals(expectedDomain, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string SanitizeCredentialUrl(string value)
+    {
+        var builder = new UriBuilder(new Uri(value, UriKind.Absolute))
+        {
+            Query = string.Empty,
+            Fragment = string.Empty
+        };
+        return builder.Uri.AbsoluteUri;
     }
 
     private static bool TryGetDomain(JsonElement request, out string domain)
@@ -571,7 +589,7 @@ internal static class Program
     private sealed record HostRequest(
         string Type, int ProtocolVersion, string? Domain = null, string? Id = null,
         string? Url = null, string? Title = null, string? Username = null, string? Password = null,
-        string? MasterPassword = null);
+        string? MasterPassword = null, string? Mode = null, string? EntryId = null);
     private sealed record CredentialSummary(string Id, string Title, string Username, string Url);
     private sealed record HostResponse(
         string Type, string App, int ProtocolVersion, string? Status, string? Code,

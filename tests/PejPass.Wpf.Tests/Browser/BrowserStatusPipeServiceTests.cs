@@ -267,6 +267,15 @@ public sealed class BrowserStatusPipeServiceTests
         Assert.DoesNotContain("candidate-secret", JsonSerializer.Serialize(response));
     }
 
+    [Theory]
+    [InlineData("https://example.com/login?session_id=secret#step2", "https://example.com/login")]
+    [InlineData("https://example.com/login?next=%2Fhome", "https://example.com/login")]
+    [InlineData("https://example.com/login", "https://example.com/login")]
+    public void SanitizeCredentialUrl_RemovesQueryAndFragment(string input, string expected)
+    {
+        Assert.Equal(expected, BrowserStatusPipeService.SanitizeCredentialUrl(input));
+    }
+
     [Fact]
     public async Task ReadBoundedLineAsync_RejectsOversizedMessage()
     {
