@@ -162,11 +162,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return;
         }
 
-        const results = await chrome.scripting.executeScript({
-          target: { tabId, allFrames: true },
-          func: processLoginForm,
-          args: ["fill", domain, response.username, response.password, response.totpCode || ""]
-        });
+        let results;
+        try {
+          results = await chrome.scripting.executeScript({
+            target: { tabId, allFrames: true },
+            func: processLoginForm,
+            args: ["fill", domain, response.username, response.password, response.totpCode || ""]
+          });
+        } catch {
+          sendResponse({ type: "error", code: "fill_unavailable" });
+          return;
+        }
         const outcomes = (results || []).map((entry) => entry.result);
         const outcome = outcomes.includes("totp_filled") ? "totp_filled" :
           outcomes.includes("totp_unavailable") ? "totp_unavailable" :
