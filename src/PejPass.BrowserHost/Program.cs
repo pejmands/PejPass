@@ -287,12 +287,8 @@ internal static class Program
 
     private static HostResponse LaunchDesktopApp()
     {
-        var appPath = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..", "..", "..", "..",
-            "PejPass.Wpf", "bin", "x64", "Release",
-            "net10.0-windows10.0.19041.0", "PejPass.exe"));
-        if (!File.Exists(appPath))
+        var appPath = GetConfiguredDesktopAppPath();
+        if (appPath is null || !File.Exists(appPath))
             return Error("app_unavailable");
 
         try
@@ -303,6 +299,29 @@ internal static class Program
         catch
         {
             return Error("app_unavailable");
+        }
+    }
+
+    private static string? GetConfiguredDesktopAppPath()
+    {
+        var manifestPath = Path.Combine(AppContext.BaseDirectory, "com.pejpass.browserhost.json");
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(manifestPath));
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !TryGetBoundedString(root, "desktopAppPath", 32767, out var appPath) ||
+                string.IsNullOrWhiteSpace(appPath) ||
+                !Path.IsPathFullyQualified(appPath))
+                return null;
+
+            return Path.GetFullPath(appPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException
+            or ArgumentException or NotSupportedException or System.Security.SecurityException)
+        {
+            return null;
         }
     }
 

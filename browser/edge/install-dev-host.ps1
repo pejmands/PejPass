@@ -12,6 +12,7 @@ if ($ExtensionId -notmatch '^[a-p]{32}$') {
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $projectPath = Join-Path $repoRoot "src\PejPass.BrowserHost\PejPass.BrowserHost.csproj"
 $desktopProjectPath = Join-Path $repoRoot "src\PejPass.Wpf\PejPass.Wpf.csproj"
+$desktopExecutable = Join-Path $repoRoot "src\PejPass.Wpf\bin\x64\Release\net10.0-windows10.0.19041.0\PejPass.exe"
 $outputDirectory = Join-Path $repoRoot "src\PejPass.BrowserHost\bin\Release\net10.0-windows"
 $hostExecutable = Join-Path $outputDirectory "PejPass.BrowserHost.exe"
 $manifestPath = Join-Path $outputDirectory "com.pejpass.browserhost.json"
@@ -31,10 +32,15 @@ if (-not (Test-Path $hostExecutable)) {
     throw "The native messaging host executable was not found at: $hostExecutable"
 }
 
+if (-not (Test-Path $desktopExecutable)) {
+    throw "The PejPass desktop executable was not found at: $desktopExecutable"
+}
+
 $manifest = @{
     name = "com.pejpass.browserhost"
     description = "PejPass local browser communication bridge"
     path = $hostExecutable
+    desktopAppPath = $desktopExecutable
     type = "stdio"
     allowed_origins = @("chrome-extension://$ExtensionId/")
 } | ConvertTo-Json -Depth 4
