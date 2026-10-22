@@ -179,6 +179,8 @@ async function checkVaultStatus({ quiet = false } = {}) {
 
       return response.status;
     }
+    // If the desktop app cannot confirm an unlocked vault, use the locked icon.
+    await updateToolbarVaultIcon(false);
     if (!quiet) {
       const desktopUnavailable = response?.code === "app_unavailable";
       vaultStatus.textContent = desktopUnavailable
@@ -187,10 +189,11 @@ async function checkVaultStatus({ quiet = false } = {}) {
       unlockControls.hidden = !desktopUnavailable;
       launchAppButton.hidden = !desktopUnavailable;
       lockVaultButton.hidden = true;
-      return desktopUnavailable ? "unavailable" : "unknown";
     }
-    return "unknown";
+    return response?.code === "app_unavailable" ? "unavailable" : "unknown";
   } catch {
+    // A failed status check must not leave a stale unlocked icon visible.
+    await updateToolbarVaultIcon(false);
     if (!quiet) {
       vaultStatus.textContent = "Vault status unavailable. Check that the browser host is installed.";
       unlockControls.hidden = false;
