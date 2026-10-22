@@ -119,9 +119,11 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     ? await CreateSaveCredentialResponseAsync(line, cancellationToken).ConfigureAwait(false)
                     : IsUnlockVaultRequest(line)
                         ? await CreateUnlockVaultResponseAsync(line).ConfigureAwait(false)
-                        : IsFillCredentialRequest(line)
-                            ? await CreateFillCredentialResponseAsync(line).ConfigureAwait(false)
-                            : CreateResponse(line);
+                        : IsUnlockWithHelloRequest(line)
+                            ? await CreateUnlockWithHelloResponseAsync(line).ConfigureAwait(false)
+                            : IsFillCredentialRequest(line)
+                                ? await CreateFillCredentialResponseAsync(line).ConfigureAwait(false)
+                                : CreateResponse(line);
                 await writer.WriteLineAsync(JsonSerializer.Serialize(response, JsonOptions)).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { break; }
@@ -224,6 +226,25 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         }
     }
 
+    private static bool IsUnlockWithHelloRequest(string? line)
+    {
+        if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
+            return false;
+
+        try
+        {
+            using var document = JsonDocument.Parse(line);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                document.RootElement.TryGetProperty("type", out var type) &&
+                type.ValueKind == JsonValueKind.String &&
+                type.GetString() == "unlockWithHello";
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
     private static bool IsFillCredentialRequest(string? line)
     {
         if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
@@ -317,6 +338,65 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         finally
         {
             UnlockLimiter.Complete(outcome);
+        }
+    }
+
+    internal async Task<StatusResponse> CreateUnlockWithHelloResponseAsync(string? line)
+    {
+        if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
+            return Error("invalid_message");
+
+        try
+        {
+            using var document = JsonDocument.Parse(line);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("protocolVersion", out var version) ||
+                !version.TryGetInt32(out var protocolVersion) ||
+                protocolVersion != ProtocolVersion)
+                return Error("unsupported_request");
+        }
+        catch (JsonException)
+        {
+            return Error("invalid_message");
+        }
+
+        if (_vaultSession.IsActive)
+            return new StatusResponse("vaultUnlocked", "PejPass", ProtocolVersion, "unlocked", null);
+
+        var app = System.Windows.Application.Current;
+        if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
+            return Error("app_unavailable");
+
+        try
+        {
+            var unlockTask = await app.Dispatcher.InvokeAsync(() =>
+            {
+                var loginWindow = app.Windows.OfType<LoginWindow>().FirstOrDefault();
+                if (loginWindow is null)
+                {
+                    loginWindow = App.Services.GetRequiredService<LoginWindow>();
+                    App.PrepareCustomChrome(loginWindow);
+                }
+
+                app.MainWindow = loginWindow;
+                if (!loginWindow.IsVisible)
+                    loginWindow.Show();
+                loginWindow.Activate();
+
+                return loginWindow.DataContext is LoginViewModel viewModel
+                    ? viewModel.UnlockWithHelloFromBrowserAsync()
+                    : Task.FromResult(false);
+            }, System.Windows.Threading.DispatcherPriority.Send).Task.ConfigureAwait(false);
+
+            var unlocked = await unlockTask.ConfigureAwait(false);
+            return unlocked && _vaultSession.IsActive
+                ? new StatusResponse("vaultUnlocked", "PejPass", ProtocolVersion, "unlocked", null)
+                : Error("hello_failed");
+        }
+        catch (Exception)
+        {
+            return Error("hello_failed");
         }
     }
 

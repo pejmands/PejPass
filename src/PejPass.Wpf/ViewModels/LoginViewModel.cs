@@ -564,6 +564,18 @@ public partial class LoginViewModel : ObservableObject
         }
     }
 
+    public async Task<bool> UnlockWithHelloFromBrowserAsync()
+    {
+        if (_vaultSession.IsActive)
+            return true;
+
+        if (!_settings.WindowsHelloEnabled)
+            return false;
+
+        await UnlockWithHelloAsync();
+        return _vaultSession.IsActive;
+    }
+
     public async Task<bool> UnlockFromBrowserAsync(string masterPassword)
     {
         if (_vaultSession.IsActive)
