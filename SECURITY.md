@@ -80,6 +80,12 @@ Both checks should succeed on a dual-signed staging manifest. The second check v
 
 Treat suspected private-key exposure as an incident, not as an ordinary scheduled rotation. Stop and assess releases, protect the remaining signing keys, and plan an explicit recovery path. Simply deleting K1 from the current source does not revoke it from already installed older applications; those applications still trust K1 and may accept a forged primary signature. Do not claim that a key has been revoked for existing clients unless those clients have a mechanism to receive and enforce that revocation.
 
+## Browser extension vault-state event pipe
+
+The desktop app publishes vault lock-state changes over the separate named pipe `PejPass.BrowserEvents.v1`. The pipe is created with `PipeOptions.CurrentUserOnly` by the desktop server, and BrowserHost connects with the same current-user-only option. It carries only the `locked` or `unlocked` state and no passwords, vault contents, key material, or other secrets. The desktop accepts at most four concurrent event subscribers.
+
+The event pipe is separate from `PejPass.BrowserStatus.v1`, which remains the request/response endpoint. The current-user restriction limits access by Windows user, not by trusted process; it is not a security boundary against malicious code already running as the same user.
+
 ## Single-instance vault-open IPC
 
 A secondary PejPass process forwards a vault path through a named pipe scoped to the current Windows session. The pipe server uses `PipeOptions.CurrentUserOnly`; messages are length-prefixed UTF-8, bounded to 128 KiB, and incomplete messages are dropped after a short timeout. The sender waits for an acknowledgement before signaling the primary instance, avoiding a race between delivery and activation.
