@@ -501,9 +501,12 @@ internal static class Program
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(request.Type == "unlockVault"
-                ? TimeSpan.FromSeconds(45)
-                : TimeSpan.FromSeconds(1));
+            timeout.CancelAfter(request.Type switch
+            {
+                "unlockVault" => TimeSpan.FromSeconds(45),
+                "fillCredential" => TimeSpan.FromSeconds(60),
+                _ => TimeSpan.FromSeconds(1)
+            });
             await using var pipe = new NamedPipeClientStream(
                 ".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous,
                 TokenImpersonationLevel.Identification);
