@@ -3,14 +3,38 @@ const protocolVersion = 1;
 const statusAlarmName = "refresh-vault-toolbar-icon";
 const pollIntervalMinutes = 0.5;
 
-async function setToolbarVaultIcon(unlocked) {
-  const iconPath = unlocked ? "icons/PejPass.ico" : "icons/PejPassLocked.ico";
-  await chrome.action.setIcon({
-    path: {
-      16: iconPath,
-      32: iconPath
+const toolbarIconCache = new Map();
+
+async function loadToolbarIcon(imagePath) {
+  if (toolbarIconCache.has(imagePath)) {
+    return toolbarIconCache.get(imagePath);
+  }
+
+  const image = new Image();
+  image.src = chrome.runtime.getURL(imagePath);
+  await image.decode();
+
+  const imageData = {};
+  for (const size of [16, 32]) {
+    const canvas = new OffscreenCanvas(size, size);
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Unable to create toolbar icon canvas.");
     }
-  });
+
+    context.clearRect(0, 0, size, size);
+    context.drawImage(image, 0, 0, size, size);
+    imageData[size] = context.getImageData(0, 0, size, size);
+  }
+
+  toolbarIconCache.set(imagePath, imageData);
+  return imageData;
+}
+
+async function setToolbarVaultIcon(unlocked) {
+  const imagePath = unlocked ? "icons/PejPass.ico" : "icons/PejPassLocked.ico";
+  const imageData = await loadToolbarIcon(imagePath);
+  await chrome.action.setIcon({ imageData });
 }
 
 async function refreshToolbarVaultIcon() {
