@@ -185,6 +185,12 @@ public sealed class BrowserStatusPipeServiceTests
         Assert.Null(response.Password);
     }
 
+    private static readonly string[] expected =
+        [
+            "desktop:login.example.com:Example:alice",
+            "hello:login.example.com"
+        ];
+
     [Fact]
     public async Task FillCredential_ReturnsSecretOnlyAfterDesktopAndWindowsHelloApproval()
     {
@@ -222,11 +228,7 @@ public sealed class BrowserStatusPipeServiceTests
             id = entry.Id.ToString("D")
         }));
 
-        Assert.Equal(new[]
-        {
-            "desktop:login.example.com:Example:alice",
-            "hello:login.example.com"
-        }, approvals);
+        Assert.Equal(expected, approvals);
         Assert.Equal("credentialForFill", response.Type);
         Assert.Equal("login.example.com", response.Domain);
         Assert.Equal(entry.Id.ToString("D"), response.Id);

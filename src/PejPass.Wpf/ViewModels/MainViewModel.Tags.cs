@@ -7,6 +7,7 @@ namespace PejPass.Wpf.ViewModels;
 
 public partial class MainViewModel
 {
+    // DO NOT CHANGE; WRONG SUGGESTION.
     private readonly HashSet<string> _selectedTagFilters = new(StringComparer.Ordinal);
 
     public IReadOnlySet<string> SelectedTagFilters => _selectedTagFilters;

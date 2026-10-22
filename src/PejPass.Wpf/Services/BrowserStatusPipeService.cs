@@ -460,15 +460,13 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
         try
         {
-            using (var saveLease = await _vaultSession.AcquireSaveLeaseAsync(
-                generation, vault, cancellationToken).ConfigureAwait(false))
-            {
-                if (saveLease is null)
-                    return Error("vault_locked");
+            using var saveLease = await _vaultSession.AcquireSaveLeaseAsync(
+                generation, vault, cancellationToken).ConfigureAwait(false);
+            if (saveLease is null)
+                return Error("vault_locked");
 
-                using var keyMaterial = _vaultSession.CopyKeyMaterial();
-                await _vaultService.SaveVaultAsync(path, keyMaterial, vault, cancellationToken).ConfigureAwait(false);
-            }
+            using var keyMaterial = _vaultSession.CopyKeyMaterial();
+            await _vaultService.SaveVaultAsync(path, keyMaterial, vault, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
@@ -494,7 +492,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     _vaultSession.RefreshDiskStamp();
 
                     if (app.MainWindow is MainWindow
-                        { DataContext: ViewModels.MainViewModel viewModel })
+                        { DataContext: MainViewModel viewModel })
                     {
                         viewModel.RefreshEntriesFromVault();
                     }
@@ -653,11 +651,14 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
                     return Error("app_unavailable");
 
-                var operation = app.Dispatcher.CheckAccess()
-                    ? FindAndConfirmCredentialForFillAsync(id, domain)
-                    : await app.Dispatcher.InvokeAsync(
-                        () => FindAndConfirmCredentialForFillAsync(id, domain),
-                        System.Windows.Threading.DispatcherPriority.Send).Task.Unwrap().ConfigureAwait(false);
+
+                Task<(FillCredential? Credential, string? ErrorCode)> operation =
+                    app.Dispatcher.CheckAccess()
+                        ? FindAndConfirmCredentialForFillAsync(id, domain)
+                        : app.Dispatcher.InvokeAsync(
+                            () => FindAndConfirmCredentialForFillAsync(id, domain),
+                            System.Windows.Threading.DispatcherPriority.Send)
+                            .Task.Unwrap();
 
                 result = await operation.ConfigureAwait(false);
             }
@@ -878,6 +879,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         return string.Join(".", labels[^(publicSuffixLength + 1)..]);
     }
 
+    // DO NOT CHANGE; WRONG SUGGESTION.
     private static readonly HashSet<string> KnownMultiLabelPublicSuffixes = new(StringComparer.OrdinalIgnoreCase)
     {
         "ac.uk", "co.uk", "gov.uk", "ltd.uk", "me.uk", "net.uk", "org.uk", "plc.uk",
