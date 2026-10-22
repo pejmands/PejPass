@@ -612,14 +612,14 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     private (FillCredential? Credential, bool Denied) FindAndConfirmCredentialForFill(
         Guid id, string domain)
     {
-        var credential = FindCredentialForFill(id, domain);
-        if (credential is null)
+        var entry = FindEntryForFill(id, domain);
+        if (entry is null)
             return (null, false);
 
         bool approved;
         if (_fillConfirmation is not null)
         {
-            approved = _fillConfirmation(domain, credential.Title, credential.Username);
+            approved = _fillConfirmation(domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
         }
         else
         {
@@ -629,14 +629,19 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
             approved = DialogService.Confirm(
                 $"Allow PejPass to provide the username and password for this site?\n\n" +
-                $"Site: {domain}\nAccount: {credential.Title}\nUsername: {credential.Username}\n\n" +
+                $"Site: {domain}\nAccount: {Limit(entry.Title, 200)}\nUsername: {Limit(entry.Username, 256)}\n\n" +
                 "Only allow this if you just requested autofill.",
                 "Confirm Browser Autofill",
                 yesText: "Allow",
                 noText: "Deny");
         }
 
-        return approved ? (credential, false) : (null, true);
+        if (!approved)
+            return (null, true);
+
+        // Re-read the credential after approval so a stale or expired TOTP code is not returned.
+        var credential = FindCredentialForFill(id, domain);
+        return (credential, false);
     }
 
     private StatusResponse CreateSaveCredentialResponse(JsonElement root)
@@ -711,11 +716,17 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         }
     }
 
-    private FillCredential? FindCredentialForFill(Guid id, string domain)
+    private VaultEntry? FindEntryForFill(Guid id, string domain)
     {
         if (!_vaultSession.IsActive || _vaultSession.Vault is not { } vault) return null;
         var entry = vault.Entries.FirstOrDefault(entry => entry.Id == id);
-        if (entry is null || !EntryMatchesDomain(entry, domain)) return null;
+        return entry is not null && EntryMatchesDomain(entry, domain) ? entry : null;
+    }
+
+    private FillCredential? FindCredentialForFill(Guid id, string domain)
+    {
+        var entry = FindEntryForFill(id, domain);
+        if (entry is null) return null;
 
         var password = entry.Password ?? string.Empty;
         if (password.Length > MaximumPasswordLength) return null;
@@ -724,7 +735,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (!string.IsNullOrWhiteSpace(entry.TotpSecret))
             TotpHelper.TryGetCode(entry.TotpSecret, out totpCode, out _);
 
-        return new FillCredential(Limit(entry.Title, 200), entry.Username ?? string.Empty, password, totpCode);
+        return new FillCredential(entry.Username ?? string.Empty, password, totpCode);
     }
 
     private List<CredentialSummary> FindCredentials(string domain)
@@ -849,7 +860,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     }
 
     internal sealed record CredentialSummary(string Id, string Title, string Username, string Url);
-    internal sealed record FillCredential(string Title, string Username, string Password, string TotpCode);
+    internal sealed record FillCredential(string Username, string Password, string TotpCode);
     internal sealed record StatusResponse(
         string Type, string App, int ProtocolVersion, string? Status, string? Code,
         string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null,
