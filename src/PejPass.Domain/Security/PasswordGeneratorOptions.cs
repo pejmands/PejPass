@@ -13,5 +13,5 @@ public sealed class PasswordGeneratorOptions
     public bool ExcludeAmbiguous { get; set; } = true;
 
     public const int MinLength = 8;
-    public const int MaxLength = 128;
+    public const int MaxLength = 64;
 }
