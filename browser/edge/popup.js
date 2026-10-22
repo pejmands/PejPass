@@ -1053,10 +1053,12 @@ function fillNewPasswordField(expectedDomain, password) {
       document.body?.innerText?.slice(0, 6000) || "",
       submitLabels
     ].join(" ");
-    const looksLikeRegistration = /sign.?up|register|create.{0,12}account|new account|create.{0,12}password/i.test(pageText);
+    const registrationPattern = /sign.?up|register|create.{0,12}account|new account|create.{0,12}password/i;
+    const looksLikeRegistration = registrationPattern.test(pageText);
+    const registrationSubmit = registrationPattern.test(submitLabels);
     const looksLikeLogin = /sign.?in|log.?in|forgot password|current password/i.test(pageText);
 
-    if (inputs.length === 1 && looksLikeRegistration && !looksLikeLogin) {
+    if (inputs.length === 1 && (registrationSubmit || (looksLikeRegistration && !looksLikeLogin))) {
       target = inputs[0];
     } else if (inputs.length > 1 && inputs[0].form &&
         inputs.every((input) => input.form === inputs[0].form)) {
@@ -1123,7 +1125,8 @@ copyPasswordButton.addEventListener("click", async () => {
         unsupported_request: "Rebuild and reinstall the latest PejPass desktop and BrowserHost.",
         clipboard_unavailable: "PejPass could not access the clipboard. Try again or copy manually."
       };
-      generatorStatus.textContent = messages[response?.code] || "PejPass could not copy the password. You can select and copy it manually.";
+      generatorStatus.textContent = messages[response?.code] ||
+        `PejPass rejected the clipboard request (${response?.code || response?.type || "unexpected response"}). You can select and copy the password manually.`;
     }
   } catch {
     generatorStatus.textContent = "Could not connect to PejPass. Open the desktop app and try again, or copy manually.";
