@@ -7,10 +7,18 @@
     "activeTab",
     "clipboardWrite",
     "nativeMessaging",
-    "scripting"
+    "scripting",
+    "alarms"
   ],
   "action": {
     "default_title": "PejPass",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/PejPassLocked.ico",
+      "32": "icons/PejPassLocked.ico"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
   }
 }
