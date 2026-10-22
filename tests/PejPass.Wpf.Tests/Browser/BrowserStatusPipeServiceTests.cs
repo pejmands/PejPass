@@ -134,8 +134,22 @@ public sealed class BrowserStatusPipeServiceTests
         var first = service.CreateResponse("""{"type":"getCredentials","protocolVersion":1,"domain":"example.com"}""");
         Assert.Single(first.Credentials!);
 
-        entry.Url = "https://changed.example/login";
-        vault.Touch();
+        Assert.True(vault.UpdateEntry(new VaultEntry
+        {
+            Id = entry.Id,
+            Title = entry.Title,
+            Username = entry.Username,
+            Password = entry.Password,
+            Url = "https://changed.example/login",
+            TotpSecret = entry.TotpSecret,
+            Notes = entry.Notes,
+            Tags = [.. entry.Tags],
+            CustomFields = [.. entry.CustomFields],
+            IsFavorite = entry.IsFavorite,
+            SortOrder = entry.SortOrder,
+            CreatedAt = entry.CreatedAt,
+            UpdatedAt = DateTimeOffset.UtcNow
+        }));
 
         var oldDomain = service.CreateResponse("""{"type":"getCredentials","protocolVersion":1,"domain":"example.com"}""");
         var newDomain = service.CreateResponse("""{"type":"getCredentials","protocolVersion":1,"domain":"changed.example"}""");
