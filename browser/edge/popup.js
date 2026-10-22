@@ -992,11 +992,11 @@ async function fillGeneratedPassword(password) {
     func: fillNewPasswordField,
     args: [activeDomain, password]
   });
-  const outcomes = (results || []).map((entry) => entry.result);
-  if (outcomes.includes("filled")) {
+  const outcomes = results || [];
+  if (outcomes.some((entry) => entry.result === "filled")) {
     return { ok: true, message: "Generated password filled into the new-password field. The form was not submitted." };
   }
-  if (outcomes.includes("wrong_page")) {
+  if (outcomes.find((entry) => entry.frameId === 0)?.result === "wrong_page") {
     return { ok: false, message: "The page changed during filling. No password was entered." };
   }
   return { ok: false, message: "No suitable new-password field was found. The generated password is still available above." };
@@ -1021,7 +1021,7 @@ function fillNewPasswordField(expectedDomain, password) {
   };
   const inputs = Array.from(document.querySelectorAll("input"))
     .filter((input) => {
-      const autocomplete = (input.autocomplete || "").toLowerCase().split(/\\s+/);
+      const autocomplete = (input.autocomplete || "").toLowerCase().split(/\s+/);
       const isPasswordInput = (input.type || "").toLowerCase() === "password";
       return (isPasswordInput || autocomplete.includes("new-password")) &&
         !input.disabled && !input.readOnly && isVisible(input);
