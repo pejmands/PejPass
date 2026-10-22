@@ -264,9 +264,9 @@ async function fillCredential(credential) {
 
   credentialsStatus.textContent = "Retrieving credentials from PejPass…";
   try {
-    const response = await sendNativeMessage({
-      type: "fillCredential",
-      protocolVersion,
+    const response = await chrome.runtime.sendMessage({
+      target: "pejpass-fill",
+      tabId: activeTabId,
       domain: activeDomain,
       id: credential.id
     });
@@ -276,34 +276,30 @@ async function fillCredential(credential) {
         vault_locked: "Unlock the PejPass vault before filling a login.",
         app_unavailable: "Open PejPass desktop and try again.",
         credential_not_found: "That account is no longer available for this site. Reopen the popup.",
+        fill_denied: "Filling was cancelled in PejPass desktop.",
+        fill_unavailable: "PejPass approved the request, but the active page could not be filled. Reopen the popup and try again.",
         invalid_domain: "The active site address is not valid for filling.",
         invalid_request: "The fill request was invalid.",
         lookup_unavailable: "PejPass could not retrieve this account. Try again.",
         unsupported_request: "The installed PejPass browser host is outdated. Rebuild the BrowserHost and rerun install-dev-host.ps1.",
         invalid_app_response: "The browser host received an incompatible response from PejPass. Rebuild both PejPass and BrowserHost, then reinstall the host.",
-        invalid_message: "The browser host rejected the fill message. Rebuild BrowserHost and reinstall the host."
+        invalid_message: "The browser host rejected the fill message. Rebuild BrowserHost and reinstall the host.",
+        host_unavailable: "The PejPass browser host is unavailable. Open PejPass desktop and try again."
       };
       credentialsStatus.textContent = messages[response.code] ||
         `PejPass could not retrieve this account (error: ${String(response.code || "unknown")}).`;
       return;
     }
 
-    if (!isValidBaseResponse(response, "credentialForFill") ||
-        response.domain !== activeDomain || response.id !== credential.id ||
-        typeof response.username !== "string" || response.username.length > 256 ||
-        typeof response.password !== "string" || response.password.length > 4096 ||
-        (response.totpCode != null && (typeof response.totpCode !== "string" ||
-          response.totpCode.length > 8 || (response.totpCode.length > 0 && !/^\d+$/.test(response.totpCode))))) {
+    if (response?.type !== "fillCompleted" || response.app !== "PejPass" ||
+        response.protocolVersion !== protocolVersion || response.domain !== activeDomain ||
+        response.id !== credential.id ||
+        !["filled", "username_only", "totp_filled", "totp_unavailable", "no_password",
+          "wrong_page", "no_username"].includes(response.outcome)) {
       credentialsStatus.textContent = "PejPass returned an invalid fill response.";
       return;
     }
 
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: activeTabId, allFrames: true },
-      func: processLoginForm,
-      args: ["fill", activeDomain, response.username, response.password, response.totpCode || ""]
-    });
-    const outcomes = (results || []).map((entry) => entry.result);
     const messages = {
       filled: "Login fields filled. Review them and submit the form yourself.",
       username_only: "Username filled. Continue on the website, then select Fill login again.",
@@ -313,13 +309,7 @@ async function fillCredential(credential) {
       wrong_page: "The active page changed. Reopen the popup and try again.",
       no_username: "Password filled, but no matching username field was found."
     };
-    const outcome = outcomes.includes("totp_filled") ? "totp_filled" :
-      outcomes.includes("totp_unavailable") ? "totp_unavailable" :
-      outcomes.includes("filled") ? "filled" :
-      outcomes.includes("username_only") ? "username_only" :
-      outcomes.includes("no_username") ? "no_username" :
-      outcomes.includes("wrong_page") ? "wrong_page" : "no_password";
-    credentialsStatus.textContent = messages[outcome];
+    credentialsStatus.textContent = messages[response.outcome];
   } catch {
     credentialsStatus.textContent = "Could not fill this page. Check that it is a regular HTTP(S) page and try again.";
   }

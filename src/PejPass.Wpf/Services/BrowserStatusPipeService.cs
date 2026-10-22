@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using PejPass.Domain.Entities;
 using PejPass.Infrastructure.Totp;
+using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.IO;
@@ -13,9 +14,15 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 {
     private readonly VaultSession _vaultSession;
     private readonly Application.Services.VaultService? _vaultService;
+    private readonly Func<string, string, string, bool>? _fillConfirmation;
 
     internal BrowserStatusPipeService(VaultSession vaultSession)
-        : this(vaultSession, null) { }
+        : this(vaultSession, (Application.Services.VaultService?)null) { }
+
+    internal BrowserStatusPipeService(
+        VaultSession vaultSession,
+        Func<string, string, string, bool> fillConfirmation)
+        : this(vaultSession, null, EventsPipeName, fillConfirmation) { }
 
     internal BrowserStatusPipeService(
         VaultSession vaultSession,
@@ -26,11 +33,19 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         VaultSession vaultSession,
         Application.Services.VaultService? vaultService,
         string eventsPipeName)
+        : this(vaultSession, vaultService, eventsPipeName, null) { }
+
+    internal BrowserStatusPipeService(
+        VaultSession vaultSession,
+        Application.Services.VaultService? vaultService,
+        string eventsPipeName,
+        Func<string, string, string, bool>? fillConfirmation)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(eventsPipeName);
         _vaultSession = vaultSession;
         _vaultService = vaultService;
         _eventsPipeName = eventsPipeName;
+        _fillConfirmation = fillConfirmation;
         _vaultSession.StateChanged += OnVaultStateChanged;
     }
 
@@ -574,10 +589,14 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         try
         {
             var app = System.Windows.Application.Current;
-            var credential = app is not null && !app.Dispatcher.CheckAccess()
-                ? app.Dispatcher.Invoke(() => FindCredentialForFill(id, domain))
-                : FindCredentialForFill(id, domain);
+            var result = app is not null && !app.Dispatcher.CheckAccess()
+                ? app.Dispatcher.Invoke(() => FindAndConfirmCredentialForFill(id, domain))
+                : FindAndConfirmCredentialForFill(id, domain);
 
+            if (result.Denied)
+                return Error("fill_denied");
+
+            var credential = result.Credential;
             if (credential is not null)
                 NotifyBrowserActivity();
 
@@ -588,6 +607,41 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     credential.TotpCode);
         }
         catch (Exception) { return Error("lookup_unavailable"); }
+    }
+
+    private (FillCredential? Credential, bool Denied) FindAndConfirmCredentialForFill(
+        Guid id, string domain)
+    {
+        var entry = FindEntryForFill(id, domain);
+        if (entry is null)
+            return (null, false);
+
+        bool approved;
+        if (_fillConfirmation is not null)
+        {
+            approved = _fillConfirmation(domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
+        }
+        else
+        {
+            var app = System.Windows.Application.Current;
+            if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
+                return (null, true);
+
+            approved = DialogService.Confirm(
+                $"Allow PejPass to provide the username and password for this site?\n\n" +
+                $"Site: {domain}\nAccount: {Limit(entry.Title, 200)}\nUsername: {Limit(entry.Username, 256)}\n\n" +
+                "Only allow this if you just requested autofill.",
+                "Confirm Browser Autofill",
+                yesText: "Allow",
+                noText: "Deny");
+        }
+
+        if (!approved)
+            return (null, true);
+
+        // Re-read the credential after approval so a stale or expired TOTP code is not returned.
+        var credential = FindCredentialForFill(id, domain);
+        return (credential, false);
     }
 
     private StatusResponse CreateSaveCredentialResponse(JsonElement root)
@@ -662,11 +716,17 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         }
     }
 
-    private FillCredential? FindCredentialForFill(Guid id, string domain)
+    private VaultEntry? FindEntryForFill(Guid id, string domain)
     {
         if (!_vaultSession.IsActive || _vaultSession.Vault is not { } vault) return null;
         var entry = vault.Entries.FirstOrDefault(entry => entry.Id == id);
-        if (entry is null || !EntryMatchesDomain(entry, domain)) return null;
+        return entry is not null && EntryMatchesDomain(entry, domain) ? entry : null;
+    }
+
+    private FillCredential? FindCredentialForFill(Guid id, string domain)
+    {
+        var entry = FindEntryForFill(id, domain);
+        if (entry is null) return null;
 
         var password = entry.Password ?? string.Empty;
         if (password.Length > MaximumPasswordLength) return null;
