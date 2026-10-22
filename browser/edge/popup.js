@@ -1117,8 +1117,11 @@ copyPasswordButton.addEventListener("click", async () => {
       protocolVersion,
       password: generatedPassword.value
     });
-    if (isValidBaseResponse(response, "clipboardCopied")) {
-      generatorStatus.textContent = "Password copied. PejPass will clear it after 30 seconds if it is still in the clipboard.";
+    if (isValidBaseResponse(response, "clipboardCopied") &&
+        Number.isInteger(response.clipboardClearSeconds) &&
+        response.clipboardClearSeconds >= 5 && response.clipboardClearSeconds <= 300) {
+      generatorStatus.textContent =
+        `Password copied. PejPass will clear it after ${response.clipboardClearSeconds} seconds if it is still in the clipboard.`;
     } else {
       const messages = {
         app_unavailable: "Open PejPass desktop and try copying again.",
