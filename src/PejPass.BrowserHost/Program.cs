@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Security.Principal;
@@ -13,31 +14,203 @@ internal static class Program
     private const int ProtocolVersion = 1;
     private const string PipeName = "PejPass.BrowserStatus.v1";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly SemaphoreSlim PipeRequestGate = new(1, 1);
+    private static int _unlockInFlight;
 
     private static async Task<int> Main()
     {
+        using var input = Console.OpenStandardInput();
+        using var output = Console.OpenStandardOutput();
+        using var shutdown = new CancellationTokenSource();
+        var writeLock = new SemaphoreSlim(1, 1);
+        var activeTasks = new ConcurrentDictionary<long, Task>();
+        long nextTaskId = 0;
+        var watcher = WatchVaultStatusAsync(output, writeLock, shutdown.Token);
+
         try
         {
-            using var input = Console.OpenStandardInput();
-            using var output = Console.OpenStandardOutput();
-            var header = new byte[sizeof(int)];
-            var firstByte = input.ReadByte();
-            if (firstByte < 0) return 0;
-            header[0] = (byte)firstByte;
-            await input.ReadExactlyAsync(header.AsMemory(1)).ConfigureAwait(false);
-            var messageLength = BinaryPrimitives.ReadInt32LittleEndian(header);
-            if (messageLength <= 0 || messageLength > MaximumMessageLength) return 1;
-            var messageBytes = new byte[messageLength];
-            await input.ReadExactlyAsync(messageBytes).ConfigureAwait(false);
-            var response = await CreateResponseAsync(messageBytes).ConfigureAwait(false);
-            var responseBytes = JsonSerializer.SerializeToUtf8Bytes(response, JsonOptions);
-            BinaryPrimitives.WriteInt32LittleEndian(header, responseBytes.Length);
-            await output.WriteAsync(header).ConfigureAwait(false);
-            await output.WriteAsync(responseBytes).ConfigureAwait(false);
-            await output.FlushAsync().ConfigureAwait(false);
+            while (true)
+            {
+                var message = await ReadMessageAsync(input, shutdown.Token).ConfigureAwait(false);
+                if (message is null) break;
+
+                var taskId = Interlocked.Increment(ref nextTaskId);
+                var task = HandleAsync(message, output, writeLock);
+                activeTasks[taskId] = task;
+                _ = task.ContinueWith(
+                    completed => activeTasks.TryRemove(taskId, out var ignored),
+                    CancellationToken.None,
+                    TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+            }
+
+            shutdown.Cancel();
+            await Task.WhenAll(activeTasks.Values.ToArray()).ConfigureAwait(false);
             return 0;
         }
-        catch { return 1; }
+        catch (InvalidDataException)
+        {
+            shutdown.Cancel();
+            try { await Task.WhenAll(activeTasks.Values.ToArray()).ConfigureAwait(false); } catch { }
+            return 1;
+        }
+        catch (IOException)
+        {
+            shutdown.Cancel();
+            try { await Task.WhenAll(activeTasks.Values.ToArray()).ConfigureAwait(false); } catch { }
+            return 0;
+        }
+        finally
+        {
+            shutdown.Cancel();
+            try { await watcher.ConfigureAwait(false); } catch { }
+            writeLock.Dispose();
+        }
+    }
+
+    private static async Task<byte[]?> ReadMessageAsync(Stream input, CancellationToken cancellationToken)
+    {
+        var header = new byte[sizeof(int)];
+        var read = await input.ReadAtLeastAsync(
+            header.AsMemory(), header.Length, throwOnEndOfStream: false, cancellationToken).ConfigureAwait(false);
+
+        if (read == 0) return null;
+        if (read < header.Length) throw new InvalidDataException("Truncated native messaging header.");
+
+        var length = BinaryPrimitives.ReadInt32LittleEndian(header);
+        if (length <= 0 || length > MaximumMessageLength)
+            throw new InvalidDataException("Invalid native messaging message length.");
+
+        var body = new byte[length];
+        await input.ReadExactlyAsync(body, cancellationToken).ConfigureAwait(false);
+        return body;
+    }
+
+    private static async Task HandleAsync(byte[] messageBytes, Stream output, SemaphoreSlim writeLock)
+    {
+        var requestId = ExtractRequestId(messageBytes);
+        HostResponse response;
+        try
+        {
+            response = await CreateResponseAsync(messageBytes).ConfigureAwait(false);
+        }
+        catch
+        {
+            response = Error("invalid_message");
+        }
+
+        try
+        {
+            await WriteAsync(output, writeLock, response with { RequestId = requestId }).ConfigureAwait(false);
+        }
+        catch
+        {
+            // The browser may have closed the native messaging port.
+        }
+    }
+
+    private static async Task WriteAsync(Stream output, SemaphoreSlim writeLock, HostResponse response)
+    {
+        var payload = JsonSerializer.SerializeToUtf8Bytes(response, JsonOptions);
+        if (payload.Length > MaximumMessageLength)
+            payload = JsonSerializer.SerializeToUtf8Bytes(Error("invalid_app_response") with
+            {
+                RequestId = response.RequestId
+            }, JsonOptions);
+
+        var header = new byte[sizeof(int)];
+        BinaryPrimitives.WriteInt32LittleEndian(header, payload.Length);
+
+        await writeLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await output.WriteAsync(header).ConfigureAwait(false);
+            await output.WriteAsync(payload).ConfigureAwait(false);
+            await output.FlushAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            writeLock.Release();
+        }
+    }
+
+    private static string? ExtractRequestId(byte[] messageBytes)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(messageBytes);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                   document.RootElement.TryGetProperty("requestId", out var id) &&
+                   id.ValueKind == JsonValueKind.String &&
+                   id.GetString() is { Length: > 0 and <= 64 } value
+                ? value
+                : null;
+        }
+        catch (JsonException) { return null; }
+    }
+
+    private static async Task WatchVaultStatusAsync(
+        Stream output, SemaphoreSlim writeLock, CancellationToken cancellationToken)
+    {
+        string? lastStatus = null;
+        var lastHeartbeat = Stopwatch.GetTimestamp();
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                if (Volatile.Read(ref _unlockInFlight) == 0)
+                {
+                    var currentStatus = await GetCurrentStatusAsync(cancellationToken).ConfigureAwait(false);
+                    if (currentStatus != lastStatus)
+                    {
+                        lastStatus = currentStatus;
+                        await WriteAsync(output, writeLock, new HostResponse(
+                            "vaultStateChanged", "PejPass", ProtocolVersion, currentStatus, null))
+                            .ConfigureAwait(false);
+                    }
+                }
+            }
+            catch (OperationCanceledException) { break; }
+            catch { /* Retry temporary status failures on the next interval. */ }
+
+            if (Stopwatch.GetElapsedTime(lastHeartbeat) >= TimeSpan.FromSeconds(20))
+            {
+                try
+                {
+                    await WriteAsync(output, writeLock, new HostResponse(
+                        "hostHeartbeat", "PejPass", ProtocolVersion, null, null)).ConfigureAwait(false);
+                    lastHeartbeat = Stopwatch.GetTimestamp();
+                }
+                catch (OperationCanceledException) { break; }
+                catch { /* The browser may have closed the native port. */ }
+            }
+
+            try { await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken).ConfigureAwait(false); }
+            catch (OperationCanceledException) { break; }
+        }
+    }
+
+    private static async Task<string> GetCurrentStatusAsync(CancellationToken cancellationToken)
+    {
+        var response = await SendPipeRequestAsync(
+            new HostRequest("getVaultStatus", ProtocolVersion), cancellationToken).ConfigureAwait(false);
+
+        if (response.Error == "app_unavailable") return "unavailable";
+        if (response.Error is not null) return "unknown";
+
+        return response.Root.TryGetProperty("status", out var status) &&
+               status.ValueKind == JsonValueKind.String &&
+               status.GetString() is "locked" or "unlocked"
+            ? status.GetString()!
+            : "unknown";
+    }
+
+    private static async Task<HostResponse> UnlockTrackedAsync(JsonElement root)
+    {
+        Interlocked.Increment(ref _unlockInFlight);
+        try { return await UnlockVaultAsync(root).ConfigureAwait(false); }
+        finally { Interlocked.Decrement(ref _unlockInFlight); }
     }
 
     private static async Task<HostResponse> CreateResponseAsync(byte[] messageBytes)
@@ -57,7 +230,7 @@ internal static class Program
             {
                 "ping" => new HostResponse("pong", "PejPass", ProtocolVersion, null, null),
                 "launchApp" => LaunchDesktopApp(),
-                "unlockVault" => await UnlockVaultAsync(root).ConfigureAwait(false),
+                "unlockVault" => await UnlockTrackedAsync(root).ConfigureAwait(false),
                 "lockVault" => await LockVaultAsync().ConfigureAwait(false),
                 "getVaultStatus" => await GetVaultStatusAsync().ConfigureAwait(false),
                 "getCredentials" => await GetCredentialsAsync(root).ConfigureAwait(false),
@@ -257,12 +430,16 @@ internal static class Program
                TryNormalizeDomain(domainElement.GetString(), out domain);
     }
 
-    private static async Task<PipeResponse> SendPipeRequestAsync(HostRequest request)
+    private static async Task<PipeResponse> SendPipeRequestAsync(
+        HostRequest request, CancellationToken cancellationToken = default)
     {
+        await PipeRequestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            using var timeout = new CancellationTokenSource(
-                request.Type == "unlockVault" ? TimeSpan.FromSeconds(45) : TimeSpan.FromSeconds(1));
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(request.Type == "unlockVault"
+                ? TimeSpan.FromSeconds(45)
+                : TimeSpan.FromSeconds(1));
             await using var pipe = new NamedPipeClientStream(
                 ".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous,
                 TokenImpersonationLevel.Identification);
@@ -285,9 +462,11 @@ internal static class Program
             return new PipeResponse(root, null);
         }
         catch (TimeoutException) { return new PipeResponse(default, "app_unavailable"); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (OperationCanceledException) { return new PipeResponse(default, "app_unavailable"); }
         catch (IOException) { return new PipeResponse(default, "app_unavailable"); }
         catch (JsonException) { return new PipeResponse(default, "invalid_app_response"); }
+        finally { PipeRequestGate.Release(); }
     }
 
     private static bool TryNormalizeDomain(string? value, out string domain)
@@ -349,6 +528,6 @@ internal static class Program
         string Type, string App, int ProtocolVersion, string? Status, string? Code,
         string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null,
         string? Id = null, string? Username = null, string? Password = null,
-        string? TotpCode = null, string? Result = null);
+        string? TotpCode = null, string? Result = null, string? RequestId = null);
     private readonly record struct PipeResponse(JsonElement Root, string? Error);
 }

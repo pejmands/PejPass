@@ -24,7 +24,6 @@ const unlockButton = document.getElementById("unlock-vault");
 const unlockStatus = document.getElementById("unlock-status");
 const launchAppButton = document.getElementById("launch-app");
 const lockVaultButton = document.getElementById("lock-vault");
-const nativeHostName = "com.pejpass.browserhost";
 const protocolVersion = 1;
 let activeTabId = null;
 let activeDomain = null;
@@ -38,15 +37,14 @@ function setConnectionStatus(connected, message) {
 }
 
 function sendNativeMessage(message) {
-  return new Promise((resolve, reject) => {
-    try {
-      chrome.runtime.sendNativeMessage(nativeHostName, message, (response) => {
-        const error = chrome.runtime.lastError;
-        if (error) { reject(new Error(error.message)); return; }
-        resolve(response);
-      });
-    } catch (error) { reject(error); }
-  });
+  return chrome.runtime
+    .sendMessage({ target: "pejpass-native", payload: message })
+    .then((response) => {
+      if (!response || (response.type === "error" && response.code === "host_unavailable")) {
+        throw new Error(response?.message || "Native host unavailable.");
+      }
+      return response;
+    });
 }
 
 function isValidBaseResponse(response, type) {
@@ -120,37 +118,6 @@ async function checkDesktopConnection() {
   } catch { setConnectionStatus(false, "Desktop bridge not installed or unavailable."); }
 }
 
-const toolbarIconCache = new Map();
-
-async function updateToolbarVaultIcon(unlocked) {
-  const state = unlocked ? "unlocked" : "locked";
-  try {
-    let imageData = toolbarIconCache.get(state);
-    if (!imageData) {
-      const image = new Image();
-      image.src = chrome.runtime.getURL(unlocked ? "icons/PejPass.ico" : "icons/PejPassLocked.ico");
-      await image.decode();
-
-      imageData = {};
-      for (const size of [16, 32]) {
-        const canvas = document.createElement("canvas");
-        canvas.width = size;
-        canvas.height = size;
-        const context = canvas.getContext("2d", { willReadFrequently: true });
-        if (!context) throw new Error("Could not create toolbar icon canvas.");
-        context.drawImage(image, 0, 0, size, size);
-        imageData[size] = context.getImageData(0, 0, size, size);
-      }
-
-      toolbarIconCache.set(state, imageData);
-    }
-
-    await chrome.action.setIcon({ imageData });
-  } catch (error) {
-    console.error("Could not update the PejPass toolbar icon.", error);
-  }
-}
-
 async function checkVaultStatus({ quiet = false } = {}) {
   if (!quiet) vaultStatus.textContent = "Checking vault status…";
   try {
@@ -161,7 +128,6 @@ async function checkVaultStatus({ quiet = false } = {}) {
       unlockControls.hidden = response.status !== "locked";
       launchAppButton.hidden = true;
       lockVaultButton.hidden = response.status !== "unlocked";
-      await updateToolbarVaultIcon(response.status === "unlocked");
 
       if (response.status === "locked") {
         credentialList.replaceChildren();
@@ -179,8 +145,6 @@ async function checkVaultStatus({ quiet = false } = {}) {
 
       return response.status;
     }
-    // If the desktop app cannot confirm an unlocked vault, use the locked icon.
-    await updateToolbarVaultIcon(false);
     if (!quiet) {
       const desktopUnavailable = response?.code === "app_unavailable";
       vaultStatus.textContent = desktopUnavailable
@@ -192,8 +156,6 @@ async function checkVaultStatus({ quiet = false } = {}) {
     }
     return response?.code === "app_unavailable" ? "unavailable" : "unknown";
   } catch {
-    // A failed status check must not leave a stale unlocked icon visible.
-    await updateToolbarVaultIcon(false);
     if (!quiet) {
       vaultStatus.textContent = "Vault status unavailable. Check that the browser host is installed.";
       unlockControls.hidden = false;
@@ -807,7 +769,6 @@ async function lockVault() {
     copyPasswordButton.disabled = true;
     generatorStatus.textContent = "Vault locked. Generate a new password when needed.";
     vaultStatus.textContent = "Vault is locked.";
-    await updateToolbarVaultIcon(false);
     unlockControls.hidden = false;
     launchAppButton.hidden = true;
     lockVaultButton.hidden = true;
@@ -908,13 +869,12 @@ showActiveSite();
 checkDesktopConnection();
 checkVaultStatus();
 
-let statusPollInProgress = false;
-setInterval(async () => {
-  if (statusPollInProgress) return;
-  statusPollInProgress = true;
-  try {
-    await checkVaultStatus({ quiet: true });
-  } finally {
-    statusPollInProgress = false;
-  }
-}, 5000);
+chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type !== "vaultStateChanged") return;
+
+  void checkVaultStatus().then((status) => {
+    if (status === "unlocked" && activeDomain && matchingCredentials.length === 0) {
+      return lookupCredentials(activeDomain);
+    }
+  });
+});
