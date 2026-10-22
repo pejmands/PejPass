@@ -25,21 +25,22 @@
       <p class="site-name" id="site-name">Checking active tab…</p>
       <p class="site-detail" id="site-detail" role="status" aria-live="polite">Reading the active tab.</p>
     </section>
-<section class="connection-card" aria-labelledby="connection-label">
-      <p class="eyebrow" id="connection-label">DESKTOP CONNECTION</p>
+<section class="connection-card status-card" aria-label="PejPass status">
       <div class="connection-row">
         <span class="status-dot" id="connection-dot" aria-hidden="true"></span>
         <p class="connection-status" id="connection-status" role="status" aria-live="polite">Checking PejPass…</p>
       </div>
-    </section>
-<section class="connection-card" aria-labelledby="vault-label">
-      <p class="eyebrow" id="vault-label">VAULT STATUS</p>
-      <p class="connection-status" id="vault-status" role="status" aria-live="polite">Checking vault status…</p>
+      <p class="connection-status status-subtext" id="vault-status" role="status" aria-live="polite" hidden>Checking vault status…</p>
+      <details class="status-details" id="status-details" hidden>
+        <summary>Details</summary>
+        <p id="status-detail"></p>
+      </details>
       <div id="unlock-controls" hidden>
         <label class="field-label" for="unlock-password">Master password</label>
         <input class="save-input" id="unlock-password" type="password" maxlength="4096" autocomplete="current-password" spellcheck="false">
         <button class="fill-button" id="unlock-vault" type="button">Unlock vault</button>
-        <p class="generator-status" id="unlock-status" role="status" aria-live="polite">The password is sent only to the local PejPass desktop bridge for verification.</p>
+        <button class="fill-button secondary-button" id="unlock-hello" type="button" hidden>Unlock with Windows Hello</button>
+        <p class="generator-status" id="unlock-status" role="status" aria-live="polite">Your master password is verified by the local PejPass desktop app.</p>
       </div>
       <button class="fill-button secondary-button" id="launch-app" type="button" hidden>Launch PejPass</button>
       <button class="fill-button secondary-button lock-vault-button" id="lock-vault" type="button" hidden>Lock vault</button>
