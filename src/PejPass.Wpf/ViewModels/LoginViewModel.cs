@@ -569,6 +569,9 @@ public partial class LoginViewModel : ObservableObject
         if (_vaultSession.IsActive)
             return true;
 
+        if (!_settings.WindowsHelloEnabled)
+            return false;
+
         await UnlockWithHelloAsync();
         return _vaultSession.IsActive;
     }
