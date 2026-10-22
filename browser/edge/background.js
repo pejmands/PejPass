@@ -5,6 +5,7 @@ const allowedTypes = new Set([
   "ping",
   "launchApp",
   "unlockVault",
+  "unlockWithHello",
   "lockVault",
   "getVaultStatus",
   "getCredentials",
@@ -212,7 +213,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  const timeoutMs = payload.type === "unlockVault" ? 50_000 :
+  const timeoutMs = ["unlockVault", "unlockWithHello"].includes(payload.type) ? 50_000 :
     payload.type === "fillCredential" ? 65_000 : 6_000;
   sendNative(payload, timeoutMs)
     .then(sendResponse)
