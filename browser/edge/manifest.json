@@ -7,8 +7,15 @@
     "activeTab",
     "nativeMessaging",
     "scripting",
-    "alarms"
+    "alarms",
+    "contextMenus"
   ],
+  "commands": {
+    "fill-first-login": {
+      "suggested_key": { "default": "Ctrl+Shift+L" },
+      "description": "Fill the first matching login with PejPass"
+    }
+  },
   "action": {
     "default_title": "PejPass",
     "default_popup": "popup.html",

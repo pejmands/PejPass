@@ -55,6 +55,14 @@ h1 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: .1px; }
   cursor: pointer;
 }
 .fill-button:hover:not(:disabled) { background: #414957; }
+.primary-fill-button {
+  margin-top: 10px; padding: 12px; border-color: #91a9d5;
+  background: #3b4b68; font-size: 14px; font-weight: 700;
+}
+.primary-fill-button:hover:not(:disabled) { background: #465a7c; }
+.primary-fill-button[hidden] { display: none; }
+.credential-item.single-match { border-color: #626b7a; }
+.credential-item.single-match .fill-button { display: none; }
 .fill-button:focus-visible { outline: 2px solid #9bbcff; outline-offset: 2px; }
 .fill-button:disabled { opacity: .45; cursor: not-allowed; }
 .password-label { margin-top: 12px; }

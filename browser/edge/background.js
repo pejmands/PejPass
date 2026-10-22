@@ -133,70 +133,112 @@ function sendNative(payload, timeoutMs) {
   });
 }
 
+
+async function fillCredentialOnTab(tabId, domain, id) {
+  if (!Number.isInteger(tabId) || tabId < 0 ||
+      typeof domain !== "string" || domain.length === 0 || domain.length > 253 ||
+      typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return { type: "error", code: "invalid_request" };
+  }
+
+  try {
+    const response = await sendNative({ type: "fillCredential", domain, id }, 65_000);
+    if (response?.type === "error") return response;
+    if (response?.type !== "credentialForFill" || response.app !== "PejPass" ||
+        response.protocolVersion !== protocolVersion || response.domain !== domain ||
+        response.id !== id || typeof response.username !== "string" ||
+        response.username.length > 256 || typeof response.password !== "string" ||
+        response.password.length > 4096 ||
+        (response.totpCode != null && (typeof response.totpCode !== "string" ||
+          response.totpCode.length > 8 ||
+          (response.totpCode.length > 0 && !/^\d+$/.test(response.totpCode))))) {
+      return { type: "error", code: "invalid_app_response" };
+    }
+
+    let results;
+    try {
+      results = await chrome.scripting.executeScript({
+        target: { tabId, allFrames: true },
+        func: processLoginForm,
+        args: ["fill", domain, response.username, response.password, response.totpCode || ""]
+      });
+    } catch {
+      return { type: "error", code: "fill_unavailable" };
+    }
+
+    const outcomes = (results || []).map((entry) => entry.result);
+    const outcome = outcomes.includes("totp_filled") ? "totp_filled" :
+      outcomes.includes("totp_unavailable") ? "totp_unavailable" :
+      outcomes.includes("filled") ? "filled" :
+      outcomes.includes("username_only") ? "username_only" :
+      outcomes.includes("no_username") ? "no_username" :
+      outcomes.includes("wrong_page") ? "wrong_page" : "no_password";
+    return { type: "fillCompleted", app: "PejPass", protocolVersion, domain, id, outcome };
+  } catch {
+    return { type: "error", code: "host_unavailable" };
+  }
+}
+
+async function fillFirstMatchingCredential(tabId, tabUrl) {
+  if (!Number.isInteger(tabId) || typeof tabUrl !== "string") return;
+  let url;
+  try { url = new URL(tabUrl); } catch { return; }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return;
+
+  const domain = url.hostname.toLowerCase().replace(/\.$/, "");
+  try {
+    const response = await sendNative({ type: "getCredentials", protocolVersion, domain }, 6_000);
+    if (response?.type !== "credentialMatches" || response.app !== "PejPass" ||
+        response.protocolVersion !== protocolVersion || response.domain !== domain ||
+        !Array.isArray(response.credentials) || response.credentials.length === 0 ||
+        response.credentials.length > 25 ||
+        !response.credentials.every((credential) =>
+          credential && typeof credential.id === "string" &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(credential.id))) {
+      return;
+    }
+    await fillCredentialOnTab(tabId, domain, response.credentials[0].id);
+  } catch {
+    // The native host or vault may be unavailable.
+  }
+}
+
+function createPejPassContextMenu() {
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: "pejpass-fill",
+      title: "Fill with PejPass",
+      contexts: ["page", "editable"],
+      documentUrlPatterns: ["http://*/*", "https://*/*"]
+    });
+  });
+}
+
+chrome.runtime.onInstalled.addListener(createPejPassContextMenu);
+chrome.runtime.onStartup.addListener(createPejPassContextMenu);
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === "pejpass-fill" && Number.isInteger(tab?.id) && tab.url) {
+    void fillFirstMatchingCredential(tab.id, tab.url);
+  }
+});
+
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== "fill-first-login") return;
+  const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  const tab = tabs[0];
+  if (tab && Number.isInteger(tab.id) && tab.url) {
+    await fillFirstMatchingCredential(tab.id, tab.url);
+  }
+});
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return false;
 
   if (message?.target === "pejpass-fill") {
-    const { tabId, domain, id } = message;
-    if (!Number.isInteger(tabId) || tabId < 0 ||
-        typeof domain !== "string" || domain.length === 0 || domain.length > 253 ||
-        typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-      sendResponse({ type: "error", code: "invalid_request" });
-      return false;
-    }
-
-    sendNative({ type: "fillCredential", domain, id }, 65_000)
-      .then(async (response) => {
-        if (response?.type === "error") {
-          sendResponse(response);
-          return;
-        }
-
-        if (response?.type !== "credentialForFill" || response.app !== "PejPass" ||
-            response.protocolVersion !== protocolVersion || response.domain !== domain ||
-            response.id !== id || typeof response.username !== "string" ||
-            response.username.length > 256 || typeof response.password !== "string" ||
-            response.password.length > 4096 ||
-            (response.totpCode != null && (typeof response.totpCode !== "string" ||
-              response.totpCode.length > 8 ||
-              (response.totpCode.length > 0 && !/^\d+$/.test(response.totpCode))))) {
-          sendResponse({ type: "error", code: "invalid_app_response" });
-          return;
-        }
-
-        let results;
-        try {
-          results = await chrome.scripting.executeScript({
-            target: { tabId, allFrames: true },
-            func: processLoginForm,
-            args: ["fill", domain, response.username, response.password, response.totpCode || ""]
-          });
-        } catch {
-          sendResponse({ type: "error", code: "fill_unavailable" });
-          return;
-        }
-        const outcomes = (results || []).map((entry) => entry.result);
-        const outcome = outcomes.includes("totp_filled") ? "totp_filled" :
-          outcomes.includes("totp_unavailable") ? "totp_unavailable" :
-          outcomes.includes("filled") ? "filled" :
-          outcomes.includes("username_only") ? "username_only" :
-          outcomes.includes("no_username") ? "no_username" :
-          outcomes.includes("wrong_page") ? "wrong_page" : "no_password";
-
-        sendResponse({
-          type: "fillCompleted",
-          app: "PejPass",
-          protocolVersion,
-          domain,
-          id,
-          outcome
-        });
-      })
-      .catch(() => sendResponse({ type: "error", code: "host_unavailable" }));
-
+    fillCredentialOnTab(message.tabId, message.domain, message.id).then(sendResponse);
     return true;
   }
-
 
   if (message?.target === "pejpass-state") {
     ensureConnectedQuietly();
@@ -294,6 +336,10 @@ function processLoginForm(action, expectedDomain, username = "", password = "", 
       [input.name, input.id, input.placeholder, input.getAttribute("aria-label")].filter(Boolean).join(" "))) ||
     candidates.find((input) => (input.type || "").toLowerCase() === "email") ||
     candidates[0];
+
+  if (action === "detect") {
+    return { found: Boolean(passwordField || usernameField), domain: currentDomain };
+  }
 
   if (action === "read") {
     return {
