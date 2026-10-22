@@ -48,7 +48,12 @@ internal static class Program
             await Task.WhenAll(activeTasks.Values.ToArray()).ConfigureAwait(false);
             return 0;
         }
-        catch (InvalidDataException) { return 1; }
+        catch (InvalidDataException)
+        {
+            shutdown.Cancel();
+            try { await Task.WhenAll(activeTasks.Values.ToArray()).ConfigureAwait(false); } catch { }
+            return 1;
+        }
         catch (IOException)
         {
             shutdown.Cancel();
