@@ -578,7 +578,8 @@ internal static class Program
         code is "invalid_domain" or "invalid_request" or "credential_not_found" or "vault_locked" or
             "lookup_unavailable" or "app_unavailable" or "invalid_app_response" or
             "unsupported_request" or "invalid_message" or "save_unavailable" or "vault_changed" or
-            "multiple_matching_accounts" or "unlock_failed" or "unlock_rate_limited" or "fill_denied";
+            "multiple_matching_accounts" or "unlock_failed" or "unlock_rate_limited" or "fill_denied" or
+            "hello_failed" or "hello_cancelled" or "hello_unavailable";
 
     private static bool HasString(JsonElement root, string name, string expected) =>
         root.ValueKind == JsonValueKind.Object && root.TryGetProperty(name, out var value) &&
