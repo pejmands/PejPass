@@ -5,7 +5,6 @@
   "description": "A lightweight browser companion for PejPass.",
   "permissions": [
     "activeTab",
-    "clipboardWrite",
     "nativeMessaging",
     "scripting",
     "alarms"
@@ -14,11 +13,16 @@
     "default_title": "PejPass",
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "icons/PejPassLocked.ico",
-      "32": "icons/PejPassLocked.ico"
+      "16": "icons/PejPass16.png",
+      "32": "icons/PejPass48.png"
     }
   },
   "background": {
     "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/PejPass16.png",
+    "48": "icons/PejPass48.png",
+    "128": "icons/PejPass128.png"
   }
 }
