@@ -277,6 +277,7 @@ async function fillCredential(credential) {
         app_unavailable: "Open PejPass desktop and try again.",
         credential_not_found: "That account is no longer available for this site. Reopen the popup.",
         fill_denied: "Filling was cancelled in PejPass desktop.",
+        fill_unavailable: "PejPass approved the request, but the active page could not be filled. Reopen the popup and try again.",
         invalid_domain: "The active site address is not valid for filling.",
         invalid_request: "The fill request was invalid.",
         lookup_unavailable: "PejPass could not retrieve this account. Try again.",
