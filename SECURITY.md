@@ -1,5 +1,20 @@
 # Security Notes
 
+## Browser native messaging and same-user threat model
+
+The browser companion sends the master password to the native messaging host as a JSON string. The host receives it through standard input and forwards it over the local named pipe to the desktop application. The named pipe is configured with `PipeOptions.CurrentUserOnly`, which restricts access across Windows user accounts; it does **not** authenticate a particular browser extension or protect the pipe from another process running as the same Windows user. The password therefore exists in plaintext in process memory and in the local IPC payload while an unlock request is being handled.
+
+The extension clears `unlockPassword.value` in its `finally` block after the request. This clears the input field, but JavaScript strings are immutable and the runtime provides no reliable way to zero the original string or all copies created during serialization and messaging. Those copies may remain in memory until reclaimed by the JavaScript engine or process. Clearing the field must not be treated as secure memory erasure.
+
+Browser-origin allowlisting in the native messaging manifest controls which browser extensions may launch/connect to the native host. It does not restrict which same-user process can connect directly to the desktop named pipe. In particular, while the vault is unlocked, a process running as the same Windows user may be able to send a `fillCredential` request for a known credential ID and matching domain, and receive the credential data through the host. The current pipe protocol does not require a separate desktop approval or Windows Hello verification for each fill request.
+
+Master-password unlock attempts initiated through the browser are rate-limited in the desktop process: the first four failed attempts do not trigger a delay; the fifth failure triggers a 30-second lockout, with subsequent lockouts increasing exponentially up to 15 minutes. Failure state is held in memory, ages out after 30 minutes, and is reset after a successful unlock. This raises the cost of repeated attempts but is not a strict rolling-window limit and does not survive a desktop-process restart.
+
+**Threat-model limitation:** the browser companion and named pipe are designed to protect against cross-user access and unauthorized browser extensions, not a fully compromised process running as the same Windows user. If same-user malware is in scope, add an authenticated capability/session mechanism and require explicit desktop approval or Windows Hello before returning credentials through `fillCredential`. A static token stored in a user-readable file alone would not establish a trustworthy boundary against same-user malware.
+
+## Legacy vault migration backups
+
+
 ## Legacy vault migration backups
 
 Migrating a v1 or v2 vault may leave a full `.v1.bak` or `.v2.bak` copy encrypted with the old master password; changing the vault password does not re-encrypt these files, so PejPass offers to remove them after a successful password change, but file deletion does not guarantee secure erasure from the underlying storage.
