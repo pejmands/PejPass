@@ -343,7 +343,14 @@ function processLoginForm(action, expectedDomain, username = "", password = "", 
       element.getClientRects().length > 0;
   };
   const usable = (input) => !input.disabled && !input.readOnly && isVisible(input);
-  const inputs = Array.from(document.querySelectorAll("input")).filter(usable);
+  const collectInputs = (root) => {
+    const found = Array.from(root.querySelectorAll("input"));
+    for (const element of root.querySelectorAll("*")) {
+      if (element.shadowRoot) found.push(...collectInputs(element.shadowRoot));
+    }
+    return found;
+  };
+  const inputs = collectInputs(document).filter(usable);
   const passwordHints = (input) => [
     input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
     input.getAttribute("data-testid"), input.getAttribute("data-field")
@@ -369,8 +376,9 @@ function processLoginForm(action, expectedDomain, username = "", password = "", 
     ["text", "email", "tel", "url", "search", ""].includes((input.type || "text").toLowerCase());
   const passwordField = inputs.find((input) => (input.type || "").toLowerCase() === "password") ||
     inputs.find(isPasswordField);
-  const form = passwordField?.form || passwordField?.closest("form") || document;
-  const candidates = Array.from(form.querySelectorAll("input"))
+  const formRoot = passwordField?.form || passwordField?.closest("form") ||
+    passwordField?.getRootNode() || document;
+  const candidates = collectInputs(formRoot)
     .filter((input) => usable(input) && input !== passwordField &&
       !isPasswordField(input) && !isTotpField(input) && isTextLike(input));
   const usernameField = candidates.find((input) =>
@@ -392,11 +400,13 @@ function processLoginForm(action, expectedDomain, username = "", password = "", 
   }
 
   const setValue = (input, value) => {
+    input.focus();
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
     if (setter) setter.call(input, value);
     else input.value = value;
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
+    input.blur();
   };
   const totpFields = inputs.filter((input) => isTotpField(input) &&
     (isTextLike(input) || (input.type || "").toLowerCase() === "number"));
@@ -410,7 +420,6 @@ function processLoginForm(action, expectedDomain, username = "", password = "", 
       } else {
         setValue(totpFields[0], totpCode);
       }
-      totpFields[0].focus();
     } else if (!passwordField) {
       return "totp_unavailable";
     }
@@ -428,13 +437,11 @@ function processLoginForm(action, expectedDomain, username = "", password = "", 
       usernameCandidates[0];
     if (!usernameOnlyField || !username) return "no_password";
     setValue(usernameOnlyField, username);
-    usernameOnlyField.focus();
     return "username_only";
   }
 
   if (usernameField && username) setValue(usernameField, username);
   setValue(passwordField, password);
-  passwordField.focus();
   if (totpFields.length > 0) return totpCode ? "totp_filled" : "totp_unavailable";
   return usernameField && username ? "filled" : "no_username";
 }
