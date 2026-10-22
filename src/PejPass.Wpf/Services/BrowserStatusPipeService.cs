@@ -17,7 +17,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     private readonly Func<string, string, string, bool>? _fillConfirmation;
 
     internal BrowserStatusPipeService(VaultSession vaultSession)
-        : this(vaultSession, null) { }
+        : this(vaultSession, (Application.Services.VaultService?)null) { }
 
     internal BrowserStatusPipeService(
         VaultSession vaultSession,
