@@ -145,7 +145,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return false;
     }
 
-    sendNative({ type: "fillCredential", domain, id }, 6_000)
+    sendNative({ type: "fillCredential", domain, id }, 65_000)
       .then(async (response) => {
         if (response?.type === "error") {
           sendResponse(response);
@@ -212,7 +212,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  const timeoutMs = payload.type === "unlockVault" ? 50_000 : 6_000;
+  const timeoutMs = payload.type === "unlockVault" ? 50_000 :
+    payload.type === "fillCredential" ? 65_000 : 6_000;
   sendNative(payload, timeoutMs)
     .then(sendResponse)
     .catch((error) => {
