@@ -175,7 +175,7 @@ public sealed class BrowserStatusPipeServiceTests
     {
         using var session = new VaultSession();
         using var keyMaterial = CreateMaterial();
-        using var service = new BrowserStatusPipeService(session);
+        using var service = new BrowserStatusPipeService(session, (_, _, _) => true);
         var entry = new VaultEntry
         {
             Title = "Example",
@@ -202,6 +202,36 @@ public sealed class BrowserStatusPipeServiceTests
         Assert.Equal("fill-only-secret", response.Password);
         Assert.Matches("^\\d{6}$", response.TotpCode);
         Assert.DoesNotContain("JBSWY3DPEHPK3PXP", JsonSerializer.Serialize(response));
+    }
+
+    [Fact]
+    public void FillCredential_RejectsWhenUserDeniesConfirmation()
+    {
+        using var session = new VaultSession();
+        using var keyMaterial = CreateMaterial();
+        using var service = new BrowserStatusPipeService(session, (_, _, _) => false);
+        var entry = new VaultEntry
+        {
+            Title = "Example",
+            Username = "alice",
+            Password = "must-not-be-returned",
+            Url = "https://example.com/login"
+        };
+        session.Open(new Vault { Entries = [entry] },
+            Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"), keyMaterial);
+
+        var response = service.CreateResponse(JsonSerializer.Serialize(new
+        {
+            type = "fillCredential",
+            protocolVersion = 1,
+            domain = "login.example.com",
+            id = entry.Id.ToString("D")
+        }));
+
+        Assert.Equal("error", response.Type);
+        Assert.Equal("fill_denied", response.Code);
+        Assert.Null(response.Password);
+        Assert.DoesNotContain("must-not-be-returned", JsonSerializer.Serialize(response));
     }
 
     [Fact]
