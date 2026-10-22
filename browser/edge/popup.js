@@ -25,6 +25,11 @@ const unlockControls = document.getElementById("unlock-controls");
 const unlockPassword = document.getElementById("unlock-password");
 const unlockButton = document.getElementById("unlock-vault");
 const unlockStatus = document.getElementById("unlock-status");
+const unlockHelloButton = document.getElementById("unlock-hello");
+const unlockErrorDetails = document.getElementById("unlock-error-details");
+const unlockErrorDetail = document.getElementById("unlock-error-detail");
+const statusDetails = document.getElementById("status-details");
+const statusDetailText = document.getElementById("status-detail-text");
 const launchAppButton = document.getElementById("launch-app");
 const lockVaultButton = document.getElementById("lock-vault");
 const passwordLength = document.getElementById("password-length");
@@ -53,6 +58,30 @@ function setConnectionStatus(connected, message) {
   connectionStatus.textContent = message;
   connectionDot.classList.toggle("connected", connected);
   connectionDot.classList.toggle("disconnected", !connected);
+}
+
+function showStatusError(message, details) {
+  vaultStatus.textContent = message;
+  statusDetailText.textContent = details;
+  statusDetails.hidden = false;
+}
+
+function clearStatusError() {
+  statusDetails.hidden = true;
+  statusDetails.open = false;
+  statusDetailText.textContent = "";
+}
+
+function showUnlockError(message, details) {
+  unlockStatus.textContent = message;
+  unlockErrorDetail.textContent = details;
+  unlockErrorDetails.hidden = false;
+}
+
+function clearUnlockError() {
+  unlockErrorDetails.hidden = true;
+  unlockErrorDetails.open = false;
+  unlockErrorDetail.textContent = "";
 }
 
 function sendNativeMessage(message) {
@@ -128,16 +157,19 @@ async function refreshLoginView() {
 }
 
 async function checkVaultStatus({ quiet = false } = {}) {
-  if (!quiet) vaultStatus.textContent = "Checking vault status…";
+  if (!quiet) {
+    vaultStatus.textContent = "Checking vault…";
+    clearStatusError();
+  }
   try {
     let response;
     try {
       const cached = await chrome.runtime.sendMessage({ target: "pejpass-state" });
       if (cached?.status === "locked" || cached?.status === "unlocked") {
-        setConnectionStatus(true, "PejPass desktop bridge connected.");
+        setConnectionStatus(true, "Desktop connected");
         response = { type: "vaultStatus", app: "PejPass", protocolVersion, status: cached.status };
       } else if (cached?.status === "unavailable") {
-        setConnectionStatus(false, "Desktop bridge not installed or unavailable.");
+        setConnectionStatus(false, "Desktop unavailable");
         response = { type: "error", code: "app_unavailable" };
       }
     } catch {
@@ -146,13 +178,16 @@ async function checkVaultStatus({ quiet = false } = {}) {
 
     if (!response) {
       response = await sendNativeMessage({ type: "getVaultStatus", protocolVersion });
-      setConnectionStatus(true, "PejPass desktop bridge connected.");
+      setConnectionStatus(true, "Desktop connected");
     }
 
     if (isValidBaseResponse(response, "vaultStatus") &&
         (response.status === "locked" || response.status === "unlocked")) {
-      vaultStatus.textContent = response.status === "unlocked" ? "Vault is unlocked." : "Vault is locked.";
+      vaultStatus.textContent = response.status === "unlocked" ? "Vault unlocked" : "Vault locked";
+      clearStatusError();
       unlockControls.hidden = response.status !== "locked";
+      unlockButton.textContent = "Unlock vault";
+      unlockHelloButton.hidden = response.status !== "locked";
       launchAppButton.hidden = true;
       lockVaultButton.hidden = response.status !== "unlocked";
 
@@ -173,23 +208,33 @@ async function checkVaultStatus({ quiet = false } = {}) {
 
       return response.status;
     }
+
     if (!quiet) {
       const desktopUnavailable = response?.code === "app_unavailable";
-      vaultStatus.textContent = desktopUnavailable
-        ? "PejPass desktop is not running."
-        : "Vault status unavailable because the desktop response was invalid.";
       unlockControls.hidden = !desktopUnavailable;
-      launchAppButton.hidden = !desktopUnavailable;
+      unlockButton.textContent = desktopUnavailable ? "Launch & unlock" : "Unlock vault";
+      unlockHelloButton.hidden = true;
+      launchAppButton.hidden = true;
       lockVaultButton.hidden = true;
+
+      if (desktopUnavailable) {
+        setConnectionStatus(false, "Desktop unavailable");
+        showStatusError("PejPass isn’t running.", "The native messaging host could not reach the PejPass desktop pipe. Check the desktop installation and browser host registration.");
+      } else {
+        setConnectionStatus(false, "Connection error");
+        showStatusError("Couldn’t check vault status.", response?.code || "The desktop returned an invalid or incompatible response.");
+      }
     }
     return response?.code === "app_unavailable" ? "unavailable" : "unknown";
-  } catch {
-    setConnectionStatus(false, "Desktop bridge not installed or unavailable.");
+  } catch (error) {
+    setConnectionStatus(false, "Desktop unavailable");
     if (!quiet) {
-      vaultStatus.textContent = "Vault status unavailable. Check that the browser host is installed.";
       unlockControls.hidden = false;
-      launchAppButton.hidden = false;
+      unlockButton.textContent = "Launch & unlock";
+      unlockHelloButton.hidden = true;
+      launchAppButton.hidden = true;
       lockVaultButton.hidden = true;
+      showStatusError("Couldn’t connect to PejPass.", error instanceof Error ? error.message : "The browser host could not be reached.");
     }
     return "unavailable";
   }
@@ -853,6 +898,7 @@ function startUnlockCooldown(seconds) {
 
 async function unlockVault() {
   if (unlockCoolingDown) return;
+  clearUnlockError();
   if (!unlockPassword.value || unlockPassword.value.length > 4096) {
     unlockStatus.textContent = "Enter your master password.";
     return;
@@ -860,7 +906,9 @@ async function unlockVault() {
 
   unlockButton.disabled = true;
   launchAppButton.disabled = true;
-  unlockStatus.textContent = "Verifying master password in PejPass…";
+  unlockStatus.textContent = unlockButton.textContent === "Launch & unlock"
+    ? "Starting PejPass and verifying your password…"
+    : "Verifying master password in PejPass…";
   try {
     const response = await sendNativeMessage({
       type: "unlockVault",
@@ -886,18 +934,59 @@ async function unlockVault() {
       invalid_request: "The password could not be sent. Try again.",
       unsupported_request: "The installed browser host or desktop app is outdated. Rebuild and reinstall the latest version."
     };
-    unlockStatus.textContent = messages[response?.code] || "Could not unlock the vault. Check the PejPass desktop connection.";
-  } catch {
-    unlockStatus.textContent = "Could not connect to PejPass. Check the browser host installation.";
+    showUnlockError(
+      response?.code === "unlock_failed" ? "Password not accepted." :
+        response?.code === "app_unavailable" ? "Couldn’t start PejPass." :
+        "Couldn’t unlock the vault.",
+      messages[response?.code] || response?.code || "The desktop connection failed or returned an incompatible response."
+    );
+  } catch (error) {
+    showUnlockError("Couldn’t connect to PejPass.", error instanceof Error ? error.message : "The browser host could not be reached.");
   } finally {
     unlockPassword.value = "";
     unlockButton.disabled = unlockCoolingDown;
-    if (!unlockCoolingDown) unlockButton.textContent = "Unlock vault";
+    if (!unlockCoolingDown && unlockButton.textContent !== "Launch & unlock") unlockButton.textContent = "Unlock vault";
     launchAppButton.disabled = false;
   }
 }
 
+async function unlockWithHello() {
+  clearUnlockError();
+  unlockHelloButton.disabled = true;
+  unlockHelloButton.textContent = "Waiting for Windows Hello…";
+  unlockStatus.textContent = "Confirm your identity in Windows Hello.";
+  try {
+    const response = await sendNativeMessage({ type: "unlockWithHello", protocolVersion });
+    if (isValidBaseResponse(response, "vaultUnlocked") && response.status === "unlocked") {
+      unlockStatus.textContent = "Vault unlocked.";
+      await checkVaultStatus();
+      if (activeDomain) await lookupCredentials(activeDomain);
+      return;
+    }
+
+    const messages = {
+      hello_failed: "Windows Hello didn’t unlock the vault. Try your master password.",
+      hello_cancelled: "Windows Hello was cancelled.",
+      hello_unavailable: "Windows Hello isn’t available. Try your master password.",
+      app_unavailable: "Couldn’t start PejPass.",
+      unsupported_request: "Update the PejPass desktop app and browser host."
+    };
+    showUnlockError(
+      response?.code === "hello_cancelled" ? "Windows Hello cancelled." :
+        response?.code === "hello_unavailable" ? "Windows Hello unavailable." :
+        "Couldn’t unlock with Windows Hello.",
+      messages[response?.code] || response?.code || "The desktop returned an invalid response."
+    );
+  } catch (error) {
+    showUnlockError("Couldn’t connect to PejPass.", error instanceof Error ? error.message : "The browser host could not be reached.");
+  } finally {
+    unlockHelloButton.disabled = false;
+    unlockHelloButton.textContent = "Unlock with Windows Hello";
+  }
+}
+
 unlockButton.addEventListener("click", unlockVault);
+unlockHelloButton.addEventListener("click", unlockWithHello);
 lockVaultButton.addEventListener("click", lockVault);
 unlockPassword.addEventListener("keydown", (event) => {
   if (event.key === "Enter") unlockVault();
