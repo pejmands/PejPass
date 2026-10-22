@@ -24,6 +24,22 @@ const unlockButton = document.getElementById("unlock-vault");
 const unlockStatus = document.getElementById("unlock-status");
 const launchAppButton = document.getElementById("launch-app");
 const lockVaultButton = document.getElementById("lock-vault");
+const passwordLength = document.getElementById("password-length");
+const generatedPassword = document.getElementById("generated-password");
+const generatePasswordButton = document.getElementById("generate-password");
+const copyPasswordButton = document.getElementById("copy-password");
+const generatorStatus = document.getElementById("generator-status");
+const characterOptions = [
+  { element: document.getElementById("include-lowercase"), characters: "abcdefghijklmnopqrstuvwxyz" },
+  { element: document.getElementById("include-uppercase"), characters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ" },
+  { element: document.getElementById("include-numbers"), characters: "0123456789" },
+  { element: document.getElementById("include-symbols"), characters: "!@#$%^&*()-_=+[]{};:,.?/" }
+];
+const viewPanels = {
+  logins: document.getElementById("panel-logins"),
+  save: document.getElementById("panel-save"),
+  generator: document.getElementById("panel-generator")
+};
 const protocolVersion = 1;
 let activeTabId = null;
 let activeDomain = null;
@@ -436,7 +452,7 @@ async function inspectLoginForm() {
       return;
     }
 
-    saveTitle.value = document.getElementById("site-name").textContent || domain;
+    saveTitle.value = siteName.textContent || domain;
     saveUsername.value = candidate.username || "";
     savePassword.value = candidate.password || "";
     saveFields.hidden = false;
@@ -642,18 +658,6 @@ function isValidCredential(credential) {
 }
 
 
-const passwordLength = document.getElementById("password-length");
-const generatedPassword = document.getElementById("generated-password");
-const generatePasswordButton = document.getElementById("generate-password");
-const copyPasswordButton = document.getElementById("copy-password");
-const generatorStatus = document.getElementById("generator-status");
-const characterOptions = [
-  { id: "include-lowercase", characters: "abcdefghijklmnopqrstuvwxyz" },
-  { id: "include-uppercase", characters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ" },
-  { id: "include-numbers", characters: "0123456789" },
-  { id: "include-symbols", characters: "!@#$%^&*()-_=+[]{};:,.?/" }
-];
-
 function secureRandomIndex(maximum) {
   if (!Number.isInteger(maximum) || maximum < 1 || maximum > 0x100000000) {
     throw new RangeError("Invalid random range.");
@@ -675,7 +679,7 @@ function secureRandomIndex(maximum) {
 function generateSecurePassword() {
   const length = Number(passwordLength.value);
   const selectedSets = characterOptions
-    .filter((option) => document.getElementById(option.id).checked)
+    .filter((option) => option.element.checked)
     .map((option) => option.characters);
 
   if (!Number.isInteger(length) || length < 8 || length > 64) {
@@ -879,11 +883,6 @@ unlockPassword.addEventListener("keydown", (event) => {
 launchAppButton.addEventListener("click", launchDesktopApp);
 
 const viewTabs = Array.from(document.querySelectorAll(".view-tab"));
-const viewPanels = {
-  logins: document.getElementById("panel-logins"),
-  save: document.getElementById("panel-save"),
-  generator: document.getElementById("panel-generator")
-};
 
 function setActiveView(view, moveFocus = false) {
   if (!Object.hasOwn(viewPanels, view)) return;
