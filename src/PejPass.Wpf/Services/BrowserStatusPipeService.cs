@@ -667,9 +667,15 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (_clipboardService is null)
             return Error("app_unavailable");
 
+        var app = System.Windows.Application.Current;
+        if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
+            return Error("app_unavailable");
+
         try
         {
-            _clipboardService.CopyWithTimeout(password, TimeSpan.FromSeconds(30));
+            app.Dispatcher.Invoke(
+                () => _clipboardService.CopyWithTimeout(password, TimeSpan.FromSeconds(30)),
+                System.Windows.Threading.DispatcherPriority.Send);
             return new StatusResponse("clipboardCopied", "PejPass", ProtocolVersion, null, null);
         }
         catch (Exception)
