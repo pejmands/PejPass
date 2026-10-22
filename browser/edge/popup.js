@@ -797,7 +797,36 @@ async function lockVault() {
   }
 }
 
+let unlockCooldownTimer = null;
+let unlockCoolingDown = false;
+
+function startUnlockCooldown(seconds) {
+  clearInterval(unlockCooldownTimer);
+  let remaining = Math.max(1, Math.min(Number(seconds) || 1, 3600));
+  unlockCoolingDown = true;
+
+  const tick = () => {
+    if (remaining <= 0) {
+      clearInterval(unlockCooldownTimer);
+      unlockCooldownTimer = null;
+      unlockCoolingDown = false;
+      unlockButton.disabled = false;
+      unlockButton.textContent = "Unlock vault";
+      unlockStatus.textContent = "You can try again.";
+      return;
+    }
+
+    unlockButton.disabled = true;
+    unlockButton.textContent = `Try again in ${remaining}s`;
+    remaining--;
+  };
+
+  tick();
+  unlockCooldownTimer = setInterval(tick, 1000);
+}
+
 async function unlockVault() {
+  if (unlockCoolingDown) return;
   if (!unlockPassword.value || unlockPassword.value.length > 4096) {
     unlockStatus.textContent = "Enter your master password.";
     return;
@@ -819,6 +848,12 @@ async function unlockVault() {
       return;
     }
 
+    if (response?.code === "unlock_rate_limited") {
+      startUnlockCooldown(response.retryAfterSeconds);
+      unlockStatus.textContent = "Too many attempts. Please wait before trying again.";
+      return;
+    }
+
     const messages = {
       unlock_failed: "The master password was not accepted, or no existing vault is selected in PejPass.",
       app_unavailable: "Could not start PejPass. Check the desktop build and browser host installation.",
@@ -830,7 +865,8 @@ async function unlockVault() {
     unlockStatus.textContent = "Could not connect to PejPass. Check the browser host installation.";
   } finally {
     unlockPassword.value = "";
-    unlockButton.disabled = false;
+    unlockButton.disabled = unlockCoolingDown;
+    if (!unlockCoolingDown) unlockButton.textContent = "Unlock vault";
     launchAppButton.disabled = false;
   }
 }
