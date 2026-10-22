@@ -61,6 +61,13 @@ function applyStatus(status) {
 
   cachedStatus = status;
   void setToolbarVaultIcon(status === "unlocked");
+  if (status !== "unlocked") {
+    void chrome.tabs.query({}).then((tabs) => {
+      for (const tab of tabs) {
+        if (Number.isInteger(tab.id)) clearMatchBadge(tab.id);
+      }
+    }).catch(() => {});
+  }
   void chrome.runtime.sendMessage({ type: "vaultStateChanged", status }).catch(() => {
     // No popup is open to receive the state change.
   });
@@ -118,7 +125,7 @@ async function refreshMatchCount(tabId) {
     }
 
     if (url.protocol !== "http:" && url.protocol !== "https:") return;
-    const domain = url.hostname.toLowerCase().replace(/\\.$/, "");
+    const domain = url.hostname.toLowerCase().replace(/\.$/, "");
     if (!domain) return;
 
     const status = await sendNative({ type: "getVaultStatus" }, 6_000);
@@ -144,7 +151,7 @@ async function refreshMatchCount(tabId) {
     if (matchRefreshVersions.get(tabId) !== version || typeof currentTab.url !== "string") return;
     const currentUrl = new URL(currentTab.url);
     if ((currentUrl.protocol !== "http:" && currentUrl.protocol !== "https:") ||
-        currentUrl.hostname.toLowerCase().replace(/\\.$/, "") !== domain) return;
+        currentUrl.hostname.toLowerCase().replace(/\.$/, "") !== domain) return;
 
     setMatchBadge(tabId, response.credentials.length);
   } catch {
