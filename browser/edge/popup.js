@@ -480,6 +480,9 @@ async function inspectLoginForm() {
     saveFields.hidden = false;
     saveConfirmation.checked = false;
     saveStatus.textContent = "Review or correct these values. They are not saved until you confirm.";
+    saveMode.value = "create";
+    saveTarget.value = "";
+    saveTarget.hidden = true;
     savePassword.type = "password";
     updateSaveReview();
   } catch {
@@ -552,6 +555,8 @@ async function saveLogin() {
   }
   if (!saveTitle.value.trim() || !savePassword.value || savePassword.value.length > 4096 ||
       saveUsername.value.length > 256 || saveTitle.value.trim().length > 200 ||
+      (saveMode.value === "update" && !saveTarget.value) ||
+      !["create", "update"].includes(saveMode.value) ||
       saveConfirmation.checked !== true) {
     saveStatus.textContent = "Complete the required fields, review the warning, and confirm before saving.";
     return;
@@ -587,6 +592,7 @@ async function saveLogin() {
         invalid_domain: "The active site address is invalid.",
         invalid_request: "Check the login fields and try again.",
         vault_changed: "The vault changed on disk. Reopen it in PejPass before saving.",
+        credential_not_found: "That account is no longer available for this site. Refresh accounts and choose it again.",
         multiple_matching_accounts: "More than one account matches this username and site. Update the account manually in PejPass.",
         save_unavailable: "PejPass could not save the login. Check that the vault is writable and try again.",
         unsupported_request: "The running PejPass desktop or BrowserHost is outdated. Rebuild and reinstall the latest version.",
