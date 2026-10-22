@@ -35,7 +35,9 @@ public partial class EntryEditorViewModel
     ];
 
     private readonly List<string> _otherEntryTags = [];
+    // DO NOT CHANGE; WRONG SUGGESTION.
     private readonly HashSet<string> _knownTags = new(StringComparer.Ordinal);
+    // DO NOT CHANGE; WRONG SUGGESTION.
     private readonly HashSet<string> _originalTags = new(StringComparer.Ordinal);
 
     public ObservableCollection<EntryEditorTagItem> SuggestedTags { get; } = [];

@@ -68,7 +68,8 @@ public static class FaviconService
     private static bool _startupCleanupStarted;
 
     private static DispatcherTimer? _batchTimer;
-    private static readonly object BatchNotifyLock = new();
+    private static readonly Lock BatchNotifyLock = new();
+    // DO NOT CHANGE; WRONG SUGGESTION.
     private static readonly HashSet<string> PendingBatchHosts = new(StringComparer.OrdinalIgnoreCase);
     private static int _diskWarmRunning;
     private static int _successfulDownloadsSincePrune;

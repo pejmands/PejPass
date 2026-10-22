@@ -160,22 +160,55 @@ public sealed class BrowserStatusPipeServiceTests
     }
 
     [Fact]
-    public void FillCredential_RequiresUnlockedVault()
+    public void CreateResponse_DoesNotServeFillCredentialSynchronously()
     {
         using var session = new VaultSession();
         using var service = new BrowserStatusPipeService(session);
-        var response = service.CreateResponse("""{"type":"fillCredential","protocolVersion":1,"domain":"example.com","id":"11111111-1111-1111-1111-111111111111"}""");
+
+        var response = service.CreateResponse(
+            """{"type":"fillCredential","protocolVersion":1,"domain":"example.com","id":"11111111-1111-1111-1111-111111111111"}""");
+
+        Assert.Equal("error", response.Type);
+        Assert.Equal("async_required", response.Code);
+        Assert.Null(response.Password);
+        Assert.Null(response.TotpCode);
+    }
+
+    [Fact]
+    public async Task FillCredential_RequiresUnlockedVault()
+    {
+        using var session = new VaultSession();
+        using var service = new BrowserStatusPipeService(session);
+        var response = await service.CreateFillCredentialResponseAsync("""{"type":"fillCredential","protocolVersion":1,"domain":"example.com","id":"11111111-1111-1111-1111-111111111111"}""");
         Assert.Equal("error", response.Type);
         Assert.Equal("vault_locked", response.Code);
         Assert.Null(response.Password);
     }
 
+    private static readonly string[] expected =
+        [
+            "desktop:login.example.com:Example:alice",
+            "hello:login.example.com"
+        ];
+
     [Fact]
-    public void FillCredential_ReturnsSecretOnlyForMatchingAccountAndDomain()
+    public async Task FillCredential_ReturnsSecretOnlyAfterDesktopAndWindowsHelloApproval()
     {
         using var session = new VaultSession();
         using var keyMaterial = CreateMaterial();
-        using var service = new BrowserStatusPipeService(session, (_, _, _) => true);
+        var approvals = new List<string>();
+        using var service = new BrowserStatusPipeService(
+            session,
+            (domain, title, username) =>
+            {
+                approvals.Add($"desktop:{domain}:{title}:{username}");
+                return true;
+            },
+            domain =>
+            {
+                approvals.Add($"hello:{domain}");
+                return Task.FromResult(WindowsHelloVerificationResult.Verified);
+            });
         var entry = new VaultEntry
         {
             Title = "Example",
@@ -187,7 +220,7 @@ public sealed class BrowserStatusPipeServiceTests
         var vault = new Vault { Entries = [entry] };
         session.Open(vault, Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"), keyMaterial);
 
-        var response = service.CreateResponse(JsonSerializer.Serialize(new
+        var response = await service.CreateFillCredentialResponseAsync(JsonSerializer.Serialize(new
         {
             type = "fillCredential",
             protocolVersion = 1,
@@ -195,6 +228,7 @@ public sealed class BrowserStatusPipeServiceTests
             id = entry.Id.ToString("D")
         }));
 
+        Assert.Equal(expected, approvals);
         Assert.Equal("credentialForFill", response.Type);
         Assert.Equal("login.example.com", response.Domain);
         Assert.Equal(entry.Id.ToString("D"), response.Id);
@@ -205,11 +239,19 @@ public sealed class BrowserStatusPipeServiceTests
     }
 
     [Fact]
-    public void FillCredential_RejectsWhenUserDeniesConfirmation()
+    public async Task FillCredential_RejectsWhenUserDeniesConfirmationWithoutInvokingWindowsHello()
     {
         using var session = new VaultSession();
         using var keyMaterial = CreateMaterial();
-        using var service = new BrowserStatusPipeService(session, (_, _, _) => false);
+        var helloCalled = false;
+        using var service = new BrowserStatusPipeService(
+            session,
+            (_, _, _) => false,
+            _ =>
+            {
+                helloCalled = true;
+                return Task.FromResult(WindowsHelloVerificationResult.Verified);
+            });
         var entry = new VaultEntry
         {
             Title = "Example",
@@ -220,7 +262,46 @@ public sealed class BrowserStatusPipeServiceTests
         session.Open(new Vault { Entries = [entry] },
             Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"), keyMaterial);
 
-        var response = service.CreateResponse(JsonSerializer.Serialize(new
+        var response = await service.CreateFillCredentialResponseAsync(JsonSerializer.Serialize(new
+        {
+            type = "fillCredential",
+            protocolVersion = 1,
+            domain = "login.example.com",
+            id = entry.Id.ToString("D")
+        }));
+
+        Assert.False(helloCalled);
+        Assert.Equal("error", response.Type);
+        Assert.Equal("fill_denied", response.Code);
+        Assert.Null(response.Password);
+        Assert.DoesNotContain("must-not-be-returned", JsonSerializer.Serialize(response));
+    }
+
+    [Theory]
+    [InlineData(WindowsHelloVerificationResult.AuthenticationFailed, "hello_failed")]
+    [InlineData(WindowsHelloVerificationResult.Cancelled, "hello_cancelled")]
+    [InlineData(WindowsHelloVerificationResult.Unavailable, "hello_unavailable")]
+    [InlineData(WindowsHelloVerificationResult.Error, "hello_unavailable")]
+    public async Task FillCredential_RejectsWhenWindowsHelloDoesNotVerify(
+        WindowsHelloVerificationResult helloResult, string expectedCode)
+    {
+        using var session = new VaultSession();
+        using var keyMaterial = CreateMaterial();
+        using var service = new BrowserStatusPipeService(
+            session,
+            (_, _, _) => true,
+            _ => Task.FromResult(helloResult));
+        var entry = new VaultEntry
+        {
+            Title = "Example",
+            Username = "alice",
+            Password = "must-not-be-returned",
+            Url = "https://example.com/login"
+        };
+        session.Open(new Vault { Entries = [entry] },
+            Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"), keyMaterial);
+
+        var response = await service.CreateFillCredentialResponseAsync(JsonSerializer.Serialize(new
         {
             type = "fillCredential",
             protocolVersion = 1,
@@ -229,17 +310,21 @@ public sealed class BrowserStatusPipeServiceTests
         }));
 
         Assert.Equal("error", response.Type);
-        Assert.Equal("fill_denied", response.Code);
+        Assert.Equal(expectedCode, response.Code);
         Assert.Null(response.Password);
+        Assert.Null(response.TotpCode);
         Assert.DoesNotContain("must-not-be-returned", JsonSerializer.Serialize(response));
     }
 
     [Fact]
-    public void FillCredential_RejectsAccountFromAnotherDomain()
+    public async Task FillCredential_RejectsAccountFromAnotherDomain()
     {
         using var session = new VaultSession();
         using var keyMaterial = CreateMaterial();
-        using var service = new BrowserStatusPipeService(session);
+        using var service = new BrowserStatusPipeService(
+            session,
+            (_, _, _) => true,
+            _ => Task.FromResult(WindowsHelloVerificationResult.Verified));
         var entry = new VaultEntry
         {
             Title = "Example",
@@ -250,7 +335,7 @@ public sealed class BrowserStatusPipeServiceTests
         session.Open(new Vault { Entries = [entry] },
             Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"), keyMaterial);
 
-        var response = service.CreateResponse(JsonSerializer.Serialize(new
+        var response = await service.CreateFillCredentialResponseAsync(JsonSerializer.Serialize(new
         {
             type = "fillCredential",
             protocolVersion = 1,

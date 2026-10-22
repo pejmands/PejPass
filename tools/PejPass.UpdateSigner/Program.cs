@@ -563,7 +563,7 @@ internal static class Signer
 
             var normalized = entry.FullName.Replace('\\', '/');
             if (string.IsNullOrWhiteSpace(normalized)
-                || normalized.StartsWith("/", StringComparison.Ordinal)
+                || normalized.StartsWith('/')
                 || Regex.IsMatch(normalized, @"^[A-Za-z]:")
                 || normalized.Split('/').Any(segment => segment is "." or ".."))
             {
