@@ -43,7 +43,10 @@ const lockVaultButton = document.getElementById("lock-vault");
 const passwordLength = document.getElementById("password-length");
 const generatedPassword = document.getElementById("generated-password");
 const generatePasswordButton = document.getElementById("generate-password");
+const generateFillPasswordButton = document.getElementById("generate-fill-password");
 const copyPasswordButton = document.getElementById("copy-password");
+const excludeAmbiguous = document.getElementById("exclude-ambiguous");
+const passwordStrength = document.getElementById("password-strength");
 const generatorStatus = document.getElementById("generator-status");
 const characterOptions = [
   { element: document.getElementById("include-lowercase"), characters: "abcdefghijklmnopqrstuvwxyz" },
@@ -116,6 +119,7 @@ function showUnavailable(message) {
   credentialsStatus.textContent = "Credential lookup is unavailable on this page.";
   inspectLoginButton.disabled = true;
   saveLoginButton.disabled = true;
+  generateFillPasswordButton.disabled = true;
   saveFields.hidden = true;
   saveBadge.hidden = true;
   credentialList.replaceChildren();
@@ -166,6 +170,7 @@ async function showActiveSite() {
     activeDomain = url.hostname.toLowerCase().replace(/\.$/, "");
     inspectLoginButton.disabled = false;
     saveLoginButton.disabled = false;
+    generateFillPasswordButton.disabled = false;
     siteName.textContent = activeDomain;
     siteDetail.textContent = "Searching PejPass for accounts matching this site…";
     void probeSaveCandidate();
@@ -895,17 +900,24 @@ function secureRandomIndex(maximum) {
   return value % maximum;
 }
 
+function getSelectedCharacterSets() {
+  return characterOptions
+    .filter((option) => option.element.checked)
+    .map((option) => excludeAmbiguous.checked
+      ? option.characters.replace(/[0Oo1lI|\`]/g, "")
+      : option.characters)
+    .filter((set) => set.length > 0);
+}
+
 function generateSecurePassword() {
   const length = Number(passwordLength.value);
-  const selectedSets = characterOptions
-    .filter((option) => option.element.checked)
-    .map((option) => option.characters);
+  const selectedSets = getSelectedCharacterSets();
 
   if (!Number.isInteger(length) || length < 8 || length > 64) {
     throw new Error("Choose a password length between 8 and 64.");
   }
   if (selectedSets.length === 0) {
-    throw new Error("Select at least one character type.");
+    throw new Error("Select at least one character type with available characters.");
   }
 
   const characters = selectedSets.join("");
@@ -923,29 +935,180 @@ function generateSecurePassword() {
   return password.join("");
 }
 
+function updatePasswordStrength(password) {
+  if (!password) {
+    passwordStrength.textContent = "Strength estimate appears after generation.";
+    return;
+  }
+
+  const alphabetSize = getSelectedCharacterSets().join("").length;
+  const entropy = alphabetSize > 1 ? password.length * Math.log2(alphabetSize) : 0;
+  const roundedBits = Math.round(entropy);
+  const label = entropy < 40 ? "Low" : entropy < 60 ? "Moderate" : entropy < 80 ? "Strong" : "Very strong";
+  passwordStrength.textContent = `Estimated strength: ${label} · ${password.length} characters · about ${roundedBits} bits`;
+}
+
+function setGeneratedPassword(password) {
+  generatedPassword.value = password;
+  copyPasswordButton.disabled = !password;
+  updatePasswordStrength(password);
+}
+
 generatePasswordButton.addEventListener("click", () => {
   try {
     const password = generateSecurePassword();
-    generatedPassword.value = password;
-    copyPasswordButton.disabled = false;
+    setGeneratedPassword(password);
     generatorStatus.textContent = "Generated locally in this browser. Not saved automatically.";
   } catch (error) {
-    generatedPassword.value = "";
-    copyPasswordButton.disabled = true;
+    setGeneratedPassword("");
     generatorStatus.textContent = error instanceof Error
       ? error.message
       : "Could not generate a password.";
   }
 });
 
+async function fillGeneratedPassword(password) {
+  if (!Number.isInteger(activeTabId) || !activeDomain) {
+    return { ok: false, message: "Open a normal website tab before generating and filling a password." };
+  }
+
+  const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  const tab = tabs[0];
+  if (!tab || tab.id !== activeTabId || typeof tab.url !== "string") {
+    return { ok: false, message: "The active page changed. Reopen the popup and try again." };
+  }
+
+  let url;
+  try { url = new URL(tab.url); } catch {
+    return { ok: false, message: "The active page address is unavailable." };
+  }
+  const domain = url.hostname.toLowerCase().replace(/\.$/, "");
+  if (domain !== activeDomain || !["http:", "https:"].includes(url.protocol)) {
+    return { ok: false, message: "The active page changed. Reopen the popup and try again." };
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: activeTabId, allFrames: true },
+    func: fillNewPasswordField,
+    args: [activeDomain, password]
+  });
+  const outcomes = (results || []).map((entry) => entry.result);
+  if (outcomes.includes("filled")) {
+    return { ok: true, message: "Generated password filled into the new-password field. The form was not submitted." };
+  }
+  if (outcomes.includes("wrong_page")) {
+    return { ok: false, message: "The page changed during filling. No password was entered." };
+  }
+  return { ok: false, message: "No suitable new-password field was found. The generated password is still available above." };
+}
+
+function fillNewPasswordField(expectedDomain, password) {
+  const normalizeHost = (host) => host.toLowerCase().replace(/\.$/, "");
+  const currentDomain = normalizeHost(window.location.hostname);
+  let topDomain;
+  try { topDomain = normalizeHost(window.top.location.hostname); }
+  catch { return "wrong_page"; }
+
+  if (topDomain !== expectedDomain ||
+      (currentDomain !== expectedDomain && !currentDomain.endsWith("." + expectedDomain))) {
+    return "wrong_page";
+  }
+
+  const isVisible = (element) => {
+    const style = window.getComputedStyle(element);
+    return style.display !== "none" && style.visibility !== "hidden" &&
+      element.getClientRects().length > 0;
+  };
+  const inputs = Array.from(document.querySelectorAll('input[type="password"]'))
+    .filter((input) => !input.disabled && !input.readOnly && isVisible(input));
+  if (inputs.length === 0) return "no_password";
+
+  const hints = (input) => [
+    input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
+    input.getAttribute("data-testid")
+  ].filter(Boolean).join(" ");
+  let target = inputs.find((input) =>
+    (input.autocomplete || "").toLowerCase().split(/\s+/).includes("new-password")) ||
+    inputs.find((input) => /new.?password|password.?new|create.?password|register.?password|signup.?password/i.test(hints(input)));
+
+  if (!target && inputs.length > 1) {
+    target = inputs[0];
+  }
+
+  if (!target) {
+    const form = inputs[0].form;
+    const submitLabels = form
+      ? Array.from(form.querySelectorAll('button, input[type="submit"], input[type="button"]'))
+        .map((element) => [element.innerText, element.value, element.getAttribute("aria-label")].filter(Boolean).join(" "))
+        .join(" ")
+      : "";
+    if (/sign.?up|register|create.?account|create.?password/i.test(submitLabels)) {
+      target = inputs[0];
+    }
+  }
+
+  if (!target) return "no_password";
+
+  target.focus();
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+  if (setter) setter.call(target, password);
+  else target.value = password;
+  target.dispatchEvent(new Event("input", { bubbles: true }));
+  target.dispatchEvent(new Event("change", { bubbles: true }));
+  target.blur();
+  return "filled";
+}
+
+generateFillPasswordButton.addEventListener("click", async () => {
+  let password;
+  try {
+    password = generateSecurePassword();
+    setGeneratedPassword(password);
+  } catch (error) {
+    setGeneratedPassword("");
+    generatorStatus.textContent = error instanceof Error
+      ? error.message
+      : "Could not generate a password.";
+    return;
+  }
+
+  generateFillPasswordButton.disabled = true;
+  generatorStatus.textContent = "Generating and checking the active page…";
+  try {
+    const result = await fillGeneratedPassword(password);
+    generatorStatus.textContent = result.message;
+  } catch {
+    generatorStatus.textContent = "Could not fill the page. The generated password is still available above.";
+  } finally {
+    generateFillPasswordButton.disabled = !Number.isInteger(activeTabId) || !activeDomain;
+  }
+});
+
 copyPasswordButton.addEventListener("click", async () => {
   if (!generatedPassword.value) return;
 
+  copyPasswordButton.disabled = true;
+  generatorStatus.textContent = "Sending password to PejPass for timed clipboard copy…";
   try {
-    await navigator.clipboard.writeText(generatedPassword.value);
-    generatorStatus.textContent = "Password copied to the clipboard.";
+    const response = await sendNativeMessage({
+      type: "copyToClipboard",
+      protocolVersion,
+      password: generatedPassword.value
+    });
+    if (isValidBaseResponse(response, "clipboardCopied")) {
+      generatorStatus.textContent = "Password copied. PejPass will clear it after 30 seconds if it is still in the clipboard.";
+    } else {
+      const messages = {
+        app_unavailable: "Open PejPass desktop and try copying again.",
+        unsupported_request: "Rebuild and reinstall the latest PejPass desktop and BrowserHost.",
+        clipboard_unavailable: "PejPass could not access the clipboard. Try again or copy manually."
+      };
+      generatorStatus.textContent = messages[response?.code] || "PejPass could not copy the password. You can select and copy it manually.";
+    }
   } catch {
-    generatorStatus.textContent = "Copy failed. Select and copy the password manually.";
+    generatorStatus.textContent = "Could not connect to PejPass. Open the desktop app and try again, or copy manually.";
+  } finally {
+    copyPasswordButton.disabled = !generatedPassword.value;
   }
 });
 
