@@ -1019,8 +1019,13 @@ function fillNewPasswordField(expectedDomain, password) {
     return style.display !== "none" && style.visibility !== "hidden" &&
       element.getClientRects().length > 0;
   };
-  const inputs = Array.from(document.querySelectorAll('input[type="password"]'))
-    .filter((input) => !input.disabled && !input.readOnly && isVisible(input));
+  const inputs = Array.from(document.querySelectorAll("input"))
+    .filter((input) => {
+      const autocomplete = (input.autocomplete || "").toLowerCase().split(/\\s+/);
+      const isPasswordInput = (input.type || "").toLowerCase() === "password";
+      return (isPasswordInput || autocomplete.includes("new-password")) &&
+        !input.disabled && !input.readOnly && isVisible(input);
+    });
   if (inputs.length === 0) return "no_password";
 
   const hints = (input) => [
@@ -1031,7 +1036,8 @@ function fillNewPasswordField(expectedDomain, password) {
     (input.autocomplete || "").toLowerCase().split(/\s+/).includes("new-password")) ||
     inputs.find((input) => /new.?password|password.?new|create.?password|register.?password|signup.?password/i.test(hints(input)));
 
-  if (!target && inputs.length > 1) {
+  if (!target && inputs.length > 1 && inputs[0].form &&
+      inputs.every((input) => input.form === inputs[0].form)) {
     target = inputs[0];
   }
 
