@@ -80,6 +80,10 @@ Both checks should succeed on a dual-signed staging manifest. The second check v
 
 Treat suspected private-key exposure as an incident, not as an ordinary scheduled rotation. Stop and assess releases, protect the remaining signing keys, and plan an explicit recovery path. Simply deleting K1 from the current source does not revoke it from already installed older applications; those applications still trust K1 and may accept a forged primary signature. Do not claim that a key has been revoked for existing clients unless those clients have a mechanism to receive and enforce that revocation.
 
+## Browser extension unlock rate limiting
+
+Browser-based master-password unlock attempts are rate-limited in memory: the first four failed attempts are allowed without delay; subsequent failures trigger exponential lockouts starting at 30 seconds and capped at 15 minutes. Failure history expires after 30 minutes, successful unlock resets it, and only one browser unlock attempt may be in flight at a time. Desktop login attempts are not covered by this browser-only limiter. The limiter is not persistent and resets when PejPass exits; it slows repeated guesses but is not a boundary against malicious code running as the same Windows user.
+
 ## Browser extension vault-state event pipe
 
 The desktop app publishes vault lock-state changes over the separate named pipe `PejPass.BrowserEvents.v1`. The pipe is created with `PipeOptions.CurrentUserOnly` by the desktop server, and BrowserHost connects with the same current-user-only option. It carries only the `locked` or `unlocked` state and no passwords, vault contents, key material, or other secrets. The desktop accepts at most four concurrent event subscribers.
