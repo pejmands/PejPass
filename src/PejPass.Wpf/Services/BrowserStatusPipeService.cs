@@ -673,10 +673,14 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
         try
         {
+            var settings = App.Services.GetRequiredService<PejPass.Domain.Settings.AppSettings>();
+            var timeoutSeconds = Math.Clamp(settings.ClipboardClearSeconds, 5, 300);
             app.Dispatcher.Invoke(
-                () => _clipboardService.CopyWithTimeout(password, TimeSpan.FromSeconds(30)),
+                () => _clipboardService.CopyWithTimeout(password, TimeSpan.FromSeconds(timeoutSeconds)),
                 System.Windows.Threading.DispatcherPriority.Send);
-            return new StatusResponse("clipboardCopied", "PejPass", ProtocolVersion, null, null);
+            return new StatusResponse(
+                "clipboardCopied", "PejPass", ProtocolVersion, null, null,
+                ClipboardClearSeconds: timeoutSeconds);
         }
         catch (Exception)
         {
@@ -1146,5 +1150,6 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         string Type, string App, int ProtocolVersion, string? Status, string? Code,
         string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null,
         string? Id = null, string? Username = null, string? Password = null,
-        string? TotpCode = null, string? Result = null, int? RetryAfterSeconds = null);
+        string? TotpCode = null, string? Result = null, int? RetryAfterSeconds = null,
+        int? ClipboardClearSeconds = null);
 }
