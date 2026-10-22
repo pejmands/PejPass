@@ -1,0 +1,397 @@
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
+using PejPass.Domain.Entities;
+using PejPass.Wpf.Dialogs;
+using PejPass.Wpf.Services;
+using PejPass.Wpf.Views;
+
+namespace PejPass.Wpf.ViewModels;
+
+/// <summary>
+/// Restore encrypted .pejpass backup into the currently open vault.
+/// This is NOT the same as Login → Open vault (which switches the active file).
+/// </summary>
+public partial class MainViewModel
+{
+    [RelayCommand]
+    private async Task RestoreBackupAsync()
+    {
+        var currentPath = _vaultSession.VaultPath;
+        var currentVault = _vaultSession.Vault;
+        var operationGeneration = _vaultSession.Generation;
+
+        if (string.IsNullOrEmpty(currentPath) || currentVault is null ||
+            !_vaultSession.IsCurrent(operationGeneration, currentVault))
+        {
+            DialogService.Warning("No vault is open.", "Restore Backup");
+            return;
+        }
+
+        var openDlg = new OpenFileDialog
+        {
+            Title = "Restore from encrypted PejPass backup",
+            Filter = "PejPass Vault (*.pejpass)|*.pejpass|All files (*.*)|*.*",
+            CheckFileExists = true
+        };
+
+        if (openDlg.ShowDialog() != true)
+            return;
+
+        var backupPath = System.IO.Path.GetFullPath(openDlg.FileName);
+        var activePath = System.IO.Path.GetFullPath(currentPath);
+
+        if (string.Equals(backupPath, activePath, StringComparison.OrdinalIgnoreCase))
+        {
+            DialogService.Warning(
+                "That is the vault file you already have open.\n\n" +
+                "Pick a different .pejpass backup file.",
+                "Restore Backup");
+            return;
+        }
+
+        var prompt = new PasswordPromptWindow(
+            title: "Backup password",
+            message: "Enter the master password used when this backup was created:")
+        {
+            Owner = GetOwnerWindow()
+        };
+
+        Vault? backupVault = null;
+
+        prompt.ValidatePasswordAsync = async password =>
+        {
+            try
+            {
+                backupVault = await _vaultService.OpenVaultAsync(
+                    backupPath,
+                    password,
+                    migrateLegacy: false);
+
+                return null;
+            }
+            catch (System.Security.Cryptography.AuthenticationTagMismatchException)
+            {
+                return VaultErrorMessages.ForBackupOpen(authenticationFailed: true);
+            }
+            catch (Exception)
+            {
+                return VaultErrorMessages.ForBackupOpen(authenticationFailed: false);
+            }
+        };
+
+        if (prompt.ShowDialog() != true || backupVault is null)
+            return;
+
+        if (!_vaultSession.IsCurrent(operationGeneration, currentVault))
+            return;
+
+        StatusMessage = "Backup opened successfully.";
+
+        var entryCount = backupVault.Entries.Count;
+        var trashCount = backupVault.Trash.Count;
+
+        var choice = DialogService.Choose(
+            $"Backup contains {entryCount} entries" +
+            (trashCount > 0 ? $" and {trashCount} in trash" : "") + ".\n\n" +
+            "• Replace — overwrite data in the CURRENT vault file\n\n" +
+            "• Merge rules:\n" +
+            "  – 100% identical content only is treated as the same item\n" +
+            "  – Backup active + current trash → restored to the list\n" +
+            "  – Backup trash + current active → left in the list (not demoted)\n" +
+            "  – Backup trash + nothing → added to trash\n\n" +
+            "This is different from Login → Open vault, which would switch to the backup file itself.",
+            "Restore mode",
+            primaryText: "Replace",
+            secondaryText: "Merge",
+            tertiaryText: "Cancel",
+            isDestructive: true);
+
+        if (!_vaultSession.IsCurrent(operationGeneration, currentVault))
+            return;
+
+        if (choice == AppDialogResult.Tertiary || choice == AppDialogResult.None)
+        {
+            StatusMessage = "Restore cancelled.";
+            return;
+        }
+
+        var replace = choice == AppDialogResult.Primary;
+
+        Vault? rollbackSnapshot = null;
+        var mutationStarted = false;
+
+        try
+        {
+            IsBusy = true;
+            BusyMessage = "Restoring backup...";
+
+            if (replace)
+            {
+                if (!DialogService.Confirm(
+                        "This will replace all entries, history, and trash in your current vault with the backup.\n\n" +
+                        "The vault file path will not change.\n\n" +
+                        "This cannot be undone unless you have another backup.\n\nContinue?",
+                        "Confirm replace",
+                        yesText: "Replace vault",
+                        noText: "Cancel",
+                        isDestructive: true))
+                {
+                    StatusMessage = "Restore cancelled.";
+                    return;
+                }
+
+                if (!_vaultSession.IsCurrent(operationGeneration, currentVault) ||
+                    !await EnsureVaultWritableAsync() ||
+                    !_vaultSession.IsCurrent(operationGeneration, currentVault))
+                    return;
+
+                rollbackSnapshot = currentVault.CreateSnapshot();
+                mutationStarted = true;
+                currentVault.ReplaceContentFrom(backupVault);
+
+                SelectedEntry = null;
+                RefreshEntriesFromVault();
+                if (!await SaveVaultAsync(currentVault, operationGeneration))
+                {
+                    RestoreVaultSnapshot(rollbackSnapshot!, currentVault, operationGeneration);
+                    return;
+                }
+
+                mutationStarted = false;
+                rollbackSnapshot = null;
+
+                DialogService.Success(
+                    $"Vault replaced from backup.\n\n" +
+                    $"Entries: {currentVault.Entries.Count}\n" +
+                    $"In trash: {currentVault.Trash.Count}\n\n" +
+                    $"Saved to:\n{currentPath}",
+                    "Restore complete");
+            }
+            else
+            {
+                if (!_vaultSession.IsCurrent(operationGeneration, currentVault) ||
+                    !await EnsureVaultWritableAsync() ||
+                    !_vaultSession.IsCurrent(operationGeneration, currentVault))
+                    return;
+
+                rollbackSnapshot = currentVault.CreateSnapshot();
+                mutationStarted = true;
+
+                // History is intentionally not merged: imported entries receive new IDs,
+                // so backup history snapshots cannot be linked safely to the merged entries.
+                // ---- Merge with explicit active-vs-trash rules ----
+                // Map fingerprint → entry (or trashed entry) in the CURRENT vault
+                var activeByFp = new Dictionary<string, VaultEntry>(StringComparer.Ordinal);
+                foreach (var e in currentVault.Entries)
+                    activeByFp[EntryContentFingerprint(e)] = e;
+
+                var trashByFp = new Dictionary<string, TrashedEntry>(StringComparer.Ordinal);
+                foreach (var tr in currentVault.Trash)
+                    trashByFp[EntryContentFingerprint(tr.Entry)] = tr;
+
+                int addedToList = 0;
+                int restoredFromTrash = 0;
+                int skippedAlreadyInList = 0;
+                int addedToTrash = 0;
+                int skippedTrashAlreadyInList = 0;
+                int skippedTrashAlreadyInTrash = 0;
+
+                // 1) Backup ACTIVE entries
+                foreach (var e in backupVault.Entries)
+                {
+                    var fp = EntryContentFingerprint(e);
+
+                    if (activeByFp.ContainsKey(fp))
+                    {
+                        // Already live in the current list → keep as-is
+                        skippedAlreadyInList++;
+                        continue;
+                    }
+
+                    if (trashByFp.TryGetValue(fp, out var trashed))
+                    {
+                        // Same content sits in current trash, but backup says it should be active
+                        // → bring it back to the list (active wins over trash)
+                        currentVault.Trash.Remove(trashed);
+                        trashed.Entry.Touch();
+                        currentVault.Entries.Add(trashed.Entry);
+                        activeByFp[fp] = trashed.Entry;
+                        trashByFp.Remove(fp);
+                        restoredFromTrash++;
+                        continue;
+                    }
+
+                    // Brand-new content → add to list
+                    var clone = CloneEntry(e, newId: true);
+                    currentVault.AddEntry(clone);
+                    activeByFp[fp] = clone;
+                    addedToList++;
+                }
+
+                // 2) Backup TRASH entries
+                foreach (var tr in backupVault.Trash)
+                {
+                    var fp = EntryContentFingerprint(tr.Entry);
+
+                    if (activeByFp.ContainsKey(fp))
+                    {
+                        // Already live in the list → never demote to trash from a backup
+                        skippedTrashAlreadyInList++;
+                        continue;
+                    }
+
+                    if (trashByFp.ContainsKey(fp))
+                    {
+                        // Already in trash → leave it
+                        skippedTrashAlreadyInTrash++;
+                        continue;
+                    }
+
+                    var clone = CloneEntry(tr.Entry, newId: true);
+                    var item = new TrashedEntry { Entry = clone, DeletedAt = tr.DeletedAt };
+                    currentVault.Trash.Add(item);
+                    trashByFp[fp] = item;
+                    addedToTrash++;
+                }
+
+                currentVault.UpdatedAt = DateTimeOffset.UtcNow;
+
+                SelectedEntry = null;
+                RefreshEntriesFromVault();
+                if (!await SaveVaultAsync(currentVault, operationGeneration))
+                {
+                    RestoreVaultSnapshot(rollbackSnapshot!, currentVault, operationGeneration);
+                    return;
+                }
+
+                mutationStarted = false;
+                rollbackSnapshot = null;
+
+                var totalSkipped = skippedAlreadyInList + skippedTrashAlreadyInList + skippedTrashAlreadyInTrash;
+                var totalChanged = addedToList + restoredFromTrash + addedToTrash;
+
+                StatusMessage = totalChanged > 0
+                    ? $"Merged: +{addedToList} list, {restoredFromTrash} from trash, +{addedToTrash} trash."
+                    : "Merge finished — nothing new to add.";
+
+                // Build a clear breakdown so trash effects are visible
+                var lines = new List<string>
+                {
+                    "Merge finished.",
+                    "",
+                    $"Added to list:              {addedToList}",
+                    $"Restored from trash → list: {restoredFromTrash}",
+                    $"Added to trash:             {addedToTrash}",
+                    $"Skipped (already in list):  {skippedAlreadyInList}",
+                };
+
+                if (skippedTrashAlreadyInList > 0)
+                    lines.Add($"Skipped trash (kept in list): {skippedTrashAlreadyInList}");
+                if (skippedTrashAlreadyInTrash > 0)
+                    lines.Add($"Skipped trash (already trash): {skippedTrashAlreadyInTrash}");
+
+                lines.Add("");
+                lines.Add($"Vault now: {currentVault.Entries.Count} entries · {currentVault.Trash.Count} in trash");
+                lines.Add("");
+                lines.Add(currentPath);
+
+                if (restoredFromTrash > 0 || skippedTrashAlreadyInList > 0 || addedToTrash > 0)
+                {
+                    lines.Add("");
+                    lines.Add("Note: trash affected this merge (see counts above).");
+                }
+
+                DialogService.Success(
+                    string.Join('\n', lines),
+                    "Restore complete");
+            }
+
+            ResetAutoLockTimer();
+        }
+        catch (Exception)
+        {
+            if (mutationStarted && rollbackSnapshot is not null)
+            {
+                try
+                {
+                    RestoreVaultSnapshot(rollbackSnapshot!, currentVault, operationGeneration);
+                }
+                catch
+                {
+                    // Preserve the original restore error.
+                }
+            }
+
+            DialogService.Error("Restore failed. The backup may be damaged or incompatible.", "Restore Backup");
+            StatusMessage = "Restore failed.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>
+    /// Fingerprint used to compare entry content. BrowserFields intentionally ignores TOTP,
+    /// tags, and custom fields because browser CSV cannot represent them.
+    /// </summary>
+    internal static string EntryContentFingerprint(
+        VaultEntry e,
+        EntryFingerprintScope scope = EntryFingerprintScope.Full)
+    {
+        static string S(string? s) => s ?? string.Empty;
+
+        if (scope == EntryFingerprintScope.BrowserFields)
+        {
+            return string.Join('\u001f',
+                S(e.Title),
+                S(e.Username),
+                S(e.Password),
+                S(e.Url),
+                S(e.Notes));
+        }
+
+        var tags = string.Join('\u001e',
+            e.Tags.Select(t => S(t)).OrderBy(t => t, StringComparer.Ordinal));
+
+        var customs = string.Join('\u001e',
+            e.CustomFields
+                .Select(f => $"{S(f.Name)}\u001d{S(f.Value)}\u001d{(f.IsSecret ? '1' : '0')}")
+                .OrderBy(x => x, StringComparer.Ordinal));
+
+        return string.Join('\u001f',
+            S(e.Title),
+            S(e.Username),
+            S(e.Password),
+            S(e.Url),
+            S(e.TotpSecret),
+            S(e.Notes),
+            tags,
+            customs);
+    }
+
+    private static VaultEntry CloneEntry(VaultEntry source, bool newId = false)
+    {
+        return new VaultEntry
+        {
+            Id = newId ? Guid.NewGuid() : source.Id,
+            Title = source.Title,
+            Username = source.Username,
+            Password = source.Password,
+            Url = source.Url,
+            TotpSecret = source.TotpSecret,
+            Notes = source.Notes,
+            Tags = [.. source.Tags],
+            CustomFields = [.. source.CustomFields.Select(f => new CustomField
+            {
+                Name = f.Name,
+                Value = f.Value,
+                IsSecret = f.IsSecret
+            })],
+            IsFavorite = source.IsFavorite,
+            SortOrder = source.SortOrder,
+            CreatedAt = source.CreatedAt,
+            UpdatedAt = source.UpdatedAt
+        };
+    }
+}

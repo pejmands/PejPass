@@ -1,0 +1,757 @@
+﻿using PejPass.Application.Interfaces;
+using PejPass.Domain.Entities;
+using PejPass.Domain.Exceptions;
+using PejPass.Infrastructure.Storage;
+
+namespace PejPass.Infrastructure.Tests.Storage;
+
+public sealed class VaultStoreValidationTests
+{
+    [Fact]
+    public async Task CreateSessionAsync_WhenHistoryExceedsLimit_ThrowsVaultLimitExceededException()
+    {
+        var vault = new Vault
+        {
+            History = Enumerable.Repeat(new EntryHistoryItem(), VaultLimits.MaxHistoryItems + 1).ToList()
+        };
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+
+        try
+        {
+            var ex = await Assert.ThrowsAsync<VaultLimitExceededException>(() =>
+                CreateStore().CreateSessionAsync(
+                    path,
+                    "password",
+                    vault,
+                    TestContext.Current.CancellationToken));
+
+            Assert.Equal(VaultLimit.HistoryItems, ex.Limit);
+            Assert.False(File.Exists(path));
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenSaltLengthIsTooSmall_ThrowsInvalidDataException()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var path = CreateVaultFile(
+            version: 2,
+            saltLength: 15);
+
+        try
+        {
+            var store = CreateStore();
+
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                store.OpenAsync(
+                    path,
+                    "password",
+                    cancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenSaltLengthIsTooLarge_ThrowsInvalidDataException()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var path = CreateVaultFile(
+            version: 2,
+            saltLength: 65);
+
+        try
+        {
+            var store = CreateStore();
+
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                store.OpenAsync(
+                    path,
+                    "password",
+                    cancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenFileIsTooShort_ThrowsInvalidDataException()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var path = CreateVaultFile(
+            version: 2,
+            saltLength: 16,
+            minimumHeaderOnly: true);
+
+        try
+        {
+            var store = CreateStore();
+
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                store.OpenAsync(
+                    path,
+                    "password",
+                    cancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenCiphertextIsEmpty_ThrowsInvalidDataException()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var path = CreateVaultFile(
+            version: 2,
+            saltLength: 16,
+            ciphertextLength: 0);
+
+        try
+        {
+            var store = CreateStore();
+
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                store.OpenAsync(
+                    path,
+                    "password",
+                    cancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenVersionIsUnsupported_ThrowsNotSupportedException()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var path = CreateVaultFile(
+            version: 4,
+            saltLength: 16);
+
+        try
+        {
+            var store = CreateStore();
+
+            await Assert.ThrowsAsync<NotSupportedException>(() =>
+                store.OpenAsync(
+                    path,
+                    "password",
+                    cancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Theory]
+    [InlineData(262145, 3, 4)]
+    [InlineData(65536, 0, 4)]
+    [InlineData(65536, 11, 4)]
+    [InlineData(65536, 3, 0)]
+    [InlineData(65536, 3, 9)]
+    [InlineData(8191, 3, 2)]
+    public async Task OpenAsync_WhenArgon2ParametersAreInvalid_RejectsBeforeDerivingKey(
+        int memorySizeKiB,
+        int iterations,
+        int degreeOfParallelism)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var path = CreateV3VaultFile(memorySizeKiB, iterations, degreeOfParallelism);
+        var crypto = new FakeCryptoService();
+        var store = new VaultStore(crypto, new FakeFileMover());
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                store.OpenAsync(path, "password", cancellationToken));
+
+            Assert.Equal(0, crypto.DeriveKeyCallCount);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenRequiredCollectionIsNull_ThrowsInvalidDataException()
+    {
+        var path = CreateV2VaultFile("{\"Name\":\"Test\",\"Entries\":null,\"Trash\":[],\"History\":[]}");
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                CreateStore().OpenAsync(path, "password", TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenEntryFieldExceedsLimit_ThrowsInvalidDataException()
+    {
+        var oversizedTitle = new string('x', VaultLimits.MaxTextCharacters + 1);
+        var json = System.Text.Json.JsonSerializer.Serialize(new Vault
+        {
+            Entries = [new VaultEntry { Title = oversizedTitle }]
+        });
+        var path = CreateV2VaultFile(json);
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                CreateStore().OpenAsync(path, "password", TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenEntryCountExceedsLimit_ThrowsInvalidDataException()
+    {
+        var entries = new List<VaultEntry>(100_001);
+        for (var i = 0; i < 100_001; i++)
+            entries.Add(new VaultEntry { Title = "Entry" + i });
+
+        var json = System.Text.Json.JsonSerializer.Serialize(new Vault { Entries = entries });
+        var path = CreateV2VaultFile(json);
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                CreateStore().OpenAsync(path, "password", TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenEntryFieldExceedsLimit_ThrowsTextLengthLimit()
+    {
+        var ex = await CreateAndExpectLimitAsync(new Vault
+        {
+            Entries = [new VaultEntry { Title = "Router", Notes = new string('x', VaultLimits.MaxTextCharacters + 1) }]
+        });
+
+        Assert.Equal(VaultLimit.TextLength, ex.Limit);
+        Assert.Equal("entry notes", ex.Subject);
+        Assert.Equal("Router", ex.EntryTitle);
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenTitleIsLong_ShortensEntryTitleInTheError()
+    {
+        var ex = await CreateAndExpectLimitAsync(new Vault
+        {
+            Entries =
+            [
+                new VaultEntry
+                {
+                    Title = new string('t', 500),
+                    Notes = new string('x', VaultLimits.MaxTextCharacters + 1)
+                }
+            ]
+        });
+
+        Assert.NotNull(ex.EntryTitle);
+        Assert.True(ex.EntryTitle!.Length <= 80);
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenEntryHasTooManyTags_ThrowsCollectionLimit()
+    {
+        var ex = await CreateAndExpectLimitAsync(new Vault
+        {
+            Entries =
+            [
+                new VaultEntry
+                {
+                    Title = "Tagged",
+                    Tags = [.. Enumerable.Range(0, VaultLimits.MaxCollectionItemsPerEntry + 1).Select(i => $"t{i}")]
+                }
+            ]
+        });
+
+        Assert.Equal(VaultLimit.CollectionItems, ex.Limit);
+        Assert.Equal("tags", ex.Subject);
+        Assert.Equal("Tagged", ex.EntryTitle);
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenEntryHasTooManyCustomFields_ThrowsCollectionLimit()
+    {
+        var ex = await CreateAndExpectLimitAsync(new Vault
+        {
+            Entries =
+            [
+                new VaultEntry
+                {
+                    Title = "Fields",
+                    CustomFields = [.. Enumerable.Range(0, VaultLimits.MaxCollectionItemsPerEntry + 1)
+                        .Select(i => new CustomField { Name = $"n{i}", Value = "v" })]
+                }
+            ]
+        });
+
+        Assert.Equal(VaultLimit.CollectionItems, ex.Limit);
+        Assert.Equal("custom fields", ex.Subject);
+        Assert.Equal("Fields", ex.EntryTitle);
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenTagIsTooLong_ThrowsTagLengthLimit()
+    {
+        var ex = await CreateAndExpectLimitAsync(new Vault
+        {
+            Entries = [new VaultEntry { Title = "Long tag", Tags = [new string('x', VaultLimits.MaxTagCharacters + 1)] }]
+        });
+
+        Assert.Equal(VaultLimit.TagLength, ex.Limit);
+        Assert.Equal("Long tag", ex.EntryTitle);
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenActivePlusTrashedEntriesExceedLimit_ThrowsEntriesLimit()
+    {
+        var vault = new Vault
+        {
+            Entries = [.. Enumerable.Range(0, 60_000).Select(i => new VaultEntry { Title = "E" + i })],
+            Trash = [.. Enumerable.Range(0, VaultLimits.MaxEntries - 60_000 + 1)
+                .Select(i => new TrashedEntry { Entry = new VaultEntry { Title = "T" + i } })]
+        };
+
+        var ex = await CreateAndExpectLimitAsync(vault);
+
+        Assert.Equal(VaultLimit.Entries, ex.Limit);
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenEntryIdsAreDuplicatedAcrossActiveAndTrash_ThrowsInvalidDataException()
+    {
+        var entryId = Guid.NewGuid();
+        var vault = new Vault
+        {
+            Entries = [new VaultEntry { Id = entryId, Title = "Active" }],
+            Trash = [new TrashedEntry { Entry = new VaultEntry { Id = entryId, Title = "Trashed" } }]
+        };
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                CreateStore().CreateSessionAsync(
+                    path,
+                    "password",
+                    vault,
+                    TestContext.Current.CancellationToken));
+
+            Assert.False(File.Exists(path));
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenEntryIdsAreDuplicated_ThrowsInvalidDataException()
+    {
+        var duplicateId = Guid.NewGuid();
+        var json = System.Text.Json.JsonSerializer.Serialize(new Vault
+        {
+            Entries =
+            [
+                new VaultEntry { Id = duplicateId, Title = "First" },
+                new VaultEntry { Id = duplicateId, Title = "Second" }
+            ]
+        });
+        var path = CreateV2VaultFile(json);
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                CreateStore().OpenAsync(
+                    path,
+                    "password",
+                    TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenTagCollectionIsMissing_IsStillAnInvalidFile()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                CreateStore().CreateSessionAsync(
+                    path,
+                    "password",
+                    new Vault { Entries = [new VaultEntry { Title = "Broken", Tags = null! }] },
+                    TestContext.Current.CancellationToken));
+
+            Assert.False(File.Exists(path));
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenFileHasTooManyTags_StillThrowsInvalidDataException()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(new Vault
+        {
+            Entries =
+            [
+                new VaultEntry
+                {
+                    Title = "Tagged",
+                    Tags = [.. Enumerable.Range(0, VaultLimits.MaxCollectionItemsPerEntry + 1).Select(i => $"t{i}")]
+                }
+            ]
+        });
+
+        var path = CreateV2VaultFile(json);
+
+        try
+        {
+            // Size violations discovered while reading a file retain the invalid-file contract.
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                CreateStore().OpenAsync(path, "password", TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhenKeyDerivationFails_ClearsReadSalt()
+    {
+        var path = CreateV2VaultFile("{}");
+        var crypto = new FakeCryptoService { ThrowOnDeriveKey = true };
+        var store = new VaultStore(crypto, new FakeFileMover());
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                store.OpenAsync(path, "password", TestContext.Current.CancellationToken));
+
+            Assert.NotNull(crypto.LastDerivedSalt);
+            Assert.All(crypto.LastDerivedSalt!, value => Assert.Equal(0, value));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_WhenKeyDerivationFails_ClearsGeneratedSalt()
+    {
+        var crypto = new FakeCryptoService { ThrowOnDeriveKey = true };
+        var store = new VaultStore(crypto, new FakeFileMover());
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            store.CreateSessionAsync(
+                path,
+                "password",
+                new Vault(),
+                TestContext.Current.CancellationToken));
+
+        Assert.NotNull(crypto.LastGeneratedSalt);
+        Assert.All(crypto.LastGeneratedSalt!, value => Assert.Equal(0, value));
+        Assert.False(File.Exists(path));
+    }
+
+    [Fact]
+    public async Task SaveWithNewPasswordAsync_WhenKeyDerivationFails_ClearsGeneratedSalt()
+    {
+        var crypto = new FakeCryptoService { ThrowOnDeriveKey = true };
+        var store = new VaultStore(crypto, new FakeFileMover());
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        var vault = new Vault();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            store.SaveWithNewPasswordAsync(
+                path,
+                "password",
+                vault,
+                vault.KdfParameters,
+                TestContext.Current.CancellationToken));
+
+        Assert.NotNull(crypto.LastGeneratedSalt);
+        Assert.All(crypto.LastGeneratedSalt!, value => Assert.Equal(0, value));
+        Assert.False(File.Exists(path));
+    }
+
+    [Fact]
+    public async Task CreateOpenAndSave_RunCryptoWithoutCallerSynchronizationContext()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        var marker = new RecordingSynchronizationContext();
+        var previousContext = SynchronizationContext.Current;
+        var crypto = new FakeCryptoService();
+        var store = new VaultStore(crypto, new FakeFileMover());
+
+        SynchronizationContext.SetSynchronizationContext(marker);
+
+        try
+        {
+            using var session = await store.CreateSessionAsync(
+                path,
+                "master-password",
+                new Vault { Name = "Thread test" },
+                cancellationToken);
+
+            Assert.Null(crypto.LastDeriveKeySynchronizationContext);
+            Assert.Null(crypto.LastEncryptSynchronizationContext);
+
+            using var reopened = await store.OpenSessionAsync(
+                path,
+                "master-password",
+                cancellationToken);
+
+            Assert.Null(crypto.LastDeriveKeySynchronizationContext);
+            Assert.Null(crypto.LastDecryptSynchronizationContext);
+
+            using var newMaterial = await store.SaveWithNewPasswordAsync(
+                path,
+                "new-master-password",
+                reopened.Vault,
+                reopened.KeyMaterial.KdfParameters,
+                cancellationToken);
+
+            Assert.Null(crypto.LastDeriveKeySynchronizationContext);
+            Assert.Null(crypto.LastEncryptSynchronizationContext);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previousContext);
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
+    private static async Task<VaultLimitExceededException> CreateAndExpectLimitAsync(Vault vault)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+
+        try
+        {
+            var ex = await Assert.ThrowsAsync<VaultLimitExceededException>(() =>
+                CreateStore().CreateSessionAsync(
+                    path,
+                    "password",
+                    vault,
+                    TestContext.Current.CancellationToken));
+
+            Assert.False(File.Exists(path));
+            return ex;
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
+    private static string CreateV2VaultFile(string json)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        stream.Write("PEJP"u8);
+        stream.WriteByte(2);
+        stream.Write(BitConverter.GetBytes((ushort)16));
+        stream.Write(new byte[16 + 12 + 16]);
+        stream.Write(System.Text.Encoding.UTF8.GetBytes(json));
+        return path;
+    }
+
+    private static string CreateV3VaultFile(
+        int memorySizeKiB,
+        int iterations = 3,
+        int degreeOfParallelism = 4)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
+        using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+
+        stream.Write("PEJP"u8);
+        stream.WriteByte(3);
+        stream.WriteByte(1);
+        stream.Write(BitConverter.GetBytes(memorySizeKiB));
+        stream.Write(BitConverter.GetBytes(iterations));
+        stream.Write(BitConverter.GetBytes(degreeOfParallelism));
+        stream.Write(BitConverter.GetBytes((ushort)16));
+        stream.Write(new byte[16 + 12 + 16 + 1]);
+
+        return path;
+    }
+
+    private static VaultStore CreateStore()
+    {
+        return new VaultStore(
+            new FakeCryptoService(),
+            new FakeFileMover());
+    }
+
+    private static string CreateVaultFile(
+        byte version,
+        int saltLength,
+        bool minimumHeaderOnly = false,
+        int ciphertextLength = 1)
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"{Guid.NewGuid():N}.pejp");
+
+        using var stream = new FileStream(
+            path,
+            FileMode.CreateNew,
+            FileAccess.Write,
+            FileShare.None);
+
+        stream.Write("PEJP"u8);
+        stream.WriteByte(version);
+        stream.Write(
+            BitConverter.GetBytes((ushort)saltLength));
+
+        stream.Write(new byte[saltLength]);
+
+        if (minimumHeaderOnly)
+            return path;
+
+        stream.Write(new byte[12]);
+        stream.Write(new byte[16]);
+
+        if (ciphertextLength > 0)
+            stream.Write(new byte[ciphertextLength]);
+
+        return path;
+    }
+
+    private sealed class RecordingSynchronizationContext : SynchronizationContext
+    {
+        public override void Post(SendOrPostCallback callback, object? state)
+        {
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                var previous = Current;
+                SetSynchronizationContext(this);
+                try
+                {
+                    callback(state);
+                }
+                finally
+                {
+                    SetSynchronizationContext(previous);
+                }
+            });
+        }
+    }
+
+    private sealed class FakeCryptoService : ICryptoService
+    {
+        public int DeriveKeyCallCount { get; private set; }
+
+        public SynchronizationContext? LastDeriveKeySynchronizationContext { get; private set; }
+
+        public SynchronizationContext? LastEncryptSynchronizationContext { get; private set; }
+
+        public SynchronizationContext? LastDecryptSynchronizationContext { get; private set; }
+
+        public bool ThrowOnDeriveKey { get; init; }
+
+        public byte[]? LastGeneratedSalt { get; private set; }
+
+        public byte[]? LastDerivedSalt { get; private set; }
+
+        public byte[] DeriveKey(
+            string masterPassword,
+            byte[] salt,
+            Argon2Parameters? parameters = null)
+        {
+            DeriveKeyCallCount++;
+            LastDeriveKeySynchronizationContext = SynchronizationContext.Current;
+            LastDerivedSalt = salt;
+            if (ThrowOnDeriveKey)
+                throw new InvalidOperationException("Simulated key derivation failure.");
+
+            return new byte[32];
+        }
+
+        public (byte[] Ciphertext, byte[] Nonce, byte[] Tag) Encrypt(
+            byte[] plaintext,
+            byte[] key,
+            byte[]? associatedData = null)
+        {
+            LastEncryptSynchronizationContext = SynchronizationContext.Current;
+            return (
+                plaintext.ToArray(),
+                new byte[12],
+                new byte[16]);
+        }
+
+        public byte[] Decrypt(
+            byte[] ciphertext,
+            byte[] nonce,
+            byte[] tag,
+            byte[] key,
+            byte[]? associatedData = null)
+        {
+            LastDecryptSynchronizationContext = SynchronizationContext.Current;
+            return ciphertext;
+        }
+
+        public byte[] GenerateSalt(int length = 16)
+        {
+            var salt = Enumerable.Repeat((byte)0x5A, length).ToArray();
+            LastGeneratedSalt = salt;
+            return salt;
+        }
+
+        public void ZeroMemory(byte[] data)
+        {
+            Array.Clear(data);
+        }
+    }
+
+    private sealed class FakeFileMover : IFileMover
+    {
+        public void Move(
+            string sourcePath,
+            string destinationPath,
+            bool overwrite)
+        {
+            File.Move(sourcePath, destinationPath, overwrite);
+        }
+    }
+}

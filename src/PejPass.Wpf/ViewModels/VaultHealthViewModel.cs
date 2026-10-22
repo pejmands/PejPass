@@ -1,0 +1,524 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using PejPass.Domain.Entities;
+using PejPass.Domain.Health;
+using PejPass.Domain.Security;
+using System.Collections.ObjectModel;
+using System.Security.Cryptography;
+using System.Text;
+using System.Windows.Threading;
+
+namespace PejPass.Wpf.ViewModels;
+
+public partial class VaultHealthViewModel : ObservableObject
+{
+    private readonly IReadOnlyList<VaultEntry> _entries;
+    private readonly IReadOnlyDictionary<Guid, DateTimeOffset> _passwordChangedAtByEntry;
+
+    [ObservableProperty]
+    public partial int SelectedFilterIndex { get; set; }
+
+    [ObservableProperty]
+    public partial int TotalIssues { get; set; }
+
+    [ObservableProperty]
+    public partial int DuplicateCount { get; set; }
+
+    [ObservableProperty]
+    public partial int WeakCount { get; set; }
+
+    [ObservableProperty]
+    public partial int NeedsImprovementCount { get; set; }
+
+    [ObservableProperty]
+    public partial int UsernameEqualsPasswordCount { get; set; }
+
+    [ObservableProperty]
+    public partial int MissingTotpCount { get; set; }
+
+    [ObservableProperty]
+    public partial int StaleCount { get; set; }
+
+    [ObservableProperty]
+    public partial int HealthScore { get; set; }
+
+    [ObservableProperty]
+    public partial string HealthLabel { get; set; } = "Scanning…";
+
+    [ObservableProperty]
+    public partial bool IsScanning { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsReady { get; set; }
+
+    [ObservableProperty]
+    public partial double ScanProgress { get; set; }
+
+    [ObservableProperty]
+    public partial string ScanStatus { get; set; } = "Preparing…";
+
+    public string[] FilterOptions { get; } =
+    [
+        "All",
+        "Duplicate passwords",
+        "Weak passwords / needs improvement",
+        "Username = password",
+        "Missing TOTP",
+        "Stale (1+ year)"
+    ];
+
+    public ObservableCollection<HealthIssueRow> Issues { get; } = [];
+
+    public bool IsEmptyVault => _entries.Count == 0;
+    public bool HasNoIssues =>
+        IsReady &&
+        _entries.Count > 0 &&
+        TotalIssues == 0;
+    public bool HasNoMatchingIssues =>
+        IsReady &&
+        TotalIssues > 0 &&
+        Issues.Count == 0;
+
+    public event EventHandler<Guid>? RequestOpenEntry;
+
+    private readonly List<HealthIssue> _allIssues = [];
+    /// <summary>EntryId → stable group key (password hash) for sorting peers together.</summary>
+    private readonly Dictionary<Guid, string> _duplicateGroupKeys = [];
+    private CancellationTokenSource? _scanCts;
+
+    public VaultHealthViewModel(
+        IEnumerable<VaultEntry> entries,
+        IEnumerable<EntryHistoryItem>? history = null)
+    {
+        _entries = [.. entries];
+        _passwordChangedAtByEntry = BuildPasswordLastChangedAtLookup(_entries, history);
+        IsScanning = true;
+        IsReady = false;
+        ScanProgress = 0;
+        ScanStatus = $"Scanning {_entries.Count} entries…";
+    }
+
+    partial void OnIsReadyChanged(bool value)
+    {
+        OpenEntryCommand.NotifyCanExecuteChanged();
+        NotifyEmptyStateProperties();
+    }
+
+    partial void OnIsScanningChanged(bool value) => CancelScanCommand.NotifyCanExecuteChanged();
+
+    public async Task StartScanAsync()
+    {
+        // Cancel any in-flight scan (e.g. rapid Rescan)
+        _scanCts?.Cancel();
+        _scanCts?.Dispose();
+        _scanCts = new CancellationTokenSource();
+        var ct = _scanCts.Token;
+
+        IsScanning = true;
+        IsReady = false;
+        ScanProgress = 0;
+        ScanStatus = $"Preparing {_entries.Count} entries…";
+
+        Issues.Clear();
+        _allIssues.Clear();
+        _duplicateGroupKeys.Clear();
+        TotalIssues = 0;
+        DuplicateCount = 0;
+        WeakCount = 0;
+        NeedsImprovementCount = 0;
+        UsernameEqualsPasswordCount = 0;
+        MissingTotpCount = 0;
+        StaleCount = 0;
+        HealthScore = 0;
+        HealthLabel = "Scanning…";
+
+        CancelScanCommand.NotifyCanExecuteChanged();
+        await YieldUiAsync().ConfigureAwait(true);
+
+        var n = _entries.Count;
+        if (n == 0)
+        {
+            HealthScore = 100;
+            HealthLabel = "Excellent";
+            ScanProgress = 100;
+            ScanStatus = "No entries to scan.";
+            IsScanning = false;
+            IsReady = true;
+            return;
+        }
+
+        try
+        {
+            // password → entries that share it (only groups with 2+)
+            var byPassword = _entries
+                .Where(e => !string.IsNullOrEmpty(e.Password))
+                .GroupBy(e => e.Password, StringComparer.Ordinal)
+                .Where(g => g.Count() > 1)
+                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
+
+            // Stable group key per password (never store the password itself in rows)
+            var groupKeyByPassword = byPassword.Keys.ToDictionary(
+                p => p,
+                p => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(p)))[..16],
+                StringComparer.Ordinal);
+
+            var utc = DateTimeOffset.UtcNow;
+            var filter = SelectedFilterIndex;
+
+            for (var i = 0; i < n; i++)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                var e = _entries[i];
+
+                if (!string.IsNullOrEmpty(e.Password) &&
+                    byPassword.TryGetValue(e.Password, out var group))
+                {
+                    var groupKey = groupKeyByPassword[e.Password];
+                    _duplicateGroupKeys[e.Id] = groupKey;
+
+                    AddIssue(new HealthIssue(
+                        HealthIssueKind.DuplicatePassword,
+                        e.Id,
+                        string.IsNullOrWhiteSpace(e.Title) ? "(untitled)" : e.Title,
+                        FormatDuplicateDetail(e, group)),
+                        filter);
+                }
+
+                var level = PasswordStrength.Evaluate(e.Password);
+                if (GetPasswordIssueKind(level) is { } passwordIssueKind)
+                {
+                    var detail = level switch
+                    {
+                        PasswordStrengthLevel.Empty => "Password is empty",
+                        PasswordStrengthLevel.Fair => "Strength: Fair — needs improvement",
+                        _ => $"Strength: {level}"
+                    };
+
+                    AddIssue(new HealthIssue(
+                        passwordIssueKind,
+                        e.Id,
+                        e.Title,
+                        detail),
+                        filter);
+                }
+
+                if (!string.IsNullOrEmpty(e.Username) &&
+                    !string.IsNullOrEmpty(e.Password) &&
+                    string.Equals(e.Username, e.Password, StringComparison.OrdinalIgnoreCase))
+                {
+                    AddIssue(new HealthIssue(
+                        HealthIssueKind.UsernameEqualsPassword,
+                        e.Id,
+                        e.Title,
+                        "Username and password are the same"),
+                        filter);
+                }
+
+                if (string.IsNullOrWhiteSpace(e.TotpSecret))
+                {
+                    AddIssue(new HealthIssue(
+                        HealthIssueKind.MissingTotp,
+                        e.Id,
+                        e.Title,
+                        "No authenticator (TOTP) configured"),
+                        filter);
+                }
+
+                var passwordChangedAt = _passwordChangedAtByEntry[e.Id];
+                if (utc - passwordChangedAt >= VaultHealthRules.StaleThreshold)
+                {
+                    var days = (int)(utc - passwordChangedAt).TotalDays;
+                    AddIssue(new HealthIssue(
+                        HealthIssueKind.StalePassword,
+                        e.Id,
+                        e.Title,
+                        $"Password unchanged for {days} days"),
+                        filter);
+                }
+
+                ScanProgress = (i + 1) * 100.0 / n;
+                ScanStatus = $"Scanning {i + 1} / {n}…";
+
+                // Yield often enough for progress to paint on large vaults
+                if ((i + 1) % 5 == 0 || i + 1 == n)
+                    await YieldUiAsync().ConfigureAwait(true);
+            }
+
+            UpdateHealthSummary();
+
+            ScanProgress = 100;
+            ScanStatus = TotalIssues == 0
+                ? "No issues found."
+                : $"{TotalIssues} issue(s) found.";
+
+            // Final ordered view (peers of same password sit together)
+            RebuildVisibleIssues(SelectedFilterIndex);
+            NotifyEmptyStateProperties();
+        }
+        catch (OperationCanceledException)
+        {
+            UpdateHealthSummary();
+            ScanStatus = TotalIssues == 0
+                ? "Scan cancelled."
+                : $"Scan cancelled — {TotalIssues} issue(s) found so far.";
+            RebuildVisibleIssues(SelectedFilterIndex);
+            NotifyEmptyStateProperties();
+        }
+        finally
+        {
+            IsScanning = false;
+            IsReady = true;
+            CancelScanCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private bool CanCancelScan() => IsScanning;
+
+    [RelayCommand(CanExecute = nameof(CanCancelScan))]
+    private void CancelScan()
+    {
+        if (!IsScanning) return;
+        ScanStatus = "Cancelling…";
+        _scanCts?.Cancel();
+    }
+
+    /// <summary>
+    /// Names the other account(s) that share this password so the user can find them.
+    /// </summary>
+    private static string FormatDuplicateDetail(VaultEntry entry, List<VaultEntry> group)
+    {
+        var others = group
+            .Where(x => x.Id != entry.Id)
+            .Select(x => string.IsNullOrWhiteSpace(x.Title) ? "(untitled)" : x.Title.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (others.Count == 0)
+            return "Same password used on multiple entries";
+
+        if (others.Count == 1)
+            return $"Same password as «{others[0]}»";
+
+        const int maxShow = 4;
+        if (others.Count <= maxShow)
+            return "Also used by: " + string.Join(", ", others.Select(t => $"«{t}»"));
+
+        var shown = others.Take(maxShow).Select(t => $"«{t}»");
+        return "Also used by: " + string.Join(", ", shown) + $", +{others.Count - maxShow} more";
+    }
+
+    private void UpdateHealthSummary()
+    {
+        if (_allIssues.Count == 0)
+        {
+            HealthScore = 100;
+            HealthLabel = "Excellent";
+            return;
+        }
+
+        var entryCount = Math.Max(1, _entries.Count);
+
+        // Score each affected entry once. Multiple issues on the same entry
+        // increase its penalty, but cannot count as several fully independent entries.
+        var penalty = _allIssues
+            .GroupBy(issue => issue.EntryId)
+            .Sum(group =>
+            {
+                var severities = group.Select(GetIssueSeverity).OrderByDescending(x => x).ToList();
+                var entryPenalty = severities[0];
+
+                // Additional issue types on the same entry matter, but less than
+                // the primary issue, preventing duplicate counting from dominating.
+                entryPenalty += (severities.Count - 1) * 0.5;
+
+                return Math.Min(entryPenalty, 5.0);
+            });
+
+        HealthScore = Math.Clamp(
+            (int)Math.Round(100 - penalty * 100.0 / (entryCount * 4.0)),
+            0,
+            100);
+
+        HealthLabel = HealthScore switch
+        {
+            >= 90 => "Excellent",
+            >= 75 => "Good",
+            >= 50 => "Needs attention",
+            _ => "At risk"
+        };
+    }
+
+    internal static HealthIssueKind? GetPasswordIssueKind(PasswordStrengthLevel level) =>
+        level switch
+        {
+            PasswordStrengthLevel.Empty or
+                PasswordStrengthLevel.VeryWeak or
+                PasswordStrengthLevel.Weak => HealthIssueKind.WeakPassword,
+            PasswordStrengthLevel.Fair => HealthIssueKind.PasswordNeedsImprovement,
+            _ => null
+        };
+
+    internal static IReadOnlyDictionary<Guid, DateTimeOffset> BuildPasswordLastChangedAtLookup(
+        IEnumerable<VaultEntry> entries,
+        IEnumerable<EntryHistoryItem>? history)
+    {
+        var entryList = entries.ToList();
+        var entriesById = entryList.ToDictionary(entry => entry.Id);
+        var latestPasswordChanges = new Dictionary<Guid, DateTimeOffset>();
+
+        foreach (var item in history ?? Enumerable.Empty<EntryHistoryItem>())
+        {
+            if (!entriesById.TryGetValue(item.EntryId, out var entry) ||
+                string.Equals(item.Password, entry.Password, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (!latestPasswordChanges.TryGetValue(item.EntryId, out var previousDate) ||
+                item.ChangedAt > previousDate)
+            {
+                latestPasswordChanges[item.EntryId] = item.ChangedAt;
+            }
+        }
+
+        // CreatedAt is the best available fallback for legacy entries with no matching history.
+        return entryList.ToDictionary(
+            entry => entry.Id,
+            entry => latestPasswordChanges.TryGetValue(entry.Id, out var changedAt)
+                ? changedAt
+                : entry.CreatedAt);
+    }
+
+    internal static double GetIssueSeverity(HealthIssue issue) => issue.Kind switch
+    {
+        HealthIssueKind.WeakPassword => 4.0,
+        HealthIssueKind.PasswordNeedsImprovement => 1.5,
+        HealthIssueKind.DuplicatePassword => 3.0,
+        HealthIssueKind.UsernameEqualsPassword => 3.0,
+        HealthIssueKind.MissingTotp => 1.0,
+        HealthIssueKind.StalePassword => 1.0,
+        _ => 0.0
+    };
+
+    private void AddIssue(HealthIssue issue, int filter)
+    {
+        _allIssues.Add(issue);
+
+        switch (issue.Kind)
+        {
+            case HealthIssueKind.DuplicatePassword: DuplicateCount++; break;
+            case HealthIssueKind.WeakPassword: WeakCount++; break;
+            case HealthIssueKind.PasswordNeedsImprovement: NeedsImprovementCount++; break;
+            case HealthIssueKind.UsernameEqualsPassword: UsernameEqualsPasswordCount++; break;
+            case HealthIssueKind.MissingTotp: MissingTotpCount++; break;
+            case HealthIssueKind.StalePassword: StaleCount++; break;
+        }
+
+        TotalIssues = _allIssues.Count;
+
+        if (MatchesFilter(issue, filter))
+            Issues.Add(new HealthIssueRow(issue, GroupKeyFor(issue)));
+    }
+
+    private string GroupKeyFor(HealthIssue issue)
+    {
+        if (issue.Kind == HealthIssueKind.DuplicatePassword &&
+            _duplicateGroupKeys.TryGetValue(issue.EntryId, out var key))
+            return key;
+
+        // Non-duplicates: stable per-entry so sort is predictable
+        return issue.EntryId.ToString("N");
+    }
+
+    private void RebuildVisibleIssues(int filterIndex)
+    {
+        Issues.Clear();
+        foreach (var i in OrderedIssues(filterIndex))
+            Issues.Add(new HealthIssueRow(i, GroupKeyFor(i)));
+    }
+
+    private IEnumerable<HealthIssue> OrderedIssues(int filterIndex)
+    {
+        return _allIssues
+            .Where(x => MatchesFilter(x, filterIndex))
+            .OrderBy(x => GroupKeyFor(x), StringComparer.Ordinal)
+            .ThenBy(x => x.EntryTitle, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static async Task YieldUiAsync()
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null)
+        {
+            await Task.Yield();
+            return;
+        }
+
+        await dispatcher.InvokeAsync(static () => { }, DispatcherPriority.Background);
+    }
+
+    private static bool MatchesFilter(HealthIssue issue, int filterIndex) => filterIndex switch
+    {
+        1 => issue.Kind == HealthIssueKind.DuplicatePassword,
+        2 => issue.Kind is HealthIssueKind.WeakPassword or HealthIssueKind.PasswordNeedsImprovement,
+        3 => issue.Kind == HealthIssueKind.UsernameEqualsPassword,
+        4 => issue.Kind == HealthIssueKind.MissingTotp,
+        5 => issue.Kind == HealthIssueKind.StalePassword,
+        _ => true
+    };
+
+    partial void OnSelectedFilterIndexChanged(int value)
+    {
+        RebuildVisibleIssues(value);
+        NotifyEmptyStateProperties();
+    }
+
+    private void NotifyEmptyStateProperties()
+    {
+        OnPropertyChanged(nameof(IsEmptyVault));
+        OnPropertyChanged(nameof(HasNoIssues));
+        OnPropertyChanged(nameof(HasNoMatchingIssues));
+    }
+
+    [RelayCommand]
+    private async Task RefreshAsync() => await StartScanAsync();
+
+    private bool CanOpenEntry(HealthIssueRow? row) => IsReady && row is not null;
+
+    [RelayCommand(CanExecute = nameof(CanOpenEntry))]
+    private void OpenEntry(HealthIssueRow? row)
+    {
+        if (!IsReady || row is null) return;
+        RequestOpenEntry?.Invoke(this, row.EntryId);
+    }
+}
+
+public sealed class HealthIssueRow
+{
+    public Guid EntryId { get; }
+    public string EntryTitle { get; }
+    public string KindLabel { get; }
+    public string Detail { get; }
+    public string GroupKey { get; }
+
+    public HealthIssueRow(HealthIssue issue, string groupKey)
+    {
+        EntryId = issue.EntryId;
+        EntryTitle = issue.EntryTitle;
+        Detail = issue.Detail;
+        GroupKey = groupKey;
+
+        KindLabel = issue.Kind switch
+        {
+            HealthIssueKind.DuplicatePassword => "Duplicate",
+            HealthIssueKind.WeakPassword => "Weak",
+            HealthIssueKind.PasswordNeedsImprovement => "Needs improvement",
+            HealthIssueKind.UsernameEqualsPassword => "User=Pwd",
+            HealthIssueKind.MissingTotp => "No TOTP",
+            HealthIssueKind.StalePassword => "Stale",
+            _ => "Issue"
+        };
+    }
+}

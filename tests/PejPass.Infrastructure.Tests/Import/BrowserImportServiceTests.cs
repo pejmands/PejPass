@@ -1,0 +1,215 @@
+﻿using PejPass.Domain.Exceptions;
+using PejPass.Infrastructure.Import;
+
+namespace PejPass.Infrastructure.Tests.Import;
+
+public sealed class BrowserImportServiceTests
+{
+    private readonly BrowserImportService _service = new();
+
+    [Fact]
+    public async Task ImportCsv_WithMalformedQuoting_RejectsImport()
+    {
+        var file = CreateTempCsv("name,password,notes\nTest,123,bad\"quote");
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => _service.ImportFromCsvAsync(file, TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ImportCsv_WithMultilineNotes_PreservesNewlines()
+    {
+        var csv = """
+        name,url,username,password,notes
+        Google,https://google.com,user,pass,"line one
+        line two
+        line three"
+        """;
+
+        var file = CreateTempCsv(csv);
+
+        var result = await _service.ImportFromCsvAsync(file, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            "line one\nline two\nline three",
+            result[0].Notes.Replace("\r\n", "\n"));
+    }
+
+    [Fact]
+    public async Task ImportCsv_WithEscapedQuotes_PreservesQuotes()
+    {
+        var csv =
+            "name,password,notes\n" +
+            "Test,123,\"say \"\"hello\"\"\"";
+
+        var file = CreateTempCsv(csv);
+
+        var result = await _service.ImportFromCsvAsync(file, TestContext.Current.CancellationToken);
+
+        var item = Assert.Single(result);
+        Assert.Equal("say \"hello\"", item.Notes);
+    }
+
+    [Fact]
+    public async Task ImportCsv_WithCommaInsideQuotedField_PreservesField()
+    {
+        var csv = """
+        name,password,notes
+        Test,123,"one,two,three"
+        """;
+
+        var file = CreateTempCsv(csv);
+
+        var result = await _service.ImportFromCsvAsync(file, TestContext.Current.CancellationToken);
+
+        var item = Assert.Single(result);
+        Assert.Equal("one,two,three", item.Notes);
+    }
+
+    [Fact]
+    public async Task ImportCsv_WhenFileExceedsSizeLimit_RejectsBeforeParsing()
+    {
+        var file = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.csv");
+        try
+        {
+            await using (var stream = new FileStream(file, FileMode.CreateNew, FileAccess.Write))
+                stream.SetLength(64L * 1024 * 1024 + 1);
+
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => _service.ImportFromCsvAsync(file, TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ImportCsv_WhenFieldExceedsCharacterLimit_ReportsFieldAndEntry()
+    {
+        var csv = "name,password,notes\nTest,123," + new string('x', VaultLimits.MaxTextCharacters + 1);
+        var file = CreateTempCsv(csv);
+
+        try
+        {
+            var ex = await Assert.ThrowsAsync<VaultLimitExceededException>(
+                () => _service.ImportFromCsvAsync(file, TestContext.Current.CancellationToken));
+
+            Assert.Equal(VaultLimit.TextLength, ex.Limit);
+            Assert.Equal("notes", ex.Subject);
+            Assert.Equal("Test", ex.EntryTitle);
+        }
+        finally
+        {
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ImportPejPassCsv_WhenFormat2OmitsFavoriteColumn_DoesNotTreatTitleAsFavorite()
+    {
+        var csv =
+            "name,url,username,password,note,totp_secret,tags,custom_fields,pejpass_format\n" +
+            "1,https://example.com,user,pass,,,\"[]\",\"[]\",2";
+        var file = CreateTempCsv(csv);
+
+        try
+        {
+            var result = Assert.Single(
+                await _service.ImportPejPassCsvAsync(file, TestContext.Current.CancellationToken));
+
+            Assert.Equal("1", result.Title);
+            Assert.False(result.IsFavorite);
+        }
+        finally
+        {
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ImportPejPassCsv_WhenFieldExceedsCharacterLimit_ReportsFieldAndEntry()
+    {
+        var oversizedNotes = new string('x', VaultLimits.MaxTextCharacters + 1);
+        var csv =
+            "name,url,username,password,note,totp_secret,tags,custom_fields,pejpass_format\n" +
+            $"Test,https://example.com,user,pass,\"{oversizedNotes}\",,\"[]\",\"[]\",1";
+        var file = CreateTempCsv(csv);
+
+        try
+        {
+            var ex = await Assert.ThrowsAsync<VaultLimitExceededException>(
+                () => _service.ImportPejPassCsvAsync(file, TestContext.Current.CancellationToken));
+
+            Assert.Equal(VaultLimit.TextLength, ex.Limit);
+            Assert.Equal("notes", ex.Subject);
+            Assert.Equal("Test", ex.EntryTitle);
+        }
+        finally
+        {
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ImportCsv_WhenRecordCountExceedsLimit_RejectsImport()
+    {
+        var csv = new System.Text.StringBuilder("name,password\n");
+        for (var i = 0; i < 100_001; i++)
+            csv.Append("Test,pass\n");
+
+        var file = CreateTempCsv(csv.ToString());
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => _service.ImportFromCsvAsync(file, TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ImportPejPassCsv_WithMalformedQuoting_RejectsImport()
+    {
+        var csv = "name,url,username,password,note,totp_secret,tags,custom_fields,pejpass_format\n" +
+                  "bad\"quote,https://example.com,user,pass,,,\"[]\",\"[]\",1";
+        var file = CreateTempCsv(csv);
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => _service.ImportPejPassCsvAsync(file, TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+    }
+
+    private static string CreateTempCsv(string content)
+    {
+        var file = Path.Combine(
+            Path.GetTempPath(),
+            $"{Guid.NewGuid()}.csv");
+
+        File.WriteAllText(file, content);
+
+        return file;
+    }
+}
