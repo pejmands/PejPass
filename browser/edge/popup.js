@@ -329,9 +329,11 @@ async function lookupCredentials(domain) {
       item.className = singleLoginMatch ? "credential-item single-match" : "credential-item";
       const title = document.createElement("p");
       title.className = "credential-title";
+      title.dir = "auto";
       title.textContent = credential.title || "Untitled account";
       const username = document.createElement("p");
       username.className = "credential-username";
+      username.dir = "auto";
       username.textContent = credential.username || "No username saved";
       const fillButton = document.createElement("button");
       fillButton.className = "fill-button";
