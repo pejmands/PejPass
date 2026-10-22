@@ -92,7 +92,8 @@ public partial class App : System.Windows.Application
         services.AddSingleton<VaultSession>();
         services.AddSingleton<BrowserStatusPipeService>(provider => new BrowserStatusPipeService(
             provider.GetRequiredService<VaultSession>(),
-            provider.GetRequiredService<VaultService>()));
+            provider.GetRequiredService<VaultService>(),
+            provider.GetRequiredService<IClipboardService>()));
         services.AddSingleton<UpdateService>();
         services.AddSingleton<SystemTrayService>();
         services.AddSingleton<WindowsSecurityService>();

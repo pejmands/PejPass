@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using PejPass.Application.Interfaces;
 using PejPass.Domain.Entities;
 using PejPass.Infrastructure.Totp;
 using PejPass.Wpf.Dialogs;
@@ -14,6 +15,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 {
     private readonly VaultSession _vaultSession;
     private readonly Application.Services.VaultService? _vaultService;
+    private IClipboardService? _clipboardService;
     private readonly Func<string, string, string, bool>? _fillConfirmation;
     private readonly Func<string, Task<WindowsHelloVerificationResult>>? _fillHelloVerification;
 
@@ -30,6 +32,15 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         VaultSession vaultSession,
         Application.Services.VaultService? vaultService)
         : this(vaultSession, vaultService, EventsPipeName) { }
+
+    internal BrowserStatusPipeService(
+        VaultSession vaultSession,
+        Application.Services.VaultService? vaultService,
+        IClipboardService clipboardService)
+        : this(vaultSession, vaultService, EventsPipeName)
+    {
+        _clipboardService = clipboardService;
+    }
 
     internal BrowserStatusPipeService(
         VaultSession vaultSession,
@@ -641,10 +652,40 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 "getCredentials" => CreateCredentialResponse(root),
                 "fillCredential" => Error("async_required"),
                 "saveCredential" => CreateSaveCredentialResponse(root),
+                "copyToClipboard" => CreateCopyToClipboardResponse(root),
                 _ => Error("unsupported_request")
             };
         }
         catch (JsonException) { return Error("invalid_message"); }
+    }
+
+    private StatusResponse CreateCopyToClipboardResponse(JsonElement root)
+    {
+        if (!TryGetBoundedString(root, "password", MaximumPasswordLength, out var password) ||
+            string.IsNullOrEmpty(password))
+            return Error("invalid_request");
+        if (_clipboardService is null)
+            return Error("app_unavailable");
+
+        var app = System.Windows.Application.Current;
+        if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
+            return Error("app_unavailable");
+
+        try
+        {
+            var settings = App.Services.GetRequiredService<PejPass.Domain.Settings.AppSettings>();
+            var timeoutSeconds = Math.Clamp(settings.ClipboardClearSeconds, 5, 300);
+            app.Dispatcher.Invoke(
+                () => _clipboardService.CopyWithTimeout(password, TimeSpan.FromSeconds(timeoutSeconds)),
+                System.Windows.Threading.DispatcherPriority.Send);
+            return new StatusResponse(
+                "clipboardCopied", "PejPass", ProtocolVersion, null, null,
+                ClipboardClearSeconds: timeoutSeconds);
+        }
+        catch (Exception)
+        {
+            return Error("clipboard_unavailable");
+        }
     }
 
     private StatusResponse CreateLockVaultResponse()
@@ -1109,5 +1150,6 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         string Type, string App, int ProtocolVersion, string? Status, string? Code,
         string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null,
         string? Id = null, string? Username = null, string? Password = null,
-        string? TotpCode = null, string? Result = null, int? RetryAfterSeconds = null);
+        string? TotpCode = null, string? Result = null, int? RetryAfterSeconds = null,
+        int? ClipboardClearSeconds = null);
 }

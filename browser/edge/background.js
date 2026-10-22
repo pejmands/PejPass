@@ -10,7 +10,8 @@ const allowedTypes = new Set([
   "getVaultStatus",
   "getCredentials",
   "fillCredential",
-  "saveCredential"
+  "saveCredential",
+  "copyToClipboard"
 ]);
 
 let port = null;

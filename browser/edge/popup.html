@@ -110,10 +110,13 @@
         <label><input id="include-uppercase" type="checkbox" checked> Uppercase (A–Z)</label>
         <label><input id="include-numbers" type="checkbox" checked> Numbers (0–9)</label>
         <label><input id="include-symbols" type="checkbox" checked> Symbols (!@#…)</label>
+        <label class="option-wide"><input id="exclude-ambiguous" type="checkbox" checked> Exclude ambiguous (0 O o 1 l I)</label>
       </div>
       <button class="fill-button" id="generate-password" type="button">Generate password</button>
+      <button class="fill-button secondary-button" id="generate-fill-password" type="button" disabled>Generate and fill</button>
       <label class="field-label password-label" for="generated-password">Generated password</label>
       <input id="generated-password" class="generated-password" type="text" readonly autocomplete="off" spellcheck="false" aria-label="Generated password">
+      <p class="strength-status" id="password-strength" role="status" aria-live="polite">Strength estimate appears after generation.</p>
       <button class="fill-button secondary-button" id="copy-password" type="button" disabled>Copy password</button>
       <p class="generator-status" id="generator-status" role="status" aria-live="polite">Generated locally in this browser. Not saved automatically.</p>
     </section>
