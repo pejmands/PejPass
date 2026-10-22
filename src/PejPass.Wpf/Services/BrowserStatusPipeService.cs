@@ -687,7 +687,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (labels.Length < 2 || labels.Any(label => label.Length == 0)) return null;
 
         var publicSuffixLength = 1;
-        for (var length = 2; length < labels.Length; length++)
+        for (var length = 2; length <= labels.Length; length++)
         {
             var suffix = string.Join(".", labels[^length..]);
             if (KnownMultiLabelPublicSuffixes.Contains(suffix))
