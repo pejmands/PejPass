@@ -6,6 +6,7 @@ const connectionDot = document.getElementById("connection-dot");
 const vaultStatus = document.getElementById("vault-status");
 const credentialsStatus = document.getElementById("credentials-status");
 const credentialList = document.getElementById("credential-list");
+const fillNowButton = document.getElementById("fill-now");
 const refreshLoginsButton = document.getElementById("refresh-logins");
 const inspectLoginButton = document.getElementById("inspect-login");
 const saveFields = document.getElementById("save-fields");
@@ -81,6 +82,7 @@ function showUnavailable(message) {
   saveFields.hidden = true;
   credentialList.replaceChildren();
   matchingCredentials = [];
+  fillNowButton.hidden = true;
 }
 
 async function showActiveSite() {
@@ -157,6 +159,7 @@ async function checkVaultStatus({ quiet = false } = {}) {
       if (response.status === "locked") {
         credentialList.replaceChildren();
         matchingCredentials = [];
+        fillNowButton.hidden = true;
         credentialsStatus.textContent = "Unlock the PejPass vault to view matching accounts.";
         saveTitle.value = "";
         saveUsername.value = "";
@@ -195,6 +198,7 @@ async function checkVaultStatus({ quiet = false } = {}) {
 async function lookupCredentials(domain) {
   credentialList.replaceChildren();
   matchingCredentials = [];
+  fillNowButton.hidden = true;
   credentialsStatus.textContent = "Searching…";
   try {
     const response = await sendNativeMessage({ type: "getCredentials", protocolVersion, domain });
@@ -220,6 +224,7 @@ async function lookupCredentials(domain) {
     matchingCredentials = response.credentials;
     refreshSaveTargets();
     if (response.credentials.length === 0) {
+      fillNowButton.hidden = true;
       credentialsStatus.textContent = "No matching accounts found."; return;
     }
 
@@ -227,9 +232,16 @@ async function lookupCredentials(domain) {
       ? "Matching accounts (first 25 shown):"
       : response.credentials.length + " matching account" + (response.credentials.length === 1 ? "" : "s") + ":";
 
+    const singleLoginMatch = response.credentials.length === 1 &&
+      activeTabId !== null && await detectLoginPage(activeTabId, domain);
+    fillNowButton.hidden = !singleLoginMatch;
+    if (singleLoginMatch) {
+      fillNowButton.textContent = "Fill now";
+    }
+
     for (const credential of response.credentials) {
       const item = document.createElement("li");
-      item.className = "credential-item";
+      item.className = singleLoginMatch ? "credential-item single-match" : "credential-item";
       const title = document.createElement("p");
       title.className = "credential-title";
       title.textContent = credential.title || "Untitled account";
@@ -311,6 +323,20 @@ async function fillCredential(credential) {
   }
 }
 
+async function detectLoginPage(tabId, domain) {
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      func: processLoginForm,
+      args: ["detect", domain]
+    });
+    return (results || []).some((entry) =>
+      entry.result?.found === true && entry.result.domain === domain);
+  } catch {
+    return false;
+  }
+}
+
 function processLoginForm(action, expectedDomain, username = "", password = "", totpCode = "") {
   const normalizeHost = (host) => host.toLowerCase().replace(/\.$/, "");
   const currentDomain = normalizeHost(window.location.hostname);
@@ -378,6 +404,10 @@ function processLoginForm(action, expectedDomain, username = "", password = "", 
       [input.name, input.id, input.placeholder, input.getAttribute("aria-label")].filter(Boolean).join(" "))) ||
     candidates.find((input) => (input.type || "").toLowerCase() === "email") ||
     candidates[0];
+
+  if (action === "detect") {
+    return { found: Boolean(passwordField || usernameField), domain: currentDomain };
+  }
 
   if (action === "read") {
     return {
@@ -634,6 +664,9 @@ saveTarget.addEventListener("change", () => {
 });
 saveConfirmation.addEventListener("change", updateSaveReview);
 
+fillNowButton.addEventListener("click", () => {
+  if (matchingCredentials.length === 1) void fillCredential(matchingCredentials[0]);
+});
 inspectLoginButton.addEventListener("click", inspectLoginForm);
 saveLoginButton.addEventListener("click", saveLogin);
 refreshLoginsButton.addEventListener("click", refreshLoginView);
