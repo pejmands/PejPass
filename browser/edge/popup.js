@@ -283,6 +283,7 @@ async function checkVaultStatus({ quiet = false } = {}) {
 async function lookupCredentials(domain) {
   credentialList.replaceChildren();
   matchingCredentials = [];
+  updateMatchBadge(0);
   fillNowButton.hidden = true;
   credentialsStatus.textContent = "Searching…";
   try {
