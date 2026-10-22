@@ -60,10 +60,11 @@ Best-effort buffer clearing does **not** guarantee that every plaintext copy is 
 - [x] Find matching vault credentials for the active site
 - [x] Fill login and TOTP fields only after user action
 - [x] Generate passwords in the extension
-- [x] Inspect and explicitly save/update login credentials after reviewing the detected values
+- [x] Detect filled password fields without reading their contents; inspect login values only after an explicit user action
+- [x] Save new logins without overwrite confirmation; require explicit confirmation and show a change review when updating existing entries
 - [x] Preserve entry history when a saved password changes
 
-The Edge companion never submits forms automatically. Saving requires a separate confirmation, and browser credentials are saved only while the vault is unlocked.
+The Edge companion never submits forms automatically. It only checks whether a visible password field is non-empty to show a Save-tab indicator; usernames and passwords are read into the popup only after you choose **Read login form**. Creating a new entry does not require overwrite confirmation. Updating an existing entry requires explicit confirmation and displays the proposed changes. Browser credentials are saved only while the vault is unlocked.
 
 ### Password Features
 
