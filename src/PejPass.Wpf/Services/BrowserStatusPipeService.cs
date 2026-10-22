@@ -20,11 +20,21 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     internal BrowserStatusPipeService(
         VaultSession vaultSession,
         Application.Services.VaultService? vaultService)
+        : this(vaultSession, vaultService, EventsPipeName) { }
+
+    internal BrowserStatusPipeService(
+        VaultSession vaultSession,
+        Application.Services.VaultService? vaultService,
+        string eventsPipeName)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(eventsPipeName);
         _vaultSession = vaultSession;
         _vaultService = vaultService;
+        _eventsPipeName = eventsPipeName;
         _vaultSession.StateChanged += OnVaultStateChanged;
     }
+
+    internal UnlockRateLimiter UnlockLimiter { get; init; } = new(TimeProvider.System);
     internal const string PipeName = "PejPass.BrowserStatus.v1";
     private const int ProtocolVersion = 1;
     private const int MaximumLineLength = 32768;
@@ -38,8 +48,12 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     {
         if (_serverTask is not null) return;
         _serverTask = Task.Run(() => RunAsync(_shutdown.Token));
-        _eventsTask = Task.Run(() => RunEventsAsync(_shutdown.Token));
+        StartEventsOnly();
     }
+
+    /// <summary>Starts only the event pipe, allowing isolated tests without opening the request pipe.</summary>
+    internal void StartEventsOnly() =>
+        _eventsTask ??= Task.Run(() => RunEventsAsync(_shutdown.Token));
 
     private async Task RunAsync(CancellationToken cancellationToken)
     {
@@ -162,7 +176,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         }
     }
 
-    private async Task<StatusResponse> CreateUnlockVaultResponseAsync(string? line)
+    internal async Task<StatusResponse> CreateUnlockVaultResponseAsync(string? line)
     {
         if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
             return Error("invalid_message");
@@ -188,12 +202,17 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (_vaultSession.IsActive)
             return new StatusResponse("vaultUnlocked", "PejPass", ProtocolVersion, "unlocked", null);
 
-        var app = System.Windows.Application.Current;
-        if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
-            return Error("app_unavailable");
+        var gate = UnlockLimiter.TryBegin(out var retryAfter);
+        if (gate != UnlockGate.Allowed)
+            return RateLimited(retryAfter);
 
+        var outcome = UnlockOutcome.Aborted;
         try
         {
+            var app = System.Windows.Application.Current;
+            if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
+                return Error("app_unavailable");
+
             var unlockTask = await app.Dispatcher.InvokeAsync(() =>
             {
                 var loginWindow = app.Windows.OfType<LoginWindow>().FirstOrDefault();
@@ -214,13 +233,23 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             }, System.Windows.Threading.DispatcherPriority.Send).Task.ConfigureAwait(false);
 
             var unlocked = await unlockTask.ConfigureAwait(false);
-            return unlocked && _vaultSession.IsActive
-                ? new StatusResponse("vaultUnlocked", "PejPass", ProtocolVersion, "unlocked", null)
-                : Error("unlock_failed");
+            if (unlocked && _vaultSession.IsActive)
+            {
+                outcome = UnlockOutcome.Success;
+                return new StatusResponse("vaultUnlocked", "PejPass", ProtocolVersion, "unlocked", null);
+            }
+
+            outcome = UnlockOutcome.Failure;
+            return Error("unlock_failed");
         }
         catch (Exception)
         {
+            outcome = UnlockOutcome.Failure;
             return Error("unlock_failed");
+        }
+        finally
+        {
+            UnlockLimiter.Complete(outcome);
         }
     }
 
@@ -688,6 +717,10 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     private static StatusResponse Error(string code) =>
         new("error", "PejPass", ProtocolVersion, null, code);
 
+    private static StatusResponse RateLimited(TimeSpan retryAfter) =>
+        new("error", "PejPass", ProtocolVersion, null, "unlock_rate_limited",
+            RetryAfterSeconds: (int)Math.Ceiling(Math.Max(1, retryAfter.TotalSeconds)));
+
     public void Dispose()
     {
         _vaultSession.StateChanged -= OnVaultStateChanged;
@@ -709,5 +742,5 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         string Type, string App, int ProtocolVersion, string? Status, string? Code,
         string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null,
         string? Id = null, string? Username = null, string? Password = null,
-        string? TotpCode = null, string? Result = null);
+        string? TotpCode = null, string? Result = null, int? RetryAfterSeconds = null);
 }
