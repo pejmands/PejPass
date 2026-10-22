@@ -363,7 +363,7 @@ function processLoginForm(action, expectedDomain, username = "", password = "", 
       input.getAttribute("inputmode"), input.getAttribute("data-testid")
     ].filter(Boolean).join(" ");
     return autocomplete.includes("one-time-code") ||
-      /\b(one.?time|otp|totp|auth.?code|verification.?code|security.?code|mfa.?code)\b/i.test(hints);
+      /one.?time|otp|totp|auth.?code|verification.?code|security.?code|mfa.?code/i.test(hints);
   };
   const isTextLike = (input) =>
     ["text", "email", "tel", "url", "search", ""].includes((input.type || "text").toLowerCase());
@@ -377,7 +377,7 @@ function processLoginForm(action, expectedDomain, username = "", password = "", 
     (input.autocomplete || "").toLowerCase().split(/\s+/).includes("username")) ||
     candidates.filter((input) => passwordField &&
       (input.compareDocumentPosition(passwordField) & Node.DOCUMENT_POSITION_FOLLOWING)).at(-1) ||
-    candidates.find((input) => /\b(user(name)?|login|email|account)\b/i.test(
+    candidates.find((input) => /user|login|email|account/i.test(
       [input.name, input.id, input.placeholder, input.getAttribute("aria-label")].filter(Boolean).join(" "))) ||
     candidates.find((input) => (input.type || "").toLowerCase() === "email") ||
     candidates[0];
