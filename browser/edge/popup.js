@@ -10,6 +10,14 @@ const fillNowButton = document.getElementById("fill-now");
 const refreshLoginsButton = document.getElementById("refresh-logins");
 const inspectLoginButton = document.getElementById("inspect-login");
 const saveFields = document.getElementById("save-fields");
+const tabSave = document.getElementById("tab-save");
+const saveBadge = document.getElementById("save-badge");
+const toggleSavePassword = document.getElementById("toggle-save-password");
+const saveDiff = document.getElementById("save-diff");
+const saveDiffList = document.getElementById("save-diff-list");
+let saveTitleEdited = false;
+let pendingSaveUrl = "";
+let savePasswordTimer = null;
 const saveTitle = document.getElementById("save-title");
 const saveUsername = document.getElementById("save-username");
 const savePassword = document.getElementById("save-password");
@@ -109,9 +117,33 @@ function showUnavailable(message) {
   inspectLoginButton.disabled = true;
   saveLoginButton.disabled = true;
   saveFields.hidden = true;
+  saveBadge.hidden = true;
   credentialList.replaceChildren();
   matchingCredentials = [];
   fillNowButton.hidden = true;
+}
+
+async function probeSaveCandidate() {
+  saveBadge.hidden = true;
+  tabSave.removeAttribute("aria-label");
+  if (!activeTabId || !activeDomain) return;
+
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: activeTabId, allFrames: true },
+      func: processLoginForm,
+      args: ["probe", activeDomain]
+    });
+    const hit = (results || []).some((entry) =>
+      entry.result?.found === true &&
+      entry.result.domain === activeDomain &&
+      entry.result.hasPassword === true);
+
+    saveBadge.hidden = !hit;
+    if (hit) tabSave.setAttribute("aria-label", "Save, a password has been entered on this page");
+  } catch {
+    // Pages that do not allow script injection do not show a suggestion.
+  }
 }
 
 async function showActiveSite() {
@@ -136,6 +168,7 @@ async function showActiveSite() {
     saveLoginButton.disabled = false;
     siteName.textContent = activeDomain;
     siteDetail.textContent = "Searching PejPass for accounts matching this site…";
+    void probeSaveCandidate();
     await lookupCredentials(activeDomain);
   } catch {
     showUnavailable("Could not read the active tab. Try closing and reopening the popup.");
@@ -199,7 +232,9 @@ async function checkVaultStatus({ quiet = false } = {}) {
         saveTitle.value = "";
         saveUsername.value = "";
         savePassword.value = "";
+        setSavePasswordVisible(false);
         saveFields.hidden = true;
+        saveBadge.hidden = true;
         saveConfirmation.checked = false;
         generatedPassword.value = "";
         copyPasswordButton.disabled = true;
@@ -454,6 +489,15 @@ function processLoginForm(action, expectedDomain, username = "", password = "", 
     return { found: Boolean(passwordField || usernameField), domain: currentDomain };
   }
 
+  if (action === "probe") {
+    // Return only whether a password value exists; never return the value itself.
+    return {
+      found: Boolean(passwordField || usernameField),
+      domain: currentDomain,
+      hasPassword: Boolean(passwordField && passwordField.value)
+    };
+  }
+
   if (action === "read") {
     return {
       found: Boolean(passwordField || usernameField),
@@ -535,16 +579,17 @@ async function inspectLoginForm() {
       return;
     }
 
+    saveTitleEdited = false;
     saveTitle.value = siteName.textContent || domain;
     saveUsername.value = candidate.username || "";
     savePassword.value = candidate.password || "";
+    setSavePasswordVisible(false);
+    pendingSaveUrl = await currentPageUrl(tabId);
+
     saveFields.hidden = false;
     saveConfirmation.checked = false;
-    saveStatus.textContent = "Review or correct these values. They are not saved until you confirm.";
-    saveMode.value = "create";
-    saveTarget.value = "";
-    saveTarget.hidden = true;
-    savePassword.type = "password";
+    saveStatus.textContent = "Review or correct these values, then choose Save or Update.";
+    applyDefaultSaveMode(saveUsername.value);
     updateSaveReview();
   } catch {
     saveStatus.textContent = "Could not inspect this page. Check that it is a regular HTTP(S) page.";
@@ -553,6 +598,49 @@ async function inspectLoginForm() {
   }
 }
 
+
+function setSavePasswordVisible(visible) {
+  clearTimeout(savePasswordTimer);
+  savePassword.type = visible ? "text" : "password";
+  toggleSavePassword.textContent = visible ? "Hide" : "Show";
+  toggleSavePassword.setAttribute("aria-pressed", String(visible));
+  if (visible) savePasswordTimer = setTimeout(() => setSavePasswordVisible(false), 10_000);
+}
+
+toggleSavePassword.addEventListener("click", () =>
+  setSavePasswordVisible(savePassword.type === "password"));
+
+async function currentPageUrl(tabId) {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    const url = new URL(tab.url);
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+function applyDefaultSaveMode(username) {
+  const wanted = username.trim().toLowerCase();
+  const matches = wanted
+    ? matchingCredentials.filter((credential) => credential.username.trim().toLowerCase() === wanted)
+    : [];
+
+  refreshSaveTargets();
+
+  if (matches.length === 1) {
+    saveMode.value = "update";
+    saveTarget.value = matches[0].id;
+    saveTarget.hidden = false;
+    if (!saveTitleEdited) saveTitle.value = matches[0].title || saveTitle.value;
+  } else {
+    saveMode.value = "create";
+    saveTarget.value = "";
+    saveTarget.hidden = true;
+  }
+}
 
 function refreshSaveTargets() {
   const selectedId = saveTarget.value;
@@ -566,9 +654,57 @@ function refreshSaveTargets() {
     saveTarget.value = selectedId;
 }
 
+function addDiffRow(label, oldValue, newValue) {
+  const row = document.createElement("li");
+  row.className = "diff-row";
+
+  const name = document.createElement("span");
+  name.className = "diff-label";
+  name.textContent = label + ": ";
+  row.append(name);
+
+  if (oldValue === newValue) {
+    const same = document.createElement("span");
+    same.className = "diff-same";
+    same.textContent = newValue + " (unchanged)";
+    row.append(same);
+  } else {
+    const before = document.createElement("span");
+    before.className = "diff-old";
+    before.textContent = oldValue;
+    const after = document.createElement("span");
+    after.className = "diff-new";
+    after.textContent = newValue;
+    row.append(before, " → ", after);
+  }
+
+  saveDiffList.append(row);
+}
+
+function renderSaveDiff(target) {
+  saveDiffList.replaceChildren();
+  if (saveMode.value !== "update" || !target) {
+    saveDiff.hidden = true;
+    return;
+  }
+
+  saveDiff.hidden = false;
+  addDiffRow("Account name", target.title || "Untitled account", saveTitle.value.trim() || "Untitled account");
+  addDiffRow("Username", target.username || "(blank)", saveUsername.value.trim() || "(blank)");
+  addDiffRow("URL", target.url || "(none)", pendingSaveUrl || "(none)");
+
+  const password = document.createElement("li");
+  password.className = "diff-row";
+  const name = document.createElement("span");
+  name.className = "diff-label";
+  name.textContent = "Password: ";
+  password.append(name, "will be replaced. The previous one is kept in History.");
+  saveDiffList.append(password);
+}
+
 function updateSaveReview() {
   if (saveFields.hidden) {
-    saveLoginButton.disabled = false;
+    saveLoginButton.disabled = true;
     return;
   }
 
@@ -576,36 +712,39 @@ function updateSaveReview() {
   const username = saveUsername.value.trim();
   const password = savePassword.value;
   const mode = saveMode.value;
+  const isUpdate = mode === "update";
   const target = matchingCredentials.find((credential) => credential.id === saveTarget.value);
   const matches = matchingCredentials.filter((credential) =>
     credential.username.trim().toLowerCase() === username.toLowerCase());
 
-  if (!title || !password || password.length > 4096 ||
-      username.length > 256 || title.length > 200) {
-    saveReviewNotice.textContent = !title
-      ? "Enter an account name before saving."
-      : !password
-        ? "A password is required before this login can be saved."
-        : "Check the field lengths before saving.";
-  } else if (mode === "update" && !target) {
-    saveReviewNotice.textContent = "Choose the exact saved account you want to update. Its previous values will be retained in history.";
-  } else if (mode === "update") {
-    saveReviewNotice.textContent = "You selected “" + (target.title || "Untitled account") +
-      "” for update. Review carefully; this exact entry will be changed and previous values retained in history.";
+  saveConfirmationRow.hidden = !isUpdate;
+  saveLoginButton.textContent = isUpdate ? "Update selected entry" : "Save as new entry";
+  renderSaveDiff(target);
+
+  const invalid = !title || !password || password.length > 4096 ||
+    username.length > 256 || title.length > 200 || (isUpdate && !target);
+
+  if (!title) {
+    saveReviewNotice.textContent = "Enter an account name before saving.";
+  } else if (!password) {
+    saveReviewNotice.textContent = "A password is required before this login can be saved.";
+  } else if (password.length > 4096 || username.length > 256 || title.length > 200) {
+    saveReviewNotice.textContent = "Check the field lengths before saving.";
+  } else if (isUpdate && !target) {
+    saveReviewNotice.textContent = "Choose the exact saved account you want to update.";
+  } else if (isUpdate) {
+    saveReviewNotice.textContent = "Check the changes above, then confirm. This exact entry will be changed.";
   } else if (matches.length > 0) {
     saveReviewNotice.textContent = matches.length === 1
-      ? "A saved account has the same username, but this action will create a separate new entry."
-      : "Several saved accounts use this username. This action will create a separate new entry; no existing account will be changed.";
+      ? "A saved account already uses this username. This will create a separate new entry; switch to Update to change it instead."
+      : "Several saved accounts use this username. This will create a separate new entry.";
   } else if (!username) {
     saveReviewNotice.textContent = "The username is blank. Save only if this login legitimately has no username.";
   } else {
-    saveReviewNotice.textContent = "This action creates a new entry. Existing accounts will not be changed.";
+    saveReviewNotice.textContent = "This creates a new entry. Existing accounts are not changed.";
   }
 
-  const invalid = !title || !password || password.length > 4096 ||
-    username.length > 256 || title.length > 200 ||
-    (mode === "update" && !target);
-  saveLoginButton.disabled = invalid || !saveConfirmation.checked;
+  saveLoginButton.disabled = invalid || (isUpdate && !saveConfirmation.checked);
 }
 
 async function saveLogin() {
@@ -618,8 +757,8 @@ async function saveLogin() {
       saveUsername.value.length > 256 || saveTitle.value.trim().length > 200 ||
       (saveMode.value === "update" && !saveTarget.value) ||
       !["create", "update"].includes(saveMode.value) ||
-      saveConfirmation.checked !== true) {
-    saveStatus.textContent = "Complete the required fields, review the warning, and confirm before saving.";
+      (saveMode.value === "update" && saveConfirmation.checked !== true)) {
+    saveStatus.textContent = "Complete the required fields and review the selected action before saving.";
     return;
   }
 
@@ -677,11 +816,15 @@ async function saveLogin() {
     saveTitle.value = "";
     saveUsername.value = "";
     savePassword.value = "";
+    setSavePasswordVisible(false);
     saveMode.value = "create";
     saveTarget.value = "";
     saveTarget.hidden = true;
     saveConfirmation.checked = false;
     saveFields.hidden = true;
+    saveBadge.hidden = true;
+    saveTitleEdited = false;
+    pendingSaveUrl = "";
 
     await lookupCredentials(activeDomain);
   } catch {
@@ -691,23 +834,32 @@ async function saveLogin() {
   }
 }
 
-for (const field of [saveTitle, saveUsername, savePassword]) {
+saveTitle.addEventListener("input", () => {
+  saveTitleEdited = true;
+  saveConfirmation.checked = false;
+  updateSaveReview();
+});
+for (const field of [saveUsername, savePassword]) {
   field.addEventListener("input", () => {
     saveConfirmation.checked = false;
     updateSaveReview();
   });
 }
+
 saveMode.addEventListener("change", () => {
   saveConfirmation.checked = false;
   saveTarget.hidden = saveMode.value !== "update";
   if (saveMode.value === "update") refreshSaveTargets();
+  else if (!saveTitleEdited) saveTitle.value = siteName.textContent || activeDomain || "";
   updateSaveReview();
 });
 saveTarget.addEventListener("change", () => {
   saveConfirmation.checked = false;
+  const target = matchingCredentials.find((credential) => credential.id === saveTarget.value);
+  if (target && !saveTitleEdited) saveTitle.value = target.title || saveTitle.value;
   updateSaveReview();
 });
-saveConfirmation.addEventListener("change", updateSaveReview);
+saveConfirmation.addEventListener("change", updateSaveReview);saveConfirmation.addEventListener("change", updateSaveReview);
 
 fillNowButton.addEventListener("click", () => {
   if (matchingCredentials.length === 1) void fillCredential(matchingCredentials[0]);
@@ -847,7 +999,9 @@ async function lockVault() {
     saveTitle.value = "";
     saveUsername.value = "";
     savePassword.value = "";
+    setSavePasswordVisible(false);
     saveFields.hidden = true;
+    saveBadge.hidden = true;
     saveConfirmation.checked = false;
     saveStatus.textContent = "Vault locked. Read the login form again after unlocking to save.";
     unlockPassword.value = "";

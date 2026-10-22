@@ -16,7 +16,7 @@
     </header>
     <nav class="view-nav" role="tablist" aria-label="PejPass sections">
       <button class="view-tab" id="tab-logins" type="button" role="tab" aria-selected="true" aria-controls="panel-logins" tabindex="0" data-view="logins">Logins</button>
-      <button class="view-tab" id="tab-save" type="button" role="tab" aria-selected="false" aria-controls="panel-save" tabindex="-1" data-view="save">Save</button>
+      <button class="view-tab" id="tab-save" type="button" role="tab" aria-selected="false" aria-controls="panel-save" tabindex="-1" data-view="save">Save<span class="tab-badge" id="save-badge" hidden></span></button>
       <button class="view-tab" id="tab-generator" type="button" role="tab" aria-selected="false" aria-controls="panel-generator" tabindex="-1" data-view="generator">Generator</button>
     </nav>
     <section class="view-panel" id="panel-logins" role="tabpanel" aria-labelledby="tab-logins">
@@ -62,7 +62,7 @@
     <section class="view-panel" id="panel-save" role="tabpanel" aria-labelledby="tab-save" hidden>
 <section class="connection-card" aria-labelledby="save-label">
       <p class="eyebrow" id="save-label">SAVE LOGIN</p>
-      <p class="connection-status">Read the current form, review the values, then explicitly choose whether to create a new entry or update a specific existing account. Previous values are retained in history when updating.</p>
+      <p class="connection-status">Read the current form and review the values. PejPass suggests updating when exactly one saved account has the same username; you can change the action before saving. Updates require confirmation and preserve previous values in history.</p>
       <button class="fill-button" id="inspect-login" type="button">Read login form</button>
       <div id="save-fields" hidden>
         <label class="field-label" for="save-title">Account name</label>
@@ -70,7 +70,10 @@
         <label class="field-label" for="save-username">Username or email</label>
         <input class="save-input" id="save-username" type="text" maxlength="256" autocomplete="off">
         <label class="field-label" for="save-password">Password</label>
-        <input class="save-input" id="save-password" type="password" maxlength="4096" autocomplete="off">
+        <div class="input-with-button">
+          <input class="save-input" id="save-password" type="password" maxlength="4096" autocomplete="off">
+          <button class="icon-button" id="toggle-save-password" type="button" aria-pressed="false" aria-controls="save-password">Show</button>
+        </div>
         <label class="field-label" for="save-mode">Action</label>
         <select class="save-input" id="save-mode">
           <option value="create">Create a new entry</option>
@@ -80,12 +83,16 @@
         <select class="save-input" id="save-target" hidden>
           <option value="">Choose an account to update</option>
         </select>
+        <div class="save-diff" id="save-diff" hidden>
+          <p class="eyebrow">CHANGES</p>
+          <ul class="diff-list" id="save-diff-list"></ul>
+        </div>
         <p class="save-notice" id="save-review-notice" role="status" aria-live="polite">Read the form and review every value before saving.</p>
-        <label class="save-confirmation" id="save-confirmation-row" for="save-confirmation">
+        <label class="save-confirmation" id="save-confirmation-row" for="save-confirmation" hidden>
           <input id="save-confirmation" type="checkbox">
-          <span>I have reviewed these values and confirm saving.</span>
+          <span>I have reviewed these changes and confirm updating this entry.</span>
         </label>
-        <button class="fill-button" id="save-login" type="button" disabled>Confirm and save</button>
+        <button class="fill-button" id="save-login" type="button" disabled>Save as new entry</button>
       </div>
       <p class="generator-status" id="save-status" role="status" aria-live="polite">Nothing is read or saved until you choose an action.</p>
     </section>
