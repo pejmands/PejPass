@@ -11,6 +11,13 @@ internal sealed partial class BrowserStatusPipeService
     internal const string EventsPipeName = "PejPass.BrowserEvents.v1";
     private const int MaximumSubscribers = 4;
 
+    private string _eventsPipeName = EventsPipeName;
+
+    internal int SubscriberCount
+    {
+        get { lock (_eventsSync) return _subscribers.Count; }
+    }
+
     private readonly object _eventsSync = new();
     private readonly List<EventSubscriber> _subscribers = [];
     private string _lastStatus = "locked";
@@ -55,7 +62,7 @@ internal sealed partial class BrowserStatusPipeService
             try
             {
                 pipe = new NamedPipeServerStream(
-                    EventsPipeName,
+                    _eventsPipeName,
                     PipeDirection.InOut,
                     MaximumSubscribers + 1,
                     PipeTransmissionMode.Byte,

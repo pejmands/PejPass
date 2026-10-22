@@ -330,7 +330,10 @@ internal static class Program
         }
 
         if (response.Error is not null)
-            return Error(response.Error);
+            return response.Error == "unlock_rate_limited"
+                ? new HostResponse("error", "PejPass", ProtocolVersion, null, response.Error,
+                    RetryAfterSeconds: response.RetryAfterSeconds)
+                : Error(response.Error);
 
         var root = response.Root;
         if (!HasString(root, "type", "vaultUnlocked") ||
@@ -500,7 +503,10 @@ internal static class Program
             {
                 var code = root.TryGetProperty("code", out var codeElement) &&
                            codeElement.ValueKind == JsonValueKind.String ? codeElement.GetString() : null;
-                return new PipeResponse(default, IsSafeErrorCode(code) ? code : "invalid_app_response");
+                var retryAfter = root.TryGetProperty("retryAfterSeconds", out var retryElement) &&
+                                 retryElement.TryGetInt32(out var seconds) && seconds is >= 1 and <= 3600
+                    ? seconds : 0;
+                return new PipeResponse(default, IsSafeErrorCode(code) ? code : "invalid_app_response", retryAfter);
             }
             return new PipeResponse(root, null);
         }
@@ -551,7 +557,7 @@ internal static class Program
         code is "invalid_domain" or "invalid_request" or "credential_not_found" or "vault_locked" or
             "lookup_unavailable" or "app_unavailable" or "invalid_app_response" or
             "unsupported_request" or "invalid_message" or "save_unavailable" or "vault_changed" or
-            "multiple_matching_accounts" or "unlock_failed";
+            "multiple_matching_accounts" or "unlock_failed" or "unlock_rate_limited";
 
     private static bool HasString(JsonElement root, string name, string expected) =>
         root.ValueKind == JsonValueKind.Object && root.TryGetProperty(name, out var value) &&
@@ -571,6 +577,7 @@ internal static class Program
         string Type, string App, int ProtocolVersion, string? Status, string? Code,
         string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null,
         string? Id = null, string? Username = null, string? Password = null,
-        string? TotpCode = null, string? Result = null, string? RequestId = null);
-    private readonly record struct PipeResponse(JsonElement Root, string? Error);
+        string? TotpCode = null, string? Result = null, string? RequestId = null,
+        int? RetryAfterSeconds = null);
+    private readonly record struct PipeResponse(JsonElement Root, string? Error, int RetryAfterSeconds = 0);
 }
