@@ -337,6 +337,7 @@ async function lookupCredentials(domain) {
       fillButton.className = "fill-button";
       fillButton.type = "button";
       fillButton.textContent = "Fill login";
+      fillButton.setAttribute("aria-label", `Fill login for ${credential.title || "Untitled account"}`);
       fillButton.addEventListener("click", () => fillCredential(credential));
       item.append(title, username, fillButton);
       credentialList.append(item);
