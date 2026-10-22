@@ -1043,12 +1043,23 @@ function fillNewPasswordField(expectedDomain, password) {
 
   if (!target) {
     const form = inputs[0].form;
-    const submitLabels = form
-      ? Array.from(form.querySelectorAll('button, input[type="submit"], input[type="button"]'))
-        .map((element) => [element.innerText, element.value, element.getAttribute("aria-label")].filter(Boolean).join(" "))
-        .join(" ")
-      : "";
-    if (/sign.?up|register|create.?account|create.?password/i.test(submitLabels)) {
+    const submitLabels = Array.from(
+      (form || document).querySelectorAll('button, input[type="submit"], input[type="button"]')
+    )
+      .map((element) => [element.innerText, element.value, element.getAttribute("aria-label")].filter(Boolean).join(" "))
+      .join(" ");
+    const pageText = [
+      document.title,
+      document.body?.innerText?.slice(0, 6000) || "",
+      submitLabels
+    ].join(" ");
+    const looksLikeRegistration = /sign.?up|register|create.{0,12}account|new account|create.{0,12}password/i.test(pageText);
+    const looksLikeLogin = /sign.?in|log.?in|forgot password|current password/i.test(pageText);
+
+    if (inputs.length === 1 && looksLikeRegistration && !looksLikeLogin) {
+      target = inputs[0];
+    } else if (inputs.length > 1 && inputs[0].form &&
+        inputs.every((input) => input.form === inputs[0].form)) {
       target = inputs[0];
     }
   }
@@ -1083,8 +1094,11 @@ generateFillPasswordButton.addEventListener("click", async () => {
   try {
     const result = await fillGeneratedPassword(password);
     generatorStatus.textContent = result.message;
-  } catch {
-    generatorStatus.textContent = "Could not fill the page. The generated password is still available above.";
+  } catch (error) {
+    const reason = error instanceof Error && error.message
+      ? error.message
+      : "The browser rejected page access.";
+    generatorStatus.textContent = `Could not fill the page: ${reason} The generated password is still available above.`;
   } finally {
     generateFillPasswordButton.disabled = !Number.isInteger(activeTabId) || !activeDomain;
   }
