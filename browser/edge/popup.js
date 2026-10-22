@@ -236,7 +236,6 @@ async function lookupCredentials(domain) {
     fillNowButton.hidden = !singleLoginMatch;
     if (singleLoginMatch) {
       fillNowButton.textContent = "Fill now";
-      fillNowButton.onclick = () => fillCredential(matchingCredentials[0]);
     }
 
     for (const credential of response.credentials) {
