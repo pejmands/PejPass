@@ -934,6 +934,7 @@ async function unlockVault() {
       invalid_request: "The password could not be sent. Try again.",
       unsupported_request: "The installed browser host or desktop app is outdated. Rebuild and reinstall the latest version."
     };
+    if (response?.code !== "app_unavailable") unlockButton.textContent = "Unlock vault";
     showUnlockError(
       response?.code === "unlock_failed" ? "Password not accepted." :
         response?.code === "app_unavailable" ? "Couldn’t start PejPass." :
