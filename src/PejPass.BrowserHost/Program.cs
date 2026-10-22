@@ -280,6 +280,7 @@ internal static class Program
                 "getCredentials" => await GetCredentialsAsync(root).ConfigureAwait(false),
                 "fillCredential" => await FillCredentialAsync(root).ConfigureAwait(false),
                 "saveCredential" => await SaveCredentialAsync(root).ConfigureAwait(false),
+                "copyToClipboard" => await CopyToClipboardAsync(root).ConfigureAwait(false),
                 _ => Error("unsupported_request")
             };
         }
@@ -518,6 +519,25 @@ internal static class Program
             null, null, domain, null, id, null, null, null, result);
     }
 
+    private static async Task<HostResponse> CopyToClipboardAsync(JsonElement request)
+    {
+        if (!TryGetBoundedString(request, "password", 4096, out var password) ||
+            string.IsNullOrEmpty(password))
+            return Error("invalid_request");
+
+        var response = await SendPipeRequestAsync(
+            new HostRequest("copyToClipboard", ProtocolVersion, Password: password)).ConfigureAwait(false);
+        if (response.Error is not null)
+            return Error(response.Error);
+
+        var root = response.Root;
+        return HasString(root, "type", "clipboardCopied") &&
+               HasString(root, "app", "PejPass") &&
+               HasVersion(root)
+            ? new HostResponse("clipboardCopied", "PejPass", ProtocolVersion, null, null)
+            : Error("invalid_app_response");
+    }
+
     private static bool TryGetWebUrl(string value, string expectedDomain)
     {
         return Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
@@ -556,6 +576,7 @@ internal static class Program
             {
                 "unlockVault" or "unlockWithHello" => TimeSpan.FromSeconds(45),
                 "fillCredential" => TimeSpan.FromSeconds(60),
+                "copyToClipboard" => TimeSpan.FromSeconds(3),
                 _ => TimeSpan.FromSeconds(1)
             });
             await using var pipe = new NamedPipeClientStream(
@@ -630,7 +651,7 @@ internal static class Program
             "lookup_unavailable" or "app_unavailable" or "invalid_app_response" or
             "unsupported_request" or "invalid_message" or "save_unavailable" or "vault_changed" or
             "multiple_matching_accounts" or "unlock_failed" or "unlock_rate_limited" or "fill_denied" or
-            "hello_failed" or "hello_cancelled" or "hello_unavailable";
+            "hello_failed" or "hello_cancelled" or "hello_unavailable" or "clipboard_unavailable";
 
     private static bool HasString(JsonElement root, string name, string expected) =>
         root.ValueKind == JsonValueKind.Object && root.TryGetProperty(name, out var value) &&
