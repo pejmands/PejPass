@@ -588,7 +588,7 @@ async function inspectLoginForm() {
 
     saveFields.hidden = false;
     saveConfirmation.checked = false;
-    saveStatus.textContent = "Review or correct these values. They are not saved until you confirm.";
+    saveStatus.textContent = "Review or correct these values, then choose Save or Update.";
     applyDefaultSaveMode(saveUsername.value);
     updateSaveReview();
   } catch {
