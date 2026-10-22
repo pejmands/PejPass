@@ -198,6 +198,7 @@ async function checkVaultStatus({ quiet = false } = {}) {
 async function lookupCredentials(domain) {
   credentialList.replaceChildren();
   matchingCredentials = [];
+  fillNowButton.hidden = true;
   credentialsStatus.textContent = "Searching…";
   try {
     const response = await sendNativeMessage({ type: "getCredentials", protocolVersion, domain });
