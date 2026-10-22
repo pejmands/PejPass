@@ -5,23 +5,25 @@
   color: #cdd6f4;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --base: #1e1e2e;
-  --mantle: #181825;
-  --surface0: #313244;
-  --surface1: #45475a;
-  --surface2: #585b70;
-  --overlay0: #6c7086;
-  --subtext0: #a6adc8;
-  --text: #cdd6f4;
-  --blue: #89b4fa;
-  --lavender: #b4befe;
+  --base: #303446;
+  --mantle: #292c3c;
+  --surface0: #414559;
+  --surface1: #51576d;
+  --surface2: #626880;
+  --overlay0: #737994;
+  --subtext0: #b5bfe2;
+  --text: #c6d0f5;
+  --blue: #8caaee;
+  --lavender: #babbf1;
   --green: #a6e3a1;
   --yellow: #f9e2af;
   --red: #f38ba8;
 }
 * { box-sizing: border-box; }
 body {
-  width: min(360px, 100vw);
+  width: 380px;
+  min-width: 380px;
+  max-width: 100vw;
   min-height: 500px;
   margin: 0;
   background: var(--base);
