@@ -150,7 +150,7 @@ internal static class Program
             {
                 if (Volatile.Read(ref _unlockInFlight) == 0)
                 {
-                    var currentStatus = await GetCurrentStatusAsync().ConfigureAwait(false);
+                    var currentStatus = await GetCurrentStatusAsync(cancellationToken).ConfigureAwait(false);
                     if (currentStatus != lastStatus)
                     {
                         lastStatus = currentStatus;
@@ -168,10 +168,10 @@ internal static class Program
         }
     }
 
-    private static async Task<string> GetCurrentStatusAsync()
+    private static async Task<string> GetCurrentStatusAsync(CancellationToken cancellationToken)
     {
         var response = await SendPipeRequestAsync(
-            new HostRequest("getVaultStatus", ProtocolVersion)).ConfigureAwait(false);
+            new HostRequest("getVaultStatus", ProtocolVersion), cancellationToken).ConfigureAwait(false);
 
         if (response.Error == "app_unavailable") return "unavailable";
         if (response.Error is not null) return "unknown";
@@ -407,13 +407,16 @@ internal static class Program
                TryNormalizeDomain(domainElement.GetString(), out domain);
     }
 
-    private static async Task<PipeResponse> SendPipeRequestAsync(HostRequest request)
+    private static async Task<PipeResponse> SendPipeRequestAsync(
+        HostRequest request, CancellationToken cancellationToken = default)
     {
-        await PipeRequestGate.WaitAsync().ConfigureAwait(false);
+        await PipeRequestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            using var timeout = new CancellationTokenSource(
-                request.Type == "unlockVault" ? TimeSpan.FromSeconds(45) : TimeSpan.FromSeconds(1));
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(request.Type == "unlockVault"
+                ? TimeSpan.FromSeconds(45)
+                : TimeSpan.FromSeconds(1));
             await using var pipe = new NamedPipeClientStream(
                 ".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous,
                 TokenImpersonationLevel.Identification);
@@ -436,6 +439,7 @@ internal static class Program
             return new PipeResponse(root, null);
         }
         catch (TimeoutException) { return new PipeResponse(default, "app_unavailable"); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (OperationCanceledException) { return new PipeResponse(default, "app_unavailable"); }
         catch (IOException) { return new PipeResponse(default, "app_unavailable"); }
         catch (JsonException) { return new PipeResponse(default, "invalid_app_response"); }
