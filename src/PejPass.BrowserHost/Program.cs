@@ -153,6 +153,7 @@ internal static class Program
         Stream output, SemaphoreSlim writeLock, CancellationToken cancellationToken)
     {
         string? lastStatus = null;
+        var lastHeartbeat = Stopwatch.GetTimestamp();
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -172,6 +173,18 @@ internal static class Program
             }
             catch (OperationCanceledException) { break; }
             catch { /* Retry temporary status failures on the next interval. */ }
+
+            if (Stopwatch.GetElapsedTime(lastHeartbeat) >= TimeSpan.FromSeconds(20))
+            {
+                try
+                {
+                    await WriteAsync(output, writeLock, new HostResponse(
+                        "hostHeartbeat", "PejPass", ProtocolVersion, null, null)).ConfigureAwait(false);
+                    lastHeartbeat = Stopwatch.GetTimestamp();
+                }
+                catch (OperationCanceledException) { break; }
+                catch { /* The browser may have closed the native port. */ }
+            }
 
             try { await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken).ConfigureAwait(false); }
             catch (OperationCanceledException) { break; }
