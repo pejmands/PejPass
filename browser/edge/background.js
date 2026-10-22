@@ -10,9 +10,12 @@ async function loadToolbarIcon(imagePath) {
     return toolbarIconCache.get(imagePath);
   }
 
-  const image = new Image();
-  image.src = chrome.runtime.getURL(imagePath);
-  await image.decode();
+  const response = await fetch(chrome.runtime.getURL(imagePath));
+  if (!response.ok) {
+    throw new Error("Unable to load toolbar icon.");
+  }
+
+  const image = await createImageBitmap(await response.blob());
 
   const imageData = {};
   for (const size of [16, 32]) {
@@ -27,6 +30,7 @@ async function loadToolbarIcon(imagePath) {
     imageData[size] = context.getImageData(0, 0, size, size);
   }
 
+  image.close();
   toolbarIconCache.set(imagePath, imageData);
   return imageData;
 }
