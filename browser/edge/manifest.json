@@ -7,7 +7,8 @@
     "activeTab",
     "nativeMessaging",
     "scripting",
-    "alarms"
+    "alarms",
+    "storage"
   ],
   "action": {
     "default_title": "PejPass",
