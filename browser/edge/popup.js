@@ -24,7 +24,6 @@ const unlockButton = document.getElementById("unlock-vault");
 const unlockStatus = document.getElementById("unlock-status");
 const launchAppButton = document.getElementById("launch-app");
 const lockVaultButton = document.getElementById("lock-vault");
-const nativeHostName = "com.pejpass.browserhost";
 const protocolVersion = 1;
 let activeTabId = null;
 let activeDomain = null;
