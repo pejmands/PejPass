@@ -1120,6 +1120,7 @@ copyPasswordButton.addEventListener("click", async () => {
     if (isValidBaseResponse(response, "clipboardCopied") &&
         Number.isInteger(response.clipboardClearSeconds) &&
         response.clipboardClearSeconds >= 5 && response.clipboardClearSeconds <= 300) {
+      copyPasswordButton.textContent = `Copy password (clears after ${response.clipboardClearSeconds} seconds)`;
       generatorStatus.textContent =
         `Password copied. PejPass will clear it after ${response.clipboardClearSeconds} seconds if it is still in the clipboard.`;
     } else {
