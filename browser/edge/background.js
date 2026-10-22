@@ -138,6 +138,25 @@ function sendNative(payload, timeoutMs) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return false;
 
+  if (message?.target === "pejpass-match-count") {
+    const { tabId, count } = message;
+    if (!Number.isInteger(tabId) || tabId < 0 ||
+        !Number.isInteger(count) || count < 0 || count > 25) {
+      sendResponse({ ok: false });
+      return false;
+    }
+
+    const text = count === 0 ? "" : String(count);
+    void chrome.action.setBadgeText({ text, tabId }).catch(() => {});
+    void chrome.action.setBadgeBackgroundColor({ color: "#8caaee", tabId }).catch(() => {});
+    void chrome.action.setTitle({
+      title: count === 0 ? "PejPass" : `PejPass — ${count} matching account${count === 1 ? "" : "s"}`,
+      tabId
+    }).catch(() => {});
+    sendResponse({ ok: true });
+    return false;
+  }
+
   if (message?.target === "pejpass-fill") {
     const { tabId, domain, id } = message;
     if (!Number.isInteger(tabId) || tabId < 0 ||
