@@ -18,6 +18,7 @@ let port = null;
 let nextRequestId = 1;
 let cachedStatus = "unknown";
 let cachedHelloReady = null;
+let nativeHostError = "";
 const pending = new Map();
 const matchRefreshVersions = new Map();
 const matchRefreshTimers = new Map();
@@ -237,12 +238,21 @@ async function recordCredentialUse(credentialId) {
 function ensurePort() {
   if (port) return port;
 
-  const connectedPort = chrome.runtime.connectNative(nativeHostName);
+  let connectedPort;
+  try {
+    connectedPort = chrome.runtime.connectNative(nativeHostName);
+  } catch (error) {
+    nativeHostError = String(error?.message || error || "Native messaging host connection failed.");
+    applyStatus("unavailable");
+    throw error;
+  }
   port = connectedPort;
+  nativeHostError = "";
 
   connectedPort.onMessage.addListener(onNativeMessage);
   connectedPort.onDisconnect.addListener(() => {
     const reason = chrome.runtime.lastError?.message || "Native host disconnected.";
+    nativeHostError = reason;
     if (port === connectedPort) port = null;
 
     for (const [requestId, request] of pending) {
@@ -378,7 +388,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.target === "pejpass-state") {
     ensureConnectedQuietly();
-    sendResponse({ status: cachedStatus, helloReady: cachedHelloReady });
+    sendResponse({
+      status: cachedStatus,
+      helloReady: cachedHelloReady,
+      nativeHostError: nativeHostError || undefined
+    });
     return false;
   }
 
