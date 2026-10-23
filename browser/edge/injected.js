@@ -3,7 +3,11 @@ function processLoginForm(action, expectedDomain, username = "", password = "", 
   const currentDomain = normalizeHost(window.location.hostname);
   let topDomain;
   try {
-    topDomain = normalizeHost(window.top.location.hostname);
+    const ancestors = window.location.ancestorOrigins;
+    const topOrigin = ancestors && ancestors.length > 0
+      ? ancestors[ancestors.length - 1]
+      : window.top.location.origin;
+    topDomain = normalizeHost(new URL(topOrigin).hostname);
   } catch {
     return action === "read" ? { found: false } : "wrong_page";
   }
