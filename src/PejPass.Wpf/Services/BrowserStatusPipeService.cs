@@ -8,6 +8,7 @@ using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.IO;
 using System.IO.Pipes;
+using System.Net;
 using System.Text.Json;
 
 namespace PejPass.Wpf.Services;
@@ -1134,7 +1135,11 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     {
         if (string.IsNullOrWhiteSpace(host)) return null;
 
-        var labels = host.TrimEnd('.').ToLowerInvariant().Split('.');
+        var normalizedHost = host.Trim().TrimEnd('.');
+        if (IPAddress.TryParse(normalizedHost, out var ipAddress))
+            return ipAddress.ToString().ToLowerInvariant();
+
+        var labels = normalizedHost.ToLowerInvariant().Split('.');
         if (labels.Length < 2 || labels.Any(label => label.Length == 0)) return null;
 
         var publicSuffixLength = 1;
