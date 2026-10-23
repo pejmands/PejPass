@@ -117,7 +117,6 @@ function showUnavailable(message) {
   siteDetail.textContent = message;
   unavailableGuide.hidden = false;
   credentialsStatus.textContent = "Open a regular website to see matching accounts.";
-  tabLogins.disabled = true;
   tabSave.disabled = true;
   inspectLoginButton.disabled = true;
   saveLoginButton.disabled = true;
