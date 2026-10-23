@@ -9,6 +9,8 @@ const manifest = JSON.parse(fs.readFileSync(path.join(firefoxRoot, "manifest.jso
 const buildScript = fs.readFileSync(path.join(repositoryRoot, "browser", "build.ps1"), "utf8");
 const backgroundSource = fs.readFileSync(path.join(__dirname, "..", "background.js"), "utf8");
 const installScript = fs.readFileSync(path.join(firefoxRoot, "install-dev-host.ps1"), "utf8");
+const signingScript = fs.readFileSync(path.join(firefoxRoot, "sign-addon.ps1"), "utf8");
+const firefoxReadme = fs.readFileSync(path.join(firefoxRoot, "README.md"), "utf8");
 
 test("Firefox manifest declares its stable Gecko ID and supported MV3 background scripts", () => {
   assert.equal(manifest.manifest_version, 3);
@@ -36,4 +38,17 @@ test("Firefox native host registration uses the Gecko ID and a separate output d
   assert.doesNotMatch(nativeManifestBlock[1], /desktopAppPath/);
   assert.match(installScript, /pejpass-host-config\.json/);
   assert.match(installScript, /desktopAppPath\s*=\s*\$desktopExecutable/);
+});
+
+test("Firefox signing script requests unlisted Mozilla signing without embedding credentials", () => {
+  assert.match(signingScript, /WEB_EXT_API_KEY/);
+  assert.match(signingScript, /WEB_EXT_API_SECRET/);
+  assert.match(signingScript, /npx --yes web-ext sign/);
+  assert.match(signingScript, /--channel unlisted/);
+  assert.match(signingScript, /--source-dir \$sourceDirectory/);
+  assert.match(signingScript, /--artifacts-dir \$artifactsDirectory/);
+  assert.match(signingScript, /--api-secret \$env:WEB_EXT_API_SECRET/);
+  assert.match(signingScript, /signed-firefox/);
+  assert.match(firefoxReadme, /Install Add-on From File/);
+  assert.match(firefoxReadme, /pejpass@pejmands\.github\.io/);
 });
