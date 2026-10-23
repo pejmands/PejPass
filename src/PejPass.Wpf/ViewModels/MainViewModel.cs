@@ -1770,12 +1770,20 @@ public partial class MainViewModel : ObservableObject
                 return false;
             }
 
-            keyMaterial = _vaultSession.CopyKeyMaterial();
+            using (var saveLease = await _vaultSession.AcquireSaveLeaseAsync(
+                sessionGeneration, vault, CancellationToken.None))
+            {
+                if (saveLease is null)
+                    return false;
 
-            await _vaultService.SaveVaultAsync(
-                vaultPath,
-                keyMaterial,
-                vault);
+                keyMaterial = _vaultSession.CopyKeyMaterial();
+                var snapshot = vault.CreateSnapshot();
+
+                await _vaultService.SaveVaultAsync(
+                    vaultPath,
+                    keyMaterial,
+                    snapshot);
+            }
 
             if (!_vaultSession.IsCurrent(sessionGeneration, vault))
                 return false;
