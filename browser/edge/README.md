@@ -16,6 +16,10 @@ The extension reads the active HTTP(S) tab hostname and requests matching accoun
 4. Choose the `browser/edge` directory.
 5. Copy the extension ID shown on the extension card.
 
+## Browser API compatibility
+
+The extension's background and popup scripts use `browser-api.js` as a small compatibility facade. It selects the standard `browser` namespace when available and falls back to `chrome` in Chromium-based browsers. Keep browser-specific manifest and packaging work separate from shared form logic; this facade is groundwork, not a complete Firefox package.
+
 ## Shared browser-independent logic
 
 The login-form detection and filling implementation is maintained in `browser/shared/injected.js`. The `browser/edge/injected.js` file is the packaged copy required by the unpacked Edge extension; edit the shared source, not the packaged copy.
