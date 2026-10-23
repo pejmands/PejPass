@@ -1777,11 +1777,12 @@ public partial class MainViewModel : ObservableObject
                     return false;
 
                 keyMaterial = _vaultSession.CopyKeyMaterial();
+                var snapshot = vault.CreateSnapshot();
 
                 await _vaultService.SaveVaultAsync(
                     vaultPath,
                     keyMaterial,
-                    vault);
+                    snapshot);
             }
 
             if (!_vaultSession.IsCurrent(sessionGeneration, vault))
