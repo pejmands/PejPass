@@ -44,7 +44,6 @@ $manifest = @{
     name = "com.pejpass.browserhost"
     description = "PejPass local browser communication bridge for Firefox"
     path = $hostExecutable
-    desktopAppPath = $desktopExecutable
     type = "stdio"
     allowed_extensions = @($extensionId)
 } | ConvertTo-Json -Depth 4
@@ -52,6 +51,17 @@ $manifest = @{
 [System.IO.File]::WriteAllText(
     $manifestPath,
     $manifest,
+    [System.Text.UTF8Encoding]::new($false)
+)
+
+$configPath = Join-Path $firefoxHostDirectory "pejpass-host-config.json"
+$config = @{
+    desktopAppPath = $desktopExecutable
+} | ConvertTo-Json -Depth 2
+
+[System.IO.File]::WriteAllText(
+    $configPath,
+    $config,
     [System.Text.UTF8Encoding]::new($false)
 )
 
