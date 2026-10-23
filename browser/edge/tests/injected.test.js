@@ -12,6 +12,9 @@ function createPage(markup, url = "https://example.com/login") {
     runScripts: "outside-only",
     pretendToBeVisual: true
   });
+  dom.window.HTMLElement.prototype.getClientRects = function () {
+    return [{ width: 100, height: 20, top: 0, left: 0, right: 100, bottom: 20 }];
+  };
   dom.window.eval(injectedSource);
   return dom;
 }
