@@ -138,10 +138,19 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 await writer.WriteLineAsync(JsonSerializer.Serialize(response, JsonOptions)).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { break; }
-            catch (IOException) { }
+            catch (IOException) { await BackoffAsync(cancellationToken).ConfigureAwait(false); }
             catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested) { break; }
-            catch (Exception) { }
+            catch (Exception) { await BackoffAsync(cancellationToken).ConfigureAwait(false); }
         }
+    }
+
+    private static async Task BackoffAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(200, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { }
     }
 
     internal static async Task<string?> ReadBoundedLineAsync(
