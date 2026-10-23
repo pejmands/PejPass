@@ -6,7 +6,6 @@ const connectionDot = document.getElementById("connection-dot");
 const vaultStatus = document.getElementById("vault-status");
 const credentialsStatus = document.getElementById("credentials-status");
 const credentialList = document.getElementById("credential-list");
-const fillNowButton = document.getElementById("fill-now");
 const refreshLoginsButton = document.getElementById("refresh-logins");
 const inspectLoginButton = document.getElementById("inspect-login");
 const saveFields = document.getElementById("save-fields");
@@ -128,7 +127,6 @@ function showUnavailable(message) {
   saveBadge.hidden = true;
   credentialList.replaceChildren();
   matchingCredentials = [];
-  fillNowButton.hidden = true;
 }
 
 async function probeSaveCandidate() {
@@ -257,8 +255,7 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
         updateMatchBadge(0);
         credentialList.replaceChildren();
         matchingCredentials = [];
-        fillNowButton.hidden = true;
-        credentialsStatus.textContent = "Unlock the PejPass vault to view matching accounts.";
+              credentialsStatus.textContent = "Unlock the PejPass vault to view matching accounts.";
         saveTitle.value = "";
         saveUsername.value = "";
         savePassword.value = "";
@@ -324,7 +321,6 @@ async function performCredentialLookup(domain) {
   credentialList.replaceChildren();
   matchingCredentials = [];
   updateMatchBadge(0);
-  fillNowButton.hidden = true;
   credentialsStatus.textContent = "Searching…";
   try {
     const response = await sendNativeMessage({ type: "getCredentials", protocolVersion, domain });
@@ -356,24 +352,12 @@ async function performCredentialLookup(domain) {
     updateMatchBadge(matchingCredentials.length);
     refreshSaveTargets();
     if (response.credentials.length === 0) {
-      fillNowButton.hidden = true;
-      credentialsStatus.textContent = "No matching accounts found."; return;
+          credentialsStatus.textContent = "No matching accounts found."; return;
     }
 
     credentialsStatus.textContent = response.credentials.length === 25
       ? "Matching accounts (first 25 shown):"
       : response.credentials.length + " matching account" + (response.credentials.length === 1 ? "" : "s") + ":";
-
-    let singleLoginMatch = false;
-    if (response.credentials.length === 1 && activeTabId !== null) {
-      singleLoginMatch = await detectLoginPage(activeTabId, domain);
-      if (stale()) return;
-    }
-
-    fillNowButton.hidden = !singleLoginMatch;
-    if (singleLoginMatch) {
-      fillNowButton.textContent = "Fill now";
-    }
 
     let activeFaviconUrl = "";
     try {
@@ -390,7 +374,7 @@ async function performCredentialLookup(domain) {
     const fragment = document.createDocumentFragment();
     for (const credential of matchingCredentials) {
       const item = document.createElement("li");
-      item.className = singleLoginMatch ? "credential-item single-match" : "credential-item";
+      item.className = "credential-item";
       const avatar = document.createElement("div");
       avatar.className = "credential-avatar";
       avatar.setAttribute("aria-hidden", "true");
@@ -501,20 +485,6 @@ async function fillCredential(credential) {
     }
   } catch {
     credentialsStatus.textContent = "Could not fill this page. Check that it is a regular HTTP(S) page and try again.";
-  }
-}
-
-async function detectLoginPage(tabId, domain) {
-  try {
-    const results = await chrome.scripting.executeScript({
-      target: { tabId, allFrames: true },
-      func: processLoginForm,
-      args: ["detect", domain]
-    });
-    return (results || []).some((entry) =>
-      entry.result?.found === true && entry.result.domain === domain);
-  } catch {
-    return false;
   }
 }
 
@@ -976,9 +946,6 @@ saveTarget.addEventListener("change", () => {
 });
 saveConfirmation.addEventListener("change", updateSaveReview);saveConfirmation.addEventListener("change", updateSaveReview);
 
-fillNowButton.addEventListener("click", () => {
-  if (matchingCredentials.length === 1) void fillCredential(matchingCredentials[0]);
-});
 inspectLoginButton.addEventListener("click", inspectLoginForm);
 saveLoginButton.addEventListener("click", saveLogin);
 refreshLoginsButton.addEventListener("click", refreshLoginView);
