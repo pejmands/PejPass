@@ -112,6 +112,25 @@ public sealed class BrowserStatusPipeServiceTests
     }
 
     [Theory]
+    [InlineData("192.168.1.5", "192.168.1.5", true)]
+    [InlineData("192.168.1.5", "10.20.1.5", false)]
+    [InlineData("10.20.1.5", "192.168.1.5", false)]
+    public void EntryMatchesDomain_RequiresExactIpAddressMatch(
+        string entryHost, string requestedDomain, bool expected)
+    {
+        var entry = new VaultEntry { Url = $"https://{entryHost}/login" };
+        Assert.Equal(expected, BrowserStatusPipeService.EntryMatchesDomain(entry, requestedDomain));
+    }
+
+    [Theory]
+    [InlineData("192.168.1.5", "192.168.1.5")]
+    [InlineData("2001:db8::1", "2001:db8::1")]
+    public void GetRegistrableDomain_ReturnsCanonicalIpAddress(string host, string expected)
+    {
+        Assert.Equal(expected, BrowserStatusPipeService.GetRegistrableDomain(host));
+    }
+
+    [Theory]
     [InlineData("github.io", "attacker.github.io", false)]
     [InlineData("alice.github.io", "attacker.github.io", false)]
     [InlineData("alice.github.io", "login.alice.github.io", true)]
