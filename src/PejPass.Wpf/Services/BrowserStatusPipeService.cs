@@ -592,6 +592,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         }
         catch
         {
+            saveLease.Dispose();
             await app.Dispatcher.InvokeAsync(() =>
             {
                 if (_vaultSession.IsCurrent(generation, vault) && prepared.Snapshot is not null)
@@ -606,6 +607,9 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             }, System.Windows.Threading.DispatcherPriority.Send, CancellationToken.None).Task.ConfigureAwait(false);
             return Error("save_unavailable");
         }
+
+        // Release the save gate before dispatching UI work; session replacement can wait on this gate.
+        saveLease.Dispose();
 
         // Persistence has succeeded. A later UI refresh failure must not roll back
         // the in-memory vault while leaving the saved file updated.
