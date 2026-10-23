@@ -66,7 +66,7 @@ internal static class PublicSuffixList
 
             try
             {
-                target.Add(string.Join(".", line.Split('.').Select(idn.GetAscii)).ToLowerInvariant());
+                target.Add(string.Join(".", line.Split('.').Select(label => idn.GetAscii(label))).ToLowerInvariant());
             }
             catch (ArgumentException)
             {
