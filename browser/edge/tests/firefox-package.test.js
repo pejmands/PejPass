@@ -20,7 +20,8 @@ test("Firefox manifest declares its stable Gecko ID and supported MV3 background
 
 test("Firefox build copies the Edge runtime and removes the worker-only importScripts line", () => {
   assert.match(buildScript, /ValidateSet\("edge",\s*"firefox"\)/);
-  assert.match(buildScript, /importScripts\\\(/);
+  assert.ok(buildScript.includes('importScripts("browser-api.js", "injected.js");'));
+  assert.match(buildScript, /StartsWith\(\$workerImport\)/);
   assert.match(backgroundSource, /^importScripts\("browser-api\.js", "injected\.js"\);/);
 });
 
