@@ -21,6 +21,7 @@ public partial class LoginWindow : Window
     private bool _isSubscribedToSnackbar;
     private bool _allowClose;
     internal bool SuppressMainWindowOnUnlock { get; private set; }
+    private bool? _browserUnlockShouldShowMainWindow;
     private static int _passwordStrengthWarmupStarted;
 
     public LoginWindow(LoginViewModel viewModel)
@@ -67,18 +68,6 @@ public partial class LoginWindow : Window
         {
             ClearPasswordInputs();
 
-            if (SuppressMainWindowOnUnlock)
-            {
-                var app = System.Windows.Application.Current;
-                var existingMain = app?.Windows.OfType<MainWindow>().FirstOrDefault();
-                if (app is not null && existingMain is not null)
-                    app.MainWindow = existingMain;
-
-                _allowClose = true;
-                Close();
-                return;
-            }
-
             var main = App.Services.GetRequiredService<MainWindow>();
 
             var vaultFilePath = viewModel.VaultPath;
@@ -93,17 +82,18 @@ public partial class LoginWindow : Window
             System.Windows.Application.Current.MainWindow = main;
 
             // Transition to main: allow close without triggering tray minimize.
-            // Browser unlock can leave the main window hidden so the user can continue in the browser.
+            // Browser unlock preserves the visibility state captured before the request.
             _allowClose = true;
-            if (SuppressMainWindowOnUnlock)
-            {
-                if (main.IsVisible)
-                    main.Hide();
-            }
-            else
+            if (!SuppressMainWindowOnUnlock ||
+                _browserUnlockShouldShowMainWindow == true)
             {
                 main.Show();
             }
+            else if (main.IsVisible)
+            {
+                main.Hide();
+            }
+
             Close();
         };
 
@@ -169,18 +159,19 @@ public partial class LoginWindow : Window
         if (DataContext is not LoginViewModel viewModel)
             return false;
 
+        _browserUnlockShouldShowMainWindow = ShouldShowMainWindowAfterBrowserUnlock();
         SuppressMainWindowOnUnlock = true;
         try
         {
             var unlocked = await viewModel.UnlockFromBrowserAsync(masterPassword);
             if (!unlocked)
-                SuppressMainWindowOnUnlock = false;
+                ResetBrowserUnlockState();
 
             return unlocked;
         }
         catch
         {
-            SuppressMainWindowOnUnlock = false;
+            ResetBrowserUnlockState();
             throw;
         }
     }
@@ -190,20 +181,42 @@ public partial class LoginWindow : Window
         if (DataContext is not LoginViewModel viewModel)
             return false;
 
+        _browserUnlockShouldShowMainWindow = ShouldShowMainWindowAfterBrowserUnlock();
         SuppressMainWindowOnUnlock = true;
         try
         {
             var unlocked = await viewModel.UnlockWithHelloFromBrowserAsync();
             if (!unlocked)
-                SuppressMainWindowOnUnlock = false;
+                ResetBrowserUnlockState();
 
             return unlocked;
         }
         catch
         {
-            SuppressMainWindowOnUnlock = false;
+            ResetBrowserUnlockState();
             throw;
         }
+    }
+
+    private bool ShouldShowMainWindowAfterBrowserUnlock()
+    {
+        var app = System.Windows.Application.Current;
+        var mainWindow = app?.MainWindow as MainWindow
+            ?? app?.Windows.OfType<MainWindow>().FirstOrDefault();
+
+        if (mainWindow is not null)
+        {
+            return mainWindow.IsVisible &&
+                mainWindow.WindowState != WindowState.Minimized;
+        }
+
+        return IsVisible && WindowState != WindowState.Minimized;
+    }
+
+    private void ResetBrowserUnlockState()
+    {
+        SuppressMainWindowOnUnlock = false;
+        _browserUnlockShouldShowMainWindow = null;
     }
 
     private static void StartPasswordStrengthWarmup()
