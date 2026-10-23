@@ -278,6 +278,7 @@ internal static class Program
                 "lockVault" => await LockVaultAsync().ConfigureAwait(false),
                 "getVaultStatus" => await GetVaultStatusAsync().ConfigureAwait(false),
                 "getCredentials" => await GetCredentialsAsync(root).ConfigureAwait(false),
+                "searchCredentials" => await SearchCredentialsAsync(root).ConfigureAwait(false),
                 "fillCredential" => await FillCredentialAsync(root).ConfigureAwait(false),
                 "saveCredential" => await SaveCredentialAsync(root).ConfigureAwait(false),
                 "copyToClipboard" => await CopyToClipboardAsync(root).ConfigureAwait(false),
@@ -471,14 +472,50 @@ internal static class Program
             null, null, domain, credentials);
     }
 
+    private static async Task<HostResponse> SearchCredentialsAsync(JsonElement request)
+    {
+        if (!TryGetDomain(request, out var domain) ||
+            !TryGetBoundedString(request, "query", 100, out var query) || query.Trim().Length < 2)
+            return Error("invalid_request");
+
+        var response = await SendPipeRequestAsync(
+            new HostRequest("searchCredentials", ProtocolVersion, domain, Query: query.Trim())).ConfigureAwait(false);
+        if (response.Error is not null) return Error(response.Error);
+
+        var root = response.Root;
+        if (!HasString(root, "type", "credentialSearchResults") || !HasString(root, "app", "PejPass") ||
+            !HasVersion(root) || !HasString(root, "domain", domain) ||
+            !root.TryGetProperty("credentials", out var credentialsElement) ||
+            credentialsElement.ValueKind != JsonValueKind.Array || credentialsElement.GetArrayLength() > 25)
+            return Error("invalid_app_response");
+
+        var credentials = new List<CredentialSummary>();
+        foreach (var item in credentialsElement.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object ||
+                !TryGetBoundedString(item, "id", 64, out var id) || !Guid.TryParse(id, out _) ||
+                !TryGetBoundedString(item, "title", 200, out var title) ||
+                !TryGetBoundedString(item, "username", 256, out var username) ||
+                !TryGetBoundedString(item, "url", 2048, out var url))
+                return Error("invalid_app_response");
+            credentials.Add(new CredentialSummary(id, title, username, url));
+        }
+
+        return new HostResponse("credentialSearchResults", "PejPass", ProtocolVersion,
+            null, null, domain, credentials);
+    }
+
     private static async Task<HostResponse> FillCredentialAsync(JsonElement request)
     {
         if (!TryGetDomain(request, out var domain) ||
             !TryGetBoundedString(request, "id", 64, out var id) || !Guid.TryParse(id, out _))
             return Error("invalid_request");
 
+        var allowDomainMismatch = request.TryGetProperty("allowDomainMismatch", out var mismatch) &&
+            mismatch.ValueKind == JsonValueKind.True;
         var response = await SendPipeRequestAsync(
-            new HostRequest("fillCredential", ProtocolVersion, domain, id)).ConfigureAwait(false);
+            new HostRequest("fillCredential", ProtocolVersion, domain, id,
+                AllowDomainMismatch: allowDomainMismatch)).ConfigureAwait(false);
         if (response.Error is not null) return Error(response.Error);
 
         var root = response.Root;
@@ -682,7 +719,8 @@ internal static class Program
     private sealed record HostRequest(
         string Type, int ProtocolVersion, string? Domain = null, string? Id = null,
         string? Url = null, string? Title = null, string? Username = null, string? Password = null,
-        string? MasterPassword = null, string? Mode = null, string? EntryId = null);
+        string? MasterPassword = null, string? Mode = null, string? EntryId = null,
+        string? Query = null, bool AllowDomainMismatch = false);
     private sealed record CredentialSummary(string Id, string Title, string Username, string Url);
     private sealed record HostResponse(
         string Type, string App, int ProtocolVersion, string? Status, string? Code,
