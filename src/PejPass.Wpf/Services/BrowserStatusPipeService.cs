@@ -854,8 +854,15 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (entry is null)
             return (null, "credential_not_found");
 
-        var settings = App.Services.GetService<AppSettings>();
-        var skipDesktopConfirmation = settings?.SkipBrowserAutofillConfirmation == true;
+        var skipDesktopConfirmation = false;
+        try
+        {
+            skipDesktopConfirmation = App.Services.GetService<AppSettings>()?.SkipBrowserAutofillConfirmation == true;
+        }
+        catch
+        {
+            // If settings are unavailable, keep the safer confirmation flow.
+        }
         if (!skipDesktopConfirmation)
         {
             bool approved;
