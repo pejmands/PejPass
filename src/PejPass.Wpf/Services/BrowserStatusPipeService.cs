@@ -330,11 +330,6 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     App.PrepareCustomChrome(loginWindow);
                 }
 
-                app.MainWindow = loginWindow;
-                if (!loginWindow.IsVisible)
-                    loginWindow.Show();
-                loginWindow.Activate();
-
                 return loginWindow.UnlockFromBrowserAsync(masterPassword);
             }, System.Windows.Threading.DispatcherPriority.Send).Task.ConfigureAwait(false);
 
@@ -399,11 +394,6 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     loginWindow = App.Services.GetRequiredService<LoginWindow>();
                     App.PrepareCustomChrome(loginWindow);
                 }
-
-                app.MainWindow = loginWindow;
-                if (!loginWindow.IsVisible)
-                    loginWindow.Show();
-                loginWindow.Activate();
 
                 return loginWindow.UnlockWithHelloFromBrowserAsync();
             }, System.Windows.Threading.DispatcherPriority.Send).Task.ConfigureAwait(false);
@@ -728,7 +718,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 if (mainWindow?.DataContext is not MainViewModel viewModel)
                     throw new InvalidOperationException("The active vault cannot be locked through the main window.");
 
-                viewModel.Lock(showLogin: true);
+                viewModel.Lock(showLogin: false);
             }
 
             if (app.Dispatcher.CheckAccess())
