@@ -867,7 +867,8 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 "Only allow this if you just requested autofill.",
                 "Confirm Browser Autofill",
                 yesText: "Allow",
-                noText: "Deny");
+                noText: "Deny",
+                bringToFront: true);
         }
 
         if (!approved)
