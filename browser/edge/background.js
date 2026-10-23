@@ -17,6 +17,7 @@ const allowedTypes = new Set([
 let port = null;
 let nextRequestId = 1;
 let cachedStatus = "unknown";
+let cachedHelloReady = null;
 const pending = new Map();
 const matchRefreshVersions = new Map();
 const matchRefreshTimers = new Map();
@@ -57,35 +58,58 @@ async function setToolbarVaultIcon(unlocked) {
   }
 }
 
-function applyStatus(status) {
+function applyStatus(status, helloReady = cachedHelloReady) {
   if (!["locked", "unlocked", "unavailable", "unknown"].includes(status)) return;
-  if (status === cachedStatus) return;
+  const statusChanged = status !== cachedStatus;
+  const helloReadyChanged = helloReady !== cachedHelloReady;
+  if (!statusChanged && !helloReadyChanged) return;
 
   cachedStatus = status;
-  void setToolbarVaultIcon(status === "unlocked");
-  if (status !== "unlocked") {
-    void chrome.tabs.query({}).then((tabs) => {
-      for (const tab of tabs) {
-        if (Number.isInteger(tab.id)) clearMatchBadge(tab.id);
-      }
-    }).catch(() => {});
-  } else {
-    void chrome.tabs.query({ active: true }).then((tabs) => {
-      for (const tab of tabs) {
-        if (Number.isInteger(tab.id)) scheduleRefreshMatchCount(tab.id);
-      }
-    }).catch(() => {});
+  cachedHelloReady = helloReady;
+  if (statusChanged) {
+    void setToolbarVaultIcon(status === "unlocked");
+    if (status !== "unlocked") {
+      void chrome.tabs.query({}).then((tabs) => {
+        for (const tab of tabs) {
+          if (Number.isInteger(tab.id)) clearMatchBadge(tab.id);
+        }
+      }).catch(() => {});
+    } else {
+      void chrome.tabs.query({ active: true }).then((tabs) => {
+        for (const tab of tabs) {
+          if (Number.isInteger(tab.id)) scheduleRefreshMatchCount(tab.id);
+        }
+      }).catch(() => {});
+    }
   }
-  void chrome.runtime.sendMessage({ type: "vaultStateChanged", status }).catch(() => {
+  void chrome.runtime.sendMessage({
+    type: "vaultStateChanged",
+    status,
+    helloReady: cachedHelloReady
+  }).catch(() => {
     // No popup is open to receive the state change.
   });
 }
-
 function onNativeMessage(message) {
   if (message?.type === "hostHeartbeat") return;
 
   if (message?.type === "vaultStateChanged") {
     applyStatus(message.status);
+
+    if (message.status === "locked" || message.status === "unlocked") {
+      void sendNative({ type: "getVaultStatus", protocolVersion }, 6000)
+        .then((response) => {
+          if (response?.type === "vaultStatus" &&
+              response.app === "PejPass" &&
+              response.protocolVersion === protocolVersion &&
+              (response.status === "locked" || response.status === "unlocked")) {
+            applyStatus(response.status, response.helloReady === true);
+          }
+        })
+        .catch(() => {
+          // Keep the last known readiness if a transient refresh fails.
+        });
+    }
     return;
   }
 
@@ -301,7 +325,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.target === "pejpass-state") {
     ensureConnectedQuietly();
-    sendResponse({ status: cachedStatus });
+    sendResponse({ status: cachedStatus, helloReady: cachedHelloReady });
     return false;
   }
 
@@ -321,7 +345,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           response?.type === "vaultStatus" &&
           response.app === "PejPass" &&
           response.protocolVersion === protocolVersion) {
-        applyStatus(response.status);
+        applyStatus(response.status, response.helloReady === true);
+      } else if (payload.type === "unlockWithHello" && response?.code === "hello_not_ready") {
+        applyStatus(cachedStatus, false);
       }
       sendResponse(response);
     })

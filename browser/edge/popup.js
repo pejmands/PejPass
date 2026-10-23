@@ -204,7 +204,7 @@ async function refreshLoginView() {
   }
 }
 
-async function checkVaultStatus({ quiet = false } = {}) {
+async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
   if (!quiet) {
     vaultStatus.textContent = "Checking vault…";
     clearStatusError();
@@ -213,10 +213,18 @@ async function checkVaultStatus({ quiet = false } = {}) {
     let response;
     try {
       const cached = await chrome.runtime.sendMessage({ target: "pejpass-state" });
-      if (cached?.status === "locked" || cached?.status === "unlocked") {
+      if (!forceRefresh &&
+          (cached?.status === "locked" || cached?.status === "unlocked") &&
+          typeof cached.helloReady === "boolean") {
         setConnectionStatus(true, "Desktop connected");
-        response = { type: "vaultStatus", app: "PejPass", protocolVersion, status: cached.status };
-      } else if (cached?.status === "unavailable") {
+        response = {
+          type: "vaultStatus",
+          app: "PejPass",
+          protocolVersion,
+          status: cached.status,
+          helloReady: cached.helloReady
+        };
+      } else if (!forceRefresh && cached?.status === "unavailable") {
         setConnectionStatus(false, "Desktop unavailable");
         response = { type: "error", code: "app_unavailable" };
       }
@@ -235,7 +243,7 @@ async function checkVaultStatus({ quiet = false } = {}) {
       clearStatusError();
       unlockControls.hidden = response.status !== "locked";
       unlockButton.textContent = "Unlock vault";
-      unlockHelloButton.hidden = response.status !== "locked";
+      unlockHelloButton.hidden = response.status !== "locked" || response.helloReady !== true;
       launchAppButton.hidden = true;
       lockVaultButton.hidden = response.status !== "unlocked";
 
@@ -1398,7 +1406,7 @@ async function unlockVault() {
     });
     if (isValidBaseResponse(response, "vaultUnlocked") && response.status === "unlocked") {
       unlockStatus.textContent = "Vault unlocked.";
-      await checkVaultStatus();
+      await checkVaultStatus({ forceRefresh: true });
       if (activeDomain) await lookupCredentials(activeDomain);
       return;
     }
@@ -1441,20 +1449,23 @@ async function unlockWithHello() {
     const response = await sendNativeMessage({ type: "unlockWithHello", protocolVersion });
     if (isValidBaseResponse(response, "vaultUnlocked") && response.status === "unlocked") {
       unlockStatus.textContent = "Vault unlocked.";
-      await checkVaultStatus();
+      await checkVaultStatus({ forceRefresh: true });
       if (activeDomain) await lookupCredentials(activeDomain);
       return;
     }
 
     const messages = {
+      hello_not_ready: "Unlock with your master password first. Windows Hello isn’t ready for this vault yet.",
       hello_failed: "Windows Hello didn’t unlock the vault. Try your master password.",
       hello_cancelled: "Windows Hello was cancelled.",
       hello_unavailable: "Windows Hello isn’t available. Try your master password.",
       app_unavailable: "Couldn’t start PejPass.",
       unsupported_request: "Update the PejPass desktop app and browser host."
     };
+    if (response?.code === "hello_not_ready") unlockHelloButton.hidden = true;
     showUnlockError(
-      response?.code === "hello_cancelled" ? "Windows Hello cancelled." :
+      response?.code === "hello_not_ready" ? "Windows Hello isn’t ready yet." :
+        response?.code === "hello_cancelled" ? "Windows Hello cancelled." :
         response?.code === "hello_unavailable" ? "Windows Hello unavailable." :
         "Couldn’t unlock with Windows Hello.",
       messages[response?.code] || response?.code || "The desktop returned an invalid response."

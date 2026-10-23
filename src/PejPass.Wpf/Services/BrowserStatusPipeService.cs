@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using PejPass.Application.Interfaces;
 using PejPass.Domain.Entities;
+using PejPass.Domain.Settings;
 using PejPass.Infrastructure.Totp;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.ViewModels;
@@ -384,6 +385,9 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (_vaultSession.IsActive)
             return new StatusResponse("vaultUnlocked", "PejPass", ProtocolVersion, "unlocked", null);
 
+        if (!IsHelloReady())
+            return Error("hello_not_ready");
+
         var app = System.Windows.Application.Current;
         if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
             return Error("app_unavailable");
@@ -672,7 +676,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             {
                 "lockVault" => CreateLockVaultResponse(),
                 "getVaultStatus" => new StatusResponse("vaultStatus", "PejPass", ProtocolVersion,
-                    _vaultSession.IsActive ? "unlocked" : "locked", null),
+                    _vaultSession.IsActive ? "unlocked" : "locked", null, HelloReady: IsHelloReady()),
                 "getCredentials" => CreateCredentialResponse(root),
                 "fillCredential" => Error("async_required"),
                 "saveCredential" => CreateSaveCredentialResponse(root),
@@ -1155,6 +1159,22 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         return value.Length <= maximumLength ? value : value[..maximumLength];
     }
 
+    private static bool IsHelloReady()
+    {
+        try
+        {
+            var settings = App.Services.GetService<AppSettings>();
+            var cache = App.Services.GetService<SessionPasswordCache>();
+            return settings?.WindowsHelloEnabled == true &&
+                cache is not null &&
+                settings.RecentVaultPaths.Any(cache.HasCacheFor);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private static StatusResponse Error(string code) =>
         new("error", "PejPass", ProtocolVersion, null, code);
 
@@ -1184,5 +1204,5 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null,
         string? Id = null, string? Username = null, string? Password = null,
         string? TotpCode = null, string? Result = null, int? RetryAfterSeconds = null,
-        int? ClipboardClearSeconds = null);
+        int? ClipboardClearSeconds = null, bool HelloReady = false);
 }
