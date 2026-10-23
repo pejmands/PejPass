@@ -173,6 +173,27 @@ public partial class LoginWindow : Window
         }
     }
 
+    internal async Task<bool> UnlockWithHelloFromBrowserAsync()
+    {
+        if (DataContext is not LoginViewModel viewModel)
+            return false;
+
+        SuppressMainWindowOnUnlock = true;
+        try
+        {
+            var unlocked = await viewModel.UnlockWithHelloFromBrowserAsync();
+            if (!unlocked)
+                SuppressMainWindowOnUnlock = false;
+
+            return unlocked;
+        }
+        catch
+        {
+            SuppressMainWindowOnUnlock = false;
+            throw;
+        }
+    }
+
     private static void StartPasswordStrengthWarmup()
     {
         if (Interlocked.Exchange(ref _passwordStrengthWarmupStarted, 1) != 0)
