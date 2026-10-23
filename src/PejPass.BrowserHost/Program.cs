@@ -586,7 +586,8 @@ internal static class Program
                 _ => TimeSpan.FromSeconds(1)
             });
             await using var pipe = new NamedPipeClientStream(
-                ".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous,
+                ".", PipeName, PipeDirection.InOut,
+                PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly,
                 TokenImpersonationLevel.Identification);
             await pipe.ConnectAsync(750, timeout.Token).ConfigureAwait(false);
             using var reader = new StreamReader(pipe, leaveOpen: true);
