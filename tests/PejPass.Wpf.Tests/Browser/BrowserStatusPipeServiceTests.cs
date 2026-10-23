@@ -1,5 +1,6 @@
 using PejPass.Application.Security;
 using PejPass.Domain.Entities;
+using PejPass.Domain.Settings;
 using PejPass.Wpf.Services;
 using System.IO;
 using System.Security.Cryptography;
@@ -9,6 +10,12 @@ namespace PejPass.Wpf.Tests.Browser;
 
 public sealed class BrowserStatusPipeServiceTests
 {
+    [Fact]
+    public void BrowserAutofillConfirmation_IsRequiredByDefault()
+    {
+        Assert.False(new AppSettings().SkipBrowserAutofillConfirmation);
+    }
+
     [Fact]
     public void GetVaultStatus_ReturnsLockedWhenNoVaultSessionIsActive()
     {
