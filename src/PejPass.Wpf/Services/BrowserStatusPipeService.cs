@@ -4,7 +4,6 @@ using PejPass.Domain.Entities;
 using PejPass.Domain.Settings;
 using PejPass.Infrastructure.Totp;
 using PejPass.Wpf.Dialogs;
-using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.IO;
 using System.IO.Pipes;
