@@ -49,7 +49,8 @@ powershell -ExecutionPolicy Bypass -File .\browser\edge\uninstall-dev-host.ps1
 - The host accepts version-1 `ping`, `launchApp`, `unlockVault`, `lockVault`, `getVaultStatus`, `getCredentials`, `fillCredential`, `saveCredential`, and `copyToClipboard` requests. Requests are validated by both the host and desktop endpoint.
 - Successful credential fill and save operations reset the desktop AutoLock timer. Passive status checks and credential metadata lookups do not reset it.
 - The desktop request endpoint uses the current-user-only `PejPass.BrowserStatus.v1` named pipe; BrowserHost serializes requests to this single-instance pipe while allowing correlated native-messaging requests. Vault-state events use a separate persistent `PejPass.BrowserEvents.v1` pipe. The event pipe is current-user-only on both ends, accepts up to four subscribers, and carries only `locked` or `unlocked` status values. Credential lookup is limited to 25 results.
-- The extension requests `activeTab`, `alarms`, `nativeMessaging`, and `scripting`; it does not run a persistent content script or read page contents in the background.
+- The extension requests `activeTab`, `alarms`, `nativeMessaging`, `scripting`, `storage`, and `tabs`. The `tabs` permission lets the background service worker read tab URLs to calculate per-tab matching-account badges and clear badges across tabs when the vault locks; this includes badges retained on inactive tabs. The extension does not run a persistent content script or read page contents in the background.
+- When the popup opens, PejPass injects a lightweight `probe` into accessible frames to check for a visible login form and whether its password field is non-empty. The result includes form-presence metadata, the page hostname, and a boolean `hasPassword`; it never returns the username or password value.
 
 ## Current scope
 

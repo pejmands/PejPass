@@ -31,6 +31,21 @@ test("probe detects a visible password without returning its value", () => {
   }
 });
 
+test("fills a same-site subdomain frame using ancestorOrigins", () => {
+  const dom = createPage('<form><input type="password" name="password"></form>', "https://login.example.com/login");
+  try {
+    Object.defineProperty(dom.window.location, "ancestorOrigins", {
+      configurable: true,
+      value: ["https://example.com"]
+    });
+    const result = dom.window.processLoginForm("fill", "example.com", "", "frame-secret");
+    assert.equal(result, "no_username");
+    assert.equal(dom.window.document.querySelector('input[type="password"]').value, "frame-secret");
+  } finally {
+    dom.window.close();
+  }
+});
+
 test("detects and fills a username-only first step", () => {
   const dom = createPage('<form><input type="email" name="email" autocomplete="username"></form>');
   try {

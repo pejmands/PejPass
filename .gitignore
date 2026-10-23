@@ -63,3 +63,7 @@ secrets/
 *.pfx
 *.p12
 *.snk
+
+## Node.js
+**/node_modules/
+npm-debug.log*

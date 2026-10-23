@@ -1092,8 +1092,13 @@ function fillNewPasswordField(expectedDomain, password) {
   const normalizeHost = (host) => host.toLowerCase().replace(/\.$/, "");
   const currentDomain = normalizeHost(window.location.hostname);
   let topDomain;
-  try { topDomain = normalizeHost(window.top.location.hostname); }
-  catch { return "wrong_page"; }
+  try {
+    const ancestors = window.location.ancestorOrigins;
+    const topOrigin = ancestors && ancestors.length > 0
+      ? ancestors[ancestors.length - 1]
+      : window.top.location.origin;
+    topDomain = normalizeHost(new URL(topOrigin).hostname);
+  } catch { return "wrong_page"; }
 
   if (topDomain !== expectedDomain ||
       (currentDomain !== expectedDomain && !currentDomain.endsWith("." + expectedDomain))) {
