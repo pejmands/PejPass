@@ -4,7 +4,8 @@ const path = require("node:path");
 const test = require("node:test");
 const { JSDOM } = require("jsdom");
 
-const injectedSource = fs.readFileSync(path.join(__dirname, "..", "injected.js"), "utf8");
+const injectedSource = fs.readFileSync(path.join(__dirname, "..", "..", "shared", "injected.js"), "utf8");
+const packagedInjectedSource = fs.readFileSync(path.join(__dirname, "..", "injected.js"), "utf8");
 
 function createPage(markup, url = "https://example.com/login") {
   const dom = new JSDOM(markup, {
@@ -18,6 +19,10 @@ function createPage(markup, url = "https://example.com/login") {
   dom.window.eval(injectedSource);
   return dom;
 }
+
+test("Edge package contains the current shared login-form implementation", () => {
+  assert.equal(packagedInjectedSource, injectedSource);
+});
 
 test("probe detects a visible password without returning its value", () => {
   const dom = createPage('<form><input name="username" autocomplete="username" value="alice"><input type="password" name="password" value="secret"></form>');
