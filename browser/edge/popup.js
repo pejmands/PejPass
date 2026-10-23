@@ -204,7 +204,7 @@ async function refreshLoginView() {
   }
 }
 
-async function checkVaultStatus({ quiet = false } = {}) {
+async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
   if (!quiet) {
     vaultStatus.textContent = "Checking vault…";
     clearStatusError();
@@ -213,7 +213,8 @@ async function checkVaultStatus({ quiet = false } = {}) {
     let response;
     try {
       const cached = await chrome.runtime.sendMessage({ target: "pejpass-state" });
-      if ((cached?.status === "locked" || cached?.status === "unlocked") &&
+      if (!forceRefresh &&
+          (cached?.status === "locked" || cached?.status === "unlocked") &&
           typeof cached.helloReady === "boolean") {
         setConnectionStatus(true, "Desktop connected");
         response = {
@@ -223,7 +224,7 @@ async function checkVaultStatus({ quiet = false } = {}) {
           status: cached.status,
           helloReady: cached.helloReady
         };
-      } else if (cached?.status === "unavailable") {
+      } else if (!forceRefresh && cached?.status === "unavailable") {
         setConnectionStatus(false, "Desktop unavailable");
         response = { type: "error", code: "app_unavailable" };
       }
@@ -1405,7 +1406,7 @@ async function unlockVault() {
     });
     if (isValidBaseResponse(response, "vaultUnlocked") && response.status === "unlocked") {
       unlockStatus.textContent = "Vault unlocked.";
-      await checkVaultStatus();
+      await checkVaultStatus({ forceRefresh: true });
       if (activeDomain) await lookupCredentials(activeDomain);
       return;
     }
@@ -1448,7 +1449,7 @@ async function unlockWithHello() {
     const response = await sendNativeMessage({ type: "unlockWithHello", protocolVersion });
     if (isValidBaseResponse(response, "vaultUnlocked") && response.status === "unlocked") {
       unlockStatus.textContent = "Vault unlocked.";
-      await checkVaultStatus();
+      await checkVaultStatus({ forceRefresh: true });
       if (activeDomain) await lookupCredentials(activeDomain);
       return;
     }
