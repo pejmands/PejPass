@@ -955,7 +955,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         {
             // If settings are unavailable, keep the safer confirmation flow.
         }
-        if (!skipDesktopConfirmation)
+        if (!skipDesktopConfirmation || allowDomainMismatch)
         {
             bool approved;
             if (_fillConfirmation is not null)
