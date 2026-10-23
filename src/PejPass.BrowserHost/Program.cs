@@ -424,9 +424,19 @@ internal static class Program
             return Error("invalid_app_response");
 
         var status = statusElement.GetString();
-        return status is "locked" or "unlocked"
-            ? new HostResponse("vaultStatus", "PejPass", ProtocolVersion, status, null)
-            : Error("invalid_app_response");
+        if (status is not ("locked" or "unlocked"))
+            return Error("invalid_app_response");
+
+        var helloReady = false;
+        if (root.TryGetProperty("helloReady", out var helloReadyElement))
+        {
+            if (helloReadyElement.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                return Error("invalid_app_response");
+            helloReady = helloReadyElement.GetBoolean();
+        }
+
+        return new HostResponse("vaultStatus", "PejPass", ProtocolVersion, status, null,
+            HelloReady: helloReady);
     }
 
     private static async Task<HostResponse> GetCredentialsAsync(JsonElement request)
@@ -679,6 +689,7 @@ internal static class Program
         string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null,
         string? Id = null, string? Username = null, string? Password = null,
         string? TotpCode = null, string? Result = null, string? RequestId = null,
-        int? RetryAfterSeconds = null, int? ClipboardClearSeconds = null);
+        int? RetryAfterSeconds = null, int? ClipboardClearSeconds = null,
+        bool HelloReady = false);
     private readonly record struct PipeResponse(JsonElement Root, string? Error, int RetryAfterSeconds = 0);
 }
