@@ -31,6 +31,7 @@ const saveReviewNotice = document.getElementById("save-review-notice");
 const saveConfirmationRow = document.getElementById("save-confirmation-row");
 const saveConfirmation = document.getElementById("save-confirmation");
 let matchingCredentials = [];
+let lookupSeq = 0;
 const unlockControls = document.getElementById("unlock-controls");
 const unlockPassword = document.getElementById("unlock-password");
 const unlockButton = document.getElementById("unlock-vault");
@@ -107,6 +108,7 @@ function updateMatchBadge(count, tabId = activeTabId) {
 }
 
 function showUnavailable(message) {
+  lookupSeq++;
   const previousTabId = activeTabId;
   if (Number.isInteger(previousTabId)) updateMatchBadge(0, previousTabId);
   activeTabId = null;
@@ -238,6 +240,7 @@ async function checkVaultStatus({ quiet = false } = {}) {
       lockVaultButton.hidden = response.status !== "unlocked";
 
       if (response.status === "locked") {
+        lookupSeq++;
         updateMatchBadge(0);
         credentialList.replaceChildren();
         matchingCredentials = [];
@@ -290,6 +293,9 @@ async function checkVaultStatus({ quiet = false } = {}) {
 }
 
 async function lookupCredentials(domain) {
+  const seq = ++lookupSeq;
+  const stale = () => seq !== lookupSeq;
+
   credentialList.replaceChildren();
   matchingCredentials = [];
   updateMatchBadge(0);
@@ -297,6 +303,8 @@ async function lookupCredentials(domain) {
   credentialsStatus.textContent = "Searching…";
   try {
     const response = await sendNativeMessage({ type: "getCredentials", protocolVersion, domain });
+    if (stale()) return;
+
     if (response?.type === "error") {
       const messages = {
         vault_locked: "Unlock the PejPass vault to view matching accounts.",
@@ -316,7 +324,10 @@ async function lookupCredentials(domain) {
       credentialsStatus.textContent = "Credential lookup returned an invalid response."; return;
     }
 
-    matchingCredentials = await sortMatchingCredentials(response.credentials, domain);
+    const sortedCredentials = await sortMatchingCredentials(response.credentials, domain);
+    if (stale()) return;
+
+    matchingCredentials = sortedCredentials;
     updateMatchBadge(matchingCredentials.length);
     refreshSaveTargets();
     if (response.credentials.length === 0) {
@@ -328,8 +339,12 @@ async function lookupCredentials(domain) {
       ? "Matching accounts (first 25 shown):"
       : response.credentials.length + " matching account" + (response.credentials.length === 1 ? "" : "s") + ":";
 
-    const singleLoginMatch = response.credentials.length === 1 &&
-      activeTabId !== null && await detectLoginPage(activeTabId, domain);
+    let singleLoginMatch = false;
+    if (response.credentials.length === 1 && activeTabId !== null) {
+      singleLoginMatch = await detectLoginPage(activeTabId, domain);
+      if (stale()) return;
+    }
+
     fillNowButton.hidden = !singleLoginMatch;
     if (singleLoginMatch) {
       fillNowButton.textContent = "Fill now";
@@ -338,13 +353,16 @@ async function lookupCredentials(domain) {
     let activeFaviconUrl = "";
     try {
       const activeTab = Number.isInteger(activeTabId) ? await chrome.tabs.get(activeTabId) : null;
+      if (stale()) return;
       if (typeof activeTab?.favIconUrl === "string" && activeTab.favIconUrl.length <= 4096) {
         activeFaviconUrl = activeTab.favIconUrl;
       }
     } catch {
+      if (stale()) return;
       // Account initials remain visible when the active tab favicon is unavailable.
     }
 
+    const fragment = document.createDocumentFragment();
     for (const credential of matchingCredentials) {
       const item = document.createElement("li");
       item.className = singleLoginMatch ? "credential-item single-match" : "credential-item";
@@ -384,9 +402,13 @@ async function lookupCredentials(domain) {
       fillButton.setAttribute("aria-label", `Fill login for ${credential.title || "Untitled account"}`);
       fillButton.addEventListener("click", () => fillCredential(credential));
       item.append(avatar, details, fillButton);
-      credentialList.append(item);
+      fragment.append(item);
     }
+
+    if (stale()) return;
+    credentialList.replaceChildren(fragment);
   } catch {
+    if (stale()) return;
     credentialsStatus.textContent = "Credential lookup unavailable. Open PejPass desktop and try again.";
   }
 }
@@ -1286,6 +1308,7 @@ async function lockVault() {
       return;
     }
 
+    lookupSeq++;
     updateMatchBadge(0);
     credentialList.replaceChildren();
     matchingCredentials = [];
