@@ -480,7 +480,6 @@ async function fillCredential(credential) {
     credentialsStatus.textContent = messages[response.outcome];
 
     if (["filled", "username_only", "totp_filled", "totp_unavailable", "no_username"].includes(response.outcome)) {
-      await recordCredentialUse(credential.id);
       window.setTimeout(() => window.close(), 350);
     }
   } catch {
@@ -1000,20 +999,6 @@ async function sortMatchingCredentials(credentials, domain) {
     return (left.title || "").localeCompare(right.title || "", undefined, { sensitivity: "base" });
   });
 }
-
-async function recordCredentialUse(credentialId) {
-  try {
-    const stored = await chrome.storage.local.get("lastUsedByCredential");
-    const history = stored?.lastUsedByCredential && typeof stored.lastUsedByCredential === "object"
-      ? stored.lastUsedByCredential
-      : {};
-    history[credentialId] = Date.now();
-    await chrome.storage.local.set({ lastUsedByCredential: history });
-  } catch {
-    // Filling should not fail if the browser cannot persist usage metadata.
-  }
-}
-
 
 function secureRandomIndex(maximum) {
   if (!Number.isInteger(maximum) || maximum < 1 || maximum > 0x100000000) {
