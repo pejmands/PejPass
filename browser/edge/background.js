@@ -21,6 +21,8 @@ let cachedHelloReady = null;
 const pending = new Map();
 const matchRefreshVersions = new Map();
 const matchRefreshTimers = new Map();
+const matchCounts = new Map();
+const activeFillCounts = new Map();
 const matchRefreshDebounceMs = 300;
 
 const toolbarIconCache = new Map();
@@ -125,7 +127,15 @@ function onNativeMessage(message) {
 }
 
 
-function setMatchBadge(tabId, count) {
+function renderMatchBadge(tabId) {
+  if ((activeFillCounts.get(tabId) || 0) > 0) {
+    void chrome.action.setBadgeText({ text: "…", tabId }).catch(() => {});
+    void chrome.action.setBadgeBackgroundColor({ color: "#8caaee", tabId }).catch(() => {});
+    void chrome.action.setTitle({ title: "PejPass — Filling credentials…", tabId }).catch(() => {});
+    return;
+  }
+
+  const count = matchCounts.get(tabId) || 0;
   const text = count === 0 ? "" : count === 25 ? "25+" : String(count);
   void chrome.action.setBadgeText({ text, tabId }).catch(() => {});
   void chrome.action.setBadgeBackgroundColor({ color: "#8caaee", tabId }).catch(() => {});
@@ -133,6 +143,23 @@ function setMatchBadge(tabId, count) {
     title: count === 0 ? "PejPass" : `PejPass — ${count === 25 ? "25+" : count} matching account${count === 1 ? "" : "s"}`,
     tabId
   }).catch(() => {});
+}
+
+function setMatchBadge(tabId, count) {
+  matchCounts.set(tabId, Math.max(0, Math.min(count, 25)));
+  renderMatchBadge(tabId);
+}
+
+function setFillInProgress(tabId, inProgress) {
+  const current = activeFillCounts.get(tabId) || 0;
+  if (inProgress) {
+    activeFillCounts.set(tabId, current + 1);
+  } else if (current <= 1) {
+    activeFillCounts.delete(tabId);
+  } else {
+    activeFillCounts.set(tabId, current - 1);
+  }
+  renderMatchBadge(tabId);
 }
 
 function clearMatchBadge(tabId) {
@@ -191,6 +218,19 @@ async function refreshMatchCount(tabId) {
     setMatchBadge(tabId, response.credentials.length);
   } catch {
     // Keep the badge empty if the tab, vault, or native host is unavailable.
+  }
+}
+
+async function recordCredentialUse(credentialId) {
+  try {
+    const stored = await chrome.storage.local.get("lastUsedByCredential");
+    const history = stored?.lastUsedByCredential && typeof stored.lastUsedByCredential === "object"
+      ? stored.lastUsedByCredential
+      : {};
+    history[credentialId] = Date.now();
+    await chrome.storage.local.set({ lastUsedByCredential: history });
+  } catch {
+    // Filling should not fail if the browser cannot persist usage metadata.
   }
 }
 
@@ -270,58 +310,71 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return false;
     }
 
+    setFillInProgress(tabId, true);
     sendNative({ type: "fillCredential", domain, id }, 65_000)
       .then(async (response) => {
-        if (response?.type === "error") {
-          sendResponse(response);
-          return;
-        }
-
-        if (response?.type !== "credentialForFill" || response.app !== "PejPass" ||
-            response.protocolVersion !== protocolVersion || response.domain !== domain ||
-            response.id !== id || typeof response.username !== "string" ||
-            response.username.length > 256 || typeof response.password !== "string" ||
-            response.password.length > 4096 ||
-            (response.totpCode != null && (typeof response.totpCode !== "string" ||
-              response.totpCode.length > 8 ||
-              (response.totpCode.length > 0 && !/^\d+$/.test(response.totpCode))))) {
-          sendResponse({ type: "error", code: "invalid_app_response" });
-          return;
-        }
-
-        let results;
         try {
-          results = await chrome.scripting.executeScript({
-            target: { tabId, allFrames: true },
-            func: processLoginForm,
-            args: ["fill", domain, response.username, response.password, response.totpCode || ""]
-          });
-        } catch {
-          sendResponse({ type: "error", code: "fill_unavailable" });
-          return;
-        }
-        const outcomes = (results || []).map((entry) => entry.result);
-        const outcome = outcomes.includes("totp_filled") ? "totp_filled" :
-          outcomes.includes("totp_unavailable") ? "totp_unavailable" :
-          outcomes.includes("filled") ? "filled" :
-          outcomes.includes("username_only") ? "username_only" :
-          outcomes.includes("no_username") ? "no_username" :
-          outcomes.includes("wrong_page") ? "wrong_page" : "no_password";
+          if (response?.type === "error") {
+            sendResponse(response);
+            return;
+          }
 
-        sendResponse({
-          type: "fillCompleted",
-          app: "PejPass",
-          protocolVersion,
-          domain,
-          id,
-          outcome
-        });
+          if (response?.type !== "credentialForFill" || response.app !== "PejPass" ||
+              response.protocolVersion !== protocolVersion || response.domain !== domain ||
+              response.id !== id || typeof response.username !== "string" ||
+              response.username.length > 256 || typeof response.password !== "string" ||
+              response.password.length > 4096 ||
+              (response.totpCode != null && (typeof response.totpCode !== "string" ||
+                response.totpCode.length > 8 ||
+                (response.totpCode.length > 0 && !/^\d+$/.test(response.totpCode))))) {
+            sendResponse({ type: "error", code: "invalid_app_response" });
+            return;
+          }
+
+          let results;
+          try {
+            results = await chrome.scripting.executeScript({
+              target: { tabId, allFrames: true },
+              func: processLoginForm,
+              args: ["fill", domain, response.username, response.password, response.totpCode || ""]
+            });
+          } catch {
+            sendResponse({ type: "error", code: "fill_unavailable" });
+            return;
+          }
+          const outcomes = (results || []).map((entry) => entry.result);
+          const outcome = outcomes.includes("totp_filled") ? "totp_filled" :
+            outcomes.includes("totp_unavailable") ? "totp_unavailable" :
+            outcomes.includes("filled") ? "filled" :
+            outcomes.includes("username_only") ? "username_only" :
+            outcomes.includes("no_username") ? "no_username" :
+            outcomes.includes("wrong_page") ? "wrong_page" : "no_password";
+
+          if (["filled", "username_only", "totp_filled", "totp_unavailable", "no_username"].includes(outcome)) {
+            await recordCredentialUse(id);
+          }
+
+          sendResponse({
+            type: "fillCompleted",
+            app: "PejPass",
+            protocolVersion,
+            domain,
+            id,
+            outcome
+          });
+        } finally {
+          setFillInProgress(tabId, false);
+          if (cachedStatus === "unlocked") scheduleRefreshMatchCount(tabId);
+        }
       })
-      .catch(() => sendResponse({ type: "error", code: "host_unavailable" }));
+      .catch(() => {
+        sendResponse({ type: "error", code: "host_unavailable" });
+        setFillInProgress(tabId, false);
+        if (cachedStatus === "unlocked") scheduleRefreshMatchCount(tabId);
+      });
 
     return true;
   }
-
 
   if (message?.target === "pejpass-state") {
     ensureConnectedQuietly();
@@ -519,6 +572,8 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   if (timer !== undefined) clearTimeout(timer);
   matchRefreshTimers.delete(tabId);
   matchRefreshVersions.delete(tabId);
+  matchCounts.delete(tabId);
+  activeFillCounts.delete(tabId);
 });
 
 chrome.runtime.onInstalled.addListener(() => {
