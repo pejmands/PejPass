@@ -149,7 +149,7 @@ public static partial class SingleInstance
         return fallback;
     }
 
-    private static void RestoreAndFocus(Window target)
+    internal static void RestoreAndFocus(Window target)
     {
         if (!target.IsVisible)
             target.Show();
