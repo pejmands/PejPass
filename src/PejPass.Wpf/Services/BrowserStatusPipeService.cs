@@ -854,27 +854,40 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (entry is null)
             return (null, "credential_not_found");
 
-        bool approved;
-        if (_fillConfirmation is not null)
+        var skipDesktopConfirmation = false;
+        try
         {
-            approved = _fillConfirmation(domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
+            skipDesktopConfirmation = App.Services.GetService<AppSettings>()?.SkipBrowserAutofillConfirmation == true;
         }
-        else
+        catch
         {
-            approved = DialogService.Confirm(
-                $"Allow PejPass to provide the username and password for this site?\n\n" +
-                $"Site: {domain}\nAccount: {Limit(entry.Title, 200)}\nUsername: {Limit(entry.Username, 256)}\n\n" +
-                "Only allow this if you just requested autofill.",
-                "Confirm Browser Autofill",
-                yesText: "Allow",
-                noText: "Deny",
-                bringToFront: true);
+            // If settings are unavailable, keep the safer confirmation flow.
+        }
+        if (!skipDesktopConfirmation)
+        {
+            bool approved;
+            if (_fillConfirmation is not null)
+            {
+                approved = _fillConfirmation(domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
+            }
+            else
+            {
+                approved = DialogService.Confirm(
+                    $"Allow PejPass to provide the username and password for this site?\n\n" +
+                    $"Site: {domain}\nAccount: {Limit(entry.Title, 200)}\nUsername: {Limit(entry.Username, 256)}\n\n" +
+                    "Only allow this if you just requested autofill.",
+                    "Confirm Browser Autofill",
+                    yesText: "Allow",
+                    noText: "Deny",
+                    bringToFront: true);
+            }
+
+            if (!approved)
+                return (null, "fill_denied");
         }
 
-        if (!approved)
-            return (null, "fill_denied");
-
-        var helloResult = await VerifyBrowserAutofillWithWindowsHelloAsync(domain);
+        var helloResult = await VerifyBrowserAutofillWithWindowsHelloAsync(
+            domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
         if (helloResult != WindowsHelloVerificationResult.Verified)
         {
             var code = helloResult switch
@@ -886,12 +899,12 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             return (null, code);
         }
 
-        // Re-read the credential after both approvals so no stale or expired TOTP code is returned.
+        // Re-read the credential after approval so no stale or expired TOTP code is returned.
         return (FindCredentialForFill(id, domain), null);
     }
 
     private async Task<WindowsHelloVerificationResult> VerifyBrowserAutofillWithWindowsHelloAsync(
-        string domain)
+        string domain, string title, string username)
     {
         if (_fillHelloVerification is not null)
             return await _fillHelloVerification(domain);
@@ -908,7 +921,8 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (owner is null || !await WindowsHelloHelper.IsAvailableAsync())
             return WindowsHelloVerificationResult.Unavailable;
 
-        return await WindowsHelloHelper.VerifyAsync(owner, $"Confirm autofill for {domain}");
+        var message = $"Confirm browser autofill\nSite: {domain}\nAccount: {SanitizePromptText(title)}\nUsername: {SanitizePromptText(username)}";
+        return await WindowsHelloHelper.VerifyAsync(owner, message);
     }
 
     private StatusResponse CreateSaveCredentialResponse(JsonElement root)
@@ -1159,6 +1173,9 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         value ??= string.Empty;
         return value.Length <= maximumLength ? value : value[..maximumLength];
     }
+
+    private static string SanitizePromptText(string value) =>
+        value.Replace('\r', ' ').Replace('\n', ' ').Trim();
 
     private static bool IsHelloReady()
     {
