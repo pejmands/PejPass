@@ -183,6 +183,10 @@ h1 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: .1px; }
 .generated-password { font-family: Consolas, "Courier New", monospace; font-size: 12px; }
 .secondary-button { margin-block-start: 8px; }
 .generator-status { margin-block: 8px 0; color: var(--subtext0); font-size: 12px; line-height: 1.45; }
+.manual-search { margin-block-start: 14px; padding-block-start: 12px; border-block-start: 1px solid var(--surface1); }
+.manual-search .field-label { margin-block-start: 0; }
+#credential-search-query { margin-block-start: 6px; }
+#search-credentials { margin-block-start: 8px; }
 .credential-list { display: grid; gap: 8px; margin-block: 10px 0; padding: 0; list-style: none; }
 .credential-item {
   min-width: 0;

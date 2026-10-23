@@ -9,6 +9,7 @@ const allowedTypes = new Set([
   "lockVault",
   "getVaultStatus",
   "getCredentials",
+  "searchCredentials",
   "fillCredential",
   "saveCredential",
   "copyToClipboard"
@@ -311,6 +312,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
+  if (message?.target === "pejpass-search-credentials") {
+    const { tabId, domain, query } = message;
+    if (!Number.isInteger(tabId) || tabId < 0 ||
+        typeof domain !== "string" || domain.length === 0 || domain.length > 253 ||
+        typeof query !== "string" || query.trim().length < 2 || query.length > 100) {
+      sendResponse({ type: "error", code: "invalid_request" });
+      return false;
+    }
+
+    sendNative({ type: "searchCredentials", domain, query: query.trim() }, 50_000)
+      .then((response) => {
+        if (response?.type === "error") {
+          sendResponse(response);
+          return;
+        }
+        if (response?.type !== "credentialSearchResults" || response.app !== "PejPass" ||
+            response.protocolVersion !== protocolVersion || response.domain !== domain ||
+            !Array.isArray(response.credentials) || response.credentials.length > 25 ||
+            !response.credentials.every((credential) =>
+              credential && typeof credential.id === "string" &&
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(credential.id) &&
+              typeof credential.title === "string" && credential.title.length <= 200 &&
+              typeof credential.username === "string" && credential.username.length <= 256 &&
+              typeof credential.url === "string" && credential.url.length <= 2048)) {
+          sendResponse({ type: "error", code: "invalid_app_response" });
+          return;
+        }
+        sendResponse(response);
+      })
+      .catch(() => sendResponse({ type: "error", code: "host_unavailable" }));
+    return true;
+  }
+
   if (message?.target === "pejpass-fill") {
     const { tabId, domain, id } = message;
     if (!Number.isInteger(tabId) || tabId < 0 ||
@@ -321,7 +355,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     setFillInProgress(tabId, true);
-    sendNative({ type: "fillCredential", domain, id }, 65_000)
+    const allowDomainMismatch = message.allowDomainMismatch === true;
+    sendNative({ type: "fillCredential", domain, id, allowDomainMismatch }, 65_000)
       .then(async (response) => {
         try {
           if (response?.type === "error") {
@@ -404,7 +439,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  const timeoutMs = payload.type === "unlockVault" || payload.type === "unlockWithHello" ? 50_000 :
+  const timeoutMs = payload.type === "unlockVault" || payload.type === "unlockWithHello" || payload.type === "searchCredentials" ? 50_000 :
     payload.type === "fillCredential" ? 65_000 : 6_000;
   sendNative(payload, timeoutMs)
     .then((response) => {

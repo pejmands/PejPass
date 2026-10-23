@@ -7,6 +7,9 @@ const vaultStatus = document.getElementById("vault-status");
 const credentialsStatus = document.getElementById("credentials-status");
 const credentialList = document.getElementById("credential-list");
 const refreshLoginsButton = document.getElementById("refresh-logins");
+const credentialSearchQuery = document.getElementById("credential-search-query");
+const searchCredentialsButton = document.getElementById("search-credentials");
+const credentialSearchStatus = document.getElementById("credential-search-status");
 const inspectLoginButton = document.getElementById("inspect-login");
 const saveFields = document.getElementById("save-fields");
 const tabLogins = document.getElementById("tab-logins");
@@ -421,6 +424,96 @@ async function performCredentialLookup(domain) {
   }
 }
 
+async function searchCredentials() {
+  const query = credentialSearchQuery.value.trim();
+  if (!activeTabId || !activeDomain || query.length < 2 || query.length > 100) {
+    credentialSearchStatus.textContent = "Enter at least 2 characters and open a regular website.";
+    return;
+  }
+
+  const requestedTabId = activeTabId;
+  const requestedDomain = activeDomain;
+  searchCredentialsButton.disabled = true;
+  searchCredentialsButton.textContent = "Searching…";
+  credentialSearchStatus.textContent = "Confirm the search in PejPass desktop.";
+  try {
+    const response = await chrome.runtime.sendMessage({
+      target: "pejpass-search-credentials",
+      tabId: requestedTabId,
+      domain: requestedDomain,
+      query
+    });
+
+    if (activeTabId !== requestedTabId || activeDomain !== requestedDomain) return;
+    if (response?.type === "error") {
+      const messages = {
+        search_denied: "Search was cancelled in PejPass desktop.",
+        vault_locked: "Unlock the PejPass vault before searching.",
+        app_unavailable: "Open PejPass desktop and try again.",
+        invalid_request: "Enter a valid search term (2–100 characters).",
+        lookup_unavailable: "PejPass could not complete the search. Try again.",
+        unsupported_request: "The running PejPass desktop or BrowserHost is outdated. Rebuild and reinstall the latest version.",
+        invalid_app_response: "PejPass returned an incompatible search response. Restart the latest desktop build."
+      };
+      credentialSearchStatus.textContent = messages[response.code] || "Credential search failed.";
+      return;
+    }
+
+    if (response?.type !== "credentialSearchResults" || response.app !== "PejPass" ||
+        response.protocolVersion !== protocolVersion || response.domain !== requestedDomain ||
+        !Array.isArray(response.credentials) || response.credentials.length > 25 ||
+        !response.credentials.every(isValidCredential)) {
+      credentialSearchStatus.textContent = "Credential search returned an invalid response.";
+      return;
+    }
+
+    const results = response.credentials.map((credential) => ({
+      ...credential,
+      allowDomainMismatch: true
+    }));
+    matchingCredentials = results;
+    const fragment = document.createDocumentFragment();
+    for (const credential of results) {
+      const item = document.createElement("li");
+      item.className = "credential-item";
+      const details = document.createElement("div");
+      details.className = "credential-details";
+      const title = document.createElement("p");
+      title.className = "credential-title";
+      title.dir = "auto";
+      title.textContent = credential.title || "Untitled account";
+      const username = document.createElement("p");
+      username.className = "credential-username";
+      username.dir = "auto";
+      username.textContent = credential.username || "No username saved";
+      const url = document.createElement("p");
+      url.className = "credential-username";
+      url.dir = "auto";
+      url.textContent = credential.url || "No website saved";
+      details.append(title, username, url);
+
+      const fillButton = document.createElement("button");
+      fillButton.className = "fill-button credential-fill-button";
+      fillButton.type = "button";
+      fillButton.textContent = "Fill selected account";
+      fillButton.setAttribute("aria-label", `Fill login for ${credential.title || "Untitled account"}`);
+      fillButton.addEventListener("click", () => fillCredential(credential));
+      item.append(details, fillButton);
+      fragment.append(item);
+    }
+    credentialList.replaceChildren(fragment);
+    credentialSearchStatus.textContent = results.length === 0
+      ? "No accounts matched that search."
+      : `${results.length} account${results.length === 1 ? "" : "s"} found. Filling requires desktop confirmation and Windows Hello.`;
+    credentialsStatus.textContent = "Manually searched accounts (domain matching bypassed only for these user-selected results).";
+  } catch {
+    credentialSearchStatus.textContent = "Credential search unavailable. Open PejPass desktop and try again.";
+  } finally {
+    searchCredentialsButton.disabled = false;
+    searchCredentialsButton.textContent = "Search all accounts";
+  }
+}
+
 async function fillCredential(credential) {
   if (!activeTabId || !activeDomain || !isValidCredential(credential)) {
     credentialsStatus.textContent = "The active page is no longer available. Reopen the popup.";
@@ -433,7 +526,8 @@ async function fillCredential(credential) {
       target: "pejpass-fill",
       tabId: activeTabId,
       domain: activeDomain,
-      id: credential.id
+      id: credential.id,
+      allowDomainMismatch: credential.allowDomainMismatch === true
     });
 
     if (response?.type === "error") {
@@ -948,6 +1042,13 @@ saveConfirmation.addEventListener("change", updateSaveReview);saveConfirmation.a
 inspectLoginButton.addEventListener("click", inspectLoginForm);
 saveLoginButton.addEventListener("click", saveLogin);
 refreshLoginsButton.addEventListener("click", refreshLoginView);
+searchCredentialsButton.addEventListener("click", searchCredentials);
+credentialSearchQuery.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    searchCredentials();
+  }
+});
 
 function isValidCredential(credential) {
   return credential !== null && typeof credential === "object" &&

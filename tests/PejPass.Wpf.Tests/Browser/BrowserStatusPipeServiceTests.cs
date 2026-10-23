@@ -223,6 +223,34 @@ public sealed class BrowserStatusPipeServiceTests
     }
 
     [Fact]
+    public async Task SearchCredentials_RequiresUnlockedVault()
+    {
+        using var session = new VaultSession();
+        using var service = new BrowserStatusPipeService(session);
+
+        var response = await service.CreateSearchCredentialResponseAsync(
+            """{"type":"searchCredentials","protocolVersion":1,"domain":"sso.example.com","query":"alice"}""");
+
+        Assert.Equal("error", response.Type);
+        Assert.Equal("vault_locked", response.Code);
+        Assert.Null(response.Credentials);
+    }
+
+    [Fact]
+    public async Task SearchCredentials_RejectsQueriesShorterThanTwoCharacters()
+    {
+        using var session = new VaultSession();
+        using var service = new BrowserStatusPipeService(session);
+
+        var response = await service.CreateSearchCredentialResponseAsync(
+            """{"type":"searchCredentials","protocolVersion":1,"domain":"sso.example.com","query":"a"}""");
+
+        Assert.Equal("error", response.Type);
+        Assert.Equal("invalid_request", response.Code);
+        Assert.Null(response.Credentials);
+    }
+
+    [Fact]
     public void CreateResponse_DoesNotServeFillCredentialSynchronously()
     {
         using var session = new VaultSession();

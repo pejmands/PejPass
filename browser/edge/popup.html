@@ -60,6 +60,12 @@
       <p class="eyebrow" id="credentials-label">MATCHING ACCOUNTS</p>
       <p class="connection-status" id="credentials-status" role="status" aria-live="polite">Waiting for the active site.</p>
       <button class="fill-button secondary-button" id="refresh-logins" type="button">Refresh status &amp; accounts</button>
+      <div class="manual-search">
+        <label class="field-label" for="credential-search-query">Find another account (SSO)</label>
+        <input class="save-input" id="credential-search-query" type="search" maxlength="100" minlength="2" placeholder="Account, username, or website" autocomplete="off">
+        <button class="fill-button secondary-button" id="search-credentials" type="button">Search all accounts</button>
+        <p class="generator-status" id="credential-search-status" role="status" aria-live="polite">Search requires confirmation in PejPass desktop.</p>
+      </div>
       <ul class="credential-list" id="credential-list" role="list" aria-label="Matching accounts"></ul>
     </section>
     </section>
