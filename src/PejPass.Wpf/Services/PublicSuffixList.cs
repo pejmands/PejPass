@@ -53,7 +53,7 @@ internal static class PublicSuffixList
                 continue;
 
             var target = exact;
-            if (line.StartsWith("!"))
+            if (line.StartsWith('!'))
             {
                 target = exceptions;
                 line = line[1..];
