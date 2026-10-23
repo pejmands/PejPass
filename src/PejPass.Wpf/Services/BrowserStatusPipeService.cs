@@ -504,6 +504,11 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (app is null)
             return Error("app_unavailable");
 
+        using var saveLease = await _vaultSession.AcquireSaveLeaseAsync(
+            generation, vault, cancellationToken).ConfigureAwait(false);
+        if (saveLease is null)
+            return Error("vault_locked");
+
         var prepared = await app.Dispatcher.InvokeAsync(() =>
         {
             if (!_vaultSession.IsCurrent(generation, vault) || _vaultSession.HasExternalChanges())
@@ -569,7 +574,8 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 savedId = entry.Id;
             }
 
-            return new SavePreparation(snapshot, resultType, savedId, vault, null);
+            var saveSnapshot = vault.CreateSnapshot();
+            return new SavePreparation(snapshot, resultType, savedId, vault, null, saveSnapshot);
         }, System.Windows.Threading.DispatcherPriority.Send, cancellationToken).Task.ConfigureAwait(false);
 
         if (prepared.Error is not null)
@@ -580,20 +586,23 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
         try
         {
-            using var saveLease = await _vaultSession.AcquireSaveLeaseAsync(
-                generation, vault, cancellationToken).ConfigureAwait(false);
-            if (saveLease is null)
-                return Error("vault_locked");
-
             using var keyMaterial = _vaultSession.CopyKeyMaterial();
-            await _vaultService.SaveVaultAsync(path, keyMaterial, vault, cancellationToken).ConfigureAwait(false);
+            await _vaultService.SaveVaultAsync(
+                path, keyMaterial, prepared.SaveSnapshot!, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
             await app.Dispatcher.InvokeAsync(() =>
             {
                 if (_vaultSession.IsCurrent(generation, vault) && prepared.Snapshot is not null)
+                {
                     vault.RestoreSnapshot(prepared.Snapshot);
+                    if (app.MainWindow is MainWindow
+                        { DataContext: MainViewModel viewModel })
+                    {
+                        viewModel.RefreshEntriesFromVault();
+                    }
+                }
             }, System.Windows.Threading.DispatcherPriority.Send, CancellationToken.None).Task.ConfigureAwait(false);
             return Error("save_unavailable");
         }
@@ -634,7 +643,8 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         string? Result,
         Guid Id,
         Vault? Vault,
-        string? Error);
+        string? Error,
+        Vault? SaveSnapshot = null);
 
     internal StatusResponse CreateResponse(string? line)
     {
