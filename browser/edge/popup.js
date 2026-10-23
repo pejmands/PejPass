@@ -291,7 +291,7 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
         );
       } else {
         setConnectionStatus(false, "Connection error");
-        showStatusError("Couldn’t check vault status.", response?.code || "The desktop returned an invalid or incompatible response.");
+        showStatusError("Couldn’t check vault status.", response?.message || response?.code || "The desktop returned an invalid or incompatible response.");
       }
     }
     return response?.code === "app_unavailable" ? "unavailable" : "unknown";
