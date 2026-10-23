@@ -160,7 +160,7 @@ public sealed class BrowserStatusPipeServiceTests
     [Theory]
     [InlineData("com", null)]
     [InlineData("ck", null)]
-    [InlineData("kawasaki.jp", null)]
+    [InlineData("b.ck", null)]
     public void GetRegistrableDomain_ReturnsNullForPublicSuffixes(string host, string? expected)
     {
         Assert.Equal(expected, BrowserStatusPipeService.GetRegistrableDomain(host));
