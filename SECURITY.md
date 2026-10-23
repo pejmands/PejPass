@@ -14,9 +14,6 @@ Master-password unlock attempts initiated through the browser are rate-limited i
 
 ## Legacy vault migration backups
 
-
-## Legacy vault migration backups
-
 Migrating a v1 or v2 vault may leave a full `.v1.bak` or `.v2.bak` copy encrypted with the old master password; changing the vault password does not re-encrypt these files, so PejPass offers to remove them after a successful password change, but file deletion does not guarantee secure erasure from the underlying storage.
 
 ## Favicon cache privacy
