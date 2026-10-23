@@ -433,6 +433,14 @@ public sealed class BrowserStatusPipeServiceTests
         Assert.Equal(expected, BrowserStatusPipeService.SanitizeCredentialUrl(input));
     }
 
+    [Theory]
+    [InlineData("https://example.com/login/step2?token=secret", "https://example.com")]
+    [InlineData("http://example.com:8080/account/login", "http://example.com:8080")]
+    public void GetCredentialOrigin_RemovesPathQueryAndFragment(string input, string expected)
+    {
+        Assert.Equal(expected, BrowserStatusPipeService.GetCredentialOrigin(input));
+    }
+
     [Fact]
     public async Task ReadBoundedLineAsync_RejectsOversizedMessage()
     {
