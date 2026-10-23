@@ -307,11 +307,25 @@ internal static class Program
 
     private static string? GetConfiguredDesktopAppPath()
     {
-        var manifestPath = Path.Combine(AppContext.BaseDirectory, "com.pejpass.browserhost.json");
+        var hostDirectory = AppContext.BaseDirectory;
+        var configPath = Path.Combine(hostDirectory, "pejpass-host-config.json");
+        var manifestPath = Path.Combine(hostDirectory, "com.pejpass.browserhost.json");
 
+        // Firefox requires a standards-compliant native messaging manifest, so its
+        // desktop launch path is stored in a separate host configuration file.
+        var configuredPath = TryReadDesktopAppPath(configPath);
+        if (configuredPath is not null)
+            return configuredPath;
+
+        // Keep compatibility with the Chromium host manifest used by Edge.
+        return TryReadDesktopAppPath(manifestPath);
+    }
+
+    private static string? TryReadDesktopAppPath(string path)
+    {
         try
         {
-            using var document = JsonDocument.Parse(File.ReadAllText(manifestPath));
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
             var root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object ||
                 !TryGetBoundedString(root, "desktopAppPath", 32767, out var appPath) ||
@@ -319,7 +333,8 @@ internal static class Program
                 !Path.IsPathFullyQualified(appPath))
                 return null;
 
-            return Path.GetFullPath(appPath);
+            var fullPath = Path.GetFullPath(appPath);
+            return File.Exists(fullPath) ? fullPath : null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException
             or ArgumentException or NotSupportedException or System.Security.SecurityException)
