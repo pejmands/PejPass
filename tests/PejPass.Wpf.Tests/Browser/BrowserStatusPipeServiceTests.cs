@@ -20,6 +20,20 @@ public sealed class BrowserStatusPipeServiceTests
         Assert.Equal(1, response.ProtocolVersion);
         Assert.Equal("locked", response.Status);
         Assert.Null(response.Code);
+        Assert.False(response.HelloReady);
+    }
+
+    [Fact]
+    public async Task UnlockWithHello_ReturnsNotReadyWhenNoSessionCacheExists()
+    {
+        using var session = new VaultSession();
+        using var service = new BrowserStatusPipeService(session);
+
+        var response = await service.CreateUnlockWithHelloResponseAsync(
+            """{"type":"unlockWithHello","protocolVersion":1}""");
+
+        Assert.Equal("error", response.Type);
+        Assert.Equal("hello_not_ready", response.Code);
     }
 
     [Fact]
