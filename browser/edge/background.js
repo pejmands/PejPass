@@ -19,6 +19,8 @@ let nextRequestId = 1;
 let cachedStatus = "unknown";
 const pending = new Map();
 const matchRefreshVersions = new Map();
+const matchRefreshTimers = new Map();
+const matchRefreshDebounceMs = 300;
 
 const toolbarIconCache = new Map();
 
@@ -70,7 +72,7 @@ function applyStatus(status) {
   } else {
     void chrome.tabs.query({ active: true }).then((tabs) => {
       for (const tab of tabs) {
-        if (Number.isInteger(tab.id)) void refreshMatchCount(tab.id);
+        if (Number.isInteger(tab.id)) scheduleRefreshMatchCount(tab.id);
       }
     }).catch(() => {});
   }
@@ -113,6 +115,18 @@ function clearMatchBadge(tabId) {
   setMatchBadge(tabId, 0);
 }
 
+function scheduleRefreshMatchCount(tabId) {
+  if (!Number.isInteger(tabId) || tabId < 0) return;
+  const existingTimer = matchRefreshTimers.get(tabId);
+  if (existingTimer !== undefined) clearTimeout(existingTimer);
+
+  const timer = setTimeout(() => {
+    matchRefreshTimers.delete(tabId);
+    void refreshMatchCount(tabId);
+  }, matchRefreshDebounceMs);
+  matchRefreshTimers.set(tabId, timer);
+}
+
 async function refreshMatchCount(tabId) {
   if (!Number.isInteger(tabId) || tabId < 0) return;
   const version = (matchRefreshVersions.get(tabId) || 0) + 1;
@@ -134,16 +148,7 @@ async function refreshMatchCount(tabId) {
     const domain = url.hostname.toLowerCase().replace(/\.$/, "");
     if (!domain) return;
 
-    const status = await sendNative({ type: "getVaultStatus" }, 6_000);
-    if (matchRefreshVersions.get(tabId) !== version) return;
-    if (status?.type !== "vaultStatus" || status.app !== "PejPass" ||
-        status.protocolVersion !== protocolVersion ||
-        !["locked", "unlocked"].includes(status.status)) {
-      return;
-    }
-
-    applyStatus(status.status);
-    if (status.status !== "unlocked") return;
+    if (cachedStatus !== "unlocked") return;
 
     const response = await sendNative({ type: "getCredentials", domain }, 6_000);
     if (matchRefreshVersions.get(tabId) !== version) return;
@@ -459,23 +464,26 @@ function scheduleReconnectAlarm() {
   chrome.alarms.create(keepAliveAlarm, { periodInMinutes: 0.5 });
 }
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (typeof changeInfo.url === "string") {
     const version = (matchRefreshVersions.get(tabId) || 0) + 1;
     matchRefreshVersions.set(tabId, version);
     clearMatchBadge(tabId);
   }
 
-  if (changeInfo.status === "complete") {
-    void refreshMatchCount(tabId);
+  if (changeInfo.status === "complete" && tab.active) {
+    scheduleRefreshMatchCount(tabId);
   }
 });
 
 chrome.tabs.onActivated.addListener(({ tabId }) => {
-  void refreshMatchCount(tabId);
+  scheduleRefreshMatchCount(tabId);
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
+  const timer = matchRefreshTimers.get(tabId);
+  if (timer !== undefined) clearTimeout(timer);
+  matchRefreshTimers.delete(tabId);
   matchRefreshVersions.delete(tabId);
 });
 
@@ -488,7 +496,7 @@ chrome.runtime.onStartup.addListener(() => {
   scheduleReconnectAlarm();
   ensureConnectedQuietly();
   void chrome.tabs.query({ active: true, lastFocusedWindow: true }).then((tabs) => {
-    for (const tab of tabs) if (Number.isInteger(tab.id)) void refreshMatchCount(tab.id);
+    for (const tab of tabs) if (Number.isInteger(tab.id)) scheduleRefreshMatchCount(tab.id);
   }).catch(() => {});
 });
 
