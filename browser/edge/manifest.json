@@ -2,6 +2,7 @@
   "manifest_version": 3,
   "name": "PejPass",
   "version": "0.5.0",
+  "minimum_chrome_version": "105",
   "description": "A lightweight browser companion for PejPass.",
   "permissions": [
     "activeTab",
@@ -14,10 +15,7 @@
   "action": {
     "default_title": "PejPass",
     "default_popup": "popup.html",
-    "default_icon": {
-      "16": "icons/PejPass16.png",
-      "32": "icons/PejPass48.png"
-    }
+    "default_icon": "icons/PejPassLocked.ico"
   },
   "background": {
     "service_worker": "background.js"
