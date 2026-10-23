@@ -627,7 +627,7 @@ internal static class Program
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(request.Type switch
             {
-                "unlockVault" or "unlockWithHello" => TimeSpan.FromSeconds(45),
+                "unlockVault" or "unlockWithHello" or "searchCredentials" => TimeSpan.FromSeconds(45),
                 "fillCredential" => TimeSpan.FromSeconds(60),
                 "copyToClipboard" => TimeSpan.FromSeconds(3),
                 _ => TimeSpan.FromSeconds(1)
