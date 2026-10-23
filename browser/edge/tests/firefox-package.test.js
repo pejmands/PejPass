@@ -31,7 +31,9 @@ test("Firefox native host registration uses the Gecko ID and a separate output d
   assert.match(installScript, /Software\\Mozilla\\NativeMessagingHosts/);
   assert.match(installScript, /firefoxHostDirectory\s*=\s*Join-Path\s+\$outputDirectory\s+"Firefox"/);
   assert.match(installScript, /pejpass@pejmands\.github\.io/);
-  assert.doesNotMatch(installScript, /desktopAppPath\s*=\s*\$desktopExecutable/);
+  const nativeManifestBlock = installScript.match(/\$manifest\s*=\s*@\{([\s\S]*?)\}\s*\|\s*ConvertTo-Json/);
+  assert.ok(nativeManifestBlock);
+  assert.doesNotMatch(nativeManifestBlock[1], /desktopAppPath/);
   assert.match(installScript, /pejpass-host-config\.json/);
   assert.match(installScript, /desktopAppPath\s*=\s*\$desktopExecutable/);
 });
