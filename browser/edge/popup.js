@@ -227,7 +227,11 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
         };
       } else if (!forceRefresh && cached?.status === "unavailable") {
         setConnectionStatus(false, "Desktop unavailable");
-        response = { type: "error", code: "app_unavailable" };
+        response = {
+          type: "error",
+          code: "app_unavailable",
+          message: typeof cached.nativeHostError === "string" ? cached.nativeHostError : ""
+        };
       }
     } catch {
       // Fall back to the native host if the background state is unavailable.
@@ -280,10 +284,14 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
 
       if (desktopUnavailable) {
         setConnectionStatus(false, "Desktop unavailable");
-        showStatusError("PejPass isn’t running.", "The native messaging host could not reach the PejPass desktop pipe. Check the desktop installation and browser host registration.");
+        showStatusError(
+          "PejPass isn’t running.",
+          response?.message ||
+            "The native messaging host could not reach the PejPass desktop pipe. Check the desktop installation and browser host registration."
+        );
       } else {
         setConnectionStatus(false, "Connection error");
-        showStatusError("Couldn’t check vault status.", response?.code || "The desktop returned an invalid or incompatible response.");
+        showStatusError("Couldn’t check vault status.", response?.message || response?.code || "The desktop returned an invalid or incompatible response.");
       }
     }
     return response?.code === "app_unavailable" ? "unavailable" : "unknown";
