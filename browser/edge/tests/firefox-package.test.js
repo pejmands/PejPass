@@ -16,6 +16,7 @@ test("Firefox manifest declares its stable Gecko ID and supported MV3 background
   assert.deepEqual(manifest.background.scripts, ["browser-api.js", "injected.js", "background.js"]);
   assert.equal(manifest.background.service_worker, undefined);
   assert.ok(manifest.permissions.includes("nativeMessaging"));
+  assert.equal(manifest.desktopAppPath, undefined);
 });
 
 test("Firefox build copies the Edge runtime and removes the worker-only importScripts line", () => {
@@ -30,4 +31,7 @@ test("Firefox native host registration uses the Gecko ID and a separate output d
   assert.match(installScript, /Software\\Mozilla\\NativeMessagingHosts/);
   assert.match(installScript, /firefoxHostDirectory\s*=\s*Join-Path\s+\$outputDirectory\s+"Firefox"/);
   assert.match(installScript, /pejpass@pejmands\.github\.io/);
+  assert.doesNotMatch(installScript, /desktopAppPath\s*=\s*\$desktopExecutable/);
+  assert.match(installScript, /pejpass-host-config\.json/);
+  assert.match(installScript, /desktopAppPath\s*=\s*\$desktopExecutable/);
 });
