@@ -316,7 +316,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const timeoutMs = payload.type === "unlockVault" || payload.type === "unlockWithHello" ? 50_000 :
     payload.type === "fillCredential" ? 65_000 : 6_000;
   sendNative(payload, timeoutMs)
-    .then(sendResponse)
+    .then((response) => {
+      if (payload.type === "getVaultStatus" &&
+          response?.type === "vaultStatus" &&
+          response.app === "PejPass" &&
+          response.protocolVersion === protocolVersion) {
+        applyStatus(response.status);
+      }
+      sendResponse(response);
+    })
     .catch((error) => {
       sendResponse({
         type: "error",
