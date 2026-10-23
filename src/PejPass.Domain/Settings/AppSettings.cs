@@ -32,6 +32,9 @@ public sealed class AppSettings
     /// </summary>
     public bool WindowsHelloEnabled { get; set; } = true;
 
+    /// <summary>When enabled, browser autofill skips the extra desktop confirmation but still requires Windows Hello.</summary>
+    public bool SkipBrowserAutofillConfirmation { get; set; }
+
     /// <summary>Windows Hello cache lifetime in minutes; zero means until the app exits.</summary>
     public int WindowsHelloTimeoutMinutes { get; set; } = 240;
 
