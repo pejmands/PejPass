@@ -127,9 +127,11 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     }
                 }
 
-                var response = IsSaveCredentialRequest(line)
-                    ? await CreateSaveCredentialResponseAsync(line, cancellationToken).ConfigureAwait(false)
-                    : IsUnlockVaultRequest(line)
+                var response = IsSearchCredentialRequest(line)
+                    ? await CreateSearchCredentialResponseAsync(line).ConfigureAwait(false)
+                    : IsSaveCredentialRequest(line)
+                        ? await CreateSaveCredentialResponseAsync(line, cancellationToken).ConfigureAwait(false)
+                        : IsUnlockVaultRequest(line)
                         ? await CreateUnlockVaultResponseAsync(line).ConfigureAwait(false)
                         : IsUnlockWithHelloRequest(line)
                             ? await CreateUnlockWithHelloResponseAsync(line).ConfigureAwait(false)
@@ -264,6 +266,33 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         {
             return false;
         }
+    }
+
+    private static bool IsSearchCredentialRequest(string? line)
+    {
+        if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
+            return false;
+        try
+        {
+            using var document = JsonDocument.Parse(line);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                document.RootElement.TryGetProperty("type", out var type) &&
+                type.ValueKind == JsonValueKind.String &&
+                type.GetString() == "searchCredentials";
+        }
+        catch (JsonException) { return false; }
+    }
+
+    private static bool IsCrossDomainFillRequest(string? line)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(line ?? string.Empty);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                document.RootElement.TryGetProperty("allowDomainMismatch", out var value) &&
+                value.ValueKind == JsonValueKind.True;
+        }
+        catch (JsonException) { return false; }
     }
 
     private static bool IsFillCredentialRequest(string? line)
@@ -664,6 +693,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 "getVaultStatus" => new StatusResponse("vaultStatus", "PejPass", ProtocolVersion,
                     _vaultSession.IsActive ? "unlocked" : "locked", null, HelloReady: IsHelloReady()),
                 "getCredentials" => CreateCredentialResponse(root),
+                "searchCredentials" => Error("async_required"),
                 "fillCredential" => Error("async_required"),
                 "saveCredential" => CreateSaveCredentialResponse(root),
                 "copyToClipboard" => CreateCopyToClipboardResponse(root),
@@ -770,6 +800,68 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         catch (Exception) { return Error("lookup_unavailable"); }
     }
 
+    internal async Task<StatusResponse> CreateSearchCredentialResponseAsync(string? line)
+    {
+        if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
+            return Error("invalid_message");
+
+        string domain;
+        string query;
+        try
+        {
+            using var document = JsonDocument.Parse(line);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("protocolVersion", out var version) ||
+                !version.TryGetInt32(out var protocolVersion) || protocolVersion != ProtocolVersion ||
+                !root.TryGetProperty("domain", out var domainElement) ||
+                domainElement.ValueKind != JsonValueKind.String ||
+                !TryNormalizeDomain(domainElement.GetString(), out domain) ||
+                !TryGetBoundedString(root, "query", 100, out query) ||
+                query.Trim().Length < 2)
+                return Error("invalid_request");
+            query = query.Trim();
+        }
+        catch (JsonException) { return Error("invalid_message"); }
+
+        if (!_vaultSession.IsActive) return Error("vault_locked");
+        var app = System.Windows.Application.Current;
+        if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
+            return Error("app_unavailable");
+
+        try
+        {
+            var approved = await app.Dispatcher.InvokeAsync(() => DialogService.Confirm(
+                $"Search saved accounts across your vault for this text?\n\nSearch: {Limit(query, 100)}\nCurrent site: {domain}\n\nAccount titles, usernames, and website addresses may be shown in the browser extension.",
+                "Confirm Credential Search",
+                yesText: "Search",
+                noText: "Cancel",
+                bringToFront: true), System.Windows.Threading.DispatcherPriority.Send);
+            if (!approved) return Error("search_denied");
+
+            if (!_vaultSession.IsActive || _vaultSession.Vault is not { } vault)
+                return Error("vault_locked");
+
+            var comparison = query.Trim();
+            var matches = vault.Entries
+                .Where(entry =>
+                    (entry.Title?.Contains(comparison, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (entry.Username?.Contains(comparison, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (entry.Url?.Contains(comparison, StringComparison.OrdinalIgnoreCase) ?? false))
+                .OrderByDescending(entry => entry.IsFavorite)
+                .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
+                .Take(MaximumCredentialResults)
+                .Select(entry => new CredentialSummary(
+                    entry.Id.ToString("D"), Limit(entry.Title, 200),
+                    Limit(entry.Username, 256), Limit(entry.Url, 2048)))
+                .ToArray();
+
+            return new StatusResponse("credentialSearchResults", "PejPass", ProtocolVersion,
+                null, null, domain, matches);
+        }
+        catch (Exception) { return Error("lookup_unavailable"); }
+    }
+
     internal async Task<StatusResponse> CreateFillCredentialResponseAsync(string? line)
     {
         if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
@@ -777,6 +869,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
         Guid id;
         string domain;
+        bool allowDomainMismatch;
         try
         {
             using var document = JsonDocument.Parse(line);
@@ -795,6 +888,8 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 idElement.ValueKind != JsonValueKind.String ||
                 !Guid.TryParse(idElement.GetString(), out id))
                 return Error("invalid_request");
+            allowDomainMismatch = root.TryGetProperty("allowDomainMismatch", out var mismatch) &&
+                mismatch.ValueKind == JsonValueKind.True;
         }
         catch (JsonException)
         {
@@ -810,7 +905,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             var app = System.Windows.Application.Current;
             if (_fillConfirmation is not null && _fillHelloVerification is not null)
             {
-                result = await FindAndConfirmCredentialForFillAsync(id, domain).ConfigureAwait(false);
+                result = await FindAndConfirmCredentialForFillAsync(id, domain, allowDomainMismatch).ConfigureAwait(false);
             }
             else
             {
@@ -820,9 +915,9 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
                 Task<(FillCredential? Credential, string? ErrorCode)> operation =
                     app.Dispatcher.CheckAccess()
-                        ? FindAndConfirmCredentialForFillAsync(id, domain)
+                        ? FindAndConfirmCredentialForFillAsync(id, domain, allowDomainMismatch)
                         : app.Dispatcher.InvokeAsync(
-                            () => FindAndConfirmCredentialForFillAsync(id, domain),
+                            () => FindAndConfirmCredentialForFillAsync(id, domain, allowDomainMismatch),
                             System.Windows.Threading.DispatcherPriority.Send)
                             .Task.Unwrap();
 
@@ -845,9 +940,9 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     }
 
     private async Task<(FillCredential? Credential, string? ErrorCode)> FindAndConfirmCredentialForFillAsync(
-        Guid id, string domain)
+        Guid id, string domain, bool allowDomainMismatch = false)
     {
-        var entry = FindEntryForFill(id, domain);
+        var entry = allowDomainMismatch ? FindEntryById(id) : FindEntryForFill(id, domain);
         if (entry is null)
             return (null, "credential_not_found");
 
@@ -897,7 +992,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         }
 
         // Re-read the credential after approval so no stale or expired TOTP code is returned.
-        return (await FindCredentialForFillAsync(id, domain), null);
+        return (await FindCredentialForFillAsync(id, domain, allowDomainMismatch), null);
     }
 
     private async Task<WindowsHelloVerificationResult> VerifyBrowserAutofillWithWindowsHelloAsync(
@@ -1005,14 +1100,19 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
     private VaultEntry? FindEntryForFill(Guid id, string domain)
     {
-        if (!_vaultSession.IsActive || _vaultSession.Vault is not { } vault) return null;
-        var entry = vault.Entries.FirstOrDefault(entry => entry.Id == id);
+        var entry = FindEntryById(id);
         return entry is not null && EntryMatchesDomain(entry, domain) ? entry : null;
     }
 
-    private async Task<FillCredential?> FindCredentialForFillAsync(Guid id, string domain)
+    private VaultEntry? FindEntryById(Guid id)
     {
-        var entry = FindEntryForFill(id, domain);
+        if (!_vaultSession.IsActive || _vaultSession.Vault is not { } vault) return null;
+        return vault.Entries.FirstOrDefault(entry => entry.Id == id);
+    }
+
+    private async Task<FillCredential?> FindCredentialForFillAsync(Guid id, string domain, bool allowDomainMismatch = false)
+    {
+        var entry = allowDomainMismatch ? FindEntryById(id) : FindEntryForFill(id, domain);
         if (entry is null) return null;
 
         var totpCode = string.Empty;
@@ -1025,7 +1125,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             await Task.Delay(TimeSpan.FromSeconds(remainingSeconds));
 
             // Re-read the entry and generate the code again after the wait.
-            entry = FindEntryForFill(id, domain);
+            entry = allowDomainMismatch ? FindEntryById(id) : FindEntryForFill(id, domain);
             if (entry is null) return null;
 
             totpCode = string.Empty;
