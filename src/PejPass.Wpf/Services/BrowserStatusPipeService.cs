@@ -897,7 +897,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         }
 
         // Re-read the credential after approval so no stale or expired TOTP code is returned.
-        return (FindCredentialForFill(id, domain), null);
+        return (await FindCredentialForFillAsync(id, domain), null);
     }
 
     private async Task<WindowsHelloVerificationResult> VerifyBrowserAutofillWithWindowsHelloAsync(
@@ -1010,17 +1010,31 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         return entry is not null && EntryMatchesDomain(entry, domain) ? entry : null;
     }
 
-    private FillCredential? FindCredentialForFill(Guid id, string domain)
+    private async Task<FillCredential?> FindCredentialForFillAsync(Guid id, string domain)
     {
         var entry = FindEntryForFill(id, domain);
         if (entry is null) return null;
 
+        var totpCode = string.Empty;
+        if (!string.IsNullOrWhiteSpace(entry.TotpSecret) &&
+            TotpHelper.TryGetCode(
+                entry.TotpSecret, DateTime.UtcNow, out totpCode, out var remainingSeconds, out _) &&
+            remainingSeconds is > 0 and < 3)
+        {
+            // Avoid returning a code that may expire before the user submits the login form.
+            await Task.Delay(TimeSpan.FromSeconds(remainingSeconds));
+
+            // Re-read the entry and generate the code again after the wait.
+            entry = FindEntryForFill(id, domain);
+            if (entry is null) return null;
+
+            totpCode = string.Empty;
+            if (!string.IsNullOrWhiteSpace(entry.TotpSecret))
+                TotpHelper.TryGetCode(entry.TotpSecret, out totpCode, out _);
+        }
+
         var password = entry.Password ?? string.Empty;
         if (password.Length > MaximumPasswordLength) return null;
-
-        var totpCode = string.Empty;
-        if (!string.IsNullOrWhiteSpace(entry.TotpSecret))
-            TotpHelper.TryGetCode(entry.TotpSecret, out totpCode, out _);
 
         return new FillCredential(entry.Username ?? string.Empty, password, totpCode);
     }
