@@ -321,7 +321,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return false;
     }
 
-    sendNative({ type: "searchCredentials", domain, query: query.trim() }, 15_000)
+    sendNative({ type: "searchCredentials", domain, query: query.trim() }, 50_000)
       .then((response) => {
         if (response?.type === "error") {
           sendResponse(response);
@@ -439,7 +439,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  const timeoutMs = payload.type === "unlockVault" || payload.type === "unlockWithHello" ? 50_000 :
+  const timeoutMs = payload.type === "unlockVault" || payload.type === "unlockWithHello" || payload.type === "searchCredentials" ? 50_000 :
     payload.type === "fillCredential" ? 65_000 : 6_000;
   sendNative(payload, timeoutMs)
     .then((response) => {
