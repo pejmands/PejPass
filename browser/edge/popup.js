@@ -274,7 +274,7 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
     if (!quiet) {
       const desktopUnavailable = response?.code === "app_unavailable";
       unlockControls.hidden = !desktopUnavailable;
-      unlockButton.textContent = desktopUnavailable ? "Launch & unlock" : "Unlock vault";
+      unlockButton.textContent = "Unlock vault";
       unlockHelloButton.hidden = true;
       lockVaultButton.hidden = true;
 
@@ -295,7 +295,7 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
     setConnectionStatus(false, "Desktop unavailable");
     if (!quiet) {
       unlockControls.hidden = false;
-      unlockButton.textContent = "Launch & unlock";
+      unlockButton.textContent = "Unlock vault";
       unlockHelloButton.hidden = true;
       lockVaultButton.hidden = true;
       showStatusError("Couldn’t connect to PejPass.", error instanceof Error ? error.message : "The browser host could not be reached.");
@@ -1318,10 +1318,7 @@ async function unlockVault() {
   }
 
   unlockButton.disabled = true;
-  launchAppButton.disabled = true;
-  unlockStatus.textContent = unlockButton.textContent === "Launch & unlock"
-    ? "Starting PejPass and verifying your password…"
-    : "Verifying master password in PejPass…";
+  unlockStatus.textContent = "Verifying master password in PejPass…";
   try {
     const response = await sendNativeMessage({
       type: "unlockVault",
@@ -1343,14 +1340,14 @@ async function unlockVault() {
 
     const messages = {
       unlock_failed: "The master password was not accepted, or no existing vault is selected in PejPass.",
-      app_unavailable: "Could not start PejPass. Check the desktop build and browser host installation.",
+      app_unavailable: "Open PejPass desktop and try again.",
       invalid_request: "The password could not be sent. Try again.",
       unsupported_request: "The installed browser host or desktop app is outdated. Rebuild and reinstall the latest version."
     };
     if (response?.code !== "app_unavailable") unlockButton.textContent = "Unlock vault";
     showUnlockError(
       response?.code === "unlock_failed" ? "Password not accepted." :
-        response?.code === "app_unavailable" ? "Couldn’t start PejPass." :
+        response?.code === "app_unavailable" ? "PejPass desktop isn’t running." :
         "Couldn’t unlock the vault.",
       messages[response?.code] || response?.code || "The desktop connection failed or returned an incompatible response."
     );
@@ -1359,8 +1356,7 @@ async function unlockVault() {
   } finally {
     unlockPassword.value = "";
     unlockButton.disabled = unlockCoolingDown;
-    if (!unlockCoolingDown && unlockButton.textContent !== "Launch & unlock") unlockButton.textContent = "Unlock vault";
-    launchAppButton.disabled = false;
+    if (!unlockCoolingDown) unlockButton.textContent = "Unlock vault";
   }
 }
 
@@ -1408,7 +1404,6 @@ lockVaultButton.addEventListener("click", lockVault);
 unlockPassword.addEventListener("keydown", (event) => {
   if (event.key === "Enter") unlockVault();
 });
-launchAppButton.addEventListener("click", launchDesktopApp);
 
 const viewTabs = Array.from(document.querySelectorAll(".view-tab"));
 
