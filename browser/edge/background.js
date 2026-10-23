@@ -95,6 +95,21 @@ function onNativeMessage(message) {
 
   if (message?.type === "vaultStateChanged") {
     applyStatus(message.status);
+
+    if (message.status === "locked" || message.status === "unlocked") {
+      void sendNative({ type: "getVaultStatus", protocolVersion }, 6000)
+        .then((response) => {
+          if (response?.type === "vaultStatus" &&
+              response.app === "PejPass" &&
+              response.protocolVersion === protocolVersion &&
+              (response.status === "locked" || response.status === "unlocked")) {
+            applyStatus(response.status, response.helloReady === true);
+          }
+        })
+        .catch(() => {
+          // Keep the last known readiness if a transient refresh fails.
+        });
+    }
     return;
   }
 
