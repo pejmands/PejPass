@@ -165,9 +165,14 @@ public partial class LoginWindow : Window
     {
         if (mainWindowState == WindowState.Minimized)
         {
-            _preserveMinimizedStateOnNextChange = true;
             Show();
-            WindowState = WindowState.Minimized;
+
+            if (WindowState != WindowState.Minimized)
+            {
+                _preserveMinimizedStateOnNextChange = true;
+                WindowState = WindowState.Minimized;
+            }
+
             return;
         }
 
