@@ -491,6 +491,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (!_vaultSession.IsActive || _vaultSession.Vault is not { } vault ||
             string.IsNullOrWhiteSpace(_vaultSession.VaultPath))
             return Error("vault_locked");
+        var credentialOrigin = GetCredentialOrigin(url);
         if (_vaultSession.HasExternalChanges())
             return Error("vault_changed");
 
@@ -538,7 +539,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     Title = string.IsNullOrWhiteSpace(title) ? existing.Title : title,
                     Username = username,
                     Password = password,
-                    Url = url,
+                    Url = string.IsNullOrWhiteSpace(existing.Url) ? credentialOrigin : existing.Url,
                     TotpSecret = existing.TotpSecret,
                     Notes = existing.Notes,
                     Tags = [.. existing.Tags],
@@ -552,7 +553,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 if (!vault.UpdateEntry(updated))
                 {
                     if (string.Equals(existing.Password, password, StringComparison.Ordinal) &&
-                        string.Equals(existing.Url, url, StringComparison.Ordinal))
+                        string.Equals(existing.Url, updated.Url, StringComparison.Ordinal))
                         return new SavePreparation(null, null, existing.Id, null, "unchanged");
                     return new SavePreparation(null, null, Guid.Empty, null, "save_unavailable");
                 }
@@ -567,7 +568,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     Title = string.IsNullOrWhiteSpace(title) ? domain : title,
                     Username = username,
                     Password = password,
-                    Url = url
+                    Url = credentialOrigin
                 };
                 vault.AddEntry(entry);
                 resultType = "created";
@@ -950,6 +951,15 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
         var builder = new UriBuilder(uri) { Query = string.Empty, Fragment = string.Empty };
         return builder.Uri.AbsoluteUri;
+    }
+
+    internal static string GetCredentialOrigin(string value)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            throw new ArgumentException("A valid HTTP or HTTPS URL is required.", nameof(value));
+
+        return uri.GetLeftPart(UriPartial.Authority);
     }
 
     private void NotifyBrowserActivity()
