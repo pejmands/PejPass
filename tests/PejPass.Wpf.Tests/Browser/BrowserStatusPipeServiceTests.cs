@@ -146,6 +146,27 @@ public sealed class BrowserStatusPipeServiceTests
     }
 
     [Theory]
+    [InlineData("example.com", "example.com")]
+    [InlineData("a.b.ck", "a.b.ck")]
+    [InlineData("www.ck", "www.ck")]
+    [InlineData("login.www.ck", "www.ck")]
+    [InlineData("a.city.kawasaki.jp", "city.kawasaki.jp")]
+    [InlineData("city.kawasaki.jp", "city.kawasaki.jp")]
+    public void GetRegistrableDomain_UsesOfficialPublicSuffixRules(string host, string expected)
+    {
+        Assert.Equal(expected, BrowserStatusPipeService.GetRegistrableDomain(host));
+    }
+
+    [Theory]
+    [InlineData("com", null)]
+    [InlineData("ck", null)]
+    [InlineData("kawasaki.jp", null)]
+    public void GetRegistrableDomain_ReturnsNullForPublicSuffixes(string host, string? expected)
+    {
+        Assert.Equal(expected, BrowserStatusPipeService.GetRegistrableDomain(host));
+    }
+
+    [Theory]
     [InlineData("github.io", null)]
     [InlineData("blogspot.com", null)]
     [InlineData("alice.github.io", "alice.github.io")]
