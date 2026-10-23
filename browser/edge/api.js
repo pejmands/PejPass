@@ -1,7 +1,7 @@
 const protocolVersion = 1;
 
 function sendNativeMessage(message) {
-  return chrome.runtime
+  return globalThis.pejpassBrowserApi.runtime
     .sendMessage({ target: "pejpass-native", payload: message })
     .then((response) => {
       if (!response || (response.type === "error" && response.code === "host_unavailable")) {

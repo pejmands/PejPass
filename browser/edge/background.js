@@ -1,4 +1,4 @@
-importScripts("injected.js");
+importScripts("browser-api.js", "injected.js");
 
 const nativeHostName = "com.pejpass.browserhost";
 const protocolVersion = 1;
@@ -34,7 +34,7 @@ const toolbarIconCache = new Map();
 async function loadToolbarIcon(imagePath) {
   if (toolbarIconCache.has(imagePath)) return toolbarIconCache.get(imagePath);
 
-  const response = await fetch(chrome.runtime.getURL(imagePath));
+  const response = await fetch(globalThis.pejpassBrowserApi.runtime.getURL(imagePath));
   if (!response.ok) throw new Error("Unable to load toolbar icon.");
   const image = await createImageBitmap(await response.blob());
 
@@ -58,7 +58,7 @@ async function setToolbarVaultIcon(unlocked) {
     const imageData = await loadToolbarIcon(
       unlocked ? "icons/PejPass.ico" : "icons/PejPassLocked.ico"
     );
-    await chrome.action.setIcon({ imageData });
+    await globalThis.pejpassBrowserApi.action.setIcon({ imageData });
   } catch {
     // The browser may be shutting down.
   }
@@ -75,20 +75,20 @@ function applyStatus(status, helloReady = cachedHelloReady) {
   if (statusChanged) {
     void setToolbarVaultIcon(status === "unlocked");
     if (status !== "unlocked") {
-      void chrome.tabs.query({}).then((tabs) => {
+      void globalThis.pejpassBrowserApi.tabs.query({}).then((tabs) => {
         for (const tab of tabs) {
           if (Number.isInteger(tab.id)) clearMatchBadge(tab.id);
         }
       }).catch(() => {});
     } else {
-      void chrome.tabs.query({ active: true }).then((tabs) => {
+      void globalThis.pejpassBrowserApi.tabs.query({ active: true }).then((tabs) => {
         for (const tab of tabs) {
           if (Number.isInteger(tab.id)) scheduleRefreshMatchCount(tab.id);
         }
       }).catch(() => {});
     }
   }
-  void chrome.runtime.sendMessage({
+  void globalThis.pejpassBrowserApi.runtime.sendMessage({
     type: "vaultStateChanged",
     status,
     helloReady: cachedHelloReady
@@ -133,17 +133,17 @@ function onNativeMessage(message) {
 
 function renderMatchBadge(tabId) {
   if ((activeFillCounts.get(tabId) || 0) > 0) {
-    void chrome.action.setBadgeText({ text: "…", tabId }).catch(() => {});
-    void chrome.action.setBadgeBackgroundColor({ color: "#8caaee", tabId }).catch(() => {});
-    void chrome.action.setTitle({ title: "PejPass — Filling credentials…", tabId }).catch(() => {});
+    void globalThis.pejpassBrowserApi.action.setBadgeText({ text: "…", tabId }).catch(() => {});
+    void globalThis.pejpassBrowserApi.action.setBadgeBackgroundColor({ color: "#8caaee", tabId }).catch(() => {});
+    void globalThis.pejpassBrowserApi.action.setTitle({ title: "PejPass — Filling credentials…", tabId }).catch(() => {});
     return;
   }
 
   const count = matchCounts.get(tabId) || 0;
   const text = count === 0 ? "" : count === 25 ? "25+" : String(count);
-  void chrome.action.setBadgeText({ text, tabId }).catch(() => {});
-  void chrome.action.setBadgeBackgroundColor({ color: "#8caaee", tabId }).catch(() => {});
-  void chrome.action.setTitle({
+  void globalThis.pejpassBrowserApi.action.setBadgeText({ text, tabId }).catch(() => {});
+  void globalThis.pejpassBrowserApi.action.setBadgeBackgroundColor({ color: "#8caaee", tabId }).catch(() => {});
+  void globalThis.pejpassBrowserApi.action.setTitle({
     title: count === 0 ? "PejPass" : `PejPass — ${count === 25 ? "25+" : count} matching account${count === 1 ? "" : "s"}`,
     tabId
   }).catch(() => {});
@@ -189,7 +189,7 @@ async function refreshMatchCount(tabId) {
   clearMatchBadge(tabId);
 
   try {
-    const tab = await chrome.tabs.get(tabId);
+    const tab = await globalThis.pejpassBrowserApi.tabs.get(tabId);
     if (matchRefreshVersions.get(tabId) !== version || typeof tab.url !== "string") return;
 
     let url;
@@ -213,7 +213,7 @@ async function refreshMatchCount(tabId) {
       return;
     }
 
-    const currentTab = await chrome.tabs.get(tabId);
+    const currentTab = await globalThis.pejpassBrowserApi.tabs.get(tabId);
     if (matchRefreshVersions.get(tabId) !== version || typeof currentTab.url !== "string") return;
     const currentUrl = new URL(currentTab.url);
     if ((currentUrl.protocol !== "http:" && currentUrl.protocol !== "https:") ||
@@ -227,7 +227,7 @@ async function refreshMatchCount(tabId) {
 
 async function recordCredentialUse(credentialId) {
   try {
-    const stored = await chrome.storage.local.get("lastUsedByCredential");
+    const stored = await globalThis.pejpassBrowserApi.storage.local.get("lastUsedByCredential");
     const history = stored?.lastUsedByCredential && typeof stored.lastUsedByCredential === "object"
       ? stored.lastUsedByCredential
       : {};
@@ -238,7 +238,7 @@ async function recordCredentialUse(credentialId) {
         .sort((left, right) => Number(right[1]) - Number(left[1]))
         .slice(0, 500)
     );
-    await chrome.storage.local.set({ lastUsedByCredential: boundedHistory });
+    await globalThis.pejpassBrowserApi.storage.local.set({ lastUsedByCredential: boundedHistory });
   } catch {
     // Filling should not fail if the browser cannot persist usage metadata.
   }
@@ -249,7 +249,7 @@ function ensurePort() {
 
   let connectedPort;
   try {
-    connectedPort = chrome.runtime.connectNative(nativeHostName);
+    connectedPort = globalThis.pejpassBrowserApi.runtime.connectNative(nativeHostName);
   } catch (error) {
     nativeHostError = String(error?.message || error || "Native messaging host connection failed.");
     applyStatus("unavailable");
@@ -260,7 +260,7 @@ function ensurePort() {
 
   connectedPort.onMessage.addListener(onNativeMessage);
   connectedPort.onDisconnect.addListener(() => {
-    const reason = chrome.runtime.lastError?.message || "Native host disconnected.";
+    const reason = globalThis.pejpassBrowserApi.runtime.lastError?.message || "Native host disconnected.";
     nativeHostError = reason;
     if (port === connectedPort) port = null;
 
@@ -304,8 +304,8 @@ function sendNative(payload, timeoutMs) {
   });
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (sender.id !== chrome.runtime.id) return false;
+globalThis.pejpassBrowserApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (sender.id !== globalThis.pejpassBrowserApi.runtime.id) return false;
 
   if (message?.target === "pejpass-match-count") {
     const { tabId, count } = message;
@@ -386,7 +386,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
           let results;
           try {
-            results = await chrome.scripting.executeScript({
+            results = await globalThis.pejpassBrowserApi.scripting.executeScript({
               target: { tabId, allFrames: true },
               func: processLoginForm,
               args: ["fill", domain, response.username, response.password, response.totpCode || ""]
@@ -481,10 +481,10 @@ function ensureConnectedQuietly() {
 }
 
 function scheduleReconnectAlarm() {
-  chrome.alarms.create(keepAliveAlarm, { periodInMinutes: 0.5 });
+  globalThis.pejpassBrowserApi.alarms.create(keepAliveAlarm, { periodInMinutes: 0.5 });
 }
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+globalThis.pejpassBrowserApi.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (typeof changeInfo.url === "string") {
     const version = (matchRefreshVersions.get(tabId) || 0) + 1;
     matchRefreshVersions.set(tabId, version);
@@ -496,11 +496,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
-chrome.tabs.onActivated.addListener(({ tabId }) => {
+globalThis.pejpassBrowserApi.tabs.onActivated.addListener(({ tabId }) => {
   scheduleRefreshMatchCount(tabId);
 });
 
-chrome.tabs.onRemoved.addListener((tabId) => {
+globalThis.pejpassBrowserApi.tabs.onRemoved.addListener((tabId) => {
   const timer = matchRefreshTimers.get(tabId);
   if (timer !== undefined) clearTimeout(timer);
   matchRefreshTimers.delete(tabId);
@@ -509,20 +509,20 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   activeFillCounts.delete(tabId);
 });
 
-chrome.runtime.onInstalled.addListener(() => {
+globalThis.pejpassBrowserApi.runtime.onInstalled.addListener(() => {
   scheduleReconnectAlarm();
   ensureConnectedQuietly();
 });
 
-chrome.runtime.onStartup.addListener(() => {
+globalThis.pejpassBrowserApi.runtime.onStartup.addListener(() => {
   scheduleReconnectAlarm();
   ensureConnectedQuietly();
-  void chrome.tabs.query({ active: true, lastFocusedWindow: true }).then((tabs) => {
+  void globalThis.pejpassBrowserApi.tabs.query({ active: true, lastFocusedWindow: true }).then((tabs) => {
     for (const tab of tabs) if (Number.isInteger(tab.id)) scheduleRefreshMatchCount(tab.id);
   }).catch(() => {});
 });
 
-chrome.alarms.onAlarm.addListener((alarm) => {
+globalThis.pejpassBrowserApi.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === keepAliveAlarm) ensureConnectedQuietly();
 });
 

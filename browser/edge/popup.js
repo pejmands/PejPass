@@ -67,7 +67,7 @@ const viewPanels = {
 let activeTabId = null;
 let activeDomain = null;
 
-version.textContent = chrome.runtime.getManifest().version;
+version.textContent = globalThis.pejpassBrowserApi.runtime.getManifest().version;
 
 function setConnectionStatus(connected, message) {
   connectionStatus.textContent = message;
@@ -102,7 +102,7 @@ function clearUnlockError() {
 function updateMatchBadge(count, tabId = activeTabId) {
   if (!Number.isInteger(tabId) || tabId < 0) return;
   const safeCount = Number.isInteger(count) ? Math.max(0, Math.min(count, 25)) : 0;
-  void chrome.runtime.sendMessage({
+  void globalThis.pejpassBrowserApi.runtime.sendMessage({
     target: "pejpass-match-count",
     tabId,
     count: safeCount
@@ -136,7 +136,7 @@ async function probeSaveCandidate() {
   if (!activeTabId || !activeDomain) return;
 
   try {
-    const results = await chrome.scripting.executeScript({
+    const results = await globalThis.pejpassBrowserApi.scripting.executeScript({
       target: { tabId: activeTabId, allFrames: true },
       func: processLoginForm,
       args: ["probe", activeDomain]
@@ -155,7 +155,7 @@ async function probeSaveCandidate() {
 
 async function showActiveSite() {
   try {
-    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    const tabs = await globalThis.pejpassBrowserApi.tabs.query({ active: true, lastFocusedWindow: true });
     const tab = tabs[0];
     if (!tab || typeof tab.url !== "string" || !Number.isInteger(tab.id)) {
       showUnavailable("The active tab address is not available."); return;
@@ -212,7 +212,7 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
   try {
     let response;
     try {
-      const cached = await chrome.runtime.sendMessage({ target: "pejpass-state" });
+      const cached = await globalThis.pejpassBrowserApi.runtime.sendMessage({ target: "pejpass-state" });
       if (!forceRefresh &&
           (cached?.status === "locked" || cached?.status === "unlocked") &&
           typeof cached.helloReady === "boolean") {
@@ -359,7 +359,7 @@ async function performCredentialLookup(domain) {
 
     let activeFaviconUrl = "";
     try {
-      const activeTab = Number.isInteger(activeTabId) ? await chrome.tabs.get(activeTabId) : null;
+      const activeTab = Number.isInteger(activeTabId) ? await globalThis.pejpassBrowserApi.tabs.get(activeTabId) : null;
       if (stale()) return;
       if (typeof activeTab?.favIconUrl === "string" && activeTab.favIconUrl.length <= 4096) {
         activeFaviconUrl = activeTab.favIconUrl;
@@ -433,7 +433,7 @@ async function searchCredentials() {
   searchCredentialsButton.textContent = "Searching…";
   credentialSearchStatus.textContent = "Confirm the search in PejPass desktop.";
   try {
-    const response = await chrome.runtime.sendMessage({
+    const response = await globalThis.pejpassBrowserApi.runtime.sendMessage({
       target: "pejpass-search-credentials",
       tabId: requestedTabId,
       domain: requestedDomain,
@@ -518,7 +518,7 @@ async function fillCredential(credential) {
 
   credentialsStatus.textContent = "Retrieving credentials from PejPass…";
   try {
-    const response = await chrome.runtime.sendMessage({
+    const response = await globalThis.pejpassBrowserApi.runtime.sendMessage({
       target: "pejpass-fill",
       tabId: activeTabId,
       domain: activeDomain,
@@ -600,7 +600,7 @@ async function inspectLoginForm() {
     saveStatus.textContent = "Reading visible login fields…";
     const tabId = activeTabId;
     const domain = activeDomain;
-    const results = await chrome.scripting.executeScript({
+    const results = await globalThis.pejpassBrowserApi.scripting.executeScript({
       target: { tabId, allFrames: true },
       func: processLoginForm,
       args: ["read", domain]
@@ -659,7 +659,7 @@ function sanitizePageUrl(value) {
 
 async function currentPageUrl(tabId) {
   try {
-    const tab = await chrome.tabs.get(tabId);
+    const tab = await globalThis.pejpassBrowserApi.tabs.get(tabId);
     return sanitizePageUrl(tab.url);
   } catch {
     return "";
@@ -812,7 +812,7 @@ async function saveLogin() {
   saveLoginButton.disabled = true;
   saveStatus.textContent = "Saving to the unlocked PejPass vault…";
   try {
-    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    const tabs = await globalThis.pejpassBrowserApi.tabs.query({ active: true, lastFocusedWindow: true });
     const url = new URL(tabs[0]?.url || "");
     const domain = url.hostname.toLowerCase().replace(/\.$/, "");
     if (tabs[0]?.id !== activeTabId || domain !== activeDomain ||
@@ -948,7 +948,7 @@ function getDomainMatchRank(credential, domain) {
 async function sortMatchingCredentials(credentials, domain) {
   let lastUsedByCredential = {};
   try {
-    const stored = await chrome.storage.local.get("lastUsedByCredential");
+    const stored = await globalThis.pejpassBrowserApi.storage.local.get("lastUsedByCredential");
     if (stored?.lastUsedByCredential && typeof stored.lastUsedByCredential === "object") {
       lastUsedByCredential = stored.lastUsedByCredential;
     }
@@ -1058,7 +1058,7 @@ async function fillGeneratedPassword(password) {
     return { ok: false, message: "Open a normal website tab before generating and filling a password." };
   }
 
-  const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  const tabs = await globalThis.pejpassBrowserApi.tabs.query({ active: true, lastFocusedWindow: true });
   const tab = tabs[0];
   if (!tab || tab.id !== activeTabId || typeof tab.url !== "string") {
     return { ok: false, message: "The active page changed. Reopen the popup and try again." };
@@ -1073,7 +1073,7 @@ async function fillGeneratedPassword(password) {
     return { ok: false, message: "The active page changed. Reopen the popup and try again." };
   }
 
-  const results = await chrome.scripting.executeScript({
+  const results = await globalThis.pejpassBrowserApi.scripting.executeScript({
     target: { tabId: activeTabId, allFrames: true },
     func: fillNewPasswordField,
     args: [activeDomain, password]
@@ -1450,7 +1450,7 @@ setActiveView("logins");
 showActiveSite();
 checkVaultStatus();
 
-chrome.runtime.onMessage.addListener((message) => {
+globalThis.pejpassBrowserApi.runtime.onMessage.addListener((message) => {
   if (message?.type !== "vaultStateChanged") return;
 
   void checkVaultStatus().then((status) => {
