@@ -84,9 +84,14 @@ public partial class LoginWindow : Window
             // Browser unlock can leave the main window hidden so the user can continue in the browser.
             _allowClose = true;
             if (SuppressMainWindowOnUnlock)
-                main.Hide();
+            {
+                if (main.IsVisible)
+                    main.Hide();
+            }
             else
+            {
                 main.Show();
+            }
             Close();
         };
 
