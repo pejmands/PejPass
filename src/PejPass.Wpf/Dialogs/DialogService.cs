@@ -56,7 +56,8 @@ public static class DialogService
     }
 
     public static bool Confirm(string message, string title = "Confirm",
-        string yesText = "Yes", string noText = "Cancel", bool isDestructive = false)
+        string yesText = "Yes", string noText = "Cancel", bool isDestructive = false,
+        bool bringToFront = false)
     {
         var dlg = new AppDialog(
             title, message, AppDialogType.Confirm, yesText, noText,
@@ -64,6 +65,9 @@ public static class DialogService
         {
             Owner = Owner
         };
+        if (bringToFront)
+            dlg.Loaded += (_, _) => SingleInstance.RestoreAndFocus(dlg);
+
         dlg.ShowDialog();
         return dlg.Result == AppDialogResult.Primary;
     }
