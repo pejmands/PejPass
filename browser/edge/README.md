@@ -16,6 +16,19 @@ The extension reads the active HTTP(S) tab hostname and requests matching accoun
 4. Choose the `browser/edge` directory.
 5. Copy the extension ID shown on the extension card.
 
+## Shared browser-independent logic
+
+The login-form detection and filling implementation is maintained in `browser/shared/injected.js`. The `browser/edge/injected.js` file is the packaged copy required by the unpacked Edge extension; edit the shared source, not the packaged copy.
+
+After changing the shared implementation, run these commands from `browser/edge`:
+
+```powershell
+npm run build
+npm test
+```
+
+The build script synchronizes the shared source into the Edge package. The tests exercise the shared implementation and fail if the packaged Edge copy is out of date. When another browser target is added, the build pipeline can synchronize this same source into that package as well.
+
 ## Build and register the local host
 
 From the repository root, run PowerShell with the extension ID copied above:
