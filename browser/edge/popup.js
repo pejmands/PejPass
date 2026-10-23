@@ -1164,17 +1164,17 @@ function fillNewPasswordField(expectedDomain, password) {
   let targets = inputs.filter((input) =>
     (input.autocomplete || "").toLowerCase().split(/\s+/).includes("new-password"));
 
-  if (targets.length === 0) {
-    const hintedTarget = inputs.find((input) =>
-      /new.?password|password.?new|create.?password|register.?password|signup.?password/i.test(hints(input)));
-    if (hintedTarget) targets = [hintedTarget];
-  }
-
   if (targets.length === 0 && inputs.length >= 3) {
     targets = inputs.slice(-2);
   } else if (targets.length === 0 && inputs.length === 2 &&
       inputs[0].form && inputs[0].form === inputs[1].form) {
     targets = isCurrent(inputs[0]) ? [inputs[1]] : inputs;
+  }
+
+  if (targets.length === 0) {
+    const hintedTarget = inputs.find((input) =>
+      /new.?password|password.?new|create.?password|register.?password|signup.?password/i.test(hints(input)));
+    if (hintedTarget) targets = [hintedTarget];
   }
 
   if (targets.length === 0) {
