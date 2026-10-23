@@ -1157,16 +1157,27 @@ function fillNewPasswordField(expectedDomain, password) {
     input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
     input.getAttribute("data-testid")
   ].filter(Boolean).join(" ");
-  let target = inputs.find((input) =>
-    (input.autocomplete || "").toLowerCase().split(/\s+/).includes("new-password")) ||
-    inputs.find((input) => /new.?password|password.?new|create.?password|register.?password|signup.?password/i.test(hints(input)));
+  const isCurrent = (input) =>
+    (input.autocomplete || "").toLowerCase().includes("current-password") ||
+    /current|old|existing/i.test(hints(input));
 
-  if (!target && inputs.length > 1 && inputs[0].form &&
-      inputs.every((input) => input.form === inputs[0].form)) {
-    target = inputs[0];
+  let targets = inputs.filter((input) =>
+    (input.autocomplete || "").toLowerCase().split(/\s+/).includes("new-password"));
+
+  if (targets.length === 0 && inputs.length >= 3) {
+    targets = inputs.slice(-2);
+  } else if (targets.length === 0 && inputs.length === 2 &&
+      inputs[0].form && inputs[0].form === inputs[1].form) {
+    targets = isCurrent(inputs[0]) ? [inputs[1]] : inputs;
   }
 
-  if (!target) {
+  if (targets.length === 0) {
+    const hintedTarget = inputs.find((input) =>
+      /new.?password|password.?new|create.?password|register.?password|signup.?password/i.test(hints(input)));
+    if (hintedTarget) targets = [hintedTarget];
+  }
+
+  if (targets.length === 0) {
     const form = inputs[0].form;
     const submitLabels = Array.from(
       (form || document).querySelectorAll('button, input[type="submit"], input[type="button"]')
@@ -1184,22 +1195,21 @@ function fillNewPasswordField(expectedDomain, password) {
     const looksLikeLogin = /sign.?in|log.?in|forgot password|current password/i.test(pageText);
 
     if (inputs.length === 1 && (registrationSubmit || (looksLikeRegistration && !looksLikeLogin))) {
-      target = inputs[0];
-    } else if (inputs.length > 1 && inputs[0].form &&
-        inputs.every((input) => input.form === inputs[0].form)) {
-      target = inputs[0];
+      targets = [inputs[0]];
     }
   }
 
-  if (!target) return "no_password";
+  if (targets.length === 0) return "no_password";
 
-  target.focus();
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-  if (setter) setter.call(target, password);
-  else target.value = password;
-  target.dispatchEvent(new Event("input", { bubbles: true }));
-  target.dispatchEvent(new Event("change", { bubbles: true }));
-  target.blur();
+  for (const target of targets) {
+    target.focus();
+    if (setter) setter.call(target, password);
+    else target.value = password;
+    target.dispatchEvent(new Event("input", { bubbles: true }));
+    target.dispatchEvent(new Event("change", { bubbles: true }));
+    target.blur();
+  }
   return "filled";
 }
 
