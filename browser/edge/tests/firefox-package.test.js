@@ -28,6 +28,6 @@ test("Firefox build copies the Edge runtime and removes the worker-only importSc
 test("Firefox native host registration uses the Gecko ID and a separate output directory", () => {
   assert.match(installScript, /allowed_extensions\s*=\s*@\(\$extensionId\)/);
   assert.match(installScript, /Software\\Mozilla\\NativeMessagingHosts/);
-  assert.match(installScript, /\\Firefox/);
+  assert.match(installScript, /firefoxHostDirectory\s*=\s*Join-Path\s+\$outputDirectory\s+"Firefox"/);
   assert.match(installScript, /pejpass@pejmands\.github\.io/);
 });
