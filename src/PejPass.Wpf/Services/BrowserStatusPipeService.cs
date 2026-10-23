@@ -336,9 +336,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     loginWindow.Show();
                 loginWindow.Activate();
 
-                return loginWindow.DataContext is LoginViewModel viewModel
-                    ? viewModel.UnlockFromBrowserAsync(masterPassword)
-                    : Task.FromResult(false);
+                return loginWindow.UnlockFromBrowserAsync(masterPassword);
             }, System.Windows.Threading.DispatcherPriority.Send).Task.ConfigureAwait(false);
 
             var unlocked = await unlockTask.ConfigureAwait(false);
