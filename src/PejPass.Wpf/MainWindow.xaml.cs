@@ -70,6 +70,9 @@ public partial class MainWindow : Window
 
         viewModel.RequestLock += (_, e) =>
         {
+            var previousWindowState = WindowState;
+            var wasVisible = IsVisible;
+
             _allowClose = true;
             var login = App.Services.GetRequiredService<LoginWindow>();
             App.PrepareCustomChrome(login);
@@ -79,7 +82,7 @@ public partial class MainWindow : Window
             if (e.ShowLogin)
                 login.Show();
             else
-                login.Hide();
+                login.MatchWindowStateForBrowserLock(wasVisible, previousWindowState);
 
             Close();
         };
