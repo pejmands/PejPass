@@ -44,7 +44,6 @@ const unlockErrorDetails = document.getElementById("unlock-error-details");
 const unlockErrorDetail = document.getElementById("unlock-error-detail");
 const statusDetails = document.getElementById("status-details");
 const statusDetailText = document.getElementById("status-detail-text");
-const launchAppButton = document.getElementById("launch-app");
 const lockVaultButton = document.getElementById("lock-vault");
 const passwordLength = document.getElementById("password-length");
 const generatedPassword = document.getElementById("generated-password");
@@ -249,7 +248,6 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
       unlockControls.hidden = response.status !== "locked";
       unlockButton.textContent = "Unlock vault";
       unlockHelloButton.hidden = response.status !== "locked" || response.helloReady !== true;
-      launchAppButton.hidden = true;
       lockVaultButton.hidden = response.status !== "unlocked";
 
       if (response.status === "locked") {
@@ -276,9 +274,8 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
     if (!quiet) {
       const desktopUnavailable = response?.code === "app_unavailable";
       unlockControls.hidden = !desktopUnavailable;
-      unlockButton.textContent = desktopUnavailable ? "Launch & unlock" : "Unlock vault";
+      unlockButton.textContent = "Unlock vault";
       unlockHelloButton.hidden = true;
-      launchAppButton.hidden = true;
       lockVaultButton.hidden = true;
 
       if (desktopUnavailable) {
@@ -298,9 +295,8 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
     setConnectionStatus(false, "Desktop unavailable");
     if (!quiet) {
       unlockControls.hidden = false;
-      unlockButton.textContent = "Launch & unlock";
+      unlockButton.textContent = "Unlock vault";
       unlockHelloButton.hidden = true;
-      launchAppButton.hidden = true;
       lockVaultButton.hidden = true;
       showStatusError("Couldn’t connect to PejPass.", error instanceof Error ? error.message : "The browser host could not be reached.");
     }
@@ -581,142 +577,6 @@ async function fillCredential(credential) {
   }
 }
 
-function processLoginForm(action, expectedDomain, username = "", password = "", totpCode = "") {
-  const normalizeHost = (host) => host.toLowerCase().replace(/\.$/, "");
-  const currentDomain = normalizeHost(window.location.hostname);
-  let topDomain;
-  try {
-    topDomain = normalizeHost(window.top.location.hostname);
-  } catch {
-    return action === "read" ? { found: false } : "wrong_page";
-  }
-
-  if (topDomain !== expectedDomain ||
-      (currentDomain !== expectedDomain && !currentDomain.endsWith("." + expectedDomain))) {
-    return action === "read" ? { found: false } : "wrong_page";
-  }
-
-  const isVisible = (element) => {
-    const style = window.getComputedStyle(element);
-    return style.display !== "none" && style.visibility !== "hidden" &&
-      element.getClientRects().length > 0;
-  };
-  const usable = (input) => !input.disabled && !input.readOnly && isVisible(input);
-  const collectInputs = (root) => {
-    const found = Array.from(root.querySelectorAll("input"));
-    for (const element of root.querySelectorAll("*")) {
-      if (element.shadowRoot) found.push(...collectInputs(element.shadowRoot));
-    }
-    return found;
-  };
-  const inputs = collectInputs(document).filter(usable);
-  const passwordHints = (input) => [
-    input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
-    input.getAttribute("data-testid"), input.getAttribute("data-field")
-  ].filter(Boolean).join(" ");
-  const isPasswordField = (input) => {
-    const type = (input.type || "").toLowerCase();
-    const autocomplete = (input.autocomplete || "").toLowerCase().split(/\s+/);
-    return type === "password" ||
-      autocomplete.includes("current-password") ||
-      autocomplete.includes("new-password") ||
-      /\b(pass(word|wd)?|pwd)\b/i.test(passwordHints(input));
-  };
-  const isTotpField = (input) => {
-    const autocomplete = (input.autocomplete || "").toLowerCase().split(/\s+/);
-    const hints = [
-      input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
-      input.getAttribute("inputmode"), input.getAttribute("data-testid")
-    ].filter(Boolean).join(" ");
-    return autocomplete.includes("one-time-code") ||
-      /one.?time|otp|totp|auth.?code|verification.?code|security.?code|mfa.?code/i.test(hints);
-  };
-  const isTextLike = (input) =>
-    ["text", "email", "tel", "url", "search", ""].includes((input.type || "text").toLowerCase());
-  const passwordField = inputs.find((input) => (input.type || "").toLowerCase() === "password") ||
-    inputs.find(isPasswordField);
-  const formRoot = passwordField?.form || passwordField?.closest("form") ||
-    passwordField?.getRootNode() || document;
-  const candidates = collectInputs(formRoot)
-    .filter((input) => usable(input) && input !== passwordField &&
-      !isPasswordField(input) && !isTotpField(input) && isTextLike(input));
-  const usernameField = candidates.find((input) =>
-    (input.autocomplete || "").toLowerCase().split(/\s+/).includes("username")) ||
-    candidates.filter((input) => passwordField &&
-      (input.compareDocumentPosition(passwordField) & Node.DOCUMENT_POSITION_FOLLOWING)).at(-1) ||
-    candidates.find((input) => /user|login|email|account/i.test(
-      [input.name, input.id, input.placeholder, input.getAttribute("aria-label")].filter(Boolean).join(" "))) ||
-    candidates.find((input) => (input.type || "").toLowerCase() === "email") ||
-    candidates[0];
-
-  if (action === "detect") {
-    return { found: Boolean(passwordField || usernameField), domain: currentDomain };
-  }
-
-  if (action === "probe") {
-    // Return only whether a password value exists; never return the value itself.
-    return {
-      found: Boolean(passwordField || usernameField),
-      domain: currentDomain,
-      hasPassword: Boolean(passwordField && passwordField.value)
-    };
-  }
-
-  if (action === "read") {
-    return {
-      found: Boolean(passwordField || usernameField),
-      domain: currentDomain,
-      username: usernameField?.value || "",
-      password: passwordField?.value || ""
-    };
-  }
-
-  const setValue = (input, value) => {
-    input.focus();
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-    if (setter) setter.call(input, value);
-    else input.value = value;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-    input.blur();
-  };
-  const totpFields = inputs.filter((input) => isTotpField(input) &&
-    (isTextLike(input) || (input.type || "").toLowerCase() === "number"));
-
-  if (totpFields.length > 0) {
-    if (totpCode) {
-      const splitCodeFields = totpFields.length > 1 && totpFields.length === totpCode.length &&
-        totpFields.every((input) => input.maxLength === 1);
-      if (splitCodeFields) {
-        totpFields.forEach((input, index) => setValue(input, totpCode[index]));
-      } else {
-        setValue(totpFields[0], totpCode);
-      }
-    } else if (!passwordField) {
-      return "totp_unavailable";
-    }
-    if (!passwordField) return "totp_filled";
-  }
-
-  if (!passwordField) {
-    const usernameCandidates = inputs.filter((input) => !isTotpField(input) && isTextLike(input));
-    const usernameOnlyField = usernameCandidates.find((input) =>
-      (input.autocomplete || "").toLowerCase().split(/\s+/).includes("username")) ||
-      usernameCandidates.find((input) => /\b(user(name)?|login|email|account)\b/i.test(
-        [input.name, input.id, input.placeholder, input.getAttribute("aria-label")].filter(Boolean).join(" "))) ||
-      usernameCandidates.find((input) => (input.type || "").toLowerCase() === "email") ||
-      usernameCandidates.find((input) => (input.type || "").toLowerCase() === "text") ||
-      usernameCandidates[0];
-    if (!usernameOnlyField || !username) return "no_password";
-    setValue(usernameOnlyField, username);
-    return "username_only";
-  }
-
-  if (usernameField && username) setValue(usernameField, username);
-  setValue(passwordField, password);
-  if (totpFields.length > 0) return totpCode ? "totp_filled" : "totp_unavailable";
-  return usernameField && username ? "filled" : "no_username";
-}
 async function inspectLoginForm() {
   if (!activeTabId || !activeDomain) {
     saveStatus.textContent = "Open a regular HTTP(S) login page first.";
@@ -785,13 +645,22 @@ function setSavePasswordVisible(visible) {
 toggleSavePassword.addEventListener("click", () =>
   setSavePasswordVisible(savePassword.type === "password"));
 
-async function currentPageUrl(tabId) {
+function sanitizePageUrl(value) {
   try {
-    const tab = await chrome.tabs.get(tabId);
-    const url = new URL(tab.url);
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol)) return "";
     url.search = "";
     url.hash = "";
     return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+async function currentPageUrl(tabId) {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    return sanitizePageUrl(tab.url);
   } catch {
     return "";
   }
@@ -947,7 +816,8 @@ async function saveLogin() {
     const url = new URL(tabs[0]?.url || "");
     const domain = url.hostname.toLowerCase().replace(/\.$/, "");
     if (tabs[0]?.id !== activeTabId || domain !== activeDomain ||
-        !["http:", "https:"].includes(url.protocol)) {
+        !["http:", "https:"].includes(url.protocol) ||
+        !pendingSaveUrl || sanitizePageUrl(url.href) !== pendingSaveUrl) {
       saveStatus.textContent = "The active page changed. Reopen the popup and inspect the form again.";
       return;
     }
@@ -956,7 +826,7 @@ async function saveLogin() {
       type: "saveCredential",
       protocolVersion,
       domain: activeDomain,
-      url: new URL(url.href).toString().split(/[?#]/, 1)[0],
+      url: pendingSaveUrl,
       title: saveTitle.value.trim(),
       username: saveUsername.value.trim(),
       password: savePassword.value,
@@ -1037,7 +907,7 @@ saveTarget.addEventListener("change", () => {
   if (target && !saveTitleEdited) saveTitle.value = target.title || saveTitle.value;
   updateSaveReview();
 });
-saveConfirmation.addEventListener("change", updateSaveReview);saveConfirmation.addEventListener("change", updateSaveReview);
+saveConfirmation.addEventListener("change", updateSaveReview);
 
 inspectLoginButton.addEventListener("click", inspectLoginForm);
 saveLoginButton.addEventListener("click", saveLogin);
@@ -1365,34 +1235,6 @@ copyPasswordButton.addEventListener("click", async () => {
   }
 });
 
-async function launchDesktopApp() {
-  launchAppButton.disabled = true;
-  launchAppButton.textContent = "Starting PejPass…";
-  vaultStatus.textContent = "Starting PejPass desktop…";
-  try {
-    const response = await sendNativeMessage({ type: "launchApp", protocolVersion });
-    if (!isValidBaseResponse(response, "appLaunched")) {
-      vaultStatus.textContent = response?.code === "app_unavailable"
-        ? "Could not locate PejPass desktop. Build the desktop app in Release and reinstall the browser host."
-        : "Could not start PejPass desktop.";
-      return;
-    }
-
-    for (let attempt = 0; attempt < 20; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const status = await checkVaultStatus();
-
-      if (status === "locked" || status === "unlocked") return;
-    }
-    vaultStatus.textContent = "PejPass is starting. Try checking the vault status again in a moment.";
-  } catch {
-    vaultStatus.textContent = "Could not start PejPass. Check that the browser host is installed.";
-  } finally {
-    launchAppButton.disabled = false;
-    launchAppButton.textContent = "Launch PejPass";
-  }
-}
-
 async function lockVault() {
   if (lockVaultButton.disabled)
     return;
@@ -1428,7 +1270,6 @@ async function lockVault() {
     generatorStatus.textContent = "Vault locked. Generate a new password when needed.";
     vaultStatus.textContent = "Vault is locked.";
     unlockControls.hidden = false;
-    launchAppButton.hidden = true;
     lockVaultButton.hidden = true;
     unlockStatus.textContent = "Enter your master password to unlock the vault.";
   } catch {
@@ -1477,10 +1318,7 @@ async function unlockVault() {
   }
 
   unlockButton.disabled = true;
-  launchAppButton.disabled = true;
-  unlockStatus.textContent = unlockButton.textContent === "Launch & unlock"
-    ? "Starting PejPass and verifying your password…"
-    : "Verifying master password in PejPass…";
+  unlockStatus.textContent = "Verifying master password in PejPass…";
   try {
     const response = await sendNativeMessage({
       type: "unlockVault",
@@ -1502,14 +1340,14 @@ async function unlockVault() {
 
     const messages = {
       unlock_failed: "The master password was not accepted, or no existing vault is selected in PejPass.",
-      app_unavailable: "Could not start PejPass. Check the desktop build and browser host installation.",
+      app_unavailable: "Open PejPass desktop and try again.",
       invalid_request: "The password could not be sent. Try again.",
       unsupported_request: "The installed browser host or desktop app is outdated. Rebuild and reinstall the latest version."
     };
     if (response?.code !== "app_unavailable") unlockButton.textContent = "Unlock vault";
     showUnlockError(
       response?.code === "unlock_failed" ? "Password not accepted." :
-        response?.code === "app_unavailable" ? "Couldn’t start PejPass." :
+        response?.code === "app_unavailable" ? "PejPass desktop isn’t running." :
         "Couldn’t unlock the vault.",
       messages[response?.code] || response?.code || "The desktop connection failed or returned an incompatible response."
     );
@@ -1518,8 +1356,7 @@ async function unlockVault() {
   } finally {
     unlockPassword.value = "";
     unlockButton.disabled = unlockCoolingDown;
-    if (!unlockCoolingDown && unlockButton.textContent !== "Launch & unlock") unlockButton.textContent = "Unlock vault";
-    launchAppButton.disabled = false;
+    if (!unlockCoolingDown) unlockButton.textContent = "Unlock vault";
   }
 }
 
@@ -1567,7 +1404,6 @@ lockVaultButton.addEventListener("click", lockVault);
 unlockPassword.addEventListener("keydown", (event) => {
   if (event.key === "Enter") unlockVault();
 });
-launchAppButton.addEventListener("click", launchDesktopApp);
 
 const viewTabs = Array.from(document.querySelectorAll(".view-tab"));
 

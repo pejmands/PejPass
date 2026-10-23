@@ -127,17 +127,16 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     }
                 }
 
-                var response = IsSearchCredentialRequest(line)
-                    ? await CreateSearchCredentialResponseAsync(line).ConfigureAwait(false)
-                    : IsSaveCredentialRequest(line)
-                        ? await CreateSaveCredentialResponseAsync(line, cancellationToken).ConfigureAwait(false)
-                        : IsUnlockVaultRequest(line)
-                        ? await CreateUnlockVaultResponseAsync(line).ConfigureAwait(false)
-                        : IsUnlockWithHelloRequest(line)
-                            ? await CreateUnlockWithHelloResponseAsync(line).ConfigureAwait(false)
-                            : IsFillCredentialRequest(line)
-                                ? await CreateFillCredentialResponseAsync(line).ConfigureAwait(false)
-                                : CreateResponse(line);
+                var requestType = GetRequestType(line);
+                var response = requestType switch
+                {
+                    "searchCredentials" => await CreateSearchCredentialResponseAsync(line).ConfigureAwait(false),
+                    "saveCredential" => await CreateSaveCredentialResponseAsync(line, cancellationToken).ConfigureAwait(false),
+                    "unlockVault" => await CreateUnlockVaultResponseAsync(line).ConfigureAwait(false),
+                    "unlockWithHello" => await CreateUnlockWithHelloResponseAsync(line).ConfigureAwait(false),
+                    "fillCredential" => await CreateFillCredentialResponseAsync(line).ConfigureAwait(false),
+                    _ => CreateResponse(line)
+                };
                 await writer.WriteLineAsync(JsonSerializer.Serialize(response, JsonOptions)).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { break; }
@@ -211,106 +210,24 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         }
     }
 
-    private static bool IsSaveCredentialRequest(string? line)
+    private static string? GetRequestType(string? line)
     {
         if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
-            return false;
+            return null;
 
         try
         {
             using var document = JsonDocument.Parse(line);
-            return document.RootElement.ValueKind == JsonValueKind.Object &&
-                document.RootElement.TryGetProperty("type", out var type) &&
-                type.ValueKind == JsonValueKind.String &&
-                type.GetString() == "saveCredential";
+            var root = document.RootElement;
+            return root.ValueKind == JsonValueKind.Object &&
+                root.TryGetProperty("type", out var type) &&
+                type.ValueKind == JsonValueKind.String
+                    ? type.GetString()
+                    : null;
         }
         catch (JsonException)
         {
-            return false;
-        }
-    }
-
-    private static bool IsUnlockVaultRequest(string? line)
-    {
-        if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
-            return false;
-
-        try
-        {
-            using var document = JsonDocument.Parse(line);
-            return document.RootElement.ValueKind == JsonValueKind.Object &&
-                document.RootElement.TryGetProperty("type", out var type) &&
-                type.ValueKind == JsonValueKind.String &&
-                type.GetString() == "unlockVault";
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
-    }
-
-    private static bool IsUnlockWithHelloRequest(string? line)
-    {
-        if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
-            return false;
-
-        try
-        {
-            using var document = JsonDocument.Parse(line);
-            return document.RootElement.ValueKind == JsonValueKind.Object &&
-                document.RootElement.TryGetProperty("type", out var type) &&
-                type.ValueKind == JsonValueKind.String &&
-                type.GetString() == "unlockWithHello";
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
-    }
-
-    private static bool IsSearchCredentialRequest(string? line)
-    {
-        if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
-            return false;
-        try
-        {
-            using var document = JsonDocument.Parse(line);
-            return document.RootElement.ValueKind == JsonValueKind.Object &&
-                document.RootElement.TryGetProperty("type", out var type) &&
-                type.ValueKind == JsonValueKind.String &&
-                type.GetString() == "searchCredentials";
-        }
-        catch (JsonException) { return false; }
-    }
-
-    private static bool IsCrossDomainFillRequest(string? line)
-    {
-        try
-        {
-            using var document = JsonDocument.Parse(line ?? string.Empty);
-            return document.RootElement.ValueKind == JsonValueKind.Object &&
-                document.RootElement.TryGetProperty("allowDomainMismatch", out var value) &&
-                value.ValueKind == JsonValueKind.True;
-        }
-        catch (JsonException) { return false; }
-    }
-
-    private static bool IsFillCredentialRequest(string? line)
-    {
-        if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
-            return false;
-
-        try
-        {
-            using var document = JsonDocument.Parse(line);
-            return document.RootElement.ValueKind == JsonValueKind.Object &&
-                document.RootElement.TryGetProperty("type", out var type) &&
-                type.ValueKind == JsonValueKind.String &&
-                type.GetString() == "fillCredential";
-        }
-        catch (JsonException)
-        {
-            return false;
+            return null;
         }
     }
 
