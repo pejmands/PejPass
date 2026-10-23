@@ -714,9 +714,20 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         {
             void LockOnUiThread()
             {
-                var mainWindow = app.Windows.OfType<MainWindow>()
-                    .FirstOrDefault(window => window.DataContext is MainViewModel);
-                if (mainWindow?.DataContext is not MainViewModel viewModel)
+                // A browser unlock can intentionally leave MainWindow hidden. Such a window
+                // may not be present in Application.Windows until it has been shown, so
+                // prefer Application.MainWindow and use the window collection as a fallback.
+                var mainWindow = app.MainWindow as MainWindow;
+                var viewModel = mainWindow?.DataContext as MainViewModel;
+
+                if (viewModel is null)
+                {
+                    mainWindow = app.Windows.OfType<MainWindow>()
+                        .FirstOrDefault(window => window.DataContext is MainViewModel);
+                    viewModel = mainWindow?.DataContext as MainViewModel;
+                }
+
+                if (viewModel is null)
                     throw new InvalidOperationException("The active vault cannot be locked through the main window.");
 
                 viewModel.Lock(showLogin: false);
