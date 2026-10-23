@@ -20,6 +20,7 @@ public partial class LoginWindow : Window
     private readonly DispatcherTimer _snackbarTimer;
     private bool _isSubscribedToSnackbar;
     private bool _allowClose;
+    internal bool SuppressMainWindowOnUnlock { get; private set; }
     private static int _passwordStrengthWarmupStarted;
 
     public LoginWindow(LoginViewModel viewModel)
@@ -80,8 +81,12 @@ public partial class LoginWindow : Window
             System.Windows.Application.Current.MainWindow = main;
 
             // Transition to main: allow close without triggering tray minimize.
+            // Browser unlock can leave the main window hidden so the user can continue in the browser.
             _allowClose = true;
-            main.Show();
+            if (SuppressMainWindowOnUnlock)
+                main.Hide();
+            else
+                main.Show();
             Close();
         };
 
@@ -140,6 +145,27 @@ public partial class LoginWindow : Window
                 }
             }
         };
+    }
+
+    internal async Task<bool> UnlockFromBrowserAsync(string masterPassword)
+    {
+        if (DataContext is not LoginViewModel viewModel)
+            return false;
+
+        SuppressMainWindowOnUnlock = true;
+        try
+        {
+            var unlocked = await viewModel.UnlockFromBrowserAsync(masterPassword);
+            if (!unlocked)
+                SuppressMainWindowOnUnlock = false;
+
+            return unlocked;
+        }
+        catch
+        {
+            SuppressMainWindowOnUnlock = false;
+            throw;
+        }
     }
 
     private static void StartPasswordStrengthWarmup()
