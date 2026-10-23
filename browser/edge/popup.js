@@ -645,13 +645,22 @@ function setSavePasswordVisible(visible) {
 toggleSavePassword.addEventListener("click", () =>
   setSavePasswordVisible(savePassword.type === "password"));
 
-async function currentPageUrl(tabId) {
+function sanitizePageUrl(value) {
   try {
-    const tab = await chrome.tabs.get(tabId);
-    const url = new URL(tab.url);
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol)) return "";
     url.search = "";
     url.hash = "";
     return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+async function currentPageUrl(tabId) {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    return sanitizePageUrl(tab.url);
   } catch {
     return "";
   }
@@ -807,15 +816,9 @@ async function saveLogin() {
     const url = new URL(tabs[0]?.url || "");
     const domain = url.hostname.toLowerCase().replace(/\.$/, "");
     if (tabs[0]?.id !== activeTabId || domain !== activeDomain ||
-        !["http:", "https:"].includes(url.protocol) || !pendingSaveUrl) {
+        !["http:", "https:"].includes(url.protocol) ||
+        !pendingSaveUrl || sanitizePageUrl(url.href) !== pendingSaveUrl) {
       saveStatus.textContent = "The active page changed. Reopen the popup and inspect the form again.";
-      return;
-    }
-
-    const saveUrl = new URL(pendingSaveUrl);
-    if (saveUrl.hostname.toLowerCase().replace(/\.$/, "") !== activeDomain ||
-        !["http:", "https:"].includes(saveUrl.protocol)) {
-      saveStatus.textContent = "The inspected page address is no longer valid. Read the form again.";
       return;
     }
 
