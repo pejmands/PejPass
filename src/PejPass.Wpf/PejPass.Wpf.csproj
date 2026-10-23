@@ -42,6 +42,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Data\public_suffix_list.dat" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Assets\PejPass.ico">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Resource>

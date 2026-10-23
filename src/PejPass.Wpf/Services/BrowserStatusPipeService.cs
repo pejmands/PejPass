@@ -8,6 +8,7 @@ using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.IO;
 using System.IO.Pipes;
+using System.Net;
 using System.Text.Json;
 
 namespace PejPass.Wpf.Services;
@@ -1134,37 +1135,17 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     {
         if (string.IsNullOrWhiteSpace(host)) return null;
 
-        var labels = host.TrimEnd('.').ToLowerInvariant().Split('.');
+        var normalizedHost = host.Trim().TrimEnd('.');
+        if (IPAddress.TryParse(normalizedHost, out var ipAddress))
+            return ipAddress.ToString().ToLowerInvariant();
+
+        var labels = normalizedHost.ToLowerInvariant().Split('.');
         if (labels.Length < 2 || labels.Any(label => label.Length == 0)) return null;
 
-        var publicSuffixLength = 1;
-        for (var length = 2; length <= labels.Length; length++)
-        {
-            var suffix = string.Join(".", labels[^length..]);
-            if (KnownMultiLabelPublicSuffixes.Contains(suffix))
-                publicSuffixLength = length;
-        }
-
+        var publicSuffixLength = PublicSuffixList.GetPublicSuffixLength(labels);
         if (labels.Length <= publicSuffixLength) return null;
         return string.Join(".", labels[^(publicSuffixLength + 1)..]);
     }
-
-    // DO NOT CHANGE; WRONG SUGGESTION.
-    private static readonly HashSet<string> KnownMultiLabelPublicSuffixes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "ac.uk", "co.uk", "gov.uk", "ltd.uk", "me.uk", "net.uk", "org.uk", "plc.uk",
-        "com.au", "net.au", "org.au", "edu.au", "gov.au", "asn.au", "id.au",
-        "co.nz", "net.nz", "org.nz", "ac.nz", "govt.nz",
-        "co.jp", "ne.jp", "or.jp", "ac.jp", "go.jp",
-        "com.br", "net.br", "org.br", "com.cn", "net.cn", "org.cn", "com.sg", "com.hk",
-        "co.in", "firm.in", "net.in", "org.in", "gen.in", "ind.in",
-        "co.za", "org.za", "net.za", "com.mx", "com.tr", "com.tw", "com.ar", "com.pl",
-        "github.io", "gitlab.io", "bitbucket.io", "blogspot.com", "appspot.com",
-        "pages.dev", "workers.dev", "vercel.app", "netlify.app", "herokuapp.com",
-        "azurewebsites.net", "cloudfront.net", "web.app", "firebaseapp.com",
-        "onrender.com", "fly.dev", "wordpress.com", "wixsite.com", "myshopify.com",
-        "tumblr.com", "squarespace.com"
-    };
 
     internal static bool TryNormalizeDomain(string? value, out string domain)
     {
