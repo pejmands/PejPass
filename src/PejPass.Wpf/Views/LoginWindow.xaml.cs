@@ -20,6 +20,7 @@ public partial class LoginWindow : Window
     private readonly DispatcherTimer _snackbarTimer;
     private bool _isSubscribedToSnackbar;
     private bool _allowClose;
+    private bool _preserveMinimizedStateOnNextChange;
     internal bool SuppressMainWindowOnUnlock { get; private set; }
     private bool? _browserUnlockShouldShowMainWindow;
     private static int _passwordStrengthWarmupStarted;
@@ -119,6 +120,12 @@ public partial class LoginWindow : Window
 
         StateChanged += (_, _) =>
         {
+            if (_preserveMinimizedStateOnNextChange)
+            {
+                _preserveMinimizedStateOnNextChange = false;
+                return;
+            }
+
             if (WindowState != WindowState.Minimized ||
                 !_settings.MinimizeToSystemTray)
             {
@@ -152,6 +159,28 @@ public partial class LoginWindow : Window
                 }
             }
         };
+    }
+
+    internal void MatchWindowStateForBrowserLock(bool mainWindowWasVisible, WindowState mainWindowState)
+    {
+        if (mainWindowState == WindowState.Minimized)
+        {
+            _preserveMinimizedStateOnNextChange = true;
+            Show();
+            WindowState = WindowState.Minimized;
+            return;
+        }
+
+        if (!mainWindowWasVisible)
+        {
+            Hide();
+            return;
+        }
+
+        if (WindowState == WindowState.Minimized)
+            WindowState = WindowState.Normal;
+
+        Show();
     }
 
     internal async Task<bool> UnlockFromBrowserAsync(string masterPassword)
