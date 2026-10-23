@@ -4,6 +4,7 @@ using PejPass.Domain.Entities;
 using PejPass.Domain.Settings;
 using PejPass.Infrastructure.Totp;
 using PejPass.Wpf.Dialogs;
+using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.IO;
 using System.IO.Pipes;
@@ -686,7 +687,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
         try
         {
-            var settings = App.Services.GetRequiredService<PejPass.Domain.Settings.AppSettings>();
+            var settings = App.Services.GetRequiredService<AppSettings>();
             var timeoutSeconds = Math.Clamp(settings.ClipboardClearSeconds, 5, 300);
             app.Dispatcher.Invoke(
                 () => _clipboardService.CopyWithTimeout(password, TimeSpan.FromSeconds(timeoutSeconds)),
