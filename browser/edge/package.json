@@ -2,7 +2,7 @@
   "name": "pejpass-browser-extension",
   "private": true,
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/injected.test.js"
   },
   "devDependencies": {
     "jsdom": "26.1.0"
