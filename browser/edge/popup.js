@@ -32,6 +32,7 @@ const saveConfirmationRow = document.getElementById("save-confirmation-row");
 const saveConfirmation = document.getElementById("save-confirmation");
 let matchingCredentials = [];
 let lookupSeq = 0;
+let credentialLookupPromise = null;
 const unlockControls = document.getElementById("unlock-controls");
 const unlockPassword = document.getElementById("unlock-password");
 const unlockButton = document.getElementById("unlock-vault");
@@ -226,7 +227,11 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
         };
       } else if (!forceRefresh && cached?.status === "unavailable") {
         setConnectionStatus(false, "Desktop unavailable");
-        response = { type: "error", code: "app_unavailable" };
+        response = {
+          type: "error",
+          code: "app_unavailable",
+          message: typeof cached.nativeHostError === "string" ? cached.nativeHostError : ""
+        };
       }
     } catch {
       // Fall back to the native host if the background state is unavailable.
@@ -279,7 +284,11 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
 
       if (desktopUnavailable) {
         setConnectionStatus(false, "Desktop unavailable");
-        showStatusError("PejPass isn’t running.", "The native messaging host could not reach the PejPass desktop pipe. Check the desktop installation and browser host registration.");
+        showStatusError(
+          "PejPass isn’t running.",
+          response?.message ||
+            "The native messaging host could not reach the PejPass desktop pipe. Check the desktop installation and browser host registration."
+        );
       } else {
         setConnectionStatus(false, "Connection error");
         showStatusError("Couldn’t check vault status.", response?.code || "The desktop returned an invalid or incompatible response.");
@@ -300,7 +309,15 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
   }
 }
 
-async function lookupCredentials(domain) {
+function lookupCredentials(domain) {
+  const pending = performCredentialLookup(domain);
+  credentialLookupPromise = pending;
+  return pending.finally(() => {
+    if (credentialLookupPromise === pending) credentialLookupPromise = null;
+  });
+}
+
+async function performCredentialLookup(domain) {
   const seq = ++lookupSeq;
   const stale = () => seq !== lookupSeq;
 
@@ -644,9 +661,20 @@ async function inspectLoginForm() {
   }
 
   inspectLoginButton.disabled = true;
-  saveStatus.textContent = "Reading visible login fields…";
+  saveStatus.textContent = "Checking vault status…";
   saveFields.hidden = true;
   try {
+    const vaultState = await checkVaultStatus({ quiet: true, forceRefresh: true });
+    if (vaultState === "locked") {
+      saveStatus.textContent = "Unlock the PejPass vault before reading or saving login details.";
+      return;
+    }
+    if (vaultState !== "unlocked") {
+      saveStatus.textContent = "Could not verify that the PejPass vault is unlocked. Check the connection and try again.";
+      return;
+    }
+
+    saveStatus.textContent = "Reading visible login fields…";
     const tabId = activeTabId;
     const domain = activeDomain;
     const results = await chrome.scripting.executeScript({
@@ -673,7 +701,7 @@ async function inspectLoginForm() {
     saveFields.hidden = false;
     saveConfirmation.checked = false;
     saveStatus.textContent = "Review or correct these values, then choose Save or Update.";
-    applyDefaultSaveMode(saveUsername.value);
+    await applyDefaultSaveMode(saveUsername.value);
     updateSaveReview();
   } catch {
     saveStatus.textContent = "Could not inspect this page. Check that it is a regular HTTP(S) page.";
@@ -706,7 +734,10 @@ async function currentPageUrl(tabId) {
   }
 }
 
-function applyDefaultSaveMode(username) {
+async function applyDefaultSaveMode(username) {
+  const pendingLookup = credentialLookupPromise;
+  if (pendingLookup) await pendingLookup;
+
   const wanted = username.trim().toLowerCase();
   const matches = wanted
     ? matchingCredentials.filter((credential) => credential.username.trim().toLowerCase() === wanted)
