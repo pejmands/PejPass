@@ -67,6 +67,18 @@ public partial class LoginWindow : Window
         {
             ClearPasswordInputs();
 
+            if (SuppressMainWindowOnUnlock)
+            {
+                var app = System.Windows.Application.Current;
+                var existingMain = app?.Windows.OfType<MainWindow>().FirstOrDefault();
+                if (app is not null && existingMain is not null)
+                    app.MainWindow = existingMain;
+
+                _allowClose = true;
+                Close();
+                return;
+            }
+
             var main = App.Services.GetRequiredService<MainWindow>();
 
             var vaultFilePath = viewModel.VaultPath;
