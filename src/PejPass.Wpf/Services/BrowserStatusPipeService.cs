@@ -331,14 +331,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     App.PrepareCustomChrome(loginWindow);
                 }
 
-                app.MainWindow = loginWindow;
-                if (!loginWindow.IsVisible)
-                    loginWindow.Show();
-                loginWindow.Activate();
-
-                return loginWindow.DataContext is LoginViewModel viewModel
-                    ? viewModel.UnlockFromBrowserAsync(masterPassword)
-                    : Task.FromResult(false);
+                return loginWindow.UnlockFromBrowserAsync(masterPassword);
             }, System.Windows.Threading.DispatcherPriority.Send).Task.ConfigureAwait(false);
 
             var unlocked = await unlockTask.ConfigureAwait(false);
@@ -403,14 +396,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     App.PrepareCustomChrome(loginWindow);
                 }
 
-                app.MainWindow = loginWindow;
-                if (!loginWindow.IsVisible)
-                    loginWindow.Show();
-                loginWindow.Activate();
-
-                return loginWindow.DataContext is LoginViewModel viewModel
-                    ? viewModel.UnlockWithHelloFromBrowserAsync()
-                    : Task.FromResult(false);
+                return loginWindow.UnlockWithHelloFromBrowserAsync();
             }, System.Windows.Threading.DispatcherPriority.Send).Task.ConfigureAwait(false);
 
             var unlocked = await unlockTask.ConfigureAwait(false);
@@ -701,7 +687,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
         try
         {
-            var settings = App.Services.GetRequiredService<PejPass.Domain.Settings.AppSettings>();
+            var settings = App.Services.GetRequiredService<AppSettings>();
             var timeoutSeconds = Math.Clamp(settings.ClipboardClearSeconds, 5, 300);
             app.Dispatcher.Invoke(
                 () => _clipboardService.CopyWithTimeout(password, TimeSpan.FromSeconds(timeoutSeconds)),
@@ -728,12 +714,23 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         {
             void LockOnUiThread()
             {
-                var mainWindow = app.Windows.OfType<MainWindow>()
-                    .FirstOrDefault(window => window.DataContext is MainViewModel);
-                if (mainWindow?.DataContext is not MainViewModel viewModel)
+                // A browser unlock can intentionally leave MainWindow hidden. Such a window
+                // may not be present in Application.Windows until it has been shown, so
+                // prefer Application.MainWindow and use the window collection as a fallback.
+                var mainWindow = app.MainWindow as MainWindow;
+                var viewModel = mainWindow?.DataContext as MainViewModel;
+
+                if (viewModel is null)
+                {
+                    mainWindow = app.Windows.OfType<MainWindow>()
+                        .FirstOrDefault(window => window.DataContext is MainViewModel);
+                    viewModel = mainWindow?.DataContext as MainViewModel;
+                }
+
+                if (viewModel is null)
                     throw new InvalidOperationException("The active vault cannot be locked through the main window.");
 
-                viewModel.Lock(showLogin: true);
+                viewModel.Lock(showLogin: false);
             }
 
             if (app.Dispatcher.CheckAccess())

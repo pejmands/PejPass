@@ -20,6 +20,9 @@ public partial class LoginWindow : Window
     private readonly DispatcherTimer _snackbarTimer;
     private bool _isSubscribedToSnackbar;
     private bool _allowClose;
+    private bool _preserveMinimizedStateOnNextChange;
+    internal bool SuppressMainWindowOnUnlock { get; private set; }
+    private bool? _browserUnlockShouldShowMainWindow;
     private static int _passwordStrengthWarmupStarted;
 
     public LoginWindow(LoginViewModel viewModel)
@@ -80,8 +83,18 @@ public partial class LoginWindow : Window
             System.Windows.Application.Current.MainWindow = main;
 
             // Transition to main: allow close without triggering tray minimize.
+            // Browser unlock preserves the visibility state captured before the request.
             _allowClose = true;
-            main.Show();
+            if (!SuppressMainWindowOnUnlock ||
+                _browserUnlockShouldShowMainWindow == true)
+            {
+                main.Show();
+            }
+            else if (main.IsVisible)
+            {
+                main.Hide();
+            }
+
             Close();
         };
 
@@ -107,6 +120,12 @@ public partial class LoginWindow : Window
 
         StateChanged += (_, _) =>
         {
+            if (_preserveMinimizedStateOnNextChange)
+            {
+                _preserveMinimizedStateOnNextChange = false;
+                return;
+            }
+
             if (WindowState != WindowState.Minimized ||
                 !_settings.MinimizeToSystemTray)
             {
@@ -140,6 +159,98 @@ public partial class LoginWindow : Window
                 }
             }
         };
+    }
+
+    internal void MatchWindowStateForBrowserLock(bool mainWindowWasVisible, WindowState mainWindowState)
+    {
+        if (mainWindowState == WindowState.Minimized)
+        {
+            Show();
+
+            if (WindowState != WindowState.Minimized)
+            {
+                _preserveMinimizedStateOnNextChange = true;
+                WindowState = WindowState.Minimized;
+            }
+
+            return;
+        }
+
+        if (!mainWindowWasVisible)
+        {
+            Hide();
+            return;
+        }
+
+        if (WindowState == WindowState.Minimized)
+            WindowState = WindowState.Normal;
+
+        Show();
+    }
+
+    internal async Task<bool> UnlockFromBrowserAsync(string masterPassword)
+    {
+        if (DataContext is not LoginViewModel viewModel)
+            return false;
+
+        _browserUnlockShouldShowMainWindow = ShouldShowMainWindowAfterBrowserUnlock();
+        SuppressMainWindowOnUnlock = true;
+        try
+        {
+            var unlocked = await viewModel.UnlockFromBrowserAsync(masterPassword);
+            if (!unlocked)
+                ResetBrowserUnlockState();
+
+            return unlocked;
+        }
+        catch
+        {
+            ResetBrowserUnlockState();
+            throw;
+        }
+    }
+
+    internal async Task<bool> UnlockWithHelloFromBrowserAsync()
+    {
+        if (DataContext is not LoginViewModel viewModel)
+            return false;
+
+        _browserUnlockShouldShowMainWindow = ShouldShowMainWindowAfterBrowserUnlock();
+        SuppressMainWindowOnUnlock = true;
+        try
+        {
+            var unlocked = await viewModel.UnlockWithHelloFromBrowserAsync();
+            if (!unlocked)
+                ResetBrowserUnlockState();
+
+            return unlocked;
+        }
+        catch
+        {
+            ResetBrowserUnlockState();
+            throw;
+        }
+    }
+
+    private bool ShouldShowMainWindowAfterBrowserUnlock()
+    {
+        var app = System.Windows.Application.Current;
+        var mainWindow = app?.MainWindow as MainWindow
+            ?? app?.Windows.OfType<MainWindow>().FirstOrDefault();
+
+        if (mainWindow is not null)
+        {
+            return mainWindow.IsVisible &&
+                mainWindow.WindowState != WindowState.Minimized;
+        }
+
+        return IsVisible && WindowState != WindowState.Minimized;
+    }
+
+    private void ResetBrowserUnlockState()
+    {
+        SuppressMainWindowOnUnlock = false;
+        _browserUnlockShouldShowMainWindow = null;
     }
 
     private static void StartPasswordStrengthWarmup()
