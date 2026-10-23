@@ -892,7 +892,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             return (null, code);
         }
 
-        // Re-read the credential after both approvals so no stale or expired TOTP code is returned.
+        // Re-read the credential after approval so no stale or expired TOTP code is returned.
         return (FindCredentialForFill(id, domain), null);
     }
 
