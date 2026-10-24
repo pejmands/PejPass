@@ -36,6 +36,31 @@ public sealed class SettingsStoreTests : IDisposable
 
         Assert.False(settings.MinimizeToSystemTray);
         Assert.False(settings.CloseToSystemTray);
+        Assert.True(settings.LockVaultWhenHiddenToTray);
+    }
+
+    [Fact]
+    public async Task LockVaultWhenHiddenToTray_CanBeDisabledAndPersisted()
+    {
+        await SettingsFileLock.WaitAsync(TestContext.Current.CancellationToken);
+
+        try
+        {
+            var settings = new AppSettings
+            {
+                LockVaultWhenHiddenToTray = false
+            };
+
+            Assert.True(SettingsStore.TrySave(settings));
+
+            var loaded = SettingsStore.Load();
+
+            Assert.False(loaded.LockVaultWhenHiddenToTray);
+        }
+        finally
+        {
+            SettingsFileLock.Release();
+        }
     }
 
     [Fact]
@@ -76,6 +101,7 @@ public sealed class SettingsStoreTests : IDisposable
 
             Assert.True(settings.MinimizeToSystemTray);
             Assert.True(settings.CloseToSystemTray);
+            Assert.True(settings.LockVaultWhenHiddenToTray);
         }
         finally
         {
