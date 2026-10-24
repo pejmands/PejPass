@@ -111,6 +111,50 @@ public sealed class SettingsStoreTests : IDisposable
 
     private static readonly SemaphoreSlim SettingsFileLock = new(1, 1);
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task OlderSettings_MigratesBrowserAutofillConfirmationChoice(
+        bool skipConfirmation, bool expectedConfirmation)
+    {
+        await SettingsFileLock.WaitAsync(TestContext.Current.CancellationToken);
+
+        try
+        {
+            const string jsonTemplate = """
+            {
+              "autoLockMinutes": 10,
+              "clipboardClearSeconds": 30,
+              "revealSecretSeconds": 10,
+              "theme": 0,
+              "fontSize": 1,
+              "zoom": 1,
+              "windowsHelloEnabled": true,
+              "skipBrowserAutofillConfirmation": __SKIP__
+            }
+            """;
+            var json = jsonTemplate.Replace("__SKIP__", skipConfirmation ? "true" : "false");
+
+            await File.WriteAllTextAsync(
+                SettingsStore.SettingsPath,
+                json,
+                Encoding.UTF8,
+                TestContext.Current.CancellationToken);
+
+            var settings = SettingsStore.Load();
+
+            Assert.Equal(expectedConfirmation, settings.BrowserAutofillConfirmationEnabled);
+            Assert.True(settings.BrowserAutofillWindowsHelloEnabled);
+            Assert.DoesNotContain("skipBrowserAutofillConfirmation", await File.ReadAllTextAsync(
+                SettingsStore.SettingsPath,
+                TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            SettingsFileLock.Release();
+        }
+    }
+
     [Fact]
     public async Task OlderSettingsWithoutOnlineFaviconProperty_LoadAsDisabled()
     {

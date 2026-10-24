@@ -11,9 +11,12 @@ namespace PejPass.Wpf.Tests.Browser;
 public sealed class BrowserStatusPipeServiceTests
 {
     [Fact]
-    public void BrowserAutofillConfirmation_IsRequiredByDefault()
+    public void BrowserAutofillConfirmationOptions_AreEnabledByDefault()
     {
-        Assert.False(new AppSettings().SkipBrowserAutofillConfirmation);
+        var settings = new AppSettings();
+
+        Assert.True(settings.BrowserAutofillConfirmationEnabled);
+        Assert.True(settings.BrowserAutofillWindowsHelloEnabled);
     }
 
     [Fact]
