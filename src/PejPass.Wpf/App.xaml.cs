@@ -16,6 +16,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Shell;
 using System.Windows.Threading;
 
@@ -26,6 +27,8 @@ public partial class App : System.Windows.Application
     public static IServiceProvider Services { get; private set; } = null!;
 
     private static AppSettings? _settings;
+    private static BitmapFrame? _lockedWindowIcon;
+    private static BitmapFrame? _unlockedWindowIcon;
     private static WindowsSecurityService? _windowsSecurityService;
     private static SecurityLockCoordinator? _securityLock;
     private static PasswordGeneratorWindow? _passwordGeneratorWindow;
@@ -633,8 +636,54 @@ public partial class App : System.Windows.Application
         Current.Resources["AppFontSize"] = FontScale.BaseSize * scale;
     }
 
+    internal static void UpdateWindowIcons(bool isUnlocked)
+    {
+        var app = Current;
+        if (app is null)
+            return;
+
+        if (!app.Dispatcher.CheckAccess())
+        {
+            app.Dispatcher.BeginInvoke(() => UpdateWindowIcons(isUnlocked));
+            return;
+        }
+
+        var icon = GetWindowIcon(isUnlocked);
+        foreach (Window window in app.Windows)
+        {
+            if (!SystemTrayService.IsHostWindow(window))
+                window.Icon = icon;
+        }
+    }
+
+    private static BitmapFrame GetWindowIcon(bool isUnlocked)
+    {
+        var cached = isUnlocked ? _unlockedWindowIcon : _lockedWindowIcon;
+        if (cached is not null)
+            return cached;
+
+        var fileName = isUnlocked ? "PejPass.ico" : "PejPassLocked.ico";
+        var uri = new Uri($"pack://application:,,,/Assets/{fileName}", UriKind.Absolute);
+        var icon = BitmapFrame.Create(
+            uri,
+            BitmapCreateOptions.None,
+            BitmapCacheOption.OnLoad);
+
+        if (icon.CanFreeze)
+            icon.Freeze();
+
+        if (isUnlocked)
+            _unlockedWindowIcon = icon;
+        else
+            _lockedWindowIcon = icon;
+
+        return icon;
+    }
+
     public static void PrepareCustomChrome(Window window)
     {
+        window.Icon = GetWindowIcon(Services?.GetService<VaultSession>()?.IsActive == true);
+
         if (window.Content is Border { Tag: "ChromeRoot" })
             return;
 

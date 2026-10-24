@@ -244,6 +244,8 @@ public sealed class SystemTrayService : IDisposable
             return;
         }
 
+        App.UpdateWindowIcons(_vaultSession.IsActive);
+
         if (_taskbarIcon is null)
             return;
 

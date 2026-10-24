@@ -7,6 +7,7 @@ using System.IO;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace PejPass.Wpf.Tests.Windowing;
@@ -28,6 +29,32 @@ public sealed class WindowTrayBehaviorTests
             Assert.True(host.Tray.IsVisible);
         }, TestContext.Current.CancellationToken);
     }
+
+    [Fact(Timeout = 15000)]
+    public void WindowIcons_TrackVaultLockState()
+    {
+        WpfTestHost.Run(host =>
+        {
+            var app = System.Windows.Application.Current!;
+            var login = host.CreateLoginWindow();
+            app.MainWindow = login;
+            App.PrepareCustomChrome(login);
+
+            Assert.Contains("PejPassLocked.ico", GetWindowIconUri(login));
+
+            OpenTestVault(host);
+
+            Assert.Contains("PejPass.ico", GetWindowIconUri(login));
+            Assert.DoesNotContain("PejPassLocked.ico", GetWindowIconUri(login));
+
+            host.VaultSession.Clear();
+
+            Assert.Contains("PejPassLocked.ico", GetWindowIconUri(login));
+        }, TestContext.Current.CancellationToken);
+    }
+
+    private static string GetWindowIconUri(Window window) =>
+        Assert.IsType<BitmapFrame>(window.Icon).UriSource?.OriginalString ?? string.Empty;
 
     [Fact(Timeout = 15000)]
     public void PrepareForExit_MakesTrayStopInterceptingClose()
