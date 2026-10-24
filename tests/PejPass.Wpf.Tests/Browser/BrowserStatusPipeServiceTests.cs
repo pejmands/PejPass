@@ -115,6 +115,20 @@ public sealed class BrowserStatusPipeServiceTests
     }
 
     [Theory]
+    [InlineData("https://example.com/login", "login.example.com", true, false)]
+    [InlineData("https://example.com/login", "attacker.test", true, true)]
+    [InlineData("https://example.com/login", "attacker.test", false, false)]
+    [InlineData("", "attacker.test", true, true)]
+    public void RequiresCrossDomainConfirmation_OnlyRequiresItForManuallySelectedMismatchedAccounts(
+        string url, string domain, bool allowDomainMismatch, bool expected)
+    {
+        var entry = new VaultEntry { Url = url };
+
+        Assert.Equal(expected,
+            BrowserStatusPipeService.RequiresCrossDomainConfirmation(entry, domain, allowDomainMismatch));
+    }
+
+    [Theory]
     [InlineData("192.168.1.5", "192.168.1.5", true)]
     [InlineData("192.168.1.5", "10.20.1.5", false)]
     [InlineData("10.20.1.5", "192.168.1.5", false)]

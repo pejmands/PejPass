@@ -431,7 +431,7 @@ async function searchCredentials() {
   const requestedDomain = activeDomain;
   searchCredentialsButton.disabled = true;
   searchCredentialsButton.textContent = "Searching…";
-  credentialSearchStatus.textContent = "Confirm the search in PejPass desktop.";
+  credentialSearchStatus.textContent = "Searching saved accounts…";
   try {
     const response = await globalThis.pejpassBrowserApi.runtime.sendMessage({
       target: "pejpass-search-credentials",
@@ -500,7 +500,7 @@ async function searchCredentials() {
     credentialList.replaceChildren(fragment);
     credentialSearchStatus.textContent = results.length === 0
       ? "No accounts matched that search."
-      : `${results.length} account${results.length === 1 ? "" : "s"} found. Filling requires desktop confirmation and Windows Hello.`;
+      : `${results.length} account${results.length === 1 ? "" : "s"} found. Select an account to fill it. Accounts from other websites always require confirmation.`;
     credentialsStatus.textContent = "Manually searched accounts (domain matching bypassed only for these user-selected results).";
   } catch {
     credentialSearchStatus.textContent = "Credential search unavailable. Open PejPass desktop and try again.";
