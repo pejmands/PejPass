@@ -246,14 +246,12 @@ public sealed class Vault
             .Distinct()
             .ToList();
 
-        var invalidField = selectedFields.FirstOrDefault(
-            field => !Enum.IsDefined(typeof(EntryHistoryField), field));
-        if (selectedFields.Any(
-                field => !Enum.IsDefined(typeof(EntryHistoryField), field)))
+        var invalidFields = selectedFields.Where(field => !Enum.IsDefined(field)).ToList();
+        if (invalidFields.Count > 0)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(fields),
-                invalidField,
+                invalidFields[0],
                 "One or more history fields are invalid.");
         }
 
