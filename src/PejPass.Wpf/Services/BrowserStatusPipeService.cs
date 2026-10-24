@@ -765,12 +765,13 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
             if (requireConfirmation)
             {
-                var approved = await app.Dispatcher.InvokeAsync(() => DialogService.Confirm(
+                var approvalTask = await app.Dispatcher.InvokeAsync(() => DialogService.ConfirmAsync(
                     $"Search saved accounts across your vault for this text?\n\nSearch: {Limit(query, 100)}\nCurrent site: {domain}\n\nAccount titles, usernames, and website addresses may be shown in the browser extension.",
                     "Confirm Credential Search",
                     yesText: "Search",
                     noText: "Cancel",
-                    bringToFront: true), System.Windows.Threading.DispatcherPriority.Send);
+                    bringToFront: true), System.Windows.Threading.DispatcherPriority.Send).Task.ConfigureAwait(false);
+                var approved = await approvalTask.ConfigureAwait(false);
                 if (!approved) return Error("search_denied");
             }
 
