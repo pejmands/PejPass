@@ -59,6 +59,12 @@ public sealed class AppSettings
     public bool CloseToSystemTray { get; set; }
 
     /// <summary>
+    /// When true, hiding the main window to the system tray locks the active vault session.
+    /// Default: on to preserve the existing security behavior.
+    /// </summary>
+    public bool LockVaultWhenHiddenToTray { get; set; } = true;
+
+    /// <summary>
     /// When true, PejPass starts automatically when the user signs in to Windows.
     /// Default: off (opt-in).
     /// </summary>
