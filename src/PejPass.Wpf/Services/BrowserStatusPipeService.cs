@@ -866,16 +866,12 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (entry is null)
             return (null, "credential_not_found");
 
-        var skipDesktopConfirmation = false;
-        try
-        {
-            skipDesktopConfirmation = App.Services.GetService<AppSettings>()?.SkipBrowserAutofillConfirmation == true;
-        }
-        catch
-        {
-            // If settings are unavailable, keep the safer confirmation flow.
-        }
-        if (!skipDesktopConfirmation || allowDomainMismatch)
+        var settings = App.Services.GetService<AppSettings>();
+        var requireDesktopConfirmation = settings?.BrowserAutofillConfirmationEnabled ?? true;
+        var requireWindowsHello = settings?.BrowserAutofillWindowsHelloEnabled ?? true;
+
+        // Manual cross-domain account selection always requires explicit confirmation.
+        if (requireDesktopConfirmation || allowDomainMismatch)
         {
             bool approved;
             if (_fillConfirmation is not null)
@@ -901,17 +897,20 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 return (null, "fill_denied");
         }
 
-        var helloResult = await VerifyBrowserAutofillWithWindowsHelloAsync(
-            domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
-        if (helloResult != WindowsHelloVerificationResult.Verified)
+        if (requireWindowsHello)
         {
-            var code = helloResult switch
+            var helloResult = await VerifyBrowserAutofillWithWindowsHelloAsync(
+                domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
+            if (helloResult != WindowsHelloVerificationResult.Verified)
             {
-                WindowsHelloVerificationResult.AuthenticationFailed => "hello_failed",
-                WindowsHelloVerificationResult.Cancelled => "hello_cancelled",
-                _ => "hello_unavailable"
-            };
-            return (null, code);
+                var code = helloResult switch
+                {
+                    WindowsHelloVerificationResult.AuthenticationFailed => "hello_failed",
+                    WindowsHelloVerificationResult.Cancelled => "hello_cancelled",
+                    _ => "hello_unavailable"
+                };
+                return (null, code);
+            }
         }
 
         // Re-read the credential after approval so no stale or expired TOTP code is returned.
