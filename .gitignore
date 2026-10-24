@@ -38,7 +38,6 @@ artifacts/
 .vs/
 *.rsuser
 *.suo
-*.user
 *.userosscache
 *.sln.docstates
 
@@ -67,3 +66,6 @@ secrets/
 ## Node.js
 **/node_modules/
 npm-debug.log*
+
+## Browser build output
+/browser/dist/
