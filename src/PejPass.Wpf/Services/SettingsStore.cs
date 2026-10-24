@@ -195,6 +195,27 @@ public static class SettingsStore
 
         settings.WindowsHelloEnabled = windowsHelloEnabled;
 
+        if (!TryGetBool(root, "browserAutofillWindowsHelloEnabled", out var browserAutofillWindowsHelloEnabled))
+        {
+            browserAutofillWindowsHelloEnabled = defaults.BrowserAutofillWindowsHelloEnabled;
+            needsSave = true;
+        }
+
+        settings.BrowserAutofillWindowsHelloEnabled = browserAutofillWindowsHelloEnabled;
+
+        if (!TryGetBool(root, "browserAutofillConfirmationEnabled", out var browserAutofillConfirmationEnabled))
+        {
+            // Preserve the old setting: when it skipped confirmation, migrate to Hello-only.
+            if (TryGetBool(root, "skipBrowserAutofillConfirmation", out var skipBrowserAutofillConfirmation))
+                browserAutofillConfirmationEnabled = !skipBrowserAutofillConfirmation;
+            else
+                browserAutofillConfirmationEnabled = defaults.BrowserAutofillConfirmationEnabled;
+
+            needsSave = true;
+        }
+
+        settings.BrowserAutofillConfirmationEnabled = browserAutofillConfirmationEnabled;
+
         if (!TryGetInt32(root, "windowsHelloTimeoutMinutes", out var windowsHelloTimeoutMinutes) ||
             windowsHelloTimeoutMinutes is not 0 and not 15 and not 60 and not 240)
         {
