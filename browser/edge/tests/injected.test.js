@@ -105,3 +105,21 @@ test("three-field password-change forms only fill the current-password field", (
     dom.window.close();
   }
 });
+
+test("fills Reddit-style username and password inputs in separate open Shadow DOM roots", () => {
+  const dom = createPage('<div id="username-host"></div><div id="password-host"></div>', "https://www.reddit.com/login");
+  try {
+    const usernameRoot = dom.window.document.getElementById("username-host").attachShadow({ mode: "open" });
+    usernameRoot.innerHTML = '<input type="text" name="username" autocomplete="username" placeholder="Email or username">';
+    const passwordRoot = dom.window.document.getElementById("password-host").attachShadow({ mode: "open" });
+    passwordRoot.innerHTML = '<input type="password" name="password" autocomplete="current-password">';
+
+    const result = dom.window.processLoginForm("fill", "reddit.com", "alice", "reddit-secret");
+
+    assert.equal(result, "filled");
+    assert.equal(usernameRoot.querySelector("input").value, "alice");
+    assert.equal(passwordRoot.querySelector("input").value, "reddit-secret");
+  } finally {
+    dom.window.close();
+  }
+});
