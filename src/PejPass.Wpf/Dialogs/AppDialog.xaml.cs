@@ -11,6 +11,7 @@ public partial class AppDialog : Window
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoMove = 0x0002;
     private const uint SwpNoActivate = 0x0010;
+    private const uint SwpShowWindow = 0x0040;
 
     [LibraryImport("user32.dll", EntryPoint = "SetWindowPos")]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -28,6 +29,10 @@ public partial class AppDialog : Window
         if (!Topmost || !IsVisible)
             return;
 
+        // Reassert both WPF's Topmost state and the native topmost z-order.
+        Topmost = false;
+        Topmost = true;
+
         var hwnd = new WindowInteropHelper(this).Handle;
         if (hwnd != IntPtr.Zero)
         {
@@ -38,7 +43,7 @@ public partial class AppDialog : Window
                 0,
                 0,
                 0,
-                SwpNoMove | SwpNoSize | SwpNoActivate);
+                SwpNoMove | SwpNoSize | SwpShowWindow);
         }
     }
     public AppDialogResult Result { get; private set; } = AppDialogResult.None;
@@ -52,7 +57,12 @@ public partial class AppDialog : Window
         InitializeComponent();
         App.PrepareCustomChrome(this);
         PreviewKeyDown += OnPreviewKeyDown;
-        Loaded += (_, _) => EnsureTopmost();
+        SourceInitialized += (_, _) => EnsureTopmost();
+        Loaded += (_, _) =>
+        {
+            EnsureTopmost();
+            Activate();
+        };
         Activated += (_, _) => EnsureTopmost();
 
         TitleText.Text = title;
