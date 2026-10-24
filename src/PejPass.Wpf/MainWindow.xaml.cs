@@ -193,8 +193,12 @@ public partial class MainWindow : Window
 
     private void ScheduleLockAfterTrayHide()
     {
-        if (!_vaultSession.IsActive || DataContext is not MainViewModel viewModel)
+        if (!_settings.LockVaultWhenHiddenToTray ||
+            !_vaultSession.IsActive ||
+            DataContext is not MainViewModel viewModel)
+        {
             return;
+        }
 
         // Lock only after the current Closing/StateChanged event has completed.
         // Lock closes this window as part of the transition to the hidden login window.
