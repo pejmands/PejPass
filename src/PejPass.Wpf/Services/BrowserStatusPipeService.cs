@@ -753,13 +753,18 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
         try
         {
-            var approved = await app.Dispatcher.InvokeAsync(() => DialogService.Confirm(
-                $"Search saved accounts across your vault for this text?\n\nSearch: {Limit(query, 100)}\nCurrent site: {domain}\n\nAccount titles, usernames, and website addresses may be shown in the browser extension.",
-                "Confirm Credential Search",
-                yesText: "Search",
-                noText: "Cancel",
-                bringToFront: true), System.Windows.Threading.DispatcherPriority.Send);
-            if (!approved) return Error("search_denied");
+            var settings = App.Services.GetService<AppSettings>();
+            var requireConfirmation = settings?.BrowserAutofillConfirmationEnabled ?? true;
+            if (requireConfirmation)
+            {
+                var approved = await app.Dispatcher.InvokeAsync(() => DialogService.Confirm(
+                    $"Search saved accounts across your vault for this text?\n\nSearch: {Limit(query, 100)}\nCurrent site: {domain}\n\nAccount titles, usernames, and website addresses may be shown in the browser extension.",
+                    "Confirm Credential Search",
+                    yesText: "Search",
+                    noText: "Cancel",
+                    bringToFront: true), System.Windows.Threading.DispatcherPriority.Send);
+                if (!approved) return Error("search_denied");
+            }
 
             if (!_vaultSession.IsActive || _vaultSession.Vault is not { } vault)
                 return Error("vault_locked");
@@ -902,8 +907,10 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             // If settings are unavailable, keep both confirmation steps enabled.
         }
 
-        // Manual cross-domain account selection always requires explicit confirmation.
-        if (requireDesktopConfirmation || allowDomainMismatch)
+        var isCrossDomainSelection = allowDomainMismatch && !EntryMatchesDomain(entry, domain);
+
+        // Accounts from another website always require explicit confirmation.
+        if (requireDesktopConfirmation || isCrossDomainSelection)
         {
             bool approved;
             if (_fillConfirmation is not null)
@@ -912,8 +919,8 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             }
             else
             {
-                var domainNotice = allowDomainMismatch
-                    ? $"\nSaved website: {Limit(entry.Url, 2048)}\nThis account was selected by manual search and does not have to match the current site domain. Verify that it is the correct SSO account.\n"
+                var domainNotice = isCrossDomainSelection
+                    ? $"\nSaved website: {Limit(entry.Url, 2048)}\nThis account belongs to another website. Verify that it is the correct account before continuing.\n"
                     : string.Empty;
                 approved = await DialogService.ConfirmAsync(
                     $"Allow PejPass to provide the username and password for this site?\n\n" +
