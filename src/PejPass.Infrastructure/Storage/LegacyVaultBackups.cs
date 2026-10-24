@@ -2,9 +2,9 @@ namespace PejPass.Infrastructure.Storage;
 
 public static class LegacyVaultBackups
 {
-    private static readonly int[] sourceArray = [1, 2];
+    private static readonly int[] legacyVersions = [1, 2];
 
     public static IReadOnlyList<string> Find(string vaultPath) =>
-        [.. sourceArray.Select(version => $"{vaultPath}.v{version}.bak")
+        [.. legacyVersions.Select(version => $"{vaultPath}.v{version}.bak")
             .Where(File.Exists)];
 }
