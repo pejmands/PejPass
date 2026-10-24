@@ -30,7 +30,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public void TraySettings_AreDisabledByDefault()
+    public void TrayVisibilitySettings_AreDisabledByDefault()
     {
         var settings = new AppSettings();
 
