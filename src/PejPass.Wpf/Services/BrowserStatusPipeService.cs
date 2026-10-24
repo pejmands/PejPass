@@ -753,8 +753,16 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
         try
         {
-            var settings = App.Services.GetService<AppSettings>();
-            var requireConfirmation = settings?.BrowserAutofillConfirmationEnabled ?? true;
+            var requireConfirmation = true;
+            try
+            {
+                requireConfirmation = App.Services.GetService<AppSettings>()?.BrowserAutofillConfirmationEnabled ?? true;
+            }
+            catch
+            {
+                // If settings are unavailable, keep confirmation enabled.
+            }
+
             if (requireConfirmation)
             {
                 var approved = await app.Dispatcher.InvokeAsync(() => DialogService.Confirm(
@@ -907,7 +915,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             // If settings are unavailable, keep both confirmation steps enabled.
         }
 
-        var isCrossDomainSelection = allowDomainMismatch && !EntryMatchesDomain(entry, domain);
+        var isCrossDomainSelection = RequiresCrossDomainConfirmation(entry, domain, allowDomainMismatch);
 
         // Accounts from another website always require explicit confirmation.
         if (requireDesktopConfirmation || isCrossDomainSelection)
@@ -1171,6 +1179,10 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             _credentialIndexByRegistrableDomain.Clear();
         }
     }
+
+    internal static bool RequiresCrossDomainConfirmation(
+        VaultEntry entry, string domain, bool allowDomainMismatch) =>
+        allowDomainMismatch && !EntryMatchesDomain(entry, domain);
 
     internal static bool EntryMatchesDomain(VaultEntry entry, string domain)
     {
