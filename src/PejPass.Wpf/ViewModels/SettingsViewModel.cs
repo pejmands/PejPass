@@ -33,6 +33,8 @@ public partial class SettingsViewModel : ObservableObject
     private readonly int _savedClipboard;
     private readonly int _savedRevealSecret;
     private readonly bool _savedWindowsHello;
+    private readonly bool _savedBrowserAutofillConfirmation;
+    private readonly bool _savedBrowserAutofillWindowsHello;
     private readonly int _savedWindowsHelloTimeout;
     private readonly FontSizeMode _savedFontSize;
     private readonly double _savedZoom;
@@ -158,6 +160,8 @@ public partial class SettingsViewModel : ObservableObject
         _savedClipboard = settings.ClipboardClearSeconds;
         _savedRevealSecret = settings.RevealSecretSeconds;
         _savedWindowsHello = settings.WindowsHelloEnabled;
+        _savedBrowserAutofillConfirmation = settings.BrowserAutofillConfirmationEnabled;
+        _savedBrowserAutofillWindowsHello = settings.BrowserAutofillWindowsHelloEnabled;
         _savedWindowsHelloTimeout = settings.WindowsHelloTimeoutMinutes;
         _savedFontSize = settings.FontSize;
         _savedZoom = settings.Zoom;
@@ -379,6 +383,8 @@ public partial class SettingsViewModel : ObservableObject
         _settings.ClipboardClearSeconds = _savedClipboard;
         _settings.RevealSecretSeconds = _savedRevealSecret;
         _settings.WindowsHelloEnabled = _savedWindowsHello;
+        _settings.BrowserAutofillConfirmationEnabled = _savedBrowserAutofillConfirmation;
+        _settings.BrowserAutofillWindowsHelloEnabled = _savedBrowserAutofillWindowsHello;
         _settings.WindowsHelloTimeoutMinutes = _savedWindowsHelloTimeout;
         _settings.FontSize = _savedFontSize;
         _settings.Zoom = _savedZoom;
@@ -397,8 +403,8 @@ public partial class SettingsViewModel : ObservableObject
             RevealSecretSeconds = _savedRevealSecret;
             SelectedThemeIndex = (int)_savedTheme;
             WindowsHelloEnabled = _savedWindowsHello;
-            BrowserAutofillConfirmationEnabled = _settings.BrowserAutofillConfirmationEnabled;
-            BrowserAutofillWindowsHelloEnabled = _settings.BrowserAutofillWindowsHelloEnabled;
+            BrowserAutofillConfirmationEnabled = _savedBrowserAutofillConfirmation;
+            BrowserAutofillWindowsHelloEnabled = _savedBrowserAutofillWindowsHello;
             SelectedWindowsHelloTimeoutIndex = Array.IndexOf(WindowsHelloTimeoutValues, _savedWindowsHelloTimeout);
             if (SelectedWindowsHelloTimeoutIndex < 0) SelectedWindowsHelloTimeoutIndex = 2;
             OnlineFaviconFetchingEnabled = _savedOnlineFaviconFetching;
