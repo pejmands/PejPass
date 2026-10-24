@@ -32,8 +32,11 @@ public sealed class AppSettings
     /// </summary>
     public bool WindowsHelloEnabled { get; set; } = true;
 
-    /// <summary>When enabled, browser autofill skips the extra desktop confirmation but still requires Windows Hello.</summary>
-    public bool SkipBrowserAutofillConfirmation { get; set; }
+    /// <summary>Ask for explicit approval in a PejPass confirmation window before browser autofill.</summary>
+    public bool BrowserAutofillConfirmationEnabled { get; set; } = true;
+
+    /// <summary>Require Windows Hello verification before providing browser autofill credentials.</summary>
+    public bool BrowserAutofillWindowsHelloEnabled { get; set; } = true;
 
     /// <summary>Windows Hello cache lifetime in minutes; zero means until the app exits.</summary>
     public int WindowsHelloTimeoutMinutes { get; set; } = 240;
