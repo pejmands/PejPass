@@ -656,14 +656,94 @@ public partial class App : System.Windows.Application
         }
     }
 
-    private static BitmapFrame GetWindowIcon(bool isUnlocked)
+    private static ImageSource GetWindowIcon(bool isUnlocked)
     {
-        var cached = isUnlocked ? _unlockedWindowIcon : _lockedWindowIcon;
-        if (cached is not null)
-            return cached;
+        if (isUnlocked)
+            return GetUnlockedWindowIcon();
 
-        var fileName = isUnlocked ? "PejPass.ico" : "PejPassLocked.ico";
-        var uri = new Uri($"pack://application:,,,/Assets/{fileName}", UriKind.Absolute);
+        if (_lockedWindowIcon is not null)
+            return _lockedWindowIcon;
+
+        const int size = 256;
+        var visual = new DrawingVisual();
+
+        using (var context = visual.RenderOpen())
+        {
+            context.DrawImage(
+                GetUnlockedWindowIcon(),
+                new Rect(0, 0, size, size));
+
+            var badgeCenter = new Point(202, 202);
+            const double badgeRadius = 48;
+            var badgeBrush = new SolidColorBrush(Color.FromRgb(35, 39, 47));
+            badgeBrush.Freeze();
+
+            context.DrawEllipse(
+                badgeBrush,
+                new Pen(Brushes.White, 6),
+                badgeCenter,
+                badgeRadius,
+                badgeRadius);
+
+            using var shackle = new StreamGeometry();
+            using (var geometryContext = shackle.Open())
+            {
+                geometryContext.BeginFigure(new Point(185, 194), false, false);
+                geometryContext.BezierTo(
+                    new Point(185, 160),
+                    new Point(219, 160),
+                    new Point(219, 194),
+                    true,
+                    false);
+            }
+
+            shackle.Freeze();
+
+            var shacklePen = new Pen(Brushes.White, 10)
+            {
+                StartLineCap = PenLineCap.Round,
+                EndLineCap = PenLineCap.Round
+            };
+            shacklePen.Freeze();
+            context.DrawGeometry(null, shacklePen, shackle);
+
+            context.DrawRoundedRectangle(
+                Brushes.White,
+                null,
+                new Rect(177, 190, 50, 40),
+                7,
+                7);
+
+            var keyholeBrush = new SolidColorBrush(Color.FromRgb(35, 39, 47));
+            keyholeBrush.Freeze();
+            context.DrawEllipse(keyholeBrush, null, new Point(202, 204), 5, 5);
+            context.DrawRoundedRectangle(
+                keyholeBrush,
+                null,
+                new Rect(199, 207, 6, 11),
+                3,
+                3);
+        }
+
+        var composedIcon = new RenderTargetBitmap(
+            size,
+            size,
+            96,
+            96,
+            PixelFormats.Pbgra32);
+        composedIcon.Render(visual);
+        composedIcon.Freeze();
+
+        _lockedWindowIcon = composedIcon;
+        return composedIcon;
+    }
+
+    private static BitmapFrame GetUnlockedWindowIcon()
+    {
+        if (_unlockedWindowIcon is not null)
+            return _unlockedWindowIcon;
+
+        var uri = new Uri("pack://application:,,,/Assets/PejPass.ico", UriKind.Absolute);
         var icon = BitmapFrame.Create(
             uri,
             BitmapCreateOptions.None,
@@ -672,11 +752,7 @@ public partial class App : System.Windows.Application
         if (icon.CanFreeze)
             icon.Freeze();
 
-        if (isUnlocked)
-            _unlockedWindowIcon = icon;
-        else
-            _lockedWindowIcon = icon;
-
+        _unlockedWindowIcon = icon;
         return icon;
     }
 
