@@ -821,9 +821,13 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (!_vaultSession.IsActive)
             return Error("vault_locked");
 
+        var vaultGeneration = _vaultSession.Generation;
         CancellationToken vaultLockToken;
         lock (_vaultLockSync)
             vaultLockToken = _vaultLockCancellation.Token;
+
+        if (!_vaultSession.IsActive || _vaultSession.Generation != vaultGeneration)
+            return Error("vault_locked");
 
         using var requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             _shutdown.Token, vaultLockToken);
@@ -854,7 +858,9 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 result = await operation.ConfigureAwait(false);
             }
 
-            if (requestCancellation.IsCancellationRequested || !_vaultSession.IsActive)
+            if (requestCancellation.IsCancellationRequested ||
+                !_vaultSession.IsActive ||
+                _vaultSession.Generation != vaultGeneration)
                 return Error("vault_locked");
 
             if (result.ErrorCode is not null)
@@ -1255,6 +1261,11 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     {
         _vaultSession.StateChanged -= OnVaultStateChanged;
         _shutdown.Cancel();
+        lock (_vaultLockSync)
+        {
+            _vaultLockCancellation.Cancel();
+            _vaultLockCancellation.Dispose();
+        }
 
         try
         {
