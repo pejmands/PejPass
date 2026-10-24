@@ -866,9 +866,18 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (entry is null)
             return (null, "credential_not_found");
 
-        var settings = App.Services.GetService<AppSettings>();
-        var requireDesktopConfirmation = settings?.BrowserAutofillConfirmationEnabled ?? true;
-        var requireWindowsHello = settings?.BrowserAutofillWindowsHelloEnabled ?? true;
+        var requireDesktopConfirmation = true;
+        var requireWindowsHello = true;
+        try
+        {
+            var settings = App.Services.GetService<AppSettings>();
+            requireDesktopConfirmation = settings?.BrowserAutofillConfirmationEnabled ?? true;
+            requireWindowsHello = settings?.BrowserAutofillWindowsHelloEnabled ?? true;
+        }
+        catch
+        {
+            // If settings are unavailable, keep both confirmation steps enabled.
+        }
 
         // Manual cross-domain account selection always requires explicit confirmation.
         if (requireDesktopConfirmation || allowDomainMismatch)
