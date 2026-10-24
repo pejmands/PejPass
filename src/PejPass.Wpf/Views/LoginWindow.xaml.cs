@@ -163,6 +163,12 @@ public partial class LoginWindow : Window
 
     internal void MatchWindowStateForBrowserLock(bool mainWindowWasVisible, WindowState mainWindowState)
     {
+        if (!mainWindowWasVisible)
+        {
+            Hide();
+            return;
+        }
+
         if (mainWindowState == WindowState.Minimized)
         {
             Show();
@@ -173,12 +179,6 @@ public partial class LoginWindow : Window
                 WindowState = WindowState.Minimized;
             }
 
-            return;
-        }
-
-        if (!mainWindowWasVisible)
-        {
-            Hide();
             return;
         }
 

@@ -26,6 +26,7 @@ public sealed class SystemTrayService : IDisposable
     private Icon? _unlockedIcon;
     private Icon? _lockedIcon;
     private ContextMenu? _contextMenu;
+    private MenuItem? _lockMenuItem;
     private bool _isExiting;
     private bool _disposed;
 
@@ -166,8 +167,11 @@ public sealed class SystemTrayService : IDisposable
         menu.Items.Add(CreateMenuItem("Show", () => ShowRequested?.Invoke(this, EventArgs.Empty)));
         menu.Items.Add(CreateMenuItem("Password Generator", () => PasswordGeneratorRequested?.Invoke(this, EventArgs.Empty)));
 
-        if (_vaultSession.IsActive)
-            menu.Items.Add(CreateMenuItem("Lock vault", () => LockRequested?.Invoke(this, EventArgs.Empty)));
+        _lockMenuItem = CreateMenuItem("Lock vault", () => LockRequested?.Invoke(this, EventArgs.Empty));
+        _lockMenuItem.Visibility = _vaultSession.IsActive
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        menu.Items.Add(_lockMenuItem);
 
         menu.Items.Add(new Separator
         {
@@ -232,10 +236,12 @@ public sealed class SystemTrayService : IDisposable
         _taskbarIcon.ToolTipText = GetTrayToolTip();
         _taskbarIcon.Icon = CreateTrayIcon();
 
-        if (_contextMenu is not null)
-            _contextMenu.IsOpen = false;
-
-        SetContextMenu(CreateContextMenu());
+        if (_lockMenuItem is not null)
+        {
+            _lockMenuItem.Visibility = _vaultSession.IsActive
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
     }
 
     private string GetTrayToolTip() =>

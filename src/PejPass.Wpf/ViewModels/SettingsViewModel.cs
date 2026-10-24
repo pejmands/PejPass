@@ -41,6 +41,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly bool _savedAutoCheckForUpdates;
     private readonly bool _savedMinimizeToSystemTray;
     private readonly bool _savedCloseToSystemTray;
+    private readonly bool _savedLockVaultWhenHiddenToTray;
     private readonly bool _savedStartWithWindows;
 
     private bool _suppressThemePreview;
@@ -84,6 +85,9 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool CloseToSystemTray { get; set; }
+
+    [ObservableProperty]
+    public partial bool LockVaultWhenHiddenToTray { get; set; }
 
     [ObservableProperty]
     public partial bool StartWithWindows { get; set; }
@@ -160,6 +164,7 @@ public partial class SettingsViewModel : ObservableObject
         _savedAutoCheckForUpdates = settings.AutoCheckForUpdates;
         _savedMinimizeToSystemTray = settings.MinimizeToSystemTray;
         _savedCloseToSystemTray = settings.CloseToSystemTray;
+        _savedLockVaultWhenHiddenToTray = settings.LockVaultWhenHiddenToTray;
         _savedStartWithWindows = settings.StartWithWindows;
 
         _suppressThemePreview = true;
@@ -176,6 +181,7 @@ public partial class SettingsViewModel : ObservableObject
         AutoCheckForUpdates = settings.AutoCheckForUpdates;
         MinimizeToSystemTray = settings.MinimizeToSystemTray;
         CloseToSystemTray = settings.CloseToSystemTray;
+        LockVaultWhenHiddenToTray = settings.LockVaultWhenHiddenToTray;
         StartWithWindows = settings.StartWithWindows;
         SelectedFontSizeIndex = (int)settings.FontSize;
         SelectedZoomIndex = GetZoomIndex(settings.Zoom);
@@ -300,6 +306,7 @@ public partial class SettingsViewModel : ObservableObject
             _settings.AutoCheckForUpdates = AutoCheckForUpdates;
             _settings.MinimizeToSystemTray = MinimizeToSystemTray;
             _settings.CloseToSystemTray = CloseToSystemTray;
+            _settings.LockVaultWhenHiddenToTray = LockVaultWhenHiddenToTray;
             _settings.StartWithWindows = StartWithWindows;
             _settings.AutoLockMinutes = AutoLockMinutes;
             _settings.ClipboardClearSeconds = ClipboardClearSeconds;
@@ -377,6 +384,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.AutoCheckForUpdates = _savedAutoCheckForUpdates;
         _settings.MinimizeToSystemTray = _savedMinimizeToSystemTray;
         _settings.CloseToSystemTray = _savedCloseToSystemTray;
+        _settings.LockVaultWhenHiddenToTray = _savedLockVaultWhenHiddenToTray;
         _settings.StartWithWindows = _savedStartWithWindows;
 
         _suppressThemePreview = true;
@@ -394,6 +402,7 @@ public partial class SettingsViewModel : ObservableObject
             AutoCheckForUpdates = _savedAutoCheckForUpdates;
             MinimizeToSystemTray = _savedMinimizeToSystemTray;
             CloseToSystemTray = _savedCloseToSystemTray;
+            LockVaultWhenHiddenToTray = _savedLockVaultWhenHiddenToTray;
             StartWithWindows = _savedStartWithWindows;
             SelectedFontSizeIndex = (int)_savedFontSize;
             SelectedRevealSecretIndex = GetRevealSecretIndex(_savedRevealSecret);

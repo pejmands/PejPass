@@ -144,6 +144,7 @@ public sealed class SettingsViewModelSaveTests : IDisposable
             host.Settings.AutoCheckForUpdates = true;
             host.Settings.MinimizeToSystemTray = true;
             host.Settings.CloseToSystemTray = true;
+            host.Settings.LockVaultWhenHiddenToTray = true;
 
             var calls = new List<bool>();
             var viewModel = CreateViewModel(
@@ -162,6 +163,7 @@ public sealed class SettingsViewModelSaveTests : IDisposable
             viewModel.AutoCheckForUpdates = false;
             viewModel.MinimizeToSystemTray = false;
             viewModel.CloseToSystemTray = false;
+            viewModel.LockVaultWhenHiddenToTray = false;
             viewModel.StartWithWindows = true;
 
             viewModel.SaveCommand.Execute(null);
@@ -171,14 +173,37 @@ public sealed class SettingsViewModelSaveTests : IDisposable
             Assert.True(host.Settings.AutoCheckForUpdates);
             Assert.True(host.Settings.MinimizeToSystemTray);
             Assert.True(host.Settings.CloseToSystemTray);
+            Assert.True(host.Settings.LockVaultWhenHiddenToTray);
 
             var saved = SettingsStore.Load();
             Assert.True(saved.AutoCheckForUpdates);
             Assert.True(saved.MinimizeToSystemTray);
             Assert.True(saved.CloseToSystemTray);
+            Assert.True(saved.LockVaultWhenHiddenToTray);
             Assert.False(saved.StartWithWindows);
             Assert.Equal(1, closed);
         }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 15000)]
+    public void Save_LockVaultWhenHiddenToTray_PersistsDisabledValue()
+    {
+        WpfTestHost.Run(host =>
+        {
+            var viewModel = CreateViewModel(host, SucceedingStartup, []);
+            viewModel.LockVaultWhenHiddenToTray = false;
+
+            viewModel.SaveCommand.Execute(null);
+
+            Assert.False(host.Settings.LockVaultWhenHiddenToTray);
+            Assert.False(SettingsStore.Load().LockVaultWhenHiddenToTray);
+        }, TestContext.Current.CancellationToken);
+    }
+
+    private static bool SucceedingStartup(bool enabled, out string? error)
+    {
+        error = null;
+        return true;
     }
 
     private static SettingsViewModel CreateViewModel(

@@ -115,6 +115,58 @@ public sealed class WindowTrayBehaviorTests
         }, TestContext.Current.CancellationToken);
     }
 
+    [Fact(Timeout = 15000)]
+    public void MainWindow_CloseToSystemTray_DoesNotLockVaultWhenOptionIsDisabled()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Settings.CloseToSystemTray = true;
+            host.Settings.LockVaultWhenHiddenToTray = false;
+            OpenTestVault(host);
+
+            var app = System.Windows.Application.Current!;
+            var window = host.CreateMainWindow();
+            app.MainWindow = window;
+            var wasClosed = false;
+            window.Closed += (_, _) => wasClosed = true;
+            window.Show();
+
+            window.Close();
+            DrainDispatcher();
+
+            Assert.False(window.IsVisible);
+            Assert.False(wasClosed);
+            Assert.True(host.VaultSession.IsActive);
+            Assert.True(host.Tray.IsVisible);
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 15000)]
+    public void MainWindow_MinimizeToSystemTray_DoesNotLockVaultWhenOptionIsDisabled()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Settings.MinimizeToSystemTray = true;
+            host.Settings.LockVaultWhenHiddenToTray = false;
+            OpenTestVault(host);
+
+            var app = System.Windows.Application.Current!;
+            var window = host.CreateMainWindow();
+            app.MainWindow = window;
+            var wasClosed = false;
+            window.Closed += (_, _) => wasClosed = true;
+            window.Show();
+
+            window.WindowState = WindowState.Minimized;
+            DrainDispatcher();
+
+            Assert.False(window.IsVisible);
+            Assert.False(wasClosed);
+            Assert.True(host.VaultSession.IsActive);
+            Assert.True(host.Tray.IsVisible);
+        }, TestContext.Current.CancellationToken);
+    }
+
     private static void OpenTestVault(WpfTestHost host)
     {
         using var keyMaterial = new VaultKeyMaterial(
@@ -167,6 +219,27 @@ public sealed class WindowTrayBehaviorTests
                 System.Windows.WindowState.Minimized,
                 window.WindowState);
             Assert.True(window.IsVisible);
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 15000)]
+    public void LoginWindow_BrowserLock_KeepsHiddenWindowHidden()
+    {
+        WpfTestHost.Run(host =>
+        {
+            var login = host.CreateLoginWindow();
+            System.Windows.Application.Current!.MainWindow = login;
+            login.Show();
+            login.Hide();
+
+            var method = typeof(LoginWindow).GetMethod(
+                "MatchWindowStateForBrowserLock",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+
+            Assert.NotNull(method);
+            method!.Invoke(login, [false, WindowState.Minimized]);
+
+            Assert.False(login.IsVisible);
         }, TestContext.Current.CancellationToken);
     }
 

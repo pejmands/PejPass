@@ -130,7 +130,7 @@
 								Margin="0,4,12,0"
 								FontSize="{DynamicResource AppFontSize11}"
 								Foreground="{DynamicResource MutedBrush}"
-								Text="When minimized, hide the window to the tray instead of leaving it minimized. The vault is locked and must be unlocked again."
+								Text="When minimized, hide the window to the tray instead of leaving it minimized."
 								TextWrapping="Wrap" />
 						</StackPanel>
 						<CheckBox
@@ -154,7 +154,7 @@
 								Margin="0,4,12,0"
 								FontSize="{DynamicResource AppFontSize11}"
 								Foreground="{DynamicResource MutedBrush}"
-								Text="When closed, hide the window to the tray instead of exiting. The vault is locked and must be unlocked again."
+								Text="When closed, hide the window to the tray instead of exiting."
 								TextWrapping="Wrap" />
 						</StackPanel>
 						<CheckBox
@@ -162,6 +162,30 @@
 							HorizontalAlignment="Left"
 							VerticalAlignment="Center"
 							IsChecked="{Binding CloseToSystemTray}" />
+					</Grid>
+
+					<Grid Margin="0,0,0,20">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="180" />
+						</Grid.ColumnDefinitions>
+						<StackPanel VerticalAlignment="Center">
+							<TextBlock
+								FontSize="{DynamicResource AppFontSize12}"
+								Foreground="{DynamicResource TextBrush}"
+								Text="Lock vault when hidden to tray" />
+							<TextBlock
+								Margin="0,4,12,0"
+								FontSize="{DynamicResource AppFontSize11}"
+								Foreground="{DynamicResource MutedBrush}"
+								Text="When enabled, hiding the main window to the tray locks the vault. Applies to both minimize and close-to-tray actions."
+								TextWrapping="Wrap" />
+						</StackPanel>
+						<CheckBox
+							Grid.Column="1"
+							HorizontalAlignment="Left"
+							VerticalAlignment="Center"
+							IsChecked="{Binding LockVaultWhenHiddenToTray}" />
 					</Grid>
 
 				</StackPanel>

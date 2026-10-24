@@ -237,6 +237,14 @@ public static class SettingsStore
 
         settings.CloseToSystemTray = closeToSystemTray;
 
+        if (!TryGetBool(root, "lockVaultWhenHiddenToTray", out var lockVaultWhenHiddenToTray))
+        {
+            lockVaultWhenHiddenToTray = defaults.LockVaultWhenHiddenToTray;
+            needsSave = true;
+        }
+
+        settings.LockVaultWhenHiddenToTray = lockVaultWhenHiddenToTray;
+
         if (!TryGetBool(root, "startWithWindows", out var startWithWindows))
         {
             startWithWindows = defaults.StartWithWindows;
