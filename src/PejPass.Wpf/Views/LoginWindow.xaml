@@ -1,6 +1,7 @@
 <Window
 	x:Class="PejPass.Wpf.Views.LoginWindow"
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	Icon="/Assets/PejPassLocked.ico"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:controls="clr-namespace:PejPass.Wpf.Controls"
 	Title="PejPass — Unlock or Create Vault"
