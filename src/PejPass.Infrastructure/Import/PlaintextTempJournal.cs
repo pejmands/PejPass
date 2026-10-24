@@ -18,11 +18,22 @@ public sealed class PlaintextTempJournal
         _journalPath = Path.GetFullPath(journalPath);
     }
 
-    public static string DefaultPath =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "PejPass",
-            "pending-plaintext-temp.txt");
+    public static string DefaultPath
+    {
+        get
+        {
+            const string environmentVariable = "PEJPASS_APPDATA_DIR";
+            var configuredPath = Environment.GetEnvironmentVariable(environmentVariable);
+
+            var appDataDir = !string.IsNullOrWhiteSpace(configuredPath)
+                ? Path.GetFullPath(configuredPath)
+                : Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PejPass");
+
+            return Path.Combine(appDataDir, "pending-plaintext-temp.txt");
+        }
+    }
 
     public static PlaintextTempJournal Default { get; } = new(DefaultPath);
 
