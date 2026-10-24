@@ -115,6 +115,58 @@ public sealed class WindowTrayBehaviorTests
         }, TestContext.Current.CancellationToken);
     }
 
+    [Fact(Timeout = 15000)]
+    public void MainWindow_CloseToSystemTray_DoesNotLockVaultWhenOptionIsDisabled()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Settings.CloseToSystemTray = true;
+            host.Settings.LockVaultWhenHiddenToTray = false;
+            OpenTestVault(host);
+
+            var app = System.Windows.Application.Current!;
+            var window = host.CreateMainWindow();
+            app.MainWindow = window;
+            var wasClosed = false;
+            window.Closed += (_, _) => wasClosed = true;
+            window.Show();
+
+            window.Close();
+            DrainDispatcher();
+
+            Assert.False(window.IsVisible);
+            Assert.False(wasClosed);
+            Assert.True(host.VaultSession.IsActive);
+            Assert.True(host.Tray.IsVisible);
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 15000)]
+    public void MainWindow_MinimizeToSystemTray_DoesNotLockVaultWhenOptionIsDisabled()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Settings.MinimizeToSystemTray = true;
+            host.Settings.LockVaultWhenHiddenToTray = false;
+            OpenTestVault(host);
+
+            var app = System.Windows.Application.Current!;
+            var window = host.CreateMainWindow();
+            app.MainWindow = window;
+            var wasClosed = false;
+            window.Closed += (_, _) => wasClosed = true;
+            window.Show();
+
+            window.WindowState = WindowState.Minimized;
+            DrainDispatcher();
+
+            Assert.False(window.IsVisible);
+            Assert.False(wasClosed);
+            Assert.True(host.VaultSession.IsActive);
+            Assert.True(host.Tray.IsVisible);
+        }, TestContext.Current.CancellationToken);
+    }
+
     private static void OpenTestVault(WpfTestHost host)
     {
         using var keyMaterial = new VaultKeyMaterial(
