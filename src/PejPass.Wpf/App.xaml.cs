@@ -685,7 +685,7 @@ public partial class App : System.Windows.Application
                 badgeRadius,
                 badgeRadius);
 
-            using var shackle = new StreamGeometry();
+            var shackle = new StreamGeometry();
             using (var geometryContext = shackle.Open())
             {
                 geometryContext.BeginFigure(new Point(185, 194), false, false);
