@@ -40,16 +40,18 @@ public sealed class WindowTrayBehaviorTests
             app.MainWindow = login;
             App.PrepareCustomChrome(login);
 
-            Assert.Contains("PejPassLocked.ico", GetWindowIconUri(login));
+            var lockedIcon = Assert.IsType<RenderTargetBitmap>(login.Icon);
+            Assert.Equal(256, lockedIcon.PixelWidth);
+            Assert.Equal(256, lockedIcon.PixelHeight);
 
             OpenTestVault(host);
 
             Assert.Contains("PejPass.ico", GetWindowIconUri(login));
-            Assert.DoesNotContain("PejPassLocked.ico", GetWindowIconUri(login));
+            Assert.IsType<BitmapFrame>(login.Icon);
 
             host.VaultSession.Clear();
 
-            Assert.Contains("PejPassLocked.ico", GetWindowIconUri(login));
+            Assert.IsType<RenderTargetBitmap>(login.Icon);
         }, TestContext.Current.CancellationToken);
     }
 
