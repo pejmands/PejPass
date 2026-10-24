@@ -47,13 +47,13 @@ public sealed class AppSettings
     public bool AutoCheckForUpdates { get; set; }
 
     /// <summary>
-    /// When true, minimizing a window hides it to the system tray and locks the active vault session.
+    /// When true, minimizing a window hides it to the system tray instead of leaving it minimized.
     /// Default: off (opt-in).
     /// </summary>
     public bool MinimizeToSystemTray { get; set; }
 
     /// <summary>
-    /// When true, closing a window hides it to the system tray instead of exiting and locks the active vault session.
+    /// When true, closing a window hides it to the system tray instead of exiting.
     /// Default: off (opt-in).
     /// </summary>
     public bool CloseToSystemTray { get; set; }
