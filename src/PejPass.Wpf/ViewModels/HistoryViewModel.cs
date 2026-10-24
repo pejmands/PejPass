@@ -402,6 +402,8 @@ public partial class HistoryViewModel : ObservableObject, IDisposable
         BusyMessage = string.Empty;
         HistoryRestored = null;
         VaultRollbackCompleted = null;
+
+        GC.SuppressFinalize(this);
     }
 
     private void ClearItems()

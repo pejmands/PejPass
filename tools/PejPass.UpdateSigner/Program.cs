@@ -14,8 +14,11 @@ internal sealed class SignerException(string message) : Exception(message)
 {
 }
 
-internal static class Signer
+internal static partial class Signer
 {
+    [GeneratedRegex(@"^[A-Za-z]:")]
+    private static partial Regex DrivePathRegex();
+
     private const string Usage = """
         Usage:
           Sign:    dotnet run --project tools/PejPass.UpdateSigner -- <update.json> <key.pem> [<more-keys.pem> ...] [--package <PejPass.zip>] [--client-key <base64>] [--public-key <base64>]
@@ -564,7 +567,7 @@ internal static class Signer
             var normalized = entry.FullName.Replace('\\', '/');
             if (string.IsNullOrWhiteSpace(normalized)
                 || normalized.StartsWith('/')
-                || Regex.IsMatch(normalized, @"^[A-Za-z]:")
+                || DrivePathRegex().IsMatch(normalized)
                 || normalized.Split('/').Any(segment => segment is "." or ".."))
             {
                 throw new SignerException($"The package contains an unsafe archive path: '{entry.FullName}'.");

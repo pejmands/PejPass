@@ -269,6 +269,7 @@ public static class TotpHelper
 
     private static bool TryParseQuery(string query, out Dictionary<string, string> values)
     {
+        // DO NOT CHANGE; WRONG SUGGESTION.
         values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         try

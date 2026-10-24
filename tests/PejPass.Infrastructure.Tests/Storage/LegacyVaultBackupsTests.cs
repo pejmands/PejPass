@@ -21,7 +21,7 @@ public sealed class LegacyVaultBackupsTests
             File.WriteAllText(extendedBackup, "extra");
 
             Assert.Equal(
-                new[] { v1Backup, v2Backup },
+                [v1Backup, v2Backup],
                 LegacyVaultBackups.Find(vaultPath));
         }
         finally

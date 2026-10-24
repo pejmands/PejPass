@@ -14,13 +14,12 @@ public sealed class WindowsClipboardWriterTests
         var payloads = WindowsClipboardWriter.CreatePayloads(text);
 
         Assert.Equal(
-            new[]
-            {
+            [
                 DataFormats.UnicodeText,
                 "ExcludeClipboardContentFromMonitorProcessing",
                 "CanIncludeInClipboardHistory",
                 "CanUploadToCloudClipboard"
-            },
+            ],
             payloads.Select(payload => payload.FormatName));
 
         Assert.Equal(Encoding.Unicode.GetBytes(text + '\0'), payloads[0].Bytes);

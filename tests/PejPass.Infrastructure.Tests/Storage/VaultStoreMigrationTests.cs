@@ -165,8 +165,9 @@ public sealed class VaultStoreMigrationTests
             var opened = await store.OpenAsync(
                 path,
                 "password",
-                cancellationToken,
-                migrateLegacy: false);
+                false,
+                cancellationToken
+               );
 
             Assert.Equal("Legacy backup", opened.Name);
             Assert.Equal(2, originalData[4]);
@@ -194,13 +195,13 @@ public sealed class VaultStoreMigrationTests
             var store = new VaultStore(new CryptoService(), new FileMover());
             await store.CreateAsync(path, "password", new Vault { KdfParameters = parameters }, cancellationToken);
 
-            var opened = await store.OpenAsync(path, "password", cancellationToken);
+            var opened = await store.OpenAsync(path, "password", ct: cancellationToken);
             Assert.Equal(parameters, opened.KdfParameters);
 
             opened.Name = "Updated";
             await store.SaveAsync(path, "password", opened, cancellationToken);
 
-            var reopened = await store.OpenAsync(path, "password", cancellationToken);
+            var reopened = await store.OpenAsync(path, "password", ct: cancellationToken);
             Assert.Equal(parameters, reopened.KdfParameters);
             Assert.Equal("Updated", reopened.Name);
         }

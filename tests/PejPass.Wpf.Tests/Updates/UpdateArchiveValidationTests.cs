@@ -81,11 +81,11 @@ public sealed class UpdateArchiveValidationTests
 
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
         {
-            foreach (var item in entries)
+            foreach (var (Name, Data) in entries)
             {
-                var entry = archive.CreateEntry(item.Name);
+                var entry = archive.CreateEntry(Name);
                 using var entryStream = entry.Open();
-                entryStream.Write(item.Data);
+                entryStream.Write(Data);
             }
         }
 

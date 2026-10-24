@@ -1,7 +1,7 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
-using System.Runtime.InteropServices;
 
 namespace PejPass.Wpf.Dialogs;
 

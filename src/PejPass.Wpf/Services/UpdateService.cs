@@ -390,14 +390,11 @@ public sealed class UpdateService : IDisposable
         WritePendingWhatsNew(staged.TargetVersion);
 
         var application = System.Windows.Application.Current;
-        if (application is not null)
-        {
-            application.Dispatcher.Invoke(() =>
+        application?.Dispatcher.Invoke(() =>
             {
                 App.Services?.GetService<SystemTrayService>()?.PrepareForExit();
                 application.Shutdown();
             });
-        }
     }
 
     internal static string BuildApplyScript(
@@ -471,12 +468,9 @@ public sealed class UpdateService : IDisposable
     {
         ArgumentNullException.ThrowIfNull(archive);
 
-        if (maxEntries < 1)
-            throw new ArgumentOutOfRangeException(nameof(maxEntries));
-        if (maxTotalUncompressedBytes < 1)
-            throw new ArgumentOutOfRangeException(nameof(maxTotalUncompressedBytes));
-        if (maxEntryUncompressedBytes < 1)
-            throw new ArgumentOutOfRangeException(nameof(maxEntryUncompressedBytes));
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxEntries, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxTotalUncompressedBytes, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxEntryUncompressedBytes, 1);
 
         if (archive.Entries.Count == 0)
             throw new InvalidDataException("Update archive is empty.");

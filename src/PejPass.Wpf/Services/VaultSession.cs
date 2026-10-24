@@ -6,7 +6,7 @@ namespace PejPass.Wpf.Services;
 
 public sealed class VaultSession : IDisposable
 {
-    private readonly object _sync = new();
+    private readonly Lock _sync = new();
     private readonly SemaphoreSlim _saveGate = new(1, 1);
     private VaultKeyMaterial? _keyMaterial;
     private Vault? _vault;

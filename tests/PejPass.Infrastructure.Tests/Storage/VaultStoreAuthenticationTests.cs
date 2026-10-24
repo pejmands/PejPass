@@ -29,7 +29,7 @@ public sealed class VaultStoreAuthenticationTests
             var opened = await store.OpenAsync(
                 path,
                 "password",
-                cancellationToken);
+                ct: cancellationToken);
 
             Assert.NotNull(opened);
         }
@@ -77,7 +77,7 @@ public sealed class VaultStoreAuthenticationTests
                 store.OpenAsync(
                     path,
                     "password",
-                    cancellationToken));
+                    ct: cancellationToken));
         }
         finally
         {
@@ -105,7 +105,7 @@ public sealed class VaultStoreAuthenticationTests
             await File.WriteAllBytesAsync(path, data, cancellationToken);
 
             await Assert.ThrowsAsync<AuthenticationTagMismatchException>(() =>
-                store.OpenAsync(path, "password", cancellationToken));
+                store.OpenAsync(path, "password", ct: cancellationToken));
         }
         finally
         {

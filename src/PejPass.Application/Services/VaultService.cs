@@ -46,7 +46,7 @@ public sealed class VaultService(IVaultStore store)
         if (!_store.Exists(path))
             throw new FileNotFoundException("Vault file not found.", path);
 
-        return await _store.OpenAsync(path, masterPassword, ct, migrateLegacy);
+        return await _store.OpenAsync(path, masterPassword, migrateLegacy, ct);
     }
 
     public async Task<VaultSessionData> OpenVaultSessionAsync(

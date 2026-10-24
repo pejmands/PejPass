@@ -11,6 +11,8 @@ public sealed class PlaintextTempJournalTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     private readonly PlaintextTempJournal _journal;
+    private static readonly int[] expected = [1];
+    private static readonly int[] expectedArray = [1];
 
     public PlaintextTempJournalTests()
     {
@@ -103,7 +105,7 @@ public sealed class PlaintextTempJournalTests : IDisposable
             EntriesThatReportJournal(seen),
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(new[] { 1 }, seen);
+        Assert.Equal(expected, seen);
         Assert.Empty(_journal.Pending());
         Assert.True(File.Exists(destination));
         Assert.Empty(Directory.GetFiles(_directory, ".*.tmp"));
@@ -120,7 +122,7 @@ public sealed class PlaintextTempJournalTests : IDisposable
             EntriesThatReportJournal(seen),
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(new[] { 1 }, seen);
+        Assert.Equal(expectedArray, seen);
         Assert.Empty(_journal.Pending());
         Assert.Empty(Directory.GetFiles(_directory, ".*.tmp"));
     }

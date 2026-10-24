@@ -58,7 +58,7 @@ public sealed class SettingsViewModelSaveTests : IDisposable
             var errors = new List<(string Message, string Title)>();
             var viewModel = CreateViewModel(
                 host,
-                (bool enabled, out string? error) =>
+                (enabled, out error) =>
                 {
                     calls.Add(enabled);
                     error = null;
@@ -88,7 +88,7 @@ public sealed class SettingsViewModelSaveTests : IDisposable
             var calls = new List<bool>();
             var viewModel = CreateViewModel(
                 host,
-                (bool enabled, out string? error) =>
+                (enabled, out error) =>
                 {
                     calls.Add(enabled);
                     error = null;
@@ -114,7 +114,7 @@ public sealed class SettingsViewModelSaveTests : IDisposable
             var errors = new List<(string Message, string Title)>();
             var viewModel = CreateViewModel(
                 host,
-                (bool enabled, out string? error) =>
+                (enabled, out error) =>
                 {
                     calls.Add(enabled);
                     error = null;
@@ -149,7 +149,7 @@ public sealed class SettingsViewModelSaveTests : IDisposable
             var calls = new List<bool>();
             var viewModel = CreateViewModel(
                 host,
-                (bool enabled, out string? error) =>
+                (enabled, out error) =>
                 {
                     calls.Add(enabled);
                     error = null;

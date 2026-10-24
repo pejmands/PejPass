@@ -134,7 +134,7 @@ public sealed class VaultTempFileCleanerTests : IDisposable
         var vault = await store.OpenAsync(
             VaultPath,
             "Password123!",
-            cancellationToken);
+            ct: cancellationToken);
 
         Assert.NotNull(vault);
         Assert.True(File.Exists(stale));

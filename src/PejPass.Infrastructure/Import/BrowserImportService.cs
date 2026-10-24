@@ -115,9 +115,9 @@ public sealed partial class BrowserImportService : IBrowserImportService
     }
 
     private static void ValidateCsvRecord(
-        IReadOnlyList<string> fields,
+        List<string> fields,
         string recordDescription,
-        IReadOnlyList<string>? header = null,
+        List<string>? header = null,
         string? entryTitle = null)
     {
         if (fields.Count > MaxCsvColumns)

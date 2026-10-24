@@ -25,7 +25,7 @@ public sealed class TrashViewModelRestoreTests
                 MainViewModel.EntryContentFingerprint(e) ==
                 MainViewModel.EntryContentFingerprint(candidate)));
 
-        await viewModel.RestoreSelectedCommand.ExecuteAsync(viewModel.Items.ToArray());
+        await viewModel.RestoreSelectedCommand.ExecuteAsync([.. viewModel.Items]);
 
         Assert.Single(vault.Entries);
         Assert.Single(vault.Trash);

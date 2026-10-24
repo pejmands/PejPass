@@ -5,16 +5,10 @@ namespace PejPass.Application.Security;
 /// <summary>
 /// Contains an opened or newly created vault and the key material for its active session.
 /// </summary>
-public sealed class VaultSessionData : IDisposable
+public sealed class VaultSessionData(Vault vault, VaultKeyMaterial keyMaterial) : IDisposable
 {
-    public Vault Vault { get; }
-    public VaultKeyMaterial KeyMaterial { get; }
-
-    public VaultSessionData(Vault vault, VaultKeyMaterial keyMaterial)
-    {
-        Vault = vault ?? throw new ArgumentNullException(nameof(vault));
-        KeyMaterial = keyMaterial ?? throw new ArgumentNullException(nameof(keyMaterial));
-    }
+    public Vault Vault { get; } = vault ?? throw new ArgumentNullException(nameof(vault));
+    public VaultKeyMaterial KeyMaterial { get; } = keyMaterial ?? throw new ArgumentNullException(nameof(keyMaterial));
 
     public void Dispose()
     {

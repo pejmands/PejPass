@@ -368,7 +368,7 @@ public partial class VaultHealthViewModel : ObservableObject
         var entriesById = entryList.ToDictionary(entry => entry.Id);
         var latestPasswordChanges = new Dictionary<Guid, DateTimeOffset>();
 
-        foreach (var item in history ?? Enumerable.Empty<EntryHistoryItem>())
+        foreach (var item in history ?? [])
         {
             if (!entriesById.TryGetValue(item.EntryId, out var entry) ||
                 string.Equals(item.Password, entry.Password, StringComparison.Ordinal))
@@ -495,30 +495,20 @@ public partial class VaultHealthViewModel : ObservableObject
     }
 }
 
-public sealed class HealthIssueRow
+public sealed class HealthIssueRow(HealthIssue issue, string groupKey)
 {
-    public Guid EntryId { get; }
-    public string EntryTitle { get; }
-    public string KindLabel { get; }
-    public string Detail { get; }
-    public string GroupKey { get; }
-
-    public HealthIssueRow(HealthIssue issue, string groupKey)
+    public Guid EntryId { get; } = issue.EntryId;
+    public string EntryTitle { get; } = issue.EntryTitle;
+    public string KindLabel { get; } = issue.Kind switch
     {
-        EntryId = issue.EntryId;
-        EntryTitle = issue.EntryTitle;
-        Detail = issue.Detail;
-        GroupKey = groupKey;
-
-        KindLabel = issue.Kind switch
-        {
-            HealthIssueKind.DuplicatePassword => "Duplicate",
-            HealthIssueKind.WeakPassword => "Weak",
-            HealthIssueKind.PasswordNeedsImprovement => "Needs improvement",
-            HealthIssueKind.UsernameEqualsPassword => "User=Pwd",
-            HealthIssueKind.MissingTotp => "No TOTP",
-            HealthIssueKind.StalePassword => "Stale",
-            _ => "Issue"
-        };
-    }
+        HealthIssueKind.DuplicatePassword => "Duplicate",
+        HealthIssueKind.WeakPassword => "Weak",
+        HealthIssueKind.PasswordNeedsImprovement => "Needs improvement",
+        HealthIssueKind.UsernameEqualsPassword => "User=Pwd",
+        HealthIssueKind.MissingTotp => "No TOTP",
+        HealthIssueKind.StalePassword => "Stale",
+        _ => "Issue"
+    };
+    public string Detail { get; } = issue.Detail;
+    public string GroupKey { get; } = groupKey;
 }

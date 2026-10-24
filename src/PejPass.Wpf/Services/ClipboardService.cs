@@ -13,7 +13,7 @@ public sealed class ClipboardService(
     private readonly IClipboardProvider _clipboard = clipboard;
     private readonly IUiDispatcher _dispatcher = dispatcher;
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
-    private readonly object _sync = new();
+    private readonly Lock _sync = new();
     private CancellationTokenSource? _cts;
     private string? _copiedText;
 

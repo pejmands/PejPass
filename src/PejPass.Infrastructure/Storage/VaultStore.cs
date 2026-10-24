@@ -360,10 +360,10 @@ public sealed class VaultStore(
     }
 
     public async Task<Vault> OpenAsync(
-        string path,
-        string masterPassword,
-        CancellationToken ct = default,
-        bool migrateLegacy = true)
+    string path,
+    string masterPassword,
+    bool migrateLegacy = true,
+    CancellationToken ct = default)
     {
         using var session = await OpenCoreAsync(
             path,
@@ -440,7 +440,7 @@ public sealed class VaultStore(
                     throw new InvalidDataException("Not a valid PejPass vault file.");
 
                 var version = new byte[1];
-                await fs.ReadExactlyAsync(version);
+                await fs.ReadExactlyAsync(version, ct);
                 versionValue = version[0];
 
                 if (versionValue != LegacyVersion &&

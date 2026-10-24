@@ -86,6 +86,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     private readonly object _credentialIndexSync = new();
     private Vault? _credentialIndexVault;
     private DateTimeOffset _credentialIndexUpdatedAt;
+    // DO NOT CHANGE; WRONG SUGGESTION.
     private Dictionary<string, List<VaultEntry>> _credentialIndexByRegistrableDomain =
         new(StringComparer.OrdinalIgnoreCase);
     private Task? _serverTask;

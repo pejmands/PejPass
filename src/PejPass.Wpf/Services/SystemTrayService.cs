@@ -250,12 +250,9 @@ public sealed class SystemTrayService : IDisposable
         _taskbarIcon.ToolTipText = GetTrayToolTip();
         _taskbarIcon.Icon = CreateTrayIcon();
 
-        if (_lockMenuItem is not null)
-        {
-            _lockMenuItem.Visibility = _vaultSession.IsActive
+        _lockMenuItem?.Visibility = _vaultSession.IsActive
                 ? Visibility.Visible
                 : Visibility.Collapsed;
-        }
     }
 
     private string GetTrayToolTip() =>

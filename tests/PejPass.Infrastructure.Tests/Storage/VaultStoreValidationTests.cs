@@ -12,7 +12,7 @@ public sealed class VaultStoreValidationTests
     {
         var vault = new Vault
         {
-            History = Enumerable.Repeat(new EntryHistoryItem(), VaultLimits.MaxHistoryItems + 1).ToList()
+            History = [.. Enumerable.Repeat(new EntryHistoryItem(), VaultLimits.MaxHistoryItems + 1)]
         };
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejp");
 
@@ -51,7 +51,7 @@ public sealed class VaultStoreValidationTests
                 store.OpenAsync(
                     path,
                     "password",
-                    cancellationToken));
+                    ct: cancellationToken));
         }
         finally
         {
@@ -75,7 +75,7 @@ public sealed class VaultStoreValidationTests
                 store.OpenAsync(
                     path,
                     "password",
-                    cancellationToken));
+                    ct: cancellationToken));
         }
         finally
         {
@@ -100,7 +100,7 @@ public sealed class VaultStoreValidationTests
                 store.OpenAsync(
                     path,
                     "password",
-                    cancellationToken));
+                    ct: cancellationToken));
         }
         finally
         {
@@ -125,7 +125,7 @@ public sealed class VaultStoreValidationTests
                 store.OpenAsync(
                     path,
                     "password",
-                    cancellationToken));
+                    ct: cancellationToken));
         }
         finally
         {
@@ -149,7 +149,7 @@ public sealed class VaultStoreValidationTests
                 store.OpenAsync(
                     path,
                     "password",
-                    cancellationToken));
+                    ct: cancellationToken));
         }
         finally
         {
@@ -177,7 +177,7 @@ public sealed class VaultStoreValidationTests
         try
         {
             await Assert.ThrowsAsync<InvalidDataException>(() =>
-                store.OpenAsync(path, "password", cancellationToken));
+                store.OpenAsync(path, "password", ct: cancellationToken));
 
             Assert.Equal(0, crypto.DeriveKeyCallCount);
         }
@@ -194,7 +194,7 @@ public sealed class VaultStoreValidationTests
         try
         {
             await Assert.ThrowsAsync<InvalidDataException>(() =>
-                CreateStore().OpenAsync(path, "password", TestContext.Current.CancellationToken));
+                CreateStore().OpenAsync(path, "password", ct: TestContext.Current.CancellationToken));
         }
         finally
         {
@@ -214,7 +214,7 @@ public sealed class VaultStoreValidationTests
         try
         {
             await Assert.ThrowsAsync<InvalidDataException>(() =>
-                CreateStore().OpenAsync(path, "password", TestContext.Current.CancellationToken));
+                CreateStore().OpenAsync(path, "password", ct: TestContext.Current.CancellationToken));
         }
         finally
         {
@@ -234,7 +234,7 @@ public sealed class VaultStoreValidationTests
         try
         {
             await Assert.ThrowsAsync<InvalidDataException>(() =>
-                CreateStore().OpenAsync(path, "password", TestContext.Current.CancellationToken));
+                CreateStore().OpenAsync(path, "password", ct: TestContext.Current.CancellationToken));
         }
         finally
         {
@@ -391,7 +391,7 @@ public sealed class VaultStoreValidationTests
                 CreateStore().OpenAsync(
                     path,
                     "password",
-                    TestContext.Current.CancellationToken));
+                    ct: TestContext.Current.CancellationToken));
         }
         finally
         {
@@ -443,7 +443,7 @@ public sealed class VaultStoreValidationTests
         {
             // Size violations discovered while reading a file retain the invalid-file contract.
             await Assert.ThrowsAsync<InvalidDataException>(() =>
-                CreateStore().OpenAsync(path, "password", TestContext.Current.CancellationToken));
+                CreateStore().OpenAsync(path, "password", ct: TestContext.Current.CancellationToken));
         }
         finally
         {
@@ -461,7 +461,7 @@ public sealed class VaultStoreValidationTests
         try
         {
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                store.OpenAsync(path, "password", TestContext.Current.CancellationToken));
+                store.OpenAsync(path, "password", ct: TestContext.Current.CancellationToken));
 
             Assert.NotNull(crypto.LastDerivedSalt);
             Assert.All(crypto.LastDerivedSalt!, value => Assert.Equal(0, value));

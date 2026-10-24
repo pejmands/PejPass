@@ -6,6 +6,7 @@ namespace PejPass.Wpf.Tests.ViewModels;
 public sealed class ImportMergeTests
 {
     private const string Totp = "JBSWY3DPEHPK3PXP";
+    private static readonly string[] expected = ["work"];
 
     private static VaultEntry BrowserRow(
         string title = "Example",
@@ -101,7 +102,7 @@ public sealed class ImportMergeTests
         var restored = Assert.Single(vault.Entries);
         Assert.Equal(entry.Id, restored.Id);
         Assert.Equal(Totp, restored.TotpSecret);
-        Assert.Equal(new[] { "work" }, restored.Tags);
+        Assert.Equal(expected, restored.Tags);
         Assert.Equal("Recovery code", Assert.Single(restored.CustomFields).Name);
     }
 

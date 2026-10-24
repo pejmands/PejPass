@@ -190,8 +190,8 @@ public sealed class WindowTrayBehaviorTests
                 "_taskbarIcon",
                 BindingFlags.NonPublic | BindingFlags.Instance);
             Assert.NotNull(iconField);
-            var trayIcon = Assert.IsAssignableFrom<FrameworkElement>(
-                iconField!.GetValue(host.Tray));
+            var trayIcon = Assert.IsType<FrameworkElement>(
+                iconField!.GetValue(host.Tray), exactMatch: false);
             Assert.Equal("None", trayIcon.GetType()
                 .GetProperty("MenuActivation")!.GetValue(trayIcon)!.ToString());
 

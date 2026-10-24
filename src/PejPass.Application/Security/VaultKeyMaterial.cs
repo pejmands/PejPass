@@ -17,7 +17,7 @@ public sealed class VaultKeyMaterial : IDisposable
 
     private static ReadOnlySpan<byte> PayloadMagic => "PPKM"u8;
 
-    private readonly object _sync = new();
+    private readonly Lock _sync = new();
     private byte[]? _key;
     private byte[]? _salt;
 
@@ -64,13 +64,13 @@ public sealed class VaultKeyMaterial : IDisposable
     public byte[] CopyKey()
     {
         lock (_sync)
-            return (_key ?? throw new ObjectDisposedException(nameof(VaultKeyMaterial))).ToArray();
+            return [.. (_key ?? throw new ObjectDisposedException(nameof(VaultKeyMaterial)))];
     }
 
     public byte[] CopySalt()
     {
         lock (_sync)
-            return (_salt ?? throw new ObjectDisposedException(nameof(VaultKeyMaterial))).ToArray();
+            return [.. (_salt ?? throw new ObjectDisposedException(nameof(VaultKeyMaterial)))];
     }
 
     public VaultKeyMaterial Clone()

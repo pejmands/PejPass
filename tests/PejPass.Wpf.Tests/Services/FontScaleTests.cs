@@ -6,9 +6,10 @@ using System.Text.RegularExpressions;
 
 namespace PejPass.Wpf.Tests.Services;
 
-public sealed class FontScaleTests
+public sealed partial class FontScaleTests
 {
-    private static readonly Regex Reference = new(@"AppFontSize(\d+)", RegexOptions.Compiled);
+    [GeneratedRegex(@"AppFontSize(\d+)")]
+    private static partial Regex Reference();
 
     [Theory]
     [InlineData(FontSizeMode.Small, 12d / 13d)]
@@ -56,7 +57,7 @@ public sealed class FontScaleTests
             if (IsBuildOutput(relative))
                 continue;
 
-            foreach (Match match in Reference.Matches(File.ReadAllText(file)))
+            foreach (Match match in Reference().Matches(File.ReadAllText(file)))
             {
                 var size = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
                 if (defined.Contains(size))

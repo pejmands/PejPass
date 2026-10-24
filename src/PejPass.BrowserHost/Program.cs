@@ -46,19 +46,19 @@ internal static class Program
             }
 
             shutdown.Cancel();
-            await Task.WhenAll(activeTasks.Values.ToArray()).ConfigureAwait(false);
+            await Task.WhenAll([.. activeTasks.Values]).ConfigureAwait(false);
             return 0;
         }
         catch (InvalidDataException)
         {
             shutdown.Cancel();
-            try { await Task.WhenAll(activeTasks.Values.ToArray()).ConfigureAwait(false); } catch { }
+            try { await Task.WhenAll([.. activeTasks.Values]).ConfigureAwait(false); } catch { }
             return 1;
         }
         catch (IOException)
         {
             shutdown.Cancel();
-            try { await Task.WhenAll(activeTasks.Values.ToArray()).ConfigureAwait(false); } catch { }
+            try { await Task.WhenAll([.. activeTasks.Values]).ConfigureAwait(false); } catch { }
             return 0;
         }
         finally

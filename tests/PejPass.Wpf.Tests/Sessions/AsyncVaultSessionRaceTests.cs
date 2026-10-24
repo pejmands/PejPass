@@ -154,7 +154,11 @@ public sealed class AsyncVaultSessionRaceTests
         public Task<VaultKeyMaterial> SaveWithNewPasswordAsync(string path, string masterPassword, Vault vault, Argon2Parameters kdfParameters, CancellationToken ct = default) =>
             throw new NotSupportedException();
 
-        public Task<Vault> OpenAsync(string path, string masterPassword, CancellationToken ct = default, bool migrateLegacy = true) =>
+        public Task<Vault> OpenAsync(
+            string path,
+            string masterPassword,
+            bool migrateLegacy = true,
+            CancellationToken ct = default) =>
             throw new NotSupportedException();
 
         public Task SaveAsync(string path, string masterPassword, Vault vault, CancellationToken ct = default) =>

@@ -90,7 +90,7 @@ public sealed class VaultStoreSessionKeyTests
             }
 
             await Assert.ThrowsAsync<AuthenticationTagMismatchException>(() =>
-                store.OpenAsync(path, "old-password", cancellationToken));
+                store.OpenAsync(path, "old-password", ct: cancellationToken));
         }
         finally
         {

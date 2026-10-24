@@ -103,7 +103,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
             store.OpenAsync(
                 _vaultPath,
                 "Password123!",
-                TestContext.Current.CancellationToken));
+                ct: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -138,7 +138,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         var restoredVault = await store.OpenAsync(
             _vaultPath,
             originalPassword,
-            cancellationToken);
+            ct: cancellationToken);
 
         Assert.Equal("Original", restoredVault.Name);
         var restoredEntry = Assert.Single(restoredVault.Entries);
@@ -173,7 +173,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         var restoredVault = await store.OpenAsync(
             _vaultPath,
             originalPassword,
-            cancellationToken);
+            ct: cancellationToken);
 
         Assert.Equal("Original", restoredVault.Name);
         var restoredEntry = Assert.Single(restoredVault.Entries);
@@ -219,7 +219,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         var restoredVault = await store.OpenAsync(
             _vaultPath,
             originalPassword,
-            cancellationToken);
+            ct: cancellationToken);
 
         Assert.Equal("Original", restoredVault.Name);
         var restoredEntry = Assert.Single(restoredVault.Entries);
@@ -229,7 +229,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
             store.OpenAsync(
                 _vaultPath,
                 newPassword,
-                cancellationToken));
+                ct: cancellationToken));
     }
 
     [Fact]
@@ -267,7 +267,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
         var restoredVault = await store.OpenAsync(
             _vaultPath,
             originalPassword,
-            cancellationToken);
+            ct: cancellationToken);
 
         Assert.Equal("Original", restoredVault.Name);
         var restoredEntry = Assert.Single(restoredVault.Entries);
@@ -277,7 +277,7 @@ public sealed class VaultStoreAtomicSaveTests : IDisposable
             store.OpenAsync(
                 _vaultPath,
                 newPassword,
-                cancellationToken));
+                ct: cancellationToken));
     }
 
     private static Vault CreateVault(string name)

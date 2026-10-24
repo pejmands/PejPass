@@ -6,7 +6,7 @@ namespace PejPass.Wpf.Tests;
 /// </summary>
 internal sealed class ManualTimeProvider(DateTimeOffset? initialTime = null) : TimeProvider
 {
-    private readonly object _sync = new();
+    private readonly Lock _sync = new();
     private readonly List<ManualTimer> _timers = [];
     private DateTimeOffset _utcNow = initialTime ?? DateTimeOffset.UnixEpoch;
 
@@ -60,15 +60,14 @@ internal sealed class ManualTimeProvider(DateTimeOffset? initialTime = null) : T
     /// <summary>Moves the clock forward and invokes each timer that became due.</summary>
     public void Advance(TimeSpan elapsed)
     {
-        if (elapsed < TimeSpan.Zero)
-            throw new ArgumentOutOfRangeException(nameof(elapsed));
+        ArgumentOutOfRangeException.ThrowIfLessThan(elapsed, TimeSpan.Zero);
 
         List<ManualTimer> dueTimers;
 
         lock (_sync)
         {
             _utcNow += elapsed;
-            dueTimers = _timers.Where(timer => timer.IsDue(_utcNow)).ToList();
+            dueTimers = [.. _timers.Where(timer => timer.IsDue(_utcNow))];
 
             foreach (var timer in dueTimers)
                 timer.MarkTriggered(_utcNow);
