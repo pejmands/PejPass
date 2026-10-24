@@ -101,6 +101,67 @@ function processLoginForm(action, expectedDomain, username = "", password = "", 
     input.dispatchEvent(new Event("change", { bubbles: true }));
     input.blur();
   };
+
+  if (action === "fillNewPassword") {
+    const passwordInputs = inputs.filter((input) => {
+      const autocomplete = (input.autocomplete || "").toLowerCase().split(/\\s+/);
+      return ((input.type || "").toLowerCase() === "password" ||
+        autocomplete.includes("new-password")) && usable(input);
+    });
+    if (passwordInputs.length === 0) return "no_password";
+
+    const hints = (input) => [
+      input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
+      input.getAttribute("data-testid")
+    ].filter(Boolean).join(" ");
+    const isCurrent = (input) =>
+      (input.autocomplete || "").toLowerCase().includes("current-password") ||
+      /current|old|existing/i.test(hints(input));
+
+    let targets = passwordInputs.filter((input) =>
+      (input.autocomplete || "").toLowerCase().split(/\\s+/).includes("new-password"));
+
+    if (targets.length === 0 && passwordInputs.length >= 3) {
+      targets = passwordInputs.slice(-2);
+    } else if (targets.length === 0 && passwordInputs.length === 2 &&
+        passwordInputs[0].form && passwordInputs[0].form === passwordInputs[1].form) {
+      targets = isCurrent(passwordInputs[0]) ? [passwordInputs[1]] : passwordInputs;
+    }
+
+    if (targets.length === 0) {
+      const hintedTarget = passwordInputs.find((input) =>
+        /new.?password|password.?new|create.?password|register.?password|signup.?password/i.test(hints(input)));
+      if (hintedTarget) targets = [hintedTarget];
+    }
+
+    if (targets.length === 0) {
+      const form = passwordInputs[0].form;
+      const searchRoot = form || passwordInputs[0].getRootNode();
+      const submitLabels = Array.from(
+        searchRoot.querySelectorAll('button, input[type="submit"], input[type="button"]')
+      )
+        .map((element) => [element.innerText, element.value, element.getAttribute("aria-label")].filter(Boolean).join(" "))
+        .join(" ");
+      const pageText = [
+        document.title,
+        document.body?.innerText?.slice(0, 6000) || "",
+        submitLabels
+      ].join(" ");
+      const registrationPattern = /sign.?up|register|create.{0,12}account|new account|create.{0,12}password/i;
+      const looksLikeRegistration = registrationPattern.test(pageText);
+      const registrationSubmit = registrationPattern.test(submitLabels);
+      const looksLikeLogin = /sign.?in|log.?in|forgot password|current password/i.test(pageText);
+
+      if (passwordInputs.length === 1 &&
+          (registrationSubmit || (looksLikeRegistration && !looksLikeLogin))) {
+        targets = [passwordInputs[0]];
+      }
+    }
+
+    if (targets.length === 0) return "no_password";
+    for (const target of targets) setValue(target, password);
+    return "filled";
+  }
   const totpFields = inputs.filter((input) => isTotpField(input) &&
     (isTextLike(input) || (input.type || "").toLowerCase() === "number"));
 
