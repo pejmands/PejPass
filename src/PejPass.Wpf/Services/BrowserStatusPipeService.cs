@@ -81,6 +81,8 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     private const int MaximumPasswordLength = 4096;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly CancellationTokenSource _shutdown = new();
+    private readonly object _vaultLockSync = new();
+    private CancellationTokenSource _vaultLockCancellation = new();
     private readonly object _credentialIndexSync = new();
     private Vault? _credentialIndexVault;
     private DateTimeOffset _credentialIndexUpdatedAt;
@@ -819,13 +821,25 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (!_vaultSession.IsActive)
             return Error("vault_locked");
 
+        var vaultGeneration = _vaultSession.Generation;
+        CancellationToken vaultLockToken;
+        lock (_vaultLockSync)
+            vaultLockToken = _vaultLockCancellation.Token;
+
+        if (!_vaultSession.IsActive || _vaultSession.Generation != vaultGeneration)
+            return Error("vault_locked");
+
+        using var requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            _shutdown.Token, vaultLockToken);
+
         try
         {
             (FillCredential? Credential, string? ErrorCode) result;
             var app = System.Windows.Application.Current;
             if (_fillConfirmation is not null && _fillHelloVerification is not null)
             {
-                result = await FindAndConfirmCredentialForFillAsync(id, domain, allowDomainMismatch).ConfigureAwait(false);
+                result = await FindAndConfirmCredentialForFillAsync(
+                    id, domain, allowDomainMismatch, requestCancellation.Token).ConfigureAwait(false);
             }
             else
             {
@@ -835,14 +849,19 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
                 Task<(FillCredential? Credential, string? ErrorCode)> operation =
                     app.Dispatcher.CheckAccess()
-                        ? FindAndConfirmCredentialForFillAsync(id, domain, allowDomainMismatch)
+                        ? FindAndConfirmCredentialForFillAsync(id, domain, allowDomainMismatch, requestCancellation.Token)
                         : app.Dispatcher.InvokeAsync(
-                            () => FindAndConfirmCredentialForFillAsync(id, domain, allowDomainMismatch),
+                            () => FindAndConfirmCredentialForFillAsync(id, domain, allowDomainMismatch, requestCancellation.Token),
                             System.Windows.Threading.DispatcherPriority.Send)
                             .Task.Unwrap();
 
                 result = await operation.ConfigureAwait(false);
             }
+
+            if (requestCancellation.IsCancellationRequested ||
+                !_vaultSession.IsActive ||
+                _vaultSession.Generation != vaultGeneration)
+                return Error("vault_locked");
 
             if (result.ErrorCode is not null)
                 return Error(result.ErrorCode);
@@ -856,11 +875,15 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 null, null, domain, null, id.ToString("D"), credential.Username, credential.Password,
                 credential.TotpCode);
         }
+        catch (OperationCanceledException) when (requestCancellation.IsCancellationRequested)
+        {
+            return Error(_vaultSession.IsActive ? "fill_denied" : "vault_locked");
+        }
         catch (Exception) { return Error("lookup_unavailable"); }
     }
 
     private async Task<(FillCredential? Credential, string? ErrorCode)> FindAndConfirmCredentialForFillAsync(
-        Guid id, string domain, bool allowDomainMismatch = false)
+        Guid id, string domain, bool allowDomainMismatch, CancellationToken cancellationToken)
     {
         var entry = allowDomainMismatch ? FindEntryById(id) : FindEntryForFill(id, domain);
         if (entry is null)
@@ -900,12 +923,18 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     yesText: "Allow",
                     noText: "Deny",
                     bringToFront: true,
-                    cancellationToken: _shutdown.Token);
+                    cancellationToken: cancellationToken);
             }
+
+            if (cancellationToken.IsCancellationRequested || !_vaultSession.IsActive)
+                return (null, "vault_locked");
 
             if (!approved)
                 return (null, "fill_denied");
         }
+
+        if (cancellationToken.IsCancellationRequested || !_vaultSession.IsActive)
+            return (null, "vault_locked");
 
         if (requireWindowsHello)
         {
@@ -924,7 +953,10 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         }
 
         // Re-read the credential after approval so no stale or expired TOTP code is returned.
-        return (await FindCredentialForFillAsync(id, domain, allowDomainMismatch), null);
+        var credential = await FindCredentialForFillAsync(id, domain, allowDomainMismatch);
+        return cancellationToken.IsCancellationRequested || !_vaultSession.IsActive
+            ? (null, "vault_locked")
+            : (credential, null);
     }
 
     private async Task<WindowsHelloVerificationResult> VerifyBrowserAutofillWithWindowsHelloAsync(
@@ -1229,6 +1261,11 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     {
         _vaultSession.StateChanged -= OnVaultStateChanged;
         _shutdown.Cancel();
+        lock (_vaultLockSync)
+        {
+            _vaultLockCancellation.Cancel();
+            _vaultLockCancellation.Dispose();
+        }
 
         try
         {

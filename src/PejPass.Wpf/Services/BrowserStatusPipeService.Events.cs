@@ -33,7 +33,23 @@ internal sealed partial class BrowserStatusPipeService
     private void OnVaultStateChanged(object? sender, EventArgs e)
     {
         if (!_vaultSession.IsActive)
+        {
+            lock (_vaultLockSync)
+                _vaultLockCancellation.Cancel();
+
             ClearCredentialIndex();
+        }
+        else
+        {
+            lock (_vaultLockSync)
+            {
+                if (_vaultLockCancellation.IsCancellationRequested)
+                {
+                    _vaultLockCancellation.Dispose();
+                    _vaultLockCancellation = new CancellationTokenSource();
+                }
+            }
+        }
 
         lock (_eventsSync)
             RefreshStatusLocked();
