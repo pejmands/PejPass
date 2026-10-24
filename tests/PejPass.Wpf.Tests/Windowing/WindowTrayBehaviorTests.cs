@@ -44,6 +44,10 @@ public sealed class WindowTrayBehaviorTests
             Assert.Equal(256, lockedIcon.PixelWidth);
             Assert.Equal(256, lockedIcon.PixelHeight);
 
+            var badgePixel = new byte[4];
+            lockedIcon.CopyPixels(new Int32Rect(190, 200, 1, 1), badgePixel, 4, 0);
+            Assert.Equal(new byte[] { 255, 255, 255, 255 }, badgePixel);
+
             OpenTestVault(host);
 
             Assert.Contains("PejPass.ico", GetWindowIconUri(login));
