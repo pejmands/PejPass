@@ -1098,21 +1098,38 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (entry is null) return null;
 
         var totpCode = string.Empty;
-        if (!string.IsNullOrWhiteSpace(entry.TotpSecret) &&
-            TotpHelper.TryGetCode(
-                entry.TotpSecret, DateTime.UtcNow, out totpCode, out var remainingSeconds, out _) &&
-            remainingSeconds is > 0 and < 3)
+        if (!string.IsNullOrWhiteSpace(entry.TotpSecret))
         {
-            // Avoid returning a code that may expire before the user submits the login form.
-            await Task.Delay(TimeSpan.FromSeconds(remainingSeconds));
+            var totpSecret = entry.TotpSecret;
+            var now = DateTime.UtcNow;
+            if (TotpHelper.TryGetCode(
+                    totpSecret, now, out totpCode, out var remainingSeconds, out var periodSeconds) &&
+                remainingSeconds is > 0 and < 3)
+            {
+                // Precompute the next time-step code before waiting for it to become valid.
+                var nextCodeReady = TotpHelper.TryGetCode(
+                    totpSecret, now.AddSeconds(periodSeconds), out var nextCode, out _, out _);
 
-            // Re-read the entry and generate the code again after the wait.
-            entry = allowDomainMismatch ? FindEntryById(id) : FindEntryForFill(id, domain);
-            if (entry is null) return null;
+                // Avoid returning a code that may expire before the user submits the login form.
+                await Task.Delay(TimeSpan.FromSeconds(remainingSeconds));
 
-            totpCode = string.Empty;
-            if (!string.IsNullOrWhiteSpace(entry.TotpSecret))
-                TotpHelper.TryGetCode(entry.TotpSecret, out totpCode, out _);
+                // Re-read the entry in case it changed while waiting.
+                entry = allowDomainMismatch ? FindEntryById(id) : FindEntryForFill(id, domain);
+                if (entry is null) return null;
+
+                if (nextCodeReady &&
+                    string.Equals(entry.TotpSecret, totpSecret, StringComparison.Ordinal))
+                {
+                    totpCode = nextCode;
+                }
+                else
+                {
+                    // The TOTP secret changed, so generate a code from the current entry.
+                    totpCode = string.Empty;
+                    if (!string.IsNullOrWhiteSpace(entry.TotpSecret))
+                        TotpHelper.TryGetCode(entry.TotpSecret, out totpCode, out _);
+                }
+            }
         }
 
         var password = entry.Password ?? string.Empty;
