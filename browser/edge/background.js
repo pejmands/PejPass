@@ -447,7 +447,8 @@ globalThis.pejpassBrowserApi.runtime.onMessage.addListener((message, sender, sen
     return false;
   }
 
-  const timeoutMs = payload.type === "unlockVault" || payload.type === "unlockWithHello" || payload.type === "searchCredentials" ? 50_000 :
+  const timeoutMs = payload.type === "unlockVault" || payload.type === "unlockWithHello" ? 70_000 :
+    payload.type === "searchCredentials" ? 50_000 :
     payload.type === "fillCredential" ? 65_000 : 6_000;
   sendNative(payload, timeoutMs)
     .then((response) => {
