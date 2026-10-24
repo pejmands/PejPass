@@ -281,13 +281,13 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
       if (desktopUnavailable) {
         setConnectionStatus(false, "Desktop unavailable");
         showStatusError(
-          "PejPass isn’t running.",
+          "PejPass isn't running.",
           response?.message ||
             "The native messaging host could not reach the PejPass desktop pipe. Check the desktop installation and browser host registration."
         );
       } else {
         setConnectionStatus(false, "Connection error");
-        showStatusError("Couldn’t check vault status.", response?.message || response?.code || "The desktop returned an invalid or incompatible response.");
+        showStatusError("Couldn't check vault status.", response?.message || response?.code || "The desktop returned an invalid or incompatible response.");
       }
     }
     return response?.code === "app_unavailable" ? "unavailable" : "unknown";
@@ -298,7 +298,7 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
       unlockButton.textContent = "Unlock vault";
       unlockHelloButton.hidden = true;
       lockVaultButton.hidden = true;
-      showStatusError("Couldn’t connect to PejPass.", error instanceof Error ? error.message : "The browser host could not be reached.");
+      showStatusError("Couldn't connect to PejPass.", error instanceof Error ? error.message : "The browser host could not be reached.");
     }
     return "unavailable";
   }
@@ -1262,12 +1262,12 @@ async function unlockVault() {
     if (response?.code !== "app_unavailable") unlockButton.textContent = "Unlock vault";
     showUnlockError(
       response?.code === "unlock_failed" ? "Password not accepted." :
-        response?.code === "app_unavailable" ? "PejPass desktop isn’t running." :
-        "Couldn’t unlock the vault.",
+        response?.code === "app_unavailable" ? "PejPass desktop isn't running." :
+        "Couldn't unlock the vault.",
       messages[response?.code] || response?.code || "The desktop connection failed or returned an incompatible response."
     );
   } catch (error) {
-    showUnlockError("Couldn’t connect to PejPass.", error instanceof Error ? error.message : "The browser host could not be reached.");
+    showUnlockError("Couldn't connect to PejPass.", error instanceof Error ? error.message : "The browser host could not be reached.");
   } finally {
     unlockPassword.value = "";
     unlockButton.disabled = unlockCoolingDown;
@@ -1290,23 +1290,23 @@ async function unlockWithHello() {
     }
 
     const messages = {
-      hello_not_ready: "Unlock with your master password first. Windows Hello isn’t ready for this vault yet.",
-      hello_failed: "Windows Hello didn’t unlock the vault. Try your master password.",
+      hello_not_ready: "Unlock with your master password first. Windows Hello isn't ready for this vault yet.",
+      hello_failed: "Windows Hello didn't unlock the vault. Try your master password.",
       hello_cancelled: "Windows Hello was cancelled.",
-      hello_unavailable: "Windows Hello isn’t available. Try your master password.",
-      app_unavailable: "Couldn’t start PejPass.",
+      hello_unavailable: "Windows Hello isn't available. Try your master password.",
+      app_unavailable: "Couldn't start PejPass.",
       unsupported_request: "Update the PejPass desktop app and browser host."
     };
     if (response?.code === "hello_not_ready") unlockHelloButton.hidden = true;
     showUnlockError(
-      response?.code === "hello_not_ready" ? "Windows Hello isn’t ready yet." :
+      response?.code === "hello_not_ready" ? "Windows Hello isn't ready yet." :
         response?.code === "hello_cancelled" ? "Windows Hello cancelled." :
         response?.code === "hello_unavailable" ? "Windows Hello unavailable." :
-        "Couldn’t unlock with Windows Hello.",
+        "Couldn't unlock with Windows Hello.",
       messages[response?.code] || response?.code || "The desktop returned an invalid response."
     );
   } catch (error) {
-    showUnlockError("Couldn’t connect to PejPass.", error instanceof Error ? error.message : "The browser host could not be reached.");
+    showUnlockError("Couldn't connect to PejPass.", error instanceof Error ? error.message : "The browser host could not be reached.");
   } finally {
     unlockHelloButton.disabled = false;
     unlockHelloButton.textContent = "Unlock with Windows Hello";
