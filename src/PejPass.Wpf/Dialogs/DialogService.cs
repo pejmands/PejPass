@@ -100,17 +100,15 @@ public static class DialogService
         {
             timeout.Token.ThrowIfCancellationRequested();
 
-            var owner = Owner;
             var dlg = new AppDialog(
                 title, message, AppDialogType.Confirm, yesText, noText,
                 isDestructive: isDestructive)
             {
-                Owner = owner,
+                ShowInTaskbar = true,
+                Topmost = true,
+                WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 UsesModalResult = false
             };
-
-            if (owner is null)
-                dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
             var completion = new TaskCompletionSource<bool>(
                 TaskCreationOptions.RunContinuationsAsynchronously);
