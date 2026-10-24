@@ -31,7 +31,7 @@ public sealed class WindowTrayBehaviorTests
     }
 
     [Fact(Timeout = 15000)]
-    public void WindowIcons_TrackVaultLockState()
+    public void WindowIcons_RemainOriginalAcrossVaultLockStateChanges()
     {
         WpfTestHost.Run(host =>
         {
@@ -40,13 +40,7 @@ public sealed class WindowTrayBehaviorTests
             app.MainWindow = login;
             App.PrepareCustomChrome(login);
 
-            var lockedIcon = Assert.IsType<RenderTargetBitmap>(login.Icon);
-            Assert.Equal(256, lockedIcon.PixelWidth);
-            Assert.Equal(256, lockedIcon.PixelHeight);
-
-            var badgePixel = new byte[4];
-            lockedIcon.CopyPixels(new Int32Rect(190, 200, 1, 1), badgePixel, 4, 0);
-            Assert.Equal(new byte[] { 255, 255, 255, 255 }, badgePixel);
+            Assert.Contains("PejPass.ico", GetWindowIconUri(login));
 
             OpenTestVault(host);
 
@@ -55,7 +49,8 @@ public sealed class WindowTrayBehaviorTests
 
             host.VaultSession.Clear();
 
-            Assert.IsType<RenderTargetBitmap>(login.Icon);
+            Assert.Contains("PejPass.ico", GetWindowIconUri(login));
+            Assert.IsType<BitmapFrame>(login.Icon);
         }, TestContext.Current.CancellationToken);
     }
 
