@@ -18,7 +18,7 @@ The extension reads the active HTTP(S) tab hostname and requests matching accoun
 
 ## Browser API compatibility
 
-The extension's background and popup scripts use `browser-api.js` as a small compatibility facade. It selects the standard `browser` namespace when available and falls back to `chrome` in Chromium-based browsers. Keep browser-specific manifest and packaging work separate from shared form logic; this facade is groundwork, not a complete Firefox package.
+The extension's background and popup scripts use `browser-api.js` as a small compatibility facade. It selects the standard `browser` namespace when available and falls back to `chrome` in Chromium-based browsers. Shared form logic is kept separate from browser-specific manifest and packaging configuration. The project includes a Firefox package alongside the Chromium-based browser packages, while browser-specific behavior and compatibility should be verified through testing.
 
 ## Shared browser-independent logic
 
