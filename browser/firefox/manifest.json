@@ -5,7 +5,8 @@
   "description": "A lightweight browser companion for PejPass.",
   "browser_specific_settings": {
     "gecko": {
-      "id": "pejpass@pejmands.github.io"
+      "id": "pejpass@pejmands.github.io",
+      "strict_min_version": "115.0"
     }
   },
   "permissions": [
