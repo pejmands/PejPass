@@ -892,14 +892,15 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 var domainNotice = allowDomainMismatch
                     ? $"\nSaved website: {Limit(entry.Url, 2048)}\nThis account was selected by manual search and does not have to match the current site domain. Verify that it is the correct SSO account.\n"
                     : string.Empty;
-                approved = DialogService.Confirm(
+                approved = await DialogService.ConfirmAsync(
                     $"Allow PejPass to provide the username and password for this site?\n\n" +
                     $"Current site: {domain}\nAccount: {Limit(entry.Title, 200)}\nUsername: {Limit(entry.Username, 256)}{domainNotice}\n" +
                     "Only allow this if you just requested autofill.",
                     "Confirm Browser Autofill",
                     yesText: "Allow",
                     noText: "Deny",
-                    bringToFront: true);
+                    bringToFront: true,
+                    cancellationToken: _shutdown.Token);
             }
 
             if (!approved)

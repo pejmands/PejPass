@@ -8,6 +8,9 @@ public static class DialogService
     /// <summary>
     /// Prefer an active visible window; never use a closed/hidden MainWindow leftover from Login→Main switch.
     /// </summary>
+    private static readonly SemaphoreSlim AutofillConfirmationGate = new(1, 1);
+    private static readonly TimeSpan AutofillConfirmationTimeout = TimeSpan.FromSeconds(60);
+
     private static Window? Owner
     {
         get
@@ -70,6 +73,78 @@ public static class DialogService
 
         dlg.ShowDialog();
         return dlg.Result == AppDialogResult.Primary;
+    }
+
+    public static async Task<bool> ConfirmAsync(
+        string message,
+        string title = "Confirm",
+        string yesText = "Yes",
+        string noText = "Cancel",
+        bool isDestructive = false,
+        bool bringToFront = false,
+        CancellationToken cancellationToken = default)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(AutofillConfirmationTimeout);
+
+        try
+        {
+            await AutofillConfirmationGate.WaitAsync(timeout.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+
+        try
+        {
+            timeout.Token.ThrowIfCancellationRequested();
+
+            var dlg = new AppDialog(
+                title, message, AppDialogType.Confirm, yesText, noText,
+                isDestructive: isDestructive)
+            {
+                ShowInTaskbar = true,
+                Topmost = true,
+                WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                UsesModalResult = false
+            };
+
+            var completion = new TaskCompletionSource<bool>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            dlg.Closed += (_, _) =>
+                completion.TrySetResult(dlg.Result == AppDialogResult.Primary);
+
+            if (bringToFront)
+                dlg.Loaded += (_, _) => SingleInstance.RestoreAndFocus(dlg, preserveTopmost: true);
+
+            dlg.Show();
+
+            using var registration = timeout.Token.Register(() =>
+            {
+                try
+                {
+                    dlg.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        if (dlg.IsVisible)
+                            dlg.Close();
+                    }));
+                }
+                catch (InvalidOperationException)
+                {
+                }
+            });
+
+            return await completion.Task.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        finally
+        {
+            AutofillConfirmationGate.Release();
+        }
     }
 
     /// <summary>

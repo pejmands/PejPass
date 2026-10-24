@@ -149,7 +149,7 @@ public static partial class SingleInstance
         return fallback;
     }
 
-    internal static void RestoreAndFocus(Window target)
+    internal static void RestoreAndFocus(Window target, bool preserveTopmost = false)
     {
         if (!target.IsVisible)
             target.Show();
@@ -171,8 +171,11 @@ public static partial class SingleInstance
         }
 
         target.Activate();
-        target.Topmost = true;
-        target.Topmost = false;
+        if (!preserveTopmost)
+        {
+            target.Topmost = true;
+            target.Topmost = false;
+        }
         target.Focus();
     }
 
