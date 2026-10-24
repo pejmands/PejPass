@@ -27,7 +27,6 @@ public partial class App : System.Windows.Application
     public static IServiceProvider Services { get; private set; } = null!;
 
     private static AppSettings? _settings;
-    private static ImageSource? _lockedWindowIcon;
     private static BitmapFrame? _unlockedWindowIcon;
     private static WindowsSecurityService? _windowsSecurityService;
     private static SecurityLockCoordinator? _securityLock;
@@ -636,7 +635,7 @@ public partial class App : System.Windows.Application
         Current.Resources["AppFontSize"] = FontScale.BaseSize * scale;
     }
 
-    internal static void UpdateWindowIcons(bool isUnlocked)
+    internal static void UpdateTaskbarOverlays(bool isUnlocked)
     {
         var app = Current;
         if (app is null)
@@ -644,98 +643,15 @@ public partial class App : System.Windows.Application
 
         if (!app.Dispatcher.CheckAccess())
         {
-            app.Dispatcher.BeginInvoke(() => UpdateWindowIcons(isUnlocked));
+            app.Dispatcher.BeginInvoke(() => UpdateTaskbarOverlays(isUnlocked));
             return;
         }
 
-        var icon = GetWindowIcon(isUnlocked);
         foreach (Window window in app.Windows)
         {
             if (!SystemTrayService.IsHostWindow(window))
-                window.Icon = icon;
+                TaskbarOverlayService.UpdateWindowOverlay(window, isUnlocked);
         }
-    }
-
-    private static ImageSource GetWindowIcon(bool isUnlocked)
-    {
-        if (isUnlocked)
-            return GetUnlockedWindowIcon();
-
-        if (_lockedWindowIcon is not null)
-            return _lockedWindowIcon;
-
-        const int size = 256;
-        var visual = new DrawingVisual();
-
-        using (var context = visual.RenderOpen())
-        {
-            context.DrawImage(
-                GetUnlockedWindowIcon(),
-                new Rect(0, 0, size, size));
-
-            var badgeCenter = new Point(202, 202);
-            const double badgeRadius = 48;
-            var badgeBrush = new SolidColorBrush(Color.FromRgb(35, 39, 47));
-            badgeBrush.Freeze();
-
-            context.DrawEllipse(
-                badgeBrush,
-                new Pen(Brushes.White, 6),
-                badgeCenter,
-                badgeRadius,
-                badgeRadius);
-
-            var shackle = new StreamGeometry();
-            using (var geometryContext = shackle.Open())
-            {
-                geometryContext.BeginFigure(new Point(185, 194), false, false);
-                geometryContext.BezierTo(
-                    new Point(185, 160),
-                    new Point(219, 160),
-                    new Point(219, 194),
-                    true,
-                    false);
-            }
-
-            shackle.Freeze();
-
-            var shacklePen = new Pen(Brushes.White, 10)
-            {
-                StartLineCap = PenLineCap.Round,
-                EndLineCap = PenLineCap.Round
-            };
-            shacklePen.Freeze();
-            context.DrawGeometry(null, shacklePen, shackle);
-
-            context.DrawRoundedRectangle(
-                Brushes.White,
-                null,
-                new Rect(177, 190, 50, 40),
-                7,
-                7);
-
-            var keyholeBrush = new SolidColorBrush(Color.FromRgb(35, 39, 47));
-            keyholeBrush.Freeze();
-            context.DrawEllipse(keyholeBrush, null, new Point(202, 204), 5, 5);
-            context.DrawRoundedRectangle(
-                keyholeBrush,
-                null,
-                new Rect(199, 207, 6, 11),
-                3,
-                3);
-        }
-
-        var composedIcon = new RenderTargetBitmap(
-            size,
-            size,
-            96,
-            96,
-            PixelFormats.Pbgra32);
-        composedIcon.Render(visual);
-        composedIcon.Freeze();
-
-        _lockedWindowIcon = composedIcon;
-        return composedIcon;
     }
 
     private static BitmapFrame GetUnlockedWindowIcon()
@@ -758,7 +674,8 @@ public partial class App : System.Windows.Application
 
     public static void PrepareCustomChrome(Window window)
     {
-        window.Icon = GetWindowIcon(Services?.GetService<VaultSession>()?.IsActive == true);
+        window.Icon = GetUnlockedWindowIcon();
+        TaskbarOverlayService.TrackWindow(window);
 
         if (window.Content is Border { Tag: "ChromeRoot" })
             return;
