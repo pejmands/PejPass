@@ -6,6 +6,7 @@ using PejPass.Wpf.Views;
 using System.IO;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 
 namespace PejPass.Wpf.Tests.Windowing;
@@ -164,6 +165,50 @@ public sealed class WindowTrayBehaviorTests
             Assert.False(wasClosed);
             Assert.True(host.VaultSession.IsActive);
             Assert.True(host.Tray.IsVisible);
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 15000)]
+    public void SystemTray_ContextMenu_IsOwnedByTrayHostNotLoginWindow()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Tray.Show();
+
+            var app = System.Windows.Application.Current!;
+            var login = host.CreateLoginWindow();
+            app.MainWindow = login;
+            login.Show();
+
+            var menuField = typeof(SystemTrayService).GetField(
+                "_contextMenu",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(menuField);
+
+            var menu = Assert.IsType<ContextMenu>(menuField!.GetValue(host.Tray));
+            var iconField = typeof(SystemTrayService).GetField(
+                "_taskbarIcon",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(iconField);
+            var trayIcon = Assert.IsAssignableFrom<FrameworkElement>(
+                iconField!.GetValue(host.Tray));
+            Assert.Equal("None", trayIcon.GetType()
+                .GetProperty("MenuActivation")!.GetValue(trayIcon)!.ToString());
+
+            var openMenu = typeof(SystemTrayService).GetMethod(
+                "OpenContextMenu",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(openMenu);
+            openMenu!.Invoke(host.Tray, null);
+
+            Assert.True(menu.IsOpen);
+            Assert.Same(trayIcon, menu.PlacementTarget);
+
+            var owner = Window.GetWindow(trayIcon);
+            Assert.NotNull(owner);
+            Assert.Equal(SystemTrayService.HostWindowTag, owner!.Tag);
+            Assert.NotSame(login, owner);
+            menu.IsOpen = false;
         }, TestContext.Current.CancellationToken);
     }
 

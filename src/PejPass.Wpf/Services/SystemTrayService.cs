@@ -63,7 +63,9 @@ public sealed class SystemTrayService : IDisposable
         {
             ToolTipText = GetTrayToolTip(),
             Icon = CreateTrayIcon(),
-            MenuActivation = PopupActivationMode.RightClick,
+            // H.NotifyIcon calls SetForegroundWindow after opening its menu,
+            // which can activate Application.MainWindow. Open it ourselves instead.
+            MenuActivation = PopupActivationMode.None,
             Visibility = Visibility.Visible
         };
 
@@ -91,6 +93,7 @@ public sealed class SystemTrayService : IDisposable
         _taskbarIcon.ForceCreate(enablesEfficiencyMode: false);
 
         // Single left click does nothing. Double left click shows the window.
+        _taskbarIcon.TrayRightMouseUp += (_, _) => OpenContextMenu();
         _taskbarIcon.TrayMouseDoubleClick += (_, _) =>
             ShowRequested?.Invoke(this, EventArgs.Empty);
     }
@@ -157,6 +160,18 @@ public sealed class SystemTrayService : IDisposable
             throw new InvalidOperationException("SystemTrayService must be used on the UI thread.");
     }
 
+    private void OpenContextMenu()
+    {
+        if (_contextMenu is not { } menu || _disposed)
+            return;
+
+        menu.PlacementTarget = _taskbarIcon;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+        menu.HorizontalOffset = 0;
+        menu.VerticalOffset = 0;
+        menu.IsOpen = true;
+    }
+
     private ContextMenu CreateContextMenu()
     {
         var menu = new ContextMenu
@@ -184,7 +199,6 @@ public sealed class SystemTrayService : IDisposable
         // the first opening uses WPF's actual cursor position as well.
         menu.Opened += (_, _) =>
         {
-            menu.PlacementTarget = null;
             menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
             menu.HorizontalOffset = 0;
             menu.VerticalOffset = 0;
