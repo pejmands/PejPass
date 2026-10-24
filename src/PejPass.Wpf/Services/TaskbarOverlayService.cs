@@ -119,7 +119,13 @@ internal static partial class TaskbarOverlayService
             graphics.DrawLine(lockPen, 22, 12, 22, 17);
 
             using var lockBrush = new SolidBrush(Color.White);
-            graphics.FillRoundedRectangle(lockBrush, 7, 15, 18, 12, 3);
+            using var lockBody = new GraphicsPath();
+            lockBody.AddArc(7, 15, 6, 6, 180, 90);
+            lockBody.AddArc(19, 15, 6, 6, 270, 90);
+            lockBody.AddArc(19, 21, 6, 6, 0, 90);
+            lockBody.AddArc(7, 21, 6, 6, 90, 90);
+            lockBody.CloseFigure();
+            graphics.FillPath(lockBrush, lockBody);
 
             using var keyholeBrush = new SolidBrush(Color.FromArgb(35, 39, 47));
             graphics.FillEllipse(keyholeBrush, 14, 17, 4, 4);
