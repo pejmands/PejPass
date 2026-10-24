@@ -66,10 +66,12 @@ public static class DialogService
             title, message, AppDialogType.Confirm, yesText, noText,
             isDestructive: isDestructive)
         {
-            Owner = Owner
+            ShowInTaskbar = true,
+            Topmost = true,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen
         };
         if (bringToFront)
-            dlg.Loaded += (_, _) => SingleInstance.RestoreAndFocus(dlg);
+            dlg.Loaded += (_, _) => SingleInstance.RestoreAndFocus(dlg, preserveTopmost: true);
 
         dlg.ShowDialog();
         return dlg.Result == AppDialogResult.Primary;
