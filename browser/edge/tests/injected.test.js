@@ -24,6 +24,22 @@ test("Edge package contains the current shared login-form implementation", () =>
   assert.equal(packagedInjectedSource, injectedSource);
 });
 
+test("fills a new password field inside an open Shadow DOM", () => {
+  const dom = createPage('<div id="password-host"></div>');
+  try {
+    const host = dom.window.document.getElementById("password-host");
+    const shadowRoot = host.attachShadow({ mode: "open" });
+    shadowRoot.innerHTML = '<input type="password" name="newPassword" autocomplete="new-password">';
+
+    const result = dom.window.processLoginForm("fillNewPassword", "example.com", "", "generated-secret");
+
+    assert.equal(result, "filled");
+    assert.equal(shadowRoot.querySelector('input[name="newPassword"]').value, "generated-secret");
+  } finally {
+    dom.window.close();
+  }
+});
+
 test("probe detects a visible password without returning its value", () => {
   const dom = createPage('<form><input name="username" autocomplete="username" value="alice"><input type="password" name="password" value="secret"></form>');
   try {
