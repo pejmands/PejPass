@@ -90,7 +90,7 @@ public partial class SettingsViewModel : ObservableObject
     public partial bool LockVaultWhenHiddenToTray { get; set; }
 
     [ObservableProperty]
-    public partial bool StartWithWindows { get; set;}
+    public partial bool StartWithWindows { get; set; }
 
     [ObservableProperty]
     public partial int SelectedFontSizeIndex { get; set; }
