@@ -1,4 +1,4 @@
-﻿namespace PejPass.Infrastructure.Storage;
+namespace PejPass.Infrastructure.Storage;
 
 public interface IFileMover
 {
