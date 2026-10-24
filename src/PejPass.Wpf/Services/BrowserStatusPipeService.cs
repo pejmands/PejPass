@@ -22,7 +22,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     private readonly Func<string, Task<WindowsHelloVerificationResult>>? _fillHelloVerification;
 
     internal BrowserStatusPipeService(VaultSession vaultSession)
-        : this(vaultSession, (Application.Services.VaultService?)null) { }
+        : this(vaultSession, null) { }
 
     internal BrowserStatusPipeService(
         VaultSession vaultSession,
@@ -613,6 +613,8 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 "getCredentials" => CreateCredentialResponse(root),
                 "searchCredentials" => Error("async_required"),
                 "fillCredential" => Error("async_required"),
+                // Save requests are handled asynchronously by RunAsync.
+                // Keep this synchronous fallback for CreateResponse tests only.
                 "saveCredential" => CreateSaveCredentialResponse(root),
                 "copyToClipboard" => CreateCopyToClipboardResponse(root),
                 _ => Error("unsupported_request")
@@ -938,6 +940,8 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         return await WindowsHelloHelper.VerifyAsync(owner, message);
     }
 
+    // Synchronous test fallback only. Production requests use
+    // CreateSaveCredentialResponseAsync through RunAsync.
     private StatusResponse CreateSaveCredentialResponse(JsonElement root)
     {
         if (!root.TryGetProperty("domain", out var domainElement) ||
