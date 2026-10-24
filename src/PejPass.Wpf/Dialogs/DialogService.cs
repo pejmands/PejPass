@@ -116,7 +116,7 @@ public static class DialogService
                 completion.TrySetResult(dlg.Result == AppDialogResult.Primary);
 
             if (bringToFront)
-                dlg.Loaded += (_, _) => SingleInstance.RestoreAndFocus(dlg);
+                dlg.Loaded += (_, _) => SingleInstance.RestoreAndFocus(dlg, preserveTopmost: true);
 
             dlg.Show();
 
