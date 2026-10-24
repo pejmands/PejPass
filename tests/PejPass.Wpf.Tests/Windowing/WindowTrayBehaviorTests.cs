@@ -223,6 +223,27 @@ public sealed class WindowTrayBehaviorTests
     }
 
     [Fact(Timeout = 15000)]
+    public void LoginWindow_BrowserLock_KeepsHiddenWindowHidden()
+    {
+        WpfTestHost.Run(host =>
+        {
+            var login = host.CreateLoginWindow();
+            System.Windows.Application.Current!.MainWindow = login;
+            login.Show();
+            login.Hide();
+
+            var method = typeof(LoginWindow).GetMethod(
+                "MatchWindowStateForBrowserLock",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+
+            Assert.NotNull(method);
+            method!.Invoke(login, [false, WindowState.Minimized]);
+
+            Assert.False(login.IsVisible);
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 15000)]
     public void LoginWindow_CloseToSystemTray_HidesInsteadOfClosing()
     {
         WpfTestHost.Run(host =>
