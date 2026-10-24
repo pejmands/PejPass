@@ -607,7 +607,11 @@ public sealed class UpdateService : IDisposable
                 $"The update server returned HTTP {(int)response.StatusCode} ({response.ReasonPhrase}).");
 
         var contentLength = response.Content.Headers.ContentLength;
-        if (contentLength is <= 0 or > MaxUpdateManifestBytes)
+
+        if (contentLength == 0)
+            throw new InvalidDataException("Update manifest is empty.");
+
+        if (contentLength is > MaxUpdateManifestBytes)
             throw new InvalidDataException("Update manifest exceeds the maximum supported size.");
 
         await using var stream = await response.Content
