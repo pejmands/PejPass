@@ -161,7 +161,10 @@ public sealed class SystemTrayService : IDisposable
     {
         var menu = new ContextMenu
         {
-            Style = GetContextMenuStyle()
+            Style = GetContextMenuStyle(),
+            // Keep the popup owned by the tray host instead of Application.MainWindow.
+            // WPF can otherwise activate the login window when the tray menu opens.
+            PlacementTarget = _taskbarIcon!
         };
 
         menu.Items.Add(CreateMenuItem("Show", () => ShowRequested?.Invoke(this, EventArgs.Empty)));
@@ -184,7 +187,6 @@ public sealed class SystemTrayService : IDisposable
         // the first opening uses WPF's actual cursor position as well.
         menu.Opened += (_, _) =>
         {
-            menu.PlacementTarget = null;
             menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
             menu.HorizontalOffset = 0;
             menu.VerticalOffset = 0;
