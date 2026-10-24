@@ -1,10 +1,46 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
+using System.Runtime.InteropServices;
 
 namespace PejPass.Wpf.Dialogs;
 
 public partial class AppDialog : Window
 {
+    private static readonly IntPtr HwndTopmost = new(-1);
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoMove = 0x0002;
+    private const uint SwpNoActivate = 0x0010;
+
+    [LibraryImport("user32.dll", EntryPoint = "SetWindowPos")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetWindowPos(
+        IntPtr hWnd,
+        IntPtr hWndInsertAfter,
+        int x,
+        int y,
+        int cx,
+        int cy,
+        uint uFlags);
+
+    private void EnsureTopmost()
+    {
+        if (!Topmost || !IsVisible)
+            return;
+
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd != IntPtr.Zero)
+        {
+            SetWindowPos(
+                hwnd,
+                HwndTopmost,
+                0,
+                0,
+                0,
+                0,
+                SwpNoMove | SwpNoSize | SwpNoActivate);
+        }
+    }
     public AppDialogResult Result { get; private set; } = AppDialogResult.None;
 
     public bool UsesModalResult { get; set; } = true;
@@ -16,6 +52,8 @@ public partial class AppDialog : Window
         InitializeComponent();
         App.PrepareCustomChrome(this);
         PreviewKeyDown += OnPreviewKeyDown;
+        Loaded += (_, _) => EnsureTopmost();
+        Activated += (_, _) => EnsureTopmost();
 
         TitleText.Text = title;
         MessageText.Text = message;
