@@ -31,76 +31,58 @@ const matchRefreshDebounceMs = 300;
 
 const toolbarIconCache = new Map();
 
-async function loadToolbarIcon(imagePath) {
-  if (toolbarIconCache.has(imagePath)) return toolbarIconCache.get(imagePath);
+async function loadToolbarIcon(unlocked) {
+  const cacheKey = unlocked ? "unlocked" : "locked";
+  if (toolbarIconCache.has(cacheKey)) return toolbarIconCache.get(cacheKey);
 
-  const response = await fetch(globalThis.pejpassBrowserApi.runtime.getURL(imagePath));
+  const response = await fetch(
+    globalThis.pejpassBrowserApi.runtime.getURL("icons/PejPass128.png")
+  );
   if (!response.ok) throw new Error("Unable to load toolbar icon.");
   const image = await createImageBitmap(await response.blob());
 
-  const imageData = {};
-  for (const size of [16, 32]) {
-    const canvas = new OffscreenCanvas(size, size);
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error("Unable to create toolbar icon canvas.");
-    context.clearRect(0, 0, size, size);
-    context.drawImage(image, 0, 0, size, size);
-    imageData[size] = context.getImageData(0, 0, size, size);
-  }
+  try {
+    const imageData = {};
+    for (const size of [16, 32]) {
+      const canvas = new OffscreenCanvas(size, size);
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Unable to create toolbar icon canvas.");
 
-  image.close();
-  toolbarIconCache.set(imagePath, imageData);
-  return imageData;
-}
+      context.clearRect(0, 0, size, size);
+      context.drawImage(image, 0, 0, size, size);
 
-async function loadFirefoxToolbarIcon(unlocked) {
-  const response = await fetch(globalThis.pejpassBrowserApi.runtime.getURL("icons/PejPass128.png"));
-  if (!response.ok) throw new Error("Unable to load Firefox toolbar icon.");
-  const image = await createImageBitmap(await response.blob());
+      if (!unlocked) {
+        const unit = size / 32;
+        const centerX = size - 8 * unit;
+        const top = size - 13 * unit;
+        context.strokeStyle = "#ffffff";
+        context.lineWidth = Math.max(1.5, 2 * unit);
+        context.beginPath();
+        context.arc(centerX, top + 3 * unit, 3 * unit, Math.PI, 0);
+        context.stroke();
 
-  const imageData = {};
-  for (const size of [16, 32]) {
-    const canvas = new OffscreenCanvas(size, size);
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error("Unable to create Firefox toolbar icon canvas.");
+        context.fillStyle = "#ffffff";
+        context.fillRect(size - 13 * unit, size - 12 * unit, 10 * unit, 8 * unit);
+        context.fillStyle = "#344055";
+        context.beginPath();
+        context.arc(centerX, size - 9 * unit, 1.3 * unit, 0, Math.PI * 2);
+        context.fill();
+        context.fillRect(centerX - 0.6 * unit, size - 9 * unit, 1.2 * unit, 2.5 * unit);
+      }
 
-    context.clearRect(0, 0, size, size);
-    context.drawImage(image, 0, 0, size, size);
-
-    if (!unlocked) {
-      const unit = size / 32;
-      const centerX = size - 8 * unit;
-      const top = size - 13 * unit;
-      context.strokeStyle = "#ffffff";
-      context.lineWidth = Math.max(1.5, 2 * unit);
-      context.beginPath();
-      context.arc(centerX, top + 3 * unit, 3 * unit, Math.PI, 0);
-      context.stroke();
-
-      context.fillStyle = "#ffffff";
-      context.fillRect(size - 13 * unit, size - 12 * unit, 10 * unit, 8 * unit);
-      context.fillStyle = "#344055";
-      context.beginPath();
-      context.arc(centerX, size - 9 * unit, 1.3 * unit, 0, Math.PI * 2);
-      context.fill();
-      context.fillRect(centerX - 0.6 * unit, size - 9 * unit, 1.2 * unit, 2.5 * unit);
+      imageData[size] = context.getImageData(0, 0, size, size);
     }
 
-    imageData[size] = context.getImageData(0, 0, size, size);
+    toolbarIconCache.set(cacheKey, imageData);
+    return imageData;
+  } finally {
+    image.close();
   }
-
-  image.close();
-  return imageData;
 }
 
 async function setToolbarVaultIcon(unlocked) {
   try {
-    const isFirefox = typeof globalThis.pejpassBrowserApi.runtime.getBrowserInfo === "function";
-    const imageData = isFirefox
-      ? await loadFirefoxToolbarIcon(unlocked)
-      : await loadToolbarIcon(
-          unlocked ? "icons/PejPass.ico" : "icons/PejPassLocked.ico"
-        );
+    const imageData = await loadToolbarIcon(unlocked);
     await globalThis.pejpassBrowserApi.action.setIcon({ imageData });
   } catch {
     // The browser may be shutting down.
