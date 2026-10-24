@@ -52,3 +52,12 @@ test("Firefox signing script requests unlisted Mozilla signing without embedding
   assert.match(firefoxReadme, /Install Add-on From File/);
   assert.match(firefoxReadme, /pejpass@pejmands\.github\.io/);
 });
+
+test("Both browsers use the same PNG-based toolbar icon renderer", () => {
+  assert.match(backgroundSource, /async function loadToolbarIcon\(unlocked\)/);
+  assert.match(backgroundSource, /icons\/PejPass128\.png/);
+  assert.match(backgroundSource, /if \(!unlocked\) \{/);
+  assert.match(backgroundSource, /const imageData = await loadToolbarIcon\(unlocked\);/);
+  assert.doesNotMatch(backgroundSource, /loadFirefoxToolbarIcon|PejPassLocked\.ico|PejPass\.ico/);
+  assert.doesNotMatch(backgroundSource, /const isFirefox =/);
+});
