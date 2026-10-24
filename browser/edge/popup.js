@@ -1075,8 +1075,8 @@ async function fillGeneratedPassword(password) {
 
   const results = await globalThis.pejpassBrowserApi.scripting.executeScript({
     target: { tabId: activeTabId, allFrames: true },
-    func: fillNewPasswordField,
-    args: [activeDomain, password]
+    func: processLoginForm,
+    args: ["fillNewPassword", activeDomain, "", password]
   });
   const outcomes = results || [];
   if (outcomes.some((entry) => entry.result === "filled")) {
@@ -1088,96 +1088,6 @@ async function fillGeneratedPassword(password) {
   return { ok: false, message: "No suitable new-password field was found. The generated password is still available above." };
 }
 
-function fillNewPasswordField(expectedDomain, password) {
-  const normalizeHost = (host) => host.toLowerCase().replace(/\.$/, "");
-  const currentDomain = normalizeHost(window.location.hostname);
-  let topDomain;
-  try {
-    const ancestors = window.location.ancestorOrigins;
-    const topOrigin = ancestors && ancestors.length > 0
-      ? ancestors[ancestors.length - 1]
-      : window.top.location.origin;
-    topDomain = normalizeHost(new URL(topOrigin).hostname);
-  } catch { return "wrong_page"; }
-
-  if (topDomain !== expectedDomain ||
-      (currentDomain !== expectedDomain && !currentDomain.endsWith("." + expectedDomain))) {
-    return "wrong_page";
-  }
-
-  const isVisible = (element) => {
-    const style = window.getComputedStyle(element);
-    return style.display !== "none" && style.visibility !== "hidden" &&
-      element.getClientRects().length > 0;
-  };
-  const inputs = Array.from(document.querySelectorAll("input"))
-    .filter((input) => {
-      const autocomplete = (input.autocomplete || "").toLowerCase().split(/\s+/);
-      const isPasswordInput = (input.type || "").toLowerCase() === "password";
-      return (isPasswordInput || autocomplete.includes("new-password")) &&
-        !input.disabled && !input.readOnly && isVisible(input);
-    });
-  if (inputs.length === 0) return "no_password";
-
-  const hints = (input) => [
-    input.name, input.id, input.placeholder, input.getAttribute("aria-label"),
-    input.getAttribute("data-testid")
-  ].filter(Boolean).join(" ");
-  const isCurrent = (input) =>
-    (input.autocomplete || "").toLowerCase().includes("current-password") ||
-    /current|old|existing/i.test(hints(input));
-
-  let targets = inputs.filter((input) =>
-    (input.autocomplete || "").toLowerCase().split(/\s+/).includes("new-password"));
-
-  if (targets.length === 0 && inputs.length >= 3) {
-    targets = inputs.slice(-2);
-  } else if (targets.length === 0 && inputs.length === 2 &&
-      inputs[0].form && inputs[0].form === inputs[1].form) {
-    targets = isCurrent(inputs[0]) ? [inputs[1]] : inputs;
-  }
-
-  if (targets.length === 0) {
-    const hintedTarget = inputs.find((input) =>
-      /new.?password|password.?new|create.?password|register.?password|signup.?password/i.test(hints(input)));
-    if (hintedTarget) targets = [hintedTarget];
-  }
-
-  if (targets.length === 0) {
-    const form = inputs[0].form;
-    const submitLabels = Array.from(
-      (form || document).querySelectorAll('button, input[type="submit"], input[type="button"]')
-    )
-      .map((element) => [element.innerText, element.value, element.getAttribute("aria-label")].filter(Boolean).join(" "))
-      .join(" ");
-    const pageText = [
-      document.title,
-      document.body?.innerText?.slice(0, 6000) || "",
-      submitLabels
-    ].join(" ");
-    const registrationPattern = /sign.?up|register|create.{0,12}account|new account|create.{0,12}password/i;
-    const looksLikeRegistration = registrationPattern.test(pageText);
-    const registrationSubmit = registrationPattern.test(submitLabels);
-    const looksLikeLogin = /sign.?in|log.?in|forgot password|current password/i.test(pageText);
-
-    if (inputs.length === 1 && (registrationSubmit || (looksLikeRegistration && !looksLikeLogin))) {
-      targets = [inputs[0]];
-    }
-  }
-
-  if (targets.length === 0) return "no_password";
-
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-  for (const target of targets) {
-    target.focus();
-    if (setter) setter.call(target, password);
-    else target.value = password;
-    target.dispatchEvent(new Event("input", { bubbles: true }));
-    target.dispatchEvent(new Event("change", { bubbles: true }));
-    target.blur();
-  }
-  return "filled";
-}
 
 generateFillPasswordButton.addEventListener("click", async () => {
   let password;
