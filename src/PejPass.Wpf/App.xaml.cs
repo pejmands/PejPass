@@ -27,7 +27,7 @@ public partial class App : System.Windows.Application
     public static IServiceProvider Services { get; private set; } = null!;
 
     private static AppSettings? _settings;
-    private static BitmapFrame? _lockedWindowIcon;
+    private static ImageSource? _lockedWindowIcon;
     private static BitmapFrame? _unlockedWindowIcon;
     private static WindowsSecurityService? _windowsSecurityService;
     private static SecurityLockCoordinator? _securityLock;
