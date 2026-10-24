@@ -7,7 +7,7 @@ using System.Windows.Interop;
 
 namespace PejPass.Wpf.Services;
 
-internal static class WindowsClipboardWriter
+internal static partial class WindowsClipboardWriter
 {
     private const uint ClipboardUnicodeText = 13;
     private const uint GlobalMemoryMoveable = 0x0002;
@@ -207,33 +207,37 @@ internal static class WindowsClipboardWriter
 
     private sealed record NativeClipboardItem(uint Format, IntPtr Memory, int Length);
 
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern uint RegisterClipboardFormat(string format);
+    [LibraryImport("user32.dll", EntryPoint = "RegisterClipboardFormatW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    private static partial uint RegisterClipboardFormat(string format);
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool OpenClipboard(IntPtr newOwner);
+    [LibraryImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool OpenClipboard(IntPtr newOwner);
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool EmptyClipboard();
+    [LibraryImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool EmptyClipboard();
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool CloseClipboard();
+    [LibraryImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool CloseClipboard();
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr SetClipboardData(uint format, IntPtr memory);
+    [LibraryImport("user32.dll", SetLastError = true)]
+    private static partial IntPtr SetClipboardData(uint format, IntPtr memory);
 
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetActiveWindow();
+    [LibraryImport("user32.dll")]
+    private static partial IntPtr GetActiveWindow();
 
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr GlobalAlloc(uint flags, UIntPtr bytes);
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    private static partial IntPtr GlobalAlloc(uint flags, UIntPtr bytes);
 
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr GlobalLock(IntPtr memory);
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    private static partial IntPtr GlobalLock(IntPtr memory);
 
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool GlobalUnlock(IntPtr memory);
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GlobalUnlock(IntPtr memory);
 
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr GlobalFree(IntPtr memory);
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    private static partial IntPtr GlobalFree(IntPtr memory);
 }
