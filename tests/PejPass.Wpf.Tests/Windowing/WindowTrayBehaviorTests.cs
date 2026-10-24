@@ -6,6 +6,7 @@ using PejPass.Wpf.Views;
 using System.IO;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 
 namespace PejPass.Wpf.Tests.Windowing;
@@ -164,6 +165,34 @@ public sealed class WindowTrayBehaviorTests
             Assert.False(wasClosed);
             Assert.True(host.VaultSession.IsActive);
             Assert.True(host.Tray.IsVisible);
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 15000)]
+    public void SystemTray_ContextMenu_IsOwnedByTrayHostNotLoginWindow()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Tray.Show();
+
+            var app = System.Windows.Application.Current!;
+            var login = host.CreateLoginWindow();
+            app.MainWindow = login;
+            login.Show();
+
+            var menuField = typeof(SystemTrayService).GetField(
+                "_contextMenu",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(menuField);
+
+            var menu = Assert.IsType<ContextMenu>(menuField!.GetValue(host.Tray));
+            var target = Assert.IsAssignableFrom<FrameworkElement>(menu.PlacementTarget);
+            Assert.Equal("H.NotifyIcon.TaskbarIcon", target.GetType().FullName);
+
+            var owner = Window.GetWindow(target);
+            Assert.NotNull(owner);
+            Assert.Equal(SystemTrayService.HostWindowTag, owner!.Tag);
+            Assert.NotSame(login, owner);
         }, TestContext.Current.CancellationToken);
     }
 
