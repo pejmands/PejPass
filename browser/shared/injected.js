@@ -56,8 +56,9 @@ function processLoginForm(action, expectedDomain, username = "", password = "", 
     ["text", "email", "tel", "url", "search", ""].includes((input.type || "text").toLowerCase());
   const passwordField = inputs.find((input) => (input.type || "").toLowerCase() === "password") ||
     inputs.find(isPasswordField);
-  const formRoot = passwordField?.form || passwordField?.closest("form") ||
-    passwordField?.getRootNode() || document;
+  // Some sites (including Reddit) render username and password inputs in separate open Shadow DOM roots.
+  // When there is no shared form, search the document and its open Shadow DOM trees instead of one root.
+  const formRoot = passwordField?.form || passwordField?.closest("form") || document;
   const candidates = collectInputs(formRoot)
     .filter((input) => usable(input) && input !== passwordField &&
       !isPasswordField(input) && !isTotpField(input) && isTextLike(input));
