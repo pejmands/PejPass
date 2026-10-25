@@ -54,7 +54,8 @@ public static class PasswordStrength
         {
             0 => PasswordStrengthLevel.VeryWeak,
             1 => PasswordStrengthLevel.Weak,
-            2 or 3 => PasswordStrengthLevel.Fair,
+            2 => PasswordStrengthLevel.Fair,
+            3 => PasswordStrengthLevel.Strong,
             4 => PasswordStrengthLevel.VeryStrong,
             _ => PasswordStrengthLevel.VeryWeak
         };
