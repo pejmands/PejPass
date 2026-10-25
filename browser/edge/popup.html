@@ -144,7 +144,8 @@
         <button class="fill-button secondary-button" id="generate-fill-password" type="button" disabled>Generate and fill</button>
         <label class="field-label password-label" for="generated-password">Generated password</label>
         <input id="generated-password" class="generated-password" type="text" readonly autocomplete="off" spellcheck="false" aria-label="Generated password">
-        <p class="strength-status" id="password-strength" role="status" aria-live="polite">Strength estimate appears after generation.</p>
+        <p class="strength-status" id="password-strength" role="status" aria-live="polite">Strength appears after generation.</p>
+        <div class="strength-meter" aria-hidden="true"><span></span></div>
         <button class="fill-button secondary-button" id="copy-password" type="button" disabled>Copy password</button>
         <p class="msg" id="generator-status" role="status" aria-live="polite">Generated in this browser. Not saved automatically.</p>
       </section>
