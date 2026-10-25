@@ -260,9 +260,6 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 !TryGetOptionalBoolean(root, "excludeAmbiguous", true, out var excludeAmbiguous))
                 return Error("invalid_request");
 
-            if (!_vaultSession.IsActive)
-                return Error("vault_locked");
-
             var password = PasswordGenerator.Generate(new PasswordGeneratorOptions
             {
                 Length = length,
