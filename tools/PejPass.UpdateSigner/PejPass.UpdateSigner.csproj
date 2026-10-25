@@ -6,14 +6,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Shared with the app so the signed payload and trusted keys cannot drift. -->
-    <Compile Include="..\..\src\PejPass.Application\Security\UpdateSigningPayload.cs"
-             Link="UpdateSigningPayload.cs" />
-    <Compile Include="..\..\src\PejPass.Application\Security\TrustedUpdateKeys.cs"
-             Link="TrustedUpdateKeys.cs" />
+    <Compile Include="..\..\src\PejPass.Application\Security\UpdateSigningPayload.cs" Link="UpdateSigningPayload.cs" />
+    <Compile Include="..\..\src\PejPass.Application\Security\TrustedUpdateKeys.cs" Link="TrustedUpdateKeys.cs" />
   </ItemGroup>
 
 </Project>
