@@ -1040,10 +1040,9 @@ function updatePasswordStrength(password, strength = null) {
   }
 
   if (strength && typeof strength.label === "string" &&
-      Number.isInteger(strength.level) && Number.isFinite(strength.progress)) {
+      Number.isInteger(strength.level)) {
     passwordStrength.textContent = `Strength: ${strength.label} · ${password.length} characters`;
     passwordStrength.dataset.level = String(strength.level);
-    passwordStrength.style.setProperty("--strength-progress", `${Math.max(0, Math.min(100, strength.progress))}%`);
     return;
   }
 
