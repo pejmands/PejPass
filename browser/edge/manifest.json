@@ -2,6 +2,7 @@
   "manifest_version": 3,
   "name": "PejPass",
   "version": "0.5.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwhYDCIdICIVHtYZyQxM+ZrhuMeqHtSMnUJYjwzM9GVLyukT7eq4Sh9ipqI7l0wgdgjDF4jo5uu0xwC7ImeEl0agrkQSzL0zRb1jYlNvLTb7Amn4rEn+/csYcT7jjyFfL2XDGGY8ZQezFdSnnygOqGjfrHbaPR1J2eowX7KyXeUWaZ9rB9PzvP6TzLGXoTTvDM76vUD5euEVIITAbIRjSceS+NUISkPC9DPLqBwUORNLToid5/RzCXzhUowIb00aeAsNapY/bMERZjUjEB6kbV3eOchJmrvVMytwxp7DeIVemDWPb/ai95YnEvZyGHXk4YlH6bnYzJwtj9IV19HDWRQIDAQAB",
   "minimum_chrome_version": "105",
   "description": "A lightweight browser companion for PejPass.",
   "permissions": [
@@ -15,7 +16,10 @@
   "action": {
     "default_title": "PejPass",
     "default_popup": "popup.html",
-    "default_icon": { "16": "icons/PejPass16.png", "48": "icons/PejPass48.png" }
+    "default_icon": {
+      "16": "icons/PejPass16.png",
+      "48": "icons/PejPass48.png"
+    }
   },
   "background": {
     "service_worker": "background.js"
