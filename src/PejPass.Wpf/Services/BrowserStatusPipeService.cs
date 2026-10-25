@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PejPass.Application.Interfaces;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Settings;
+using PejPass.Domain.Security;
 using PejPass.Infrastructure.Totp;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.ViewModels;
@@ -135,6 +136,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 var response = requestType switch
                 {
                     "searchCredentials" => await CreateSearchCredentialResponseAsync(line).ConfigureAwait(false),
+                    "generatePassword" => CreateGeneratedPasswordResponse(line),
                     "saveCredential" => await CreateSaveCredentialResponseAsync(line, cancellationToken).ConfigureAwait(false),
                     "unlockVault" => await CreateUnlockVaultResponseAsync(line).ConfigureAwait(false),
                     "unlockWithHello" => await CreateUnlockWithHelloResponseAsync(line).ConfigureAwait(false),
@@ -233,6 +235,70 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         {
             return null;
         }
+    }
+
+    private StatusResponse CreateGeneratedPasswordResponse(string? line)
+    {
+        if (string.IsNullOrWhiteSpace(line) || line.Length > MaximumLineLength)
+            return Error("invalid_message");
+
+        try
+        {
+            using var document = JsonDocument.Parse(line);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("protocolVersion", out var version) ||
+                !version.TryGetInt32(out var protocolVersion) ||
+                protocolVersion != ProtocolVersion ||
+                !root.TryGetProperty("length", out var lengthElement) ||
+                !lengthElement.TryGetInt32(out var length) ||
+                length is < PasswordGeneratorOptions.MinLength or > PasswordGeneratorOptions.MaxLength ||
+                !TryGetOptionalBoolean(root, "includeLowercase", true, out var includeLowercase) ||
+                !TryGetOptionalBoolean(root, "includeUppercase", true, out var includeUppercase) ||
+                !TryGetOptionalBoolean(root, "includeDigits", true, out var includeDigits) ||
+                !TryGetOptionalBoolean(root, "includeSymbols", true, out var includeSymbols) ||
+                !TryGetOptionalBoolean(root, "excludeAmbiguous", true, out var excludeAmbiguous))
+                return Error("invalid_request");
+
+            var password = PasswordGenerator.Generate(new PasswordGeneratorOptions
+            {
+                Length = length,
+                IncludeLowercase = includeLowercase,
+                IncludeUppercase = includeUppercase,
+                IncludeDigits = includeDigits,
+                IncludeSymbols = includeSymbols,
+                ExcludeAmbiguous = excludeAmbiguous
+            });
+            var level = PasswordStrength.Evaluate(password);
+            return new StatusResponse("generatedPassword", "PejPass", ProtocolVersion, "unlocked", null,
+                Password: password,
+                StrengthLabel: PasswordStrength.GetLabel(level),
+                StrengthLevel: (int)level,
+                StrengthProgress: PasswordStrength.GetProgress(level));
+        }
+        catch (JsonException)
+        {
+            return Error("invalid_message");
+        }
+        catch (InvalidOperationException)
+        {
+            return Error("invalid_request");
+        }
+        catch (Exception)
+        {
+            return Error("generation_unavailable");
+        }
+    }
+
+    private static bool TryGetOptionalBoolean(JsonElement root, string name, bool defaultValue, out bool value)
+    {
+        value = defaultValue;
+        if (!root.TryGetProperty(name, out var element))
+            return true;
+        if (element.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            return false;
+        value = element.GetBoolean();
+        return true;
     }
 
     internal async Task<StatusResponse> CreateUnlockVaultResponseAsync(string? line)
@@ -1322,5 +1388,6 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         string? Domain = null, IReadOnlyList<CredentialSummary>? Credentials = null,
         string? Id = null, string? Username = null, string? Password = null,
         string? TotpCode = null, string? Result = null, int? RetryAfterSeconds = null,
-        int? ClipboardClearSeconds = null, bool HelloReady = false);
+        int? ClipboardClearSeconds = null, bool HelloReady = false,
+        string? StrengthLabel = null, int? StrengthLevel = null, double? StrengthProgress = null);
 }

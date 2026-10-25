@@ -14,7 +14,8 @@ const allowedTypes = new Set([
   "searchCredentials",
   "fillCredential",
   "saveCredential",
-  "copyToClipboard"
+  "copyToClipboard",
+  "generatePassword"
 ]);
 
 let port = null;
