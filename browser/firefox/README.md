@@ -49,6 +49,8 @@ powershell -ExecutionPolicy Bypass -File .\browser\firefox\install-dev-host.ps1
 
 The script builds PejPass and BrowserHost, creates a Firefox-specific host manifest in a separate output directory, and registers it for the current Windows user under `HKCU\Software\Mozilla\NativeMessagingHosts\com.pejpass.browserhost`. The separate manifest and host directory preserve the existing Edge registration and manifest.
 
+The Firefox manifest does not contain the desktop executable path. The script writes it to `pejpass-host-config.json` next to the Firefox copy of the host executable instead. BrowserHost reads that file first and falls back to `com.pejpass.browserhost.json` in its own directory (the Edge case), so both browsers resolve the path correctly. The script copies only the files in the host output directory, not subdirectories.
+
 Restart Firefox if it was already running. To remove the Firefox registration, run:
 
 ```powershell
@@ -57,6 +59,24 @@ powershell -ExecutionPolicy Bypass -File .\browser\firefox\uninstall-dev-host.ps
 
 This only removes the Firefox registry entry; it does not remove the Edge registration.
 
+To check both registrations without changing anything, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\browser\check-host-registration.ps1
+```
+
+## Known differences from Edge
+
+- **Frames:** Firefox does not provide `location.ancestorOrigins`. PejPass cannot prove the top-level site from inside a cross-origin frame, so it does not fill fields in such frames, including same-site subdomain frames that Edge accepts. Fields in the main document and open Shadow DOM roots work normally.
+- **Background page:** Firefox runs the background script as an event page that the browser can unload when idle, while Edge runs a service worker. PejPass stores the last known vault state in `storage.session` and confirms it with the desktop app after a restart.
+- **Popup lifetime:** Firefox may close the popup sooner than Edge. PejPass delays closing the popup by about 1.2 seconds after a successful fill so the result message can be read.
+- **Controls:** Firefox draws form controls differently. The popup styles `select` elements itself to keep them consistent.
+- **Native host configuration:** `desktopAppPath` lives in `pejpass-host-config.json` (Firefox) instead of the host manifest (Edge).
+
+Use **About** (select the version number in the popup header) and **Copy diagnostics** to compare the state of both browsers when behavior differs.
+
 ## Validation
 
 From `browser\edge`, run `npm test` to run the browser package tests. Then build Firefox as above and test it in Firefox. Automated tests cannot replace manual testing of native messaging, vault status, credential lookup, login filling, saving, TOTP, and generated-password filling.
+
+Also test unlocking in Firefox with the desktop app closed: BrowserHost should start the desktop app and complete the unlock. This depends on `pejpass-host-config.json` being next to the Firefox copy of the host executable; `check-host-registration.ps1` verifies it.

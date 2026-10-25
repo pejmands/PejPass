@@ -105,7 +105,7 @@ function processLoginForm(action, expectedDomain, username = "", password = "", 
 
   if (action === "fillNewPassword") {
     const passwordInputs = inputs.filter((input) => {
-      const autocomplete = (input.autocomplete || "").toLowerCase().split(/\\s+/);
+      const autocomplete = (input.autocomplete || "").toLowerCase().split(/\s+/);
       return ((input.type || "").toLowerCase() === "password" ||
         autocomplete.includes("new-password")) && usable(input);
     });
@@ -120,7 +120,7 @@ function processLoginForm(action, expectedDomain, username = "", password = "", 
       /current|old|existing/i.test(hints(input));
 
     let targets = passwordInputs.filter((input) =>
-      (input.autocomplete || "").toLowerCase().split(/\\s+/).includes("new-password"));
+      (input.autocomplete || "").toLowerCase().split(/\s+/).includes("new-password"));
 
     if (targets.length === 0 && passwordInputs.length >= 3) {
       targets = passwordInputs.slice(-2);

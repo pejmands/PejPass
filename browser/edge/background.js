@@ -29,6 +29,52 @@ const matchCounts = new Map();
 const activeFillCounts = new Map();
 const matchRefreshDebounceMs = 300;
 
+// Last known vault state survives service-worker / event-page restarts. No secrets are stored.
+const sessionStateArea = globalThis.pejpassBrowserApi.storage?.session;
+
+function persistState() {
+  if (!sessionStateArea) return;
+  void sessionStateArea.set({
+    pejpassState: { status: cachedStatus, helloReady: cachedHelloReady }
+  }).catch(() => {});
+}
+
+async function restoreState() {
+  if (!sessionStateArea) return;
+  try {
+    const stored = (await sessionStateArea.get("pejpassState"))?.pejpassState;
+    if (cachedStatus !== "unknown" || !stored ||
+        (stored.status !== "locked" && stored.status !== "unlocked")) return;
+
+    const restored = stored.status;
+    cachedStatus = restored;
+    cachedHelloReady = typeof stored.helloReady === "boolean" ? stored.helloReady : null;
+    void setToolbarVaultIcon(restored === "unlocked");
+
+    // The vault may have changed while the worker was stopped, so confirm with the desktop app.
+    try {
+      const response = await sendNative({ type: "getVaultStatus", protocolVersion }, 6000);
+      if (response?.type === "vaultStatus" && response.app === "PejPass" &&
+          response.protocolVersion === protocolVersion &&
+          (response.status === "locked" || response.status === "unlocked")) {
+        applyStatus(response.status, response.helloReady === true);
+      }
+    } catch {
+      if (cachedStatus === restored) applyStatus("unavailable");
+      return;
+    }
+
+    if (cachedStatus === "unlocked") {
+      const tabs = await globalThis.pejpassBrowserApi.tabs.query({ active: true });
+      for (const tab of tabs) {
+        if (Number.isInteger(tab.id)) scheduleRefreshMatchCount(tab.id);
+      }
+    }
+  } catch {
+    // Persisted state is only an optimisation; the native host remains the source of truth.
+  }
+}
+
 const toolbarIconCache = new Map();
 
 async function loadToolbarIcon(unlocked) {
@@ -97,6 +143,7 @@ function applyStatus(status, helloReady = cachedHelloReady) {
 
   cachedStatus = status;
   cachedHelloReady = helloReady;
+  persistState();
   if (statusChanged) {
     void setToolbarVaultIcon(status === "unlocked");
     if (status !== "unlocked") {
@@ -211,6 +258,7 @@ async function refreshMatchCount(tabId) {
   if (!Number.isInteger(tabId) || tabId < 0) return;
   const version = (matchRefreshVersions.get(tabId) || 0) + 1;
   matchRefreshVersions.set(tabId, version);
+  const previousCount = matchCounts.get(tabId) || 0;
   clearMatchBadge(tabId);
 
   try {
@@ -232,6 +280,10 @@ async function refreshMatchCount(tabId) {
 
     const response = await sendNative({ type: "getCredentials", domain }, 6_000);
     if (matchRefreshVersions.get(tabId) !== version) return;
+    if (response?.type === "error" && response.code === "app_busy") {
+      if (matchRefreshVersions.get(tabId) === version) setMatchBadge(tabId, previousCount);
+      return;
+    }
     if (response?.type !== "credentialMatches" || response.app !== "PejPass" ||
         response.protocolVersion !== protocolVersion || response.domain !== domain ||
         !Array.isArray(response.credentials) || response.credentials.length > 25) {
@@ -552,5 +604,6 @@ globalThis.pejpassBrowserApi.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === keepAliveAlarm) ensureConnectedQuietly();
 });
 
+void restoreState();
 // Re-establish the native connection whenever the service worker starts.
 ensureConnectedQuietly();
