@@ -226,26 +226,60 @@ h1 { margin: 0; font-size: 17px; font-weight: 650; line-height: 1.2; }
   .msg-inline.kind-warning { color: var(--yellow); }
   .msg-inline.kind-success { color: var(--green); }
 }
-.strength-status { margin-block-start: var(--s2); color: var(--text); }
+.strength-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  max-width: 100%;
+  margin-block-start: var(--s2);
+  padding: 5px 9px;
+  border: 1px solid var(--surface1);
+  border-radius: 7px;
+  background: var(--surface0);
+  color: var(--subtext0);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.strength-status::before {
+  content: "";
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--overlay0);
+}
 .strength-meter {
-  height: 5px;
+  position: relative;
+  height: 8px;
   margin-block-start: var(--s1);
   overflow: hidden;
   border-radius: 999px;
-  background: var(--surface2);
+  background: var(--surface0);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 8%, transparent);
 }
 .strength-meter span {
   display: block;
   width: var(--strength-progress, 0%);
   height: 100%;
   border-radius: inherit;
-  background: var(--blue);
-  transition: width 140ms ease;
+  background: var(--overlay0);
+  transition: width 220ms ease, background-color 180ms ease;
 }
-#password-strength[data-level="1"] + .strength-meter span,
+#password-strength[data-level="1"] { color: var(--red); border-color: var(--red); background: color-mix(in srgb, var(--red) 12%, var(--base)); }
+#password-strength[data-level="1"]::before,
+#password-strength[data-level="1"] + .strength-meter span { background: var(--red); }
+#password-strength[data-level="2"] { color: var(--red); border-color: var(--red); background: color-mix(in srgb, var(--red) 12%, var(--base)); }
+#password-strength[data-level="2"]::before,
 #password-strength[data-level="2"] + .strength-meter span { background: var(--red); }
+#password-strength[data-level="3"] { color: var(--yellow); border-color: var(--yellow); background: color-mix(in srgb, var(--yellow) 12%, var(--base)); }
+#password-strength[data-level="3"]::before,
 #password-strength[data-level="3"] + .strength-meter span { background: var(--yellow); }
-#password-strength[data-level="4"] + .strength-meter span,
+#password-strength[data-level="4"] { color: var(--green); border-color: var(--green); background: color-mix(in srgb, var(--green) 12%, var(--base)); }
+#password-strength[data-level="4"]::before,
+#password-strength[data-level="4"] + .strength-meter span { background: var(--green); }
+#password-strength[data-level="5"] { color: var(--green); border-color: var(--green); background: color-mix(in srgb, var(--green) 12%, var(--base)); }
+#password-strength[data-level="5"]::before,
 #password-strength[data-level="5"] + .strength-meter span { background: var(--green); }
 
 /* ---------- Form controls ---------- */
