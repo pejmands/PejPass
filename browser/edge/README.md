@@ -1,6 +1,6 @@
 # PejPass for Microsoft Edge
 
-The extension reads the active HTTP(S) tab hostname and requests matching account metadata from the local PejPass desktop app. Passwords and a current TOTP code are retrieved only after the user explicitly selects **Fill login** for a matching account. It can submit a master password, or request a Windows Hello unlock, for local vault verification. It can also generate passwords locally in the popup using the browser's cryptographic random number generator.
+The extension reads the active HTTP(S) tab hostname and requests matching account metadata from the local PejPass desktop app. Passwords and a current TOTP code are retrieved only after the user explicitly selects **Fill login** for a matching account. It can submit a master password, or request a Windows Hello unlock, for local vault verification. The password generator requests cryptographically generated passwords and the shared zxcvbn strength assessment from the desktop app when available, with a local cryptographic fallback if the app cannot be reached.
 
 ## Requirements
 
