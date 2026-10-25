@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO.Pipes;
 using System.Security.Principal;
 using System.Text.Json;
-using PejPass.Domain.Security;
 
 namespace PejPass.BrowserHost;
 
