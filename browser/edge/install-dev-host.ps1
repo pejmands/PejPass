@@ -1,6 +1,9 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$ExtensionId
+    [string]$ExtensionId,
+
+    [Parameter(Mandatory = $false)]
+    [string]$InstallDirectory
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,10 +15,16 @@ if ($ExtensionId -notmatch '^[a-p]{32}$') {
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $projectPath = Join-Path $repoRoot "src\PejPass.BrowserHost\PejPass.BrowserHost.csproj"
 $desktopProjectPath = Join-Path $repoRoot "src\PejPass.Wpf\PejPass.Wpf.csproj"
-$desktopExecutable = Join-Path $repoRoot "src\PejPass.Wpf\bin\x64\Release\net10.0-windows10.0.19041.0\PejPass.exe"
-$outputDirectory = Join-Path $repoRoot "src\PejPass.BrowserHost\bin\Release\net10.0-windows"
-$hostExecutable = Join-Path $outputDirectory "PejPass.BrowserHost.exe"
-$manifestPath = Join-Path $outputDirectory "com.pejpass.browserhost.json"
+
+if ([string]::IsNullOrWhiteSpace($InstallDirectory)) {
+    $InstallDirectory = Join-Path $env:LOCALAPPDATA "Programs\PejPass"
+}
+
+$InstallDirectory = [System.IO.Path]::GetFullPath($InstallDirectory)
+$hostDirectory = Join-Path $InstallDirectory "BrowserHost"
+$desktopExecutable = Join-Path $InstallDirectory "PejPass.exe"
+$hostExecutable = Join-Path $hostDirectory "PejPass.BrowserHost.exe"
+$manifestPath = Join-Path $hostDirectory "com.pejpass.browserhost.json"
 $registryPath = "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\com.pejpass.browserhost"
 
 dotnet build $desktopProjectPath --configuration Release -p:Platform=x64
@@ -28,12 +37,30 @@ if ($LASTEXITCODE -ne 0) {
     throw "Building the PejPass native messaging host failed."
 }
 
-if (-not (Test-Path $hostExecutable)) {
-    throw "The native messaging host executable was not found at: $hostExecutable"
+$builtDesktopDirectory = Join-Path $repoRoot "src\PejPass.Wpf\bin\x64\Release\net10.0-windows10.0.19041.0"
+$builtDesktopExecutable = Join-Path $builtDesktopDirectory "PejPass.exe"
+$builtHostDirectory = Join-Path $repoRoot "src\PejPass.BrowserHost\bin\Release\net10.0-windows"
+
+if (-not (Test-Path $builtDesktopExecutable)) {
+    throw "The built PejPass desktop executable was not found: $builtDesktopExecutable"
 }
 
+if (-not (Test-Path (Join-Path $builtHostDirectory "PejPass.BrowserHost.exe"))) {
+    throw "The built native messaging host executable was not found."
+}
+
+New-Item -ItemType Directory -Path $InstallDirectory -Force | Out-Null
+New-Item -ItemType Directory -Path $hostDirectory -Force | Out-Null
+
+Copy-Item -Path (Join-Path $builtDesktopDirectory "*") -Destination $InstallDirectory -Recurse -Force
+Copy-Item -Path (Join-Path $builtHostDirectory "*") -Destination $hostDirectory -Recurse -Force
+
 if (-not (Test-Path $desktopExecutable)) {
-    throw "The PejPass desktop executable was not found at: $desktopExecutable"
+    throw "PejPass was not copied to: $desktopExecutable"
+}
+
+if (-not (Test-Path $hostExecutable)) {
+    throw "The native messaging host was not copied to: $hostExecutable"
 }
 
 $manifest = @{
@@ -55,5 +82,6 @@ New-Item -Path $registryPath -Force | Out-Null
 Set-Item -Path $registryPath -Value $manifestPath
 
 Write-Host "PejPass native messaging host registered for Edge."
+Write-Host "Install directory: $InstallDirectory"
 Write-Host "Manifest: $manifestPath"
 Write-Host "Restart Edge if it was already running, then test the PejPass extension popup."
