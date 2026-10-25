@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PejPass.Application.Interfaces;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Settings;
+using PejPass.Domain.Security;
 using PejPass.Infrastructure.Totp;
 using PejPass.Wpf.Dialogs;
 using PejPass.Wpf.ViewModels;
