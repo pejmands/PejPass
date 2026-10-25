@@ -24,3 +24,7 @@ test("popup shows a busy message for app_busy instead of a connection error", ()
 test("busy messages are styled as warnings", () => {
   assert.match(popupUiSource, /\\bbusy\\b/);
 });
+
+test("BrowserHost allows the app_busy error code through its safe-code filter", () => {
+  assert.match(hostSource, /"search_denied" or "app_busy"/);
+});
