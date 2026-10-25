@@ -736,7 +736,7 @@ internal static class Program
             "unsupported_request" or "invalid_message" or "save_unavailable" or "vault_changed" or
             "multiple_matching_accounts" or "unlock_failed" or "unlock_rate_limited" or "fill_denied" or
             "hello_failed" or "hello_cancelled" or "hello_unavailable" or "hello_not_ready" or
-            "clipboard_unavailable" or "search_denied";
+            "clipboard_unavailable" or "search_denied" or "app_busy";
 
     private static bool HasString(JsonElement root, string name, string expected) =>
         root.ValueKind == JsonValueKind.Object && root.TryGetProperty(name, out var value) &&
