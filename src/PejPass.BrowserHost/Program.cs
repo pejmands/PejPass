@@ -282,6 +282,7 @@ internal static class Program
                 "fillCredential" => await FillCredentialAsync(root).ConfigureAwait(false),
                 "saveCredential" => await SaveCredentialAsync(root).ConfigureAwait(false),
                 "copyToClipboard" => await CopyToClipboardAsync(root).ConfigureAwait(false),
+                "generatePassword" => await GeneratePasswordAsync(root).ConfigureAwait(false),
                 _ => Error("unsupported_request")
             };
         }
@@ -581,6 +582,54 @@ internal static class Program
             null, null, domain, null, id, null, null, null, result);
     }
 
+    private static async Task<HostResponse> GeneratePasswordAsync(JsonElement request)
+    {
+        if (!request.TryGetProperty("length", out var lengthElement) ||
+            !lengthElement.TryGetInt32(out var length) || length is < 8 or > 64 ||
+            !TryGetOptionalBoolean(request, "includeLowercase", true, out var includeLowercase) ||
+            !TryGetOptionalBoolean(request, "includeUppercase", true, out var includeUppercase) ||
+            !TryGetOptionalBoolean(request, "includeDigits", true, out var includeDigits) ||
+            !TryGetOptionalBoolean(request, "includeSymbols", true, out var includeSymbols) ||
+            !TryGetOptionalBoolean(request, "excludeAmbiguous", true, out var excludeAmbiguous))
+            return Error("invalid_request");
+
+        var response = await SendPipeRequestAsync(new HostRequest(
+            "generatePassword", ProtocolVersion, Length: length,
+            IncludeLowercase: includeLowercase, IncludeUppercase: includeUppercase,
+            IncludeDigits: includeDigits, IncludeSymbols: includeSymbols,
+            ExcludeAmbiguous: excludeAmbiguous)).ConfigureAwait(false);
+        if (response.Error is not null)
+            return Error(response.Error);
+
+        var root = response.Root;
+        if (!HasString(root, "type", "generatedPassword") ||
+            !HasString(root, "app", "PejPass") || !HasVersion(root) ||
+            !TryGetBoundedString(root, "password", 64, out var password) ||
+            password.Length != length ||
+            !TryGetBoundedString(root, "strengthLabel", 32, out var strengthLabel) ||
+            !root.TryGetProperty("strengthLevel", out var levelElement) ||
+            !levelElement.TryGetInt32(out var strengthLevel) || strengthLevel is < 0 or > 5 ||
+            !root.TryGetProperty("strengthProgress", out var progressElement) ||
+            !progressElement.TryGetDouble(out var strengthProgress) ||
+            !double.IsFinite(strengthProgress) || strengthProgress is < 0 or > 100)
+            return Error("invalid_app_response");
+
+        return new HostResponse("generatedPassword", "PejPass", ProtocolVersion, "unlocked", null,
+            Password: password, StrengthLabel: strengthLabel,
+            StrengthLevel: strengthLevel, StrengthProgress: strengthProgress);
+    }
+
+    private static bool TryGetOptionalBoolean(JsonElement root, string name, bool defaultValue, out bool value)
+    {
+        value = defaultValue;
+        if (!root.TryGetProperty(name, out var element))
+            return true;
+        if (element.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            return false;
+        value = element.GetBoolean();
+        return true;
+    }
+
     private static async Task<HostResponse> CopyToClipboardAsync(JsonElement request)
     {
         if (!TryGetBoundedString(request, "password", 4096, out var password) ||
@@ -751,7 +800,9 @@ internal static class Program
         string Type, int ProtocolVersion, string? Domain = null, string? Id = null,
         string? Url = null, string? Title = null, string? Username = null, string? Password = null,
         string? MasterPassword = null, string? Mode = null, string? EntryId = null,
-        string? Query = null, bool AllowDomainMismatch = false);
+        string? Query = null, bool AllowDomainMismatch = false, int? Length = null,
+        bool IncludeLowercase = true, bool IncludeUppercase = true, bool IncludeDigits = true,
+        bool IncludeSymbols = true, bool ExcludeAmbiguous = true);
     private sealed record CredentialSummary(string Id, string Title, string Username, string Url);
     private sealed record HostResponse(
         string Type, string App, int ProtocolVersion, string? Status, string? Code,
@@ -759,6 +810,7 @@ internal static class Program
         string? Id = null, string? Username = null, string? Password = null,
         string? TotpCode = null, string? Result = null, string? RequestId = null,
         int? RetryAfterSeconds = null, int? ClipboardClearSeconds = null,
-        bool HelloReady = false);
+        bool HelloReady = false, string? StrengthLabel = null, int? StrengthLevel = null,
+        double? StrengthProgress = null);
     private readonly record struct PipeResponse(JsonElement Root, string? Error, int RetryAfterSeconds = 0);
 }
