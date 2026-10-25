@@ -226,7 +226,27 @@ h1 { margin: 0; font-size: 17px; font-weight: 650; line-height: 1.2; }
   .msg-inline.kind-warning { color: var(--yellow); }
   .msg-inline.kind-success { color: var(--green); }
 }
-.strength-status { margin-block-start: var(--s2); color: var(--blue); }
+.strength-status { margin-block-start: var(--s2); color: var(--text); }
+.strength-meter {
+  height: 5px;
+  margin-block-start: var(--s1);
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface2);
+}
+.strength-meter span {
+  display: block;
+  width: var(--strength-progress, 0%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+  transition: width 140ms ease;
+}
+#password-strength[data-level="1"] + .strength-meter span,
+#password-strength[data-level="2"] + .strength-meter span { background: var(--red); }
+#password-strength[data-level="3"] + .strength-meter span { background: var(--yellow); }
+#password-strength[data-level="4"] + .strength-meter span,
+#password-strength[data-level="5"] + .strength-meter span { background: var(--green); }
 
 /* ---------- Form controls ---------- */
 .field-label { display: block; margin-block: var(--s3) var(--s1); color: var(--text); font-weight: 600; }
