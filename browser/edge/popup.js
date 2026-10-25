@@ -491,9 +491,10 @@ async function searchCredentials() {
       username.dir = "auto";
       username.textContent = credential.username || "No username saved";
       const url = document.createElement("p");
-      url.className = "credential-username";
+      url.className = "credential-username credential-url";
       url.dir = "auto";
       url.textContent = credential.url || "No website saved";
+      if (credential.url) url.title = credential.url;
       details.append(title, username, url);
 
       const fillButton = document.createElement("button");
