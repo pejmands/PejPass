@@ -258,6 +258,7 @@ async function refreshMatchCount(tabId) {
   if (!Number.isInteger(tabId) || tabId < 0) return;
   const version = (matchRefreshVersions.get(tabId) || 0) + 1;
   matchRefreshVersions.set(tabId, version);
+  const previousCount = matchCounts.get(tabId) || 0;
   clearMatchBadge(tabId);
 
   try {
@@ -279,6 +280,10 @@ async function refreshMatchCount(tabId) {
 
     const response = await sendNative({ type: "getCredentials", domain }, 6_000);
     if (matchRefreshVersions.get(tabId) !== version) return;
+    if (response?.type === "error" && response.code === "app_busy") {
+      if (matchRefreshVersions.get(tabId) === version) setMatchBadge(tabId, previousCount);
+      return;
+    }
     if (response?.type !== "credentialMatches" || response.app !== "PejPass" ||
         response.protocolVersion !== protocolVersion || response.domain !== domain ||
         !Array.isArray(response.credentials) || response.credentials.length > 25) {
