@@ -334,6 +334,12 @@ select.save-input {
 .credential-details { min-width: 0; flex: 1; }
 .credential-title { overflow-wrap: anywhere; font-weight: 650; }
 .credential-username { overflow-wrap: anywhere; color: var(--subtext0); }
+.credential-url {
+  overflow: hidden;
+  max-width: 100%;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 .credential-fill-button { width: auto; flex: 0 0 auto; }
 
 .manual-search { margin-block-start: var(--s3); padding-block-start: var(--s2); border-block-start: 1px solid var(--surface1); }
