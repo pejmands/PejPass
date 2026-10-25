@@ -106,6 +106,8 @@ test("three-field password-change forms only fill the current-password field", (
   }
 });
 
+// The popup always passes the exact hostname of the active tab (for example "www.reddit.com"),
+// so the expected domain here is the full hostname, not the registrable domain.
 test("fills Reddit-style username and password inputs in separate open Shadow DOM roots", () => {
   const dom = createPage('<div id="username-host"></div><div id="password-host"></div>', "https://www.reddit.com/login");
   try {
@@ -114,11 +116,22 @@ test("fills Reddit-style username and password inputs in separate open Shadow DO
     const passwordRoot = dom.window.document.getElementById("password-host").attachShadow({ mode: "open" });
     passwordRoot.innerHTML = '<input type="password" name="password" autocomplete="current-password">';
 
-    const result = dom.window.processLoginForm("fill", "reddit.com", "alice", "reddit-secret");
+    const result = dom.window.processLoginForm("fill", "www.reddit.com", "alice", "reddit-secret");
 
     assert.equal(result, "filled");
     assert.equal(usernameRoot.querySelector("input").value, "alice");
     assert.equal(passwordRoot.querySelector("input").value, "reddit-secret");
+  } finally {
+    dom.window.close();
+  }
+});
+
+test("refuses to fill when the expected domain is not the exact top-level hostname", () => {
+  const dom = createPage('<form><input name="username" autocomplete="username"><input type="password" name="password"></form>', "https://www.reddit.com/login");
+  try {
+    assert.equal(dom.window.processLoginForm("fill", "reddit.com", "alice", "secret"), "wrong_page");
+    assert.equal(dom.window.document.querySelector('input[type="password"]').value, "");
+    assert.equal(dom.window.processLoginForm("read", "reddit.com").found, false);
   } finally {
     dom.window.close();
   }

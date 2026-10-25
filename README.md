@@ -1,207 +1,113 @@
-# PejPass
+# PejPass for Microsoft Edge
 
-**PejPass** is a professional, offline-first password manager for Windows.
-
-Built with **C# / .NET 10**, **WPF**, **CommunityToolkit.Mvvm**, and modern authenticated encryption.
-
-> Your secrets stay on your machine. No accounts. No telemetry. Network access is optional: update availability can be checked at startup when enabled in Settings, or manually from About; optional favicon fetching is off by default.
-
-## Security Model
-
-| Layer | Technology |
-|---|---|
-| Key Derivation | **Argon2id** |
-| Encryption | **AES-256-GCM** (authenticated encryption) |
-| Master Password | Never stored |
-| Storage | Local encrypted `.pejpass` vault |
-| Memory Handling | Best-effort zeroing of owned sensitive byte buffers |
-| Clipboard | Automatic clipboard clearing |
-| Auto-lock | Configurable inactivity timeout |
-| Authentication | Optional Windows Hello unlock |
-
-Best-effort buffer clearing does **not** guarantee that every plaintext copy is removed from process memory. Managed strings and copies held by other components may remain until reclaimed by the runtime.
-
-### Master Password Policy
-
-- Minimum length: **12 characters**
-- Maximum length: **256 characters** (the estimator's evaluation limit)
-- Requires the maximum zxcvbn score of **4** ("Very strong")
-- Rejects common and predictable patterns using zxcvbn's bundled dictionaries and pattern matching
-- Spaces are allowed, so strong multi-word passphrases can be used
-- The bundled word dictionaries are English-focused, so common non-English phrases may be overrated.
-
-## Features
-
-### Vault Management
-
-- [x] Create encrypted vault
-- [x] Open / lock vault
-- [x] Custom vault location and recent vault list
-- [x] Automatic locking after inactivity
-- [x] Windows Hello authentication
-- [x] Change master password
-- [x] Secure local-only storage
-- [x] Soft-delete trash with restore / permanent delete
-
-### Credential Management
-
-- [x] Add / edit / delete entries
-- [x] Username and password storage
-- [x] URL and notes
-- [x] Custom fields
-- [x] Secret custom fields
-- [x] Search across entries and custom fields
-- [x] Favorites
-- [x] Tags and tag filtering
-- [x] Entry sort modes (favorites stay on top)
-
-### Browser Companion
-
-- [x] Find matching vault credentials for the active site
-- [x] Fill login and TOTP fields only after user action
-- [x] Generate passwords in the extension
-- [x] Detect filled password fields without reading their contents; inspect login values only after an explicit user action
-- [x] Save new logins without overwrite confirmation; require explicit confirmation and show a change review when updating existing entries
-- [x] Preserve entry history when a saved password changes
-
-The Edge companion never submits forms automatically. It only checks whether a visible password field is non-empty to show a Save-tab indicator; usernames and passwords are read into the popup only after you choose **Read login form**. Creating a new entry does not require overwrite confirmation. Updating an existing entry requires explicit confirmation and displays the proposed changes. Browser credentials are saved only while the vault is unlocked.
-
-### Password Features
-
-- [x] Secure password generator
-- [x] Vault health analysis
-
-### Two-Factor Authentication
-
-- [x] TOTP support
-- [x] Generate time-based verification codes
-- [x] Store TOTP secrets securely
-- [x] Import TOTP from QR / otpauth URI (where available)
-
-### History & Restore
-
-PejPass keeps entry history snapshots to protect against accidental changes.
-
-- [x] View previous entry versions
-- [x] Compare current data with previous snapshots
-- [x] Highlight changed fields
-- [x] Restore selected fields only
-- [x] Restore complete snapshots
-- [x] Delete individual history snapshots
-- [x] Delete all history snapshots
-
-### Updates & What’s New
-
-Update availability is checked in the background at startup only when **Check for updates at startup** is enabled in Settings (off by default). You can also check manually from About. Updates are never installed automatically: downloading and installing a portable update requires user confirmation.
-
-- [x] Check for updates via remote `update.json` manifest
-- [x] Download & install portable update (with user confirmation)
-- [x] Open download link in the browser
-- [x] What’s New changelog (cache-first, multi-version notes)
-- [x] Show What’s New once after a successful update
-
-Version and release date shown in About come from the running `PejPass.exe` metadata.
-
-## Import & Export
-
-### Browser Import
-
-Supported browsers:
-
-- Chrome
-- Microsoft Edge
-- Firefox
-
-Steps:
-
-1. Export passwords from your browser as CSV
-2. Open PejPass
-3. Import the CSV file
-
-Supported columns:
-
-```
-name / title
-url
-username
-password
-notes
-```
-
-### CSV Export
-
-- [x] Export entries as browser-compatible CSV (Chrome/Edge-style columns)
-- [x] Export entries in PejPass-specific CSV format
-
-Both CSV formats are **unencrypted plain text** intended for data portability, not secure backups. Anyone who can read an exported CSV may be able to access its credentials. Export only when needed, store the file securely, and delete it when finished.
-
-### Encrypted Backup
-
-Use **Backup** from the title-bar menu (shortcut: **Ctrl+B**) to export an encrypted `.pejpass` vault backup. Prefer this over CSV export for routine backups. Store backup copies separately from the active vault and keep your master password safe.
-
-## User Interface
-
-- Modern WPF interface with custom window chrome
-- Light / dark / system theme
-- Font size and zoom
-- Keyboard shortcuts reference in Settings
-- Optional online favicon fetching (off by default)
-- About, Settings, and What’s New available from the title-bar menu (including before unlock, with appearance-only settings on the login screen)
-- Native Windows application
-- No WebView dependency
-
-## Project Structure
-
-```
-src/
- ├── PejPass.Domain
- ├── PejPass.Application
- ├── PejPass.Infrastructure
- └── PejPass.Wpf
-
-tests/
- ├── PejPass.Domain.Tests
- ├── PejPass.Infrastructure.Tests
- ├── PejPass.Wpf.Tests
- └── PejPass.UpdateSigner.Tests
-
-tools/
- └── PejPass.UpdateSigner
-```
+The extension reads the active HTTP(S) tab hostname and requests matching account metadata from the local PejPass desktop app. Passwords and a current TOTP code are retrieved only after the user explicitly selects **Fill login** for a matching account. It can submit a master password, or request a Windows Hello unlock, for local vault verification. It can also generate passwords locally in the popup using the browser's cryptographic random number generator.
 
 ## Requirements
 
-- Windows 10 / Windows 11
+- Microsoft Edge
 - .NET 10 SDK
+- A local checkout of this repository
 
-## Getting Started
+## Load the extension
 
-```bash
-git clone https://github.com/pejmands/PejPass.git
+1. Open `edge://extensions` in Edge.
+2. Enable **Developer mode**.
+3. Select **Load unpacked**.
+4. Choose the `browser/edge` directory.
+5. Copy the extension ID shown on the extension card.
 
-cd PejPass
+## Browser API compatibility
 
-dotnet restore
-dotnet build
-dotnet run --project src/PejPass.Wpf
+The extension's background and popup scripts use `browser-api.js` as a small compatibility facade. It selects the standard `browser` namespace when available and falls back to `chrome` in Chromium-based browsers. Shared form logic is kept separate from browser-specific manifest and packaging configuration. The Firefox package is a complete, buildable extension package, not just groundwork; it reuses the shared popup and form logic while keeping its manifest and packaging configuration browser-specific. Run the build and tests for each browser package before release.
+
+## Differences between Edge and Firefox
+
+These differences come from the browsers, not from PejPass settings. See `browser/firefox/README.md` for Firefox setup.
+
+| Area | Edge (Chromium) | Firefox |
+|---|---|---|
+| Background | MV3 service worker (`importScripts`); the browser can stop it when idle | MV3 event page (`background.scripts`); the browser can unload it when idle |
+| Native host manifest | `allowed_origins` with the extension ID; `desktopAppPath` is stored in the manifest | `allowed_extensions` with the Gecko ID `pejpass@pejmands.github.io`; `desktopAppPath` is stored in `pejpass-host-config.json` next to the host executable |
+| Registry key | `HKCU\Software\Microsoft\Edge\NativeMessagingHosts` | `HKCU\Software\Mozilla\NativeMessagingHosts` |
+| Frames | `location.ancestorOrigins` lets PejPass verify the top-level site from a same-site subdomain frame | `ancestorOrigins` is not available, so a subdomain frame cannot prove its top-level site and is not filled; main-document fields still work |
+| Popup | The popup stays open until it loses focus | The popup may close earlier; PejPass waits about 1.2 seconds after a successful fill before closing |
+| Toolbar icon | PNG, rendered on a canvas | Same renderer |
+
+To survive background restarts, the last known vault state (`locked`, `unlocked`, `unavailable`, plus whether Windows Hello is ready) is kept in `storage.session`. It contains no credentials, account names, or addresses, and it is cleared when the browser session ends. After a restart the background script confirms the state with the desktop app before relying on it.
+
+## About and diagnostics
+
+Select the version number in the popup header to open the About panel. It shows the extension version, browser, desktop connection, vault state, and the last native host error. **Copy diagnostics** copies those values as text; it never includes passwords, account names, or website addresses. Attach that text when reporting a problem, especially one that differs between Edge and Firefox.
+
+## Shared browser-independent logic
+
+The login-form detection and filling implementation is maintained in `browser/shared/injected.js`. The `browser/edge/injected.js` file is the packaged copy required by the unpacked Edge extension; edit the shared source, not the packaged copy.
+
+After changing the shared implementation, run these commands from `browser/edge`:
+
+```powershell
+npm run build
+npm test
 ```
 
-## Development Status
+The build script synchronizes the shared source into the Edge package. The tests exercise the shared implementation and fail if the packaged Edge copy is out of date. The Firefox build copies the same source into `browser/dist/firefox`.
 
-PejPass is an actively developed personal project.
+## Build and register the local host
 
-Recent focus areas include:
+From the repository root, run PowerShell with the extension ID copied above:
 
-- About / update / What’s New experience
-- Appearance and pre-login settings
-- Vault trash and recovery flows
-- Further UX and security polish
+```powershell
+powershell -ExecutionPolicy Bypass -File .\browser\edge\install-dev-host.ps1 -ExtensionId YOUR_32_CHARACTER_EXTENSION_ID
+```
 
-## License
+The script builds `src/PejPass.Wpf` and `src/PejPass.BrowserHost`, writes a host manifest under the host's Release output directory, and registers that manifest for the current Windows user in Edge. The manifest records the desktop executable's absolute path in `desktopAppPath`; the host uses this configured path when handling `launchApp`, rather than deriving a path relative to the development checkout. It does not require administrator privileges. Restart Edge after registration if it was already running.
 
-MIT
+To check a registration for Edge and Firefox without changing anything, run:
 
----
+```powershell
+powershell -ExecutionPolicy Bypass -File .\browser\check-host-registration.ps1
+```
 
-**Disclaimer**: PejPass is a personal project under active development.
-Always keep encrypted backups of your vault. Use at your own risk.
+To remove the Edge registration later:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\browser\edge\uninstall-dev-host.ps1
+```
+
+## Manual checks
+
+- The password generator supports lengths from 8 to 64 characters, configurable lowercase, uppercase, numeric, and symbol sets, and optional exclusion of look-alike characters. It ensures at least one character from each selected set. It uses `crypto.getRandomValues`, rejection sampling to avoid modulo bias, and a cryptographic shuffle. The strength indicator estimates entropy from the selected character pool and length; it is an estimate, not a full password-strength analyzer. Generated passwords are not saved automatically.
+- **Generate and fill** only fills a visible field identified as a new-password field or a likely registration form. It does not submit the page. Copying a generated password routes through the desktop clipboard service, which clears it after 30 seconds only if the clipboard still contains the same text; the desktop app and updated BrowserHost must be running.
+- The popup displays the active hostname on ordinary HTTP(S) pages; restricted browser pages show an unavailable message.
+- The extension background service worker owns one persistent Native Messaging port and routes popup requests through it with request IDs. The desktop pushes vault-state changes to BrowserHost over the separate `PejPass.BrowserEvents.v1` named pipe; no status polling occurs while the desktop event pipe is connected. The toolbar icon and open popup react to these events. A 30-second alarm is used only to re-establish a disconnected Native Messaging connection. The toolbar uses the shared PNG-based icon renderer for both locked and unlocked states, with a locked icon as the default. When unlocked, select **Lock vault** to lock the desktop vault immediately; the popup clears account metadata, save-form values, and its generated password.
+- If the desktop app is not running, the popup reports that PejPass is not running. The host also supports a `launchApp` request that starts the executable configured by the absolute `desktopAppPath` (in the host manifest for Edge, in `pejpass-host-config.json` for Firefox), but the popup currently has no button for it. The development registration scripts point this path at the Release build in the checkout; a production installer should write the actual installed executable path.
+- When the vault is locked, the popup accepts the master password and forwards it through Native Messaging and the current-user-only named pipe to the desktop app. The desktop app verifies it using its existing vault-opening flow. The extension clears the password field after each attempt and does not store the password. When Windows Hello is ready for the vault, **Unlock with Windows Hello** asks the desktop app to verify the user. This requires an existing vault selected in PejPass and a Release build created by `install-dev-host.ps1`.
+- When unlocked, the popup lists entries whose saved URL host and active site share the same registrable domain (eTLD+1). Matching uses the official Public Suffix List bundled with the desktop app, including exact, wildcard, exception, and internationalized-domain rules. This helps prevent an entry for a public suffix or another tenant on shared hosting from being offered to a different tenant. The bundled list is a snapshot and is updated when the application is updated; it is not fetched dynamically at runtime.
+- **Find another account (SSO)** searches all saved accounts by title, username, or website. Each search requires confirmation in the PejPass desktop app. Selecting a result from another website fills it with the domain check bypassed for that one user-selected account, and the desktop app asks for confirmation again before releasing the credential.
+- Only entry ID, title, username, and saved URL are sent for lookup. Passwords, TOTP secrets, notes, custom fields, and key material are excluded from lookup responses. A current TOTP code is generated by the desktop app only during an explicit fill request; the raw TOTP secret is never sent to the extension.
+- When locked, the extension shows an unlock message and receives no account metadata.
+- Selecting **Fill login** requests the chosen credential from the desktop app, revalidates the account ID and active hostname, and checks the main document plus accessible same-site frames. If the page is on a username-first step, it fills a likely visible username field and asks you to continue on the site; select **Fill login** again after the password step appears. When a password field is present, it fills the password and a likely username field in the same form when available. It dispatches focus, input, change, and blur interactions around each value update to improve compatibility with frameworks that validate on blur. The detector traverses open Shadow DOM roots as well as the main document. If a visible one-time-code field is present, it also fills a current TOTP code when the selected entry has a valid TOTP secret. Cross-origin frames are intentionally not filled, except that Edge accepts a same-site subdomain frame when `ancestorOrigins` proves the top-level site.
+- Filling is always user-triggered. The extension does not submit the form. Review the filled fields and submit the login yourself.
+- After a login is successfully saved or updated, the extension clears and hides the temporary save form, including its password field.
+- The extension checks the page hostname again immediately before filling and does not fill if the page changed.
+- The host accepts version-1 `ping`, `launchApp`, `unlockVault`, `unlockWithHello`, `lockVault`, `getVaultStatus`, `getCredentials`, `searchCredentials`, `fillCredential`, `saveCredential`, and `copyToClipboard` requests. Requests are validated by both the host and desktop endpoint.
+- Successful credential fill and save operations reset the desktop AutoLock timer. Passive status checks and credential metadata lookups do not reset it.
+- The desktop request endpoint uses the current-user-only `PejPass.BrowserStatus.v1` named pipe; BrowserHost serializes requests to this single-instance pipe while allowing correlated native-messaging requests. Vault-state events use a separate persistent `PejPass.BrowserEvents.v1` pipe. The event pipe is current-user-only on both ends, accepts up to four subscribers, and carries only `locked` or `unlocked` status values. Credential lookup is limited to 25 results.
+- When the popup opens, PejPass injects a lightweight `probe` into accessible frames to check for a visible login form and whether its password field is non-empty. The result includes form-presence metadata, the page hostname, and a boolean `hasPassword`; it never returns the username or password value.
+
+## Permissions
+
+| Permission | Why it is needed |
+|---|---|
+| `nativeMessaging` | Talk to the local PejPass desktop app through BrowserHost |
+| `activeTab` | Grants access to the current tab after the user opens the popup, so the extension can inject the form helper for reading and filling |
+| `scripting` | Inject the form helper into the active tab and its accessible frames |
+| `tabs` | Read tab URLs in the background to compute per-tab matching-account badges, and to clear badges on all tabs when the vault locks |
+| `storage` | `storage.local` keeps recently used account IDs for sorting; `storage.session` keeps the last known vault state across background restarts |
+| `alarms` | Re-establish a disconnected Native Messaging connection every 30 seconds |
+
+`tabs` exposes tab URLs and titles but not page contents. Removing it would also remove the badge on tabs other than the one where the popup was opened, because `activeTab` only applies after a user gesture. Replacing it with `host_permissions` for all websites would request broader access (page contents) and is not recommended. The extension does not run a persistent content script or read page contents in the background.
+
+## Current scope
+
+Autofill supports visible username-like and password inputs in the main page document, open Shadow DOM roots, and accessible same-site frames. Closed Shadow DOM roots cannot be inspected by the extension. For multi-step login pages, fill the username first, continue on the website, then select **Fill login** again to fill the password or a detected one-time-code field. TOTP autofill requires a valid TOTP secret stored with the selected entry. It does not automatically submit forms or handle login fields inside cross-origin frames (in Firefox this includes same-site subdomain frames).

@@ -633,10 +633,25 @@ internal static class Program
                TryNormalizeDomain(domainElement.GetString(), out domain);
     }
 
+    /// <summary>
+    /// How long a request may wait for its turn on the single-instance desktop pipe before the
+    /// host answers <c>app_busy</c>. Interactive requests (which can hold the pipe while the user
+    /// confirms something in the desktop app) wait longer than status and lookup requests.
+    /// </summary>
+    private static TimeSpan GateWaitFor(string requestType) => requestType switch
+    {
+        "unlockVault" or "unlockWithHello" or "searchCredentials" or "fillCredential" => TimeSpan.FromSeconds(5),
+        _ => TimeSpan.FromSeconds(2)
+    };
+
     private static async Task<PipeResponse> SendPipeRequestAsync(
         HostRequest request, CancellationToken cancellationToken = default)
     {
-        await PipeRequestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        // Do not queue behind a long-running request: the browser gave up on queued requests
+        // long ago, and running them late would only delay the next ones. Fail fast instead.
+        if (!await PipeRequestGate.WaitAsync(GateWaitFor(request.Type), cancellationToken).ConfigureAwait(false))
+            return new PipeResponse(default, "app_busy");
+
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

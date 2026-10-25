@@ -9,130 +9,148 @@
   <script src="api.js" defer></script>
   <script src="injected.js" defer></script>
   <script src="popup.js" defer></script>
+  <script src="popup-ui.js" defer></script>
 </head>
 <body>
   <main class="popup">
     <header class="header">
       <div class="brand-mark" aria-hidden="true">P</div>
       <div class="brand-copy"><h1>PejPass</h1><p class="subtitle">Browser companion</p></div>
-      <span class="version" id="version"></span>
+      <button class="version-button" id="version" type="button" aria-expanded="false" aria-controls="about-panel" title="About and diagnostics"></button>
     </header>
+
+    <section class="about-panel" id="about-panel" aria-label="About PejPass" hidden>
+      <dl class="about-list">
+        <dt>Extension</dt><dd id="about-version"></dd>
+        <dt>Browser</dt><dd id="about-browser"></dd>
+        <dt>Desktop</dt><dd id="about-desktop"></dd>
+        <dt>Vault</dt><dd id="about-vault"></dd>
+        <dt>Host error</dt><dd id="about-host-error">None</dd>
+      </dl>
+      <button class="fill-button" id="copy-diagnostics" type="button">Copy diagnostics</button>
+      <p class="msg" id="diagnostics-status" role="status" aria-live="polite">Diagnostics never include passwords, account names, or website addresses.</p>
+    </section>
+
     <nav class="view-nav" role="tablist" aria-label="PejPass sections">
       <button class="view-tab" id="tab-logins" type="button" role="tab" aria-selected="true" aria-controls="panel-logins" tabindex="0" data-view="logins">Logins</button>
       <button class="view-tab" id="tab-save" type="button" role="tab" aria-selected="false" aria-controls="panel-save" tabindex="-1" data-view="save">Save<span class="tab-badge" id="save-badge" hidden></span></button>
       <button class="view-tab" id="tab-generator" type="button" role="tab" aria-selected="false" aria-controls="panel-generator" tabindex="-1" data-view="generator">Generator</button>
     </nav>
+
     <section class="view-panel" id="panel-logins" role="tabpanel" aria-labelledby="tab-logins">
-<section class="site-card" aria-labelledby="site-label">
-      <p class="eyebrow" id="site-label">CURRENT SITE</p>
-      <p class="site-name" id="site-name" dir="auto">Checking active tab…</p>
-      <p class="site-detail" id="site-detail" dir="auto" role="status" aria-live="polite">Reading the active tab.</p>
-      <div class="unavailable-guide" id="unavailable-guide" hidden>
-        <p class="unavailable-guide-title">Open a website to continue</p>
-        <p>Logins and Save are available on regular HTTP or HTTPS websites. Browser settings, new-tab pages, and local files do not expose their page content to extensions.</p>
-      </div>
-    </section>
-<section class="connection-card status-card" aria-labelledby="connection-label">
-      <p class="eyebrow" id="connection-label">PEJPASS STATUS</p>
-      <div class="status-row">
-        <span class="status-dot" id="connection-dot" aria-hidden="true"></span>
-        <p class="connection-status" id="connection-status" role="status" aria-live="polite">Checking PejPass…</p>
-        <span class="status-separator" aria-hidden="true">·</span>
-        <p class="connection-status vault-status" id="vault-status" role="status" aria-live="polite">Checking vault…</p>
-      </div>
-      <details class="error-details" id="status-details" hidden>
-        <summary>Details</summary>
-        <p id="status-detail-text"></p>
-      </details>
-      <div id="unlock-controls" hidden>
-        <label class="field-label" for="unlock-password">Master password</label>
-        <input class="save-input" id="unlock-password" type="password" maxlength="4096" autocomplete="current-password" spellcheck="false">
-        <button class="fill-button" id="unlock-vault" type="button">Unlock vault</button>
-        <button class="fill-button secondary-button hello-button" id="unlock-hello" type="button" hidden>Unlock with Windows Hello</button>
-        <p class="generator-status" id="unlock-status" role="status" aria-live="polite">Your master password is sent only to the local PejPass desktop app.</p>
-        <details class="error-details" id="unlock-error-details" hidden>
+      <section class="site-card" aria-label="Current site and PejPass status">
+        <p class="site-name" id="site-name" dir="auto">Checking active tab…</p>
+        <p class="site-detail" id="site-detail" dir="auto" role="status" aria-live="polite">Reading the active tab.</p>
+        <div class="unavailable-guide" id="unavailable-guide" hidden>
+          <p class="unavailable-guide-title">Open a website to continue</p>
+          <p>Logins and Save work on regular HTTP or HTTPS websites. Browser settings, new-tab pages, and local files are not available to extensions.</p>
+        </div>
+        <div class="status-row">
+          <span class="status-dot" id="connection-dot" aria-hidden="true"></span>
+          <p class="connection-status msg-inline" id="connection-status" role="status" aria-live="polite">Checking PejPass…</p>
+          <span class="status-separator" aria-hidden="true">·</span>
+          <p class="connection-status vault-status msg-inline" id="vault-status" role="status" aria-live="polite">Checking vault…</p>
+        </div>
+        <details class="error-details" id="status-details" hidden>
           <summary>Details</summary>
-          <p id="unlock-error-detail"></p>
+          <p id="status-detail-text"></p>
         </details>
-      </div>
-      <button class="fill-button secondary-button lock-vault-button" id="lock-vault" type="button" hidden>Lock vault</button>
+        <div id="unlock-controls" hidden>
+          <label class="field-label" for="unlock-password">Master password</label>
+          <input class="save-input" id="unlock-password" type="password" maxlength="4096" autocomplete="current-password" spellcheck="false">
+          <button class="fill-button" id="unlock-vault" type="button">Unlock vault</button>
+          <button class="fill-button secondary-button hello-button" id="unlock-hello" type="button" hidden>Unlock with Windows Hello</button>
+          <p class="msg" id="unlock-status" role="status" aria-live="polite">Your master password goes only to the PejPass desktop app on this computer.</p>
+          <details class="error-details" id="unlock-error-details" hidden>
+            <summary>Details</summary>
+            <p id="unlock-error-detail"></p>
+          </details>
+        </div>
+        <button class="fill-button secondary-button lock-vault-button" id="lock-vault" type="button" hidden>Lock vault</button>
+      </section>
+
+      <section class="connection-card" aria-labelledby="credentials-label">
+        <div class="card-head">
+          <h2 class="eyebrow" id="credentials-label">Matching accounts</h2>
+          <button class="fill-button compact-button" id="refresh-logins" type="button" title="Refresh status and accounts">Refresh</button>
+        </div>
+        <p class="msg" id="credentials-status" role="status" aria-live="polite">Waiting for the active site.</p>
+        <ul class="credential-list" id="credential-list" role="list" aria-label="Matching accounts"></ul>
+        <details class="manual-search">
+          <summary>Find another account (SSO)</summary>
+          <label class="field-label" for="credential-search-query">Account, username, or website</label>
+          <input class="save-input" id="credential-search-query" type="search" maxlength="100" minlength="2" autocomplete="off">
+          <button class="fill-button secondary-button" id="search-credentials" type="button">Search all accounts</button>
+          <p class="msg" id="credential-search-status" role="status" aria-live="polite">PejPass desktop asks you to confirm each search.</p>
+        </details>
+      </section>
     </section>
-<section class="connection-card" aria-labelledby="credentials-label">
-      <p class="eyebrow" id="credentials-label">MATCHING ACCOUNTS</p>
-      <p class="connection-status" id="credentials-status" role="status" aria-live="polite">Waiting for the active site.</p>
-      <button class="fill-button secondary-button" id="refresh-logins" type="button">Refresh status &amp; accounts</button>
-      <div class="manual-search">
-        <label class="field-label" for="credential-search-query">Find another account (SSO)</label>
-        <input class="save-input" id="credential-search-query" type="search" maxlength="100" minlength="2" placeholder="Account, username, or website" autocomplete="off">
-        <button class="fill-button secondary-button" id="search-credentials" type="button">Search all accounts</button>
-        <p class="generator-status" id="credential-search-status" role="status" aria-live="polite">Search requires confirmation in PejPass desktop.</p>
-      </div>
-      <ul class="credential-list" id="credential-list" role="list" aria-label="Matching accounts"></ul>
-    </section>
-    </section>
+
     <section class="view-panel" id="panel-save" role="tabpanel" aria-labelledby="tab-save" hidden>
-<section class="connection-card" aria-labelledby="save-label">
-      <p class="eyebrow" id="save-label">SAVE LOGIN</p>
-      <p class="connection-status">Read the current form and review the values. PejPass suggests updating when exactly one saved account has the same username; you can change the action before saving. Updates require confirmation and preserve previous values in history.</p>
-      <button class="fill-button" id="inspect-login" type="button">Read login form</button>
-      <div id="save-fields" hidden>
-        <label class="field-label" for="save-title">Account name</label>
-        <input class="save-input" id="save-title" type="text" maxlength="200" autocomplete="off">
-        <label class="field-label" for="save-username">Username or email</label>
-        <input class="save-input" id="save-username" type="text" maxlength="256" autocomplete="off">
-        <label class="field-label" for="save-password">Password</label>
-        <div class="input-with-button">
-          <input class="save-input" id="save-password" type="password" maxlength="4096" autocomplete="off">
-          <button class="icon-button" id="toggle-save-password" type="button" aria-pressed="false" aria-controls="save-password">Show</button>
+      <section class="connection-card" aria-labelledby="save-label">
+        <h2 class="eyebrow" id="save-label">Save login</h2>
+        <p class="save-intro">Read the login form, review the values, then save. Updates keep the old password in History.</p>
+        <button class="fill-button" id="inspect-login" type="button">Read login form</button>
+        <div id="save-fields" hidden>
+          <label class="field-label" for="save-title">Account name</label>
+          <input class="save-input" id="save-title" type="text" maxlength="200" autocomplete="off">
+          <label class="field-label" for="save-username">Username or email</label>
+          <input class="save-input" id="save-username" type="text" maxlength="256" autocomplete="off">
+          <label class="field-label" for="save-password">Password</label>
+          <div class="input-with-button">
+            <input class="save-input" id="save-password" type="password" maxlength="4096" autocomplete="off">
+            <button class="icon-button" id="toggle-save-password" type="button" aria-pressed="false" aria-controls="save-password">Show</button>
+          </div>
+          <label class="field-label" for="save-mode">Action</label>
+          <select class="save-input" id="save-mode">
+            <option value="create">Create a new entry</option>
+            <option value="update">Update an existing entry</option>
+          </select>
+          <label class="field-label" for="save-target">Account to update</label>
+          <select class="save-input" id="save-target" hidden>
+            <option value="">Choose an account to update</option>
+          </select>
+          <div class="save-diff" id="save-diff" hidden>
+            <h3 class="eyebrow">Changes</h3>
+            <ul class="diff-list" id="save-diff-list"></ul>
+          </div>
+          <p class="save-notice" id="save-review-notice" role="status" aria-live="polite">Read the form and review every value before saving.</p>
+          <label class="save-confirmation" id="save-confirmation-row" for="save-confirmation" hidden>
+            <input id="save-confirmation" type="checkbox">
+            <span>I reviewed these changes and want to update this entry.</span>
+          </label>
+          <button class="fill-button" id="save-login" type="button" disabled>Save as new entry</button>
         </div>
-        <label class="field-label" for="save-mode">Action</label>
-        <select class="save-input" id="save-mode">
-          <option value="create">Create a new entry</option>
-          <option value="update">Update an existing entry</option>
-        </select>
-        <label class="field-label" for="save-target">Account to update</label>
-        <select class="save-input" id="save-target" hidden>
-          <option value="">Choose an account to update</option>
-        </select>
-        <div class="save-diff" id="save-diff" hidden>
-          <p class="eyebrow">CHANGES</p>
-          <ul class="diff-list" id="save-diff-list"></ul>
-        </div>
-        <p class="save-notice" id="save-review-notice" role="status" aria-live="polite">Read the form and review every value before saving.</p>
-        <label class="save-confirmation" id="save-confirmation-row" for="save-confirmation" hidden>
-          <input id="save-confirmation" type="checkbox">
-          <span>I have reviewed these changes and confirm updating this entry.</span>
-        </label>
-        <button class="fill-button" id="save-login" type="button" disabled>Save as new entry</button>
-      </div>
-      <p class="generator-status" id="save-status" role="status" aria-live="polite">Nothing is read or saved until you choose an action.</p>
+        <p class="msg" id="save-status" role="status" aria-live="polite">Nothing is read or saved until you choose an action.</p>
+      </section>
     </section>
-    </section>
+
     <section class="view-panel" id="panel-generator" role="tabpanel" aria-labelledby="tab-generator" hidden>
-<section class="connection-card generator-card" aria-labelledby="generator-label">
-      <p class="eyebrow" id="generator-label">PASSWORD GENERATOR</p>
-      <label class="field-label" for="password-length">Length</label>
-      <div class="length-row">
-        <input id="password-length" type="number" min="8" max="64" value="20" inputmode="numeric">
-        <span class="field-hint">8–64 characters</span>
-      </div>
-      <div class="options-grid">
-        <label><input id="include-lowercase" type="checkbox" checked> Lowercase (a–z)</label>
-        <label><input id="include-uppercase" type="checkbox" checked> Uppercase (A–Z)</label>
-        <label><input id="include-numbers" type="checkbox" checked> Numbers (0–9)</label>
-        <label><input id="include-symbols" type="checkbox" checked> Symbols (!@#…)</label>
-        <label class="option-wide"><input id="exclude-ambiguous" type="checkbox" checked> Exclude ambiguous (0 O o 1 l I)</label>
-      </div>
-      <button class="fill-button" id="generate-password" type="button">Generate password</button>
-      <button class="fill-button secondary-button" id="generate-fill-password" type="button" disabled>Generate and fill</button>
-      <label class="field-label password-label" for="generated-password">Generated password</label>
-      <input id="generated-password" class="generated-password" type="text" readonly autocomplete="off" spellcheck="false" aria-label="Generated password">
-      <p class="strength-status" id="password-strength" role="status" aria-live="polite">Strength estimate appears after generation.</p>
-      <button class="fill-button secondary-button" id="copy-password" type="button" disabled>Copy password</button>
-      <p class="generator-status" id="generator-status" role="status" aria-live="polite">Generated locally in this browser. Not saved automatically.</p>
+      <section class="connection-card generator-card" aria-labelledby="generator-label">
+        <h2 class="eyebrow" id="generator-label">Password generator</h2>
+        <label class="field-label" for="password-length">Length</label>
+        <div class="length-row">
+          <input id="password-length" type="number" min="8" max="64" value="20" inputmode="numeric">
+          <span class="field-hint">8–64 characters</span>
+        </div>
+        <div class="options-grid">
+          <label><input id="include-lowercase" type="checkbox" checked> Lowercase (a–z)</label>
+          <label><input id="include-uppercase" type="checkbox" checked> Uppercase (A–Z)</label>
+          <label><input id="include-numbers" type="checkbox" checked> Numbers (0–9)</label>
+          <label><input id="include-symbols" type="checkbox" checked> Symbols (!@#…)</label>
+          <label class="option-wide"><input id="exclude-ambiguous" type="checkbox" checked> Exclude look-alike characters (0 O o 1 l I)</label>
+        </div>
+        <button class="fill-button" id="generate-password" type="button">Generate password</button>
+        <button class="fill-button secondary-button" id="generate-fill-password" type="button" disabled>Generate and fill</button>
+        <label class="field-label password-label" for="generated-password">Generated password</label>
+        <input id="generated-password" class="generated-password" type="text" readonly autocomplete="off" spellcheck="false" aria-label="Generated password">
+        <p class="strength-status" id="password-strength" role="status" aria-live="polite">Strength estimate appears after generation.</p>
+        <button class="fill-button secondary-button" id="copy-password" type="button" disabled>Copy password</button>
+        <p class="msg" id="generator-status" role="status" aria-live="polite">Generated in this browser. Not saved automatically.</p>
+      </section>
     </section>
-    </section>
-    <footer><span>Passwords retrieved only when you select Fill login · Forms are never submitted automatically</span></footer>
+
+    <footer>Fills only when you choose · never submits forms</footer>
   </main>
 </body>
 </html>

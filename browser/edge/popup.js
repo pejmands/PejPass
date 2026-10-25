@@ -65,6 +65,7 @@ const viewPanels = {
   generator: document.getElementById("panel-generator")
 };
 let activeTabId = null;
+const busyMessage = "PejPass is waiting for you to respond to a request in the desktop app. Respond there, then try again.";
 let activeDomain = null;
 
 version.textContent = globalThis.pejpassBrowserApi.runtime.getManifest().version;
@@ -200,7 +201,7 @@ async function refreshLoginView() {
     ]);
   } finally {
     refreshLoginsButton.disabled = false;
-    refreshLoginsButton.textContent = "Refresh status & accounts";
+    refreshLoginsButton.textContent = "Refresh";
   }
 }
 
@@ -286,6 +287,11 @@ async function checkVaultStatus({ quiet = false, forceRefresh = false } = {}) {
             "The native messaging host could not reach the PejPass desktop pipe. Check the desktop installation and browser host registration."
         );
       } else {
+        if (response?.code === "app_busy") {
+          setConnectionStatus(true, "Desktop connected");
+          showStatusError("PejPass is busy.", busyMessage);
+          return "unknown";
+        }
         setConnectionStatus(false, "Connection error");
         showStatusError("Couldn't check vault status.", response?.message || response?.code || "The desktop returned an invalid or incompatible response.");
       }
@@ -326,6 +332,7 @@ async function performCredentialLookup(domain) {
 
     if (response?.type === "error") {
       const messages = {
+        app_busy: busyMessage,
         vault_locked: "Unlock the PejPass vault to view matching accounts.",
         app_unavailable: "Open PejPass desktop and try again.",
         invalid_domain: "The active site address is not valid for lookup.",
@@ -443,6 +450,7 @@ async function searchCredentials() {
     if (activeTabId !== requestedTabId || activeDomain !== requestedDomain) return;
     if (response?.type === "error") {
       const messages = {
+        app_busy: busyMessage,
         search_denied: "Search was cancelled in PejPass desktop.",
         vault_locked: "Unlock the PejPass vault before searching.",
         app_unavailable: "Open PejPass desktop and try again.",
@@ -528,6 +536,7 @@ async function fillCredential(credential) {
 
     if (response?.type === "error") {
       const messages = {
+        app_busy: busyMessage,
         vault_locked: "Unlock the PejPass vault before filling a login.",
         app_unavailable: "Open PejPass desktop and try again.",
         credential_not_found: "That account is no longer available for this site. Reopen the popup.",
@@ -570,7 +579,7 @@ async function fillCredential(credential) {
     credentialsStatus.textContent = messages[response.outcome];
 
     if (["filled", "username_only", "totp_filled", "totp_unavailable", "no_username"].includes(response.outcome)) {
-      window.setTimeout(() => window.close(), 350);
+      window.setTimeout(() => window.close(), 1200);
     }
   } catch {
     credentialsStatus.textContent = "Could not fill this page. Check that it is a regular HTTP(S) page and try again.";
@@ -835,6 +844,7 @@ async function saveLogin() {
     });
     if (response?.type === "error") {
       const messages = {
+        app_busy: busyMessage,
         vault_locked: "Unlock the PejPass vault before saving a login.",
         app_unavailable: "Open the latest PejPass desktop build and try again.",
         invalid_domain: "The active site address is invalid.",
@@ -1136,6 +1146,7 @@ copyPasswordButton.addEventListener("click", async () => {
         `Password copied. PejPass will clear it after ${response.clipboardClearSeconds} seconds if it is still in the clipboard.`;
     } else {
       const messages = {
+        app_busy: busyMessage,
         app_unavailable: "Open PejPass desktop and try copying again.",
         unsupported_request: "Rebuild and reinstall the latest PejPass desktop and BrowserHost.",
         clipboard_unavailable: "PejPass could not access the clipboard. Try again or copy manually."
@@ -1162,7 +1173,7 @@ async function lockVault() {
     if (!isValidBaseResponse(response, "vaultLocked") || response.status !== "locked") {
       vaultStatus.textContent = response?.code === "app_unavailable"
         ? "Could not lock the vault. Open PejPass desktop and try again."
-        : "PejPass returned an invalid vault-lock response.";
+        : response?.code === "app_busy" ? busyMessage : "PejPass returned an invalid vault-lock response.";
       return;
     }
 
@@ -1254,6 +1265,7 @@ async function unlockVault() {
     }
 
     const messages = {
+        app_busy: busyMessage,
       unlock_failed: "The master password was not accepted, or no existing vault is selected in PejPass.",
       app_unavailable: "Open PejPass desktop and try again.",
       invalid_request: "The password could not be sent. Try again.",
@@ -1290,6 +1302,7 @@ async function unlockWithHello() {
     }
 
     const messages = {
+        app_busy: busyMessage,
       hello_not_ready: "Unlock with your master password first. Windows Hello isn't ready for this vault yet.",
       hello_failed: "Windows Hello didn't unlock the vault. Try your master password.",
       hello_cancelled: "Windows Hello was cancelled.",
