@@ -1074,16 +1074,39 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
             return WindowsHelloVerificationResult.Unavailable;
 
-        var owner = app.Windows.OfType<System.Windows.Window>()
-            .Where(window => !SystemTrayService.IsHostWindow(window) && window.IsLoaded)
-            .OrderByDescending(window => window.IsVisible)
-            .ThenByDescending(window => window.IsActive)
-            .FirstOrDefault();
-        if (owner is null || !await WindowsHelloHelper.IsAvailableAsync())
+        if (!await WindowsHelloHelper.IsAvailableAsync())
             return WindowsHelloVerificationResult.Unavailable;
 
-        var message = $"Confirm browser autofill\nSite: {domain}\nAccount: {SanitizePromptText(title)}\nUsername: {SanitizePromptText(username)}";
-        return await WindowsHelloHelper.VerifyAsync(owner, message);
+        // Browser autofill can be requested while every PejPass window is hidden.
+        // Passing a hidden LoginWindow/MainWindow HWND can place the native Hello
+        // prompt at a screen corner. Use a transparent, centered owner just for
+        // this verification; it must not reveal or activate the main application UI.
+        var owner = new System.Windows.Window
+        {
+            Width = 1,
+            Height = 1,
+            WindowStyle = System.Windows.WindowStyle.None,
+            ResizeMode = System.Windows.ResizeMode.NoResize,
+            ShowInTaskbar = false,
+            ShowActivated = false,
+            AllowsTransparency = true,
+            Background = System.Windows.Media.Brushes.Transparent,
+            Opacity = 0,
+            WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen
+        };
+
+        try
+        {
+            owner.Show();
+
+            var message = $"Confirm browser autofill\nSite: {domain}\nAccount: {SanitizePromptText(title)}\nUsername: {SanitizePromptText(username)}";
+            return await WindowsHelloHelper.VerifyAsync(owner, message);
+        }
+        finally
+        {
+            if (owner.IsVisible)
+                owner.Close();
+        }
     }
 
     // Synchronous test fallback only. Production requests use
