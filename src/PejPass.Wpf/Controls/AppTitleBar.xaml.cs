@@ -437,7 +437,8 @@ public partial class AppTitleBar : UserControl
         var maximized = w.WindowState == WindowState.Maximized;
         RestoreMenuItem.IsEnabled = maximized;
         MaximizeMenuItem.IsEnabled = !maximized && w.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip;
-        MinimizeMenuItem.IsEnabled = w.ResizeMode != ResizeMode.NoResize;
+        //MinimizeMenuItem.Visibility = ShowMinimize ? Visibility.Visible : Visibility.Collapsed; 
+        MinimizeMenuItem.IsEnabled = ShowMinimize;
 
         var hasPath = !string.IsNullOrWhiteSpace(FilePath) && ShowFileActions;
         CopyFilePathMenuItem.Visibility = hasPath ? Visibility.Visible : Visibility.Collapsed;

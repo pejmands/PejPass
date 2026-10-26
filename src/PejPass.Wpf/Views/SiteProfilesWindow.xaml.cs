@@ -1,3 +1,4 @@
+using PejPass.Domain.Entities;
 using PejPass.Wpf.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
