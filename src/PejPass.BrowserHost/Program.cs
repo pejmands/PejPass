@@ -20,6 +20,7 @@ internal static class Program
 
     private static async Task<int> Main()
     {
+        TrayHostDiagnostic.RunIfRequested();
         using var input = Console.OpenStandardInput();
         using var output = Console.OpenStandardOutput();
         using var shutdown = new CancellationTokenSource();
