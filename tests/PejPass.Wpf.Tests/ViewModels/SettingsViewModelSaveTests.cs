@@ -29,6 +29,8 @@ public sealed class SettingsViewModelSaveTests : IDisposable
     {
         WpfTestHost.Run(host =>
         {
+            host.Settings.WindowsHelloEnabled = false;
+
             using var session = new VaultSession();
             using var cache = new SessionPasswordCache(host.Settings, TimeProvider.System);
             using var material = CreateMaterial();
