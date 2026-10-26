@@ -1379,8 +1379,11 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
     private static bool HostMatchesConfiguredDomain(string host, string configuredDomain)
     {
-        if (!TryNormalizeDomain(configuredDomain, out var normalizedConfiguredDomain))
+        if (!TryNormalizeDomain(configuredDomain, out var normalizedConfiguredDomain) ||
+            GetRegistrableDomain(normalizedConfiguredDomain) is null)
+        {
             return false;
+        }
 
         return host.Equals(normalizedConfiguredDomain, StringComparison.OrdinalIgnoreCase) ||
                host.EndsWith("." + normalizedConfiguredDomain, StringComparison.OrdinalIgnoreCase);
