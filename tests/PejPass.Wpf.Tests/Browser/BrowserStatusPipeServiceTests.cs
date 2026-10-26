@@ -93,6 +93,28 @@ public sealed class BrowserStatusPipeServiceTests
     }
 
     [Fact]
+    public void VaultSnapshot_ClonesSiteProfilesAndTheirDomainLists()
+    {
+        var vault = new Vault
+        {
+            SiteProfiles =
+            [
+                new SiteProfile
+                {
+                    Name = "ChatGPT",
+                    Domains = ["chatgpt.com", "auth.openai.com"]
+                }
+            ]
+        };
+
+        var snapshot = vault.CreateSnapshot();
+        snapshot.SiteProfiles[0].Domains.Add("other.example");
+
+        Assert.Equal(2, vault.SiteProfiles[0].Domains.Count);
+        Assert.Equal("ChatGPT", snapshot.SiteProfiles[0].Name);
+    }
+
+    [Fact]
     public void GetCredentials_RequiresUnlockedVault()
     {
         using var session = new VaultSession();
