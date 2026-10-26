@@ -70,6 +70,9 @@ public partial class SettingsViewModel : ObservableObject
     public partial bool WindowsHelloEnabled { get; set; }
 
     [ObservableProperty]
+    public partial bool WindowsHelloAvailable { get; set; }
+
+    [ObservableProperty]
     public partial bool BrowserAutofillConfirmationEnabled { get; set; }
 
     [ObservableProperty]
@@ -194,6 +197,11 @@ public partial class SettingsViewModel : ObservableObject
         SelectedRevealSecretIndex = GetRevealSecretIndex(settings.RevealSecretSeconds);
         _suppressZoomPreview = false;
         _suppressThemePreview = false;
+    }
+
+    public async Task RefreshWindowsHelloAvailabilityAsync()
+    {
+        WindowsHelloAvailable = await WindowsHelloHelper.IsAvailableAsync();
     }
 
     partial void OnAutoLockMinutesChanged(int value) => ValidateAutoLock();
