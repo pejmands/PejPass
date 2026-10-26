@@ -428,7 +428,6 @@ public sealed class BrowserStatusPipeServiceTests
     [Theory]
     [InlineData(WindowsHelloVerificationResult.AuthenticationFailed, "hello_failed")]
     [InlineData(WindowsHelloVerificationResult.Cancelled, "hello_cancelled")]
-    [InlineData(WindowsHelloVerificationResult.Unavailable, "hello_unavailable")]
     [InlineData(WindowsHelloVerificationResult.Error, "hello_unavailable")]
     public async Task FillCredential_RejectsWhenWindowsHelloDoesNotVerify(
         WindowsHelloVerificationResult helloResult, string expectedCode)
@@ -462,6 +461,47 @@ public sealed class BrowserStatusPipeServiceTests
         Assert.Null(response.Password);
         Assert.Null(response.TotpCode);
         Assert.DoesNotContain("must-not-be-returned", JsonSerializer.Serialize(response));
+    }
+
+    [Fact]
+    public async Task FillCredential_FallsBackToDesktopConfirmationWhenWindowsHelloIsUnavailable()
+    {
+        using var session = new VaultSession();
+        using var keyMaterial = CreateMaterial();
+        var approvals = new List<string>();
+        using var service = new BrowserStatusPipeService(
+            session,
+            (domain, title, username) =>
+            {
+                approvals.Add($"desktop:{domain}:{title}:{username}");
+                return true;
+            },
+            domain =>
+            {
+                approvals.Add($"hello:{domain}");
+                return Task.FromResult(WindowsHelloVerificationResult.Unavailable);
+            });
+        var entry = new VaultEntry
+        {
+            Title = "Example",
+            Username = "alice",
+            Password = "fallback-secret",
+            Url = "https://example.com/login"
+        };
+        session.Open(new Vault { Entries = [entry] },
+            Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"), keyMaterial);
+
+        var response = await service.CreateFillCredentialResponseAsync(JsonSerializer.Serialize(new
+        {
+            type = "fillCredential",
+            protocolVersion = 1,
+            domain = "login.example.com",
+            id = entry.Id.ToString("D")
+        }));
+
+        Assert.Equal(expected, approvals);
+        Assert.Equal("credentialForFill", response.Type);
+        Assert.Equal("fallback-secret", response.Password);
     }
 
     [Fact]

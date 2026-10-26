@@ -1,3 +1,5 @@
+using PejPass.Application.Security;
+using PejPass.Domain.Entities;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using System.IO;
@@ -20,6 +22,38 @@ public sealed class SettingsViewModelSaveTests : IDisposable
 
         _previousSettingsPath = SettingsStore.SettingsPath;
         SettingsStore.SettingsPath = Path.Combine(_directory, "settings.json");
+    }
+
+    [Fact(Timeout = 15000)]
+    public void Save_WhenWindowsHelloIsEnabledDuringActiveSession_CachesCurrentVaultKey()
+    {
+        WpfTestHost.Run(host =>
+        {
+            host.Settings.WindowsHelloEnabled = false;
+
+            using var session = new VaultSession();
+            using var cache = new SessionPasswordCache(host.Settings, TimeProvider.System);
+            using var material = CreateMaterial();
+            var vaultPath = Path.Combine(_directory, "active-vault.pejpass");
+            session.Open(new Vault(), vaultPath, material);
+
+            var viewModel = new SettingsViewModel(
+                host.Settings,
+                new ThemeService(host.Settings),
+                null!,
+                session,
+                cache,
+                (_, _) => { },
+                SucceedingStartup)
+            {
+                WindowsHelloAvailable = true,
+                WindowsHelloEnabled = true
+            };
+
+            viewModel.SaveCommand.Execute(null);
+
+            Assert.True(cache.HasCacheFor(vaultPath));
+        }, TestContext.Current.CancellationToken);
     }
 
     [Fact(Timeout = 15000)]
@@ -198,6 +232,22 @@ public sealed class SettingsViewModelSaveTests : IDisposable
             Assert.False(host.Settings.LockVaultWhenHiddenToTray);
             Assert.False(SettingsStore.Load().LockVaultWhenHiddenToTray);
         }, TestContext.Current.CancellationToken);
+    }
+
+    private static VaultKeyMaterial CreateMaterial()
+    {
+        var key = Enumerable.Repeat((byte)0x31, 32).ToArray();
+        var salt = Enumerable.Repeat((byte)0x32, 16).ToArray();
+
+        try
+        {
+            return new VaultKeyMaterial(key, salt, Argon2Parameters.Default);
+        }
+        finally
+        {
+            System.Security.Cryptography.CryptographicOperations.ZeroMemory(key);
+            System.Security.Cryptography.CryptographicOperations.ZeroMemory(salt);
+        }
     }
 
     private static bool SucceedingStartup(bool enabled, out string? error)

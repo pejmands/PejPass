@@ -984,36 +984,17 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         }
 
         var isCrossDomainSelection = RequiresCrossDomainConfirmation(entry, domain, allowDomainMismatch);
+        var desktopConfirmationCompleted = false;
 
         // Accounts from another website always require explicit confirmation.
         if (requireDesktopConfirmation || isCrossDomainSelection)
         {
-            bool approved;
-            if (_fillConfirmation is not null)
-            {
-                approved = _fillConfirmation(domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
-            }
-            else
-            {
-                var domainNotice = isCrossDomainSelection
-                    ? $"\nSaved website: {Limit(entry.Url, 2048)}\nThis account belongs to another website. Verify that it is the correct account before continuing.\n"
-                    : string.Empty;
-                approved = await DialogService.ConfirmAsync(
-                    $"Allow PejPass to provide the username and password for this site?\n\n" +
-                    $"Current site: {domain}\nAccount: {Limit(entry.Title, 200)}\nUsername: {Limit(entry.Username, 256)}{domainNotice}\n" +
-                    "Only allow this if you just requested autofill.",
-                    "Confirm Browser Autofill",
-                    yesText: "Allow",
-                    noText: "Deny",
-                    bringToFront: true,
-                    cancellationToken: cancellationToken);
-            }
+            var confirmationError = await ConfirmBrowserAutofillAsync(
+                entry, domain, isCrossDomainSelection, cancellationToken);
+            if (confirmationError is not null)
+                return (null, confirmationError);
 
-            if (cancellationToken.IsCancellationRequested || !_vaultSession.IsActive)
-                return (null, "vault_locked");
-
-            if (!approved)
-                return (null, "fill_denied");
+            desktopConfirmationCompleted = true;
         }
 
         if (cancellationToken.IsCancellationRequested || !_vaultSession.IsActive)
@@ -1023,7 +1004,18 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         {
             var helloResult = await VerifyBrowserAutofillWithWindowsHelloAsync(
                 domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
-            if (helloResult != WindowsHelloVerificationResult.Verified)
+            if (helloResult == WindowsHelloVerificationResult.Unavailable)
+            {
+                // If Hello is unavailable, fall back to explicit desktop approval.
+                if (!desktopConfirmationCompleted)
+                {
+                    var confirmationError = await ConfirmBrowserAutofillAsync(
+                        entry, domain, isCrossDomainSelection, cancellationToken);
+                    if (confirmationError is not null)
+                        return (null, confirmationError);
+                }
+            }
+            else if (helloResult != WindowsHelloVerificationResult.Verified)
             {
                 var code = helloResult switch
                 {
@@ -1040,6 +1032,36 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         return cancellationToken.IsCancellationRequested || !_vaultSession.IsActive
             ? (null, "vault_locked")
             : (credential, null);
+    }
+
+    private async Task<string?> ConfirmBrowserAutofillAsync(
+        VaultEntry entry, string domain, bool isCrossDomainSelection, CancellationToken cancellationToken)
+    {
+        bool approved;
+        if (_fillConfirmation is not null)
+        {
+            approved = _fillConfirmation(domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
+        }
+        else
+        {
+            var domainNotice = isCrossDomainSelection
+                ? $"\nSaved website: {Limit(entry.Url, 2048)}\nThis account belongs to another website. Verify that it is the correct account before continuing.\n"
+                : string.Empty;
+            approved = await DialogService.ConfirmAsync(
+                $"Allow PejPass to provide the username and password for this site?\n\n" +
+                $"Current site: {domain}\nAccount: {Limit(entry.Title, 200)}\nUsername: {Limit(entry.Username, 256)}{domainNotice}\n" +
+                "Only allow this if you just requested autofill.",
+                "Confirm Browser Autofill",
+                yesText: "Allow",
+                noText: "Deny",
+                bringToFront: true,
+                cancellationToken: cancellationToken);
+        }
+
+        if (cancellationToken.IsCancellationRequested || !_vaultSession.IsActive)
+            return "vault_locked";
+
+        return approved ? null : "fill_denied";
     }
 
     private async Task<WindowsHelloVerificationResult> VerifyBrowserAutofillWithWindowsHelloAsync(

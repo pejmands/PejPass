@@ -569,7 +569,7 @@ public partial class LoginViewModel : ObservableObject
         if (_vaultSession.IsActive)
             return true;
 
-        if (!_settings.WindowsHelloEnabled)
+        if (!_settings.WindowsHelloEnabled || !await WindowsHelloHelper.IsAvailableAsync())
             return false;
 
         await UnlockWithHelloAsync();
@@ -704,7 +704,7 @@ public partial class LoginViewModel : ObservableObject
                     sessionData.KeyMaterial);
 
                 _sessionPasswordCache.ResetHelloFailures();
-                if (_settings.WindowsHelloEnabled)
+                if (_settings.WindowsHelloEnabled && await WindowsHelloHelper.IsAvailableAsync())
                 {
                     _sessionPasswordCache.Store(
                         VaultPath,
