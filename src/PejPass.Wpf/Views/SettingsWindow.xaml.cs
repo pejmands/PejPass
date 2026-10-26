@@ -30,6 +30,12 @@ public partial class SettingsWindow : Window
         };
 
         Closing += OnClosing;
+        Loaded += OnLoaded;
+    }
+
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        await _vm.RefreshWindowsHelloAvailabilityAsync();
     }
 
     private void OnGlobalZoomChanged(object? sender, double zoom) =>
