@@ -1263,6 +1263,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             return [];
 
         return [.. entries
+            .Where(entry => EntryMatchesDomain(vault, entry, domain))
             .OrderByDescending(entry => entry.IsFavorite)
             .ThenBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase)
             .Take(MaximumCredentialResults)
