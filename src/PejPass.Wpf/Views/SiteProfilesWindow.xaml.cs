@@ -75,9 +75,10 @@ public partial class SiteProfilesWindow : Window
                          ['\r', '\n', ',', ';'],
                          StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
-                if (!BrowserStatusPipeService.TryNormalizeDomain(rawDomain, out var domain))
+                if (!BrowserStatusPipeService.TryNormalizeDomain(rawDomain, out var domain) ||
+                    BrowserStatusPipeService.GetRegistrableDomain(domain) is null)
                 {
-                    ShowValidation($"'{rawDomain}' is not a valid hostname. Enter hostnames only, without a URL path or port.");
+                    ShowValidation($"'{rawDomain}' is not a valid registrable hostname. Public suffixes such as 'com' or 'co.uk' cannot be used.");
                     return;
                 }
 
