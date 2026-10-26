@@ -3,7 +3,9 @@ using H.NotifyIcon.Core;
 using System.ComponentModel;
 using System.Drawing;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Controls;
 using Media = System.Windows.Media;
 
@@ -12,7 +14,7 @@ namespace PejPass.Wpf.Services;
 /// <summary>
 /// System-tray via H.NotifyIcon.Wpf. The tray icon is always available.
 /// </summary>
-public sealed class SystemTrayService : IDisposable
+public sealed partial class SystemTrayService : IDisposable
 {
     internal const string HostWindowTag = "PejPass.TrayHost";
 
@@ -169,6 +171,17 @@ public sealed class SystemTrayService : IDisposable
         menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
         menu.HorizontalOffset = 0;
         menu.VerticalOffset = 0;
+
+        // Activate the invisible tray host, not Application.MainWindow. WPF
+        // needs a foreground owner for a tray ContextMenu to dismiss on an
+        // outside click, but activating the app's main window can reveal Login.
+        var hostHandle = _hostWindow is null
+            ? IntPtr.Zero
+            : new WindowInteropHelper(_hostWindow).Handle;
+
+        if (hostHandle != IntPtr.Zero)
+            _ = SetForegroundWindow(hostHandle);
+
         menu.IsOpen = true;
     }
 
@@ -176,7 +189,9 @@ public sealed class SystemTrayService : IDisposable
     {
         var menu = new ContextMenu
         {
-            Style = GetContextMenuStyle()
+            Style = GetContextMenuStyle(),
+            PlacementTarget = _taskbarIcon!,
+            StaysOpen = false
         };
 
         menu.Items.Add(CreateMenuItem("Show", () => ShowRequested?.Invoke(this, EventArgs.Empty)));
@@ -353,6 +368,10 @@ public sealed class SystemTrayService : IDisposable
 
         return (Icon)SystemIcons.Application.Clone();
     }
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetForegroundWindow(IntPtr hWnd);
 
     public void Dispose()
     {
