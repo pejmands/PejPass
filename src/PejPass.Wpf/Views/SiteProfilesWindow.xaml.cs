@@ -31,7 +31,7 @@ public partial class SiteProfilesWindow : Window
     {
         var profile = new SiteProfileEditorItem(Guid.NewGuid(), string.Empty, string.Empty);
         Profiles.Add(profile);
-        ProfilesScrollViewer.ScrollToEnd();
+        ProfilesScrollViewer.ScrollToBottom();
     }
 
     private void RemoveProfile_Click(object sender, RoutedEventArgs e)
