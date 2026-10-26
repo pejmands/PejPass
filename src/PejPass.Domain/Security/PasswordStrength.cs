@@ -28,6 +28,16 @@ public static class PasswordStrength
 
         var score = Core.EvaluatePassword(input).Score;
 
+        // Repeated character runs can be underestimated by zxcvbn for mixed-case inputs.
+        if (HasLongRepeatedCharacterRun(input))
+        {
+            var compactInput = new string(input
+                .Where((character, index) =>
+                    index == 0 || char.ToUpperInvariant(character) != char.ToUpperInvariant(input[index - 1]))
+                .ToArray());
+            score = Math.Min(score, Core.EvaluatePassword(compactInput).Score);
+        }
+
         // Score an alphanumeric-only variant when whitespace does not separate an intentional multi-word passphrase.
         // This prevents spaces, tabs, or punctuation around predictable patterns from artificially raising the score.
         if (input.Any(char.IsWhiteSpace))
@@ -43,6 +53,29 @@ public static class PasswordStrength
         }
 
         return score;
+    }
+
+    private static bool HasLongRepeatedCharacterRun(string input)
+    {
+        var runLength = 1;
+
+        for (var index = 1; index < input.Length; index++)
+        {
+            if (char.IsLetterOrDigit(input[index]) &&
+                char.IsLetterOrDigit(input[index - 1]) &&
+                char.ToUpperInvariant(input[index]) == char.ToUpperInvariant(input[index - 1]))
+            {
+                runLength++;
+                if (runLength >= 4)
+                    return true;
+            }
+            else
+            {
+                runLength = 1;
+            }
+        }
+
+        return false;
     }
 
     public static PasswordStrengthLevel Evaluate(string? password)
