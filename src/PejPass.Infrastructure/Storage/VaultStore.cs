@@ -57,6 +57,7 @@ public sealed class VaultStore(
                 $"Vault exceeds the limit of {MaxVaultHistoryItems} history items.");
 
         ValidateText(vault.Name, "vault name");
+        ValidateSiteProfiles(vault.SiteProfiles);
 
         var entryIds = new HashSet<Guid>();
 
@@ -102,6 +103,77 @@ public sealed class VaultStore(
             }
         }
     }
+
+    private static void ValidateSiteProfiles(List<SiteProfile>? profiles)
+    {
+        if (profiles is null)
+            throw new InvalidDataException("Vault contains a missing site-profile collection.");
+
+        if (profiles.Count > 1000)
+            throw new InvalidDataException("Vault contains too many site profiles.");
+
+        var profileIds = new HashSet<Guid>();
+        var profileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var domains = new List<(string Domain, string ProfileName)>();
+
+        foreach (var profile in profiles)
+        {
+            if (profile is null)
+                throw new InvalidDataException("Vault contains an invalid site profile.");
+
+            ValidateText(profile.Name, "site-profile name");
+            if (string.IsNullOrWhiteSpace(profile.Name) ||
+                !profileIds.Add(profile.Id) ||
+                !profileNames.Add(profile.Name.Trim()))
+            {
+                throw new InvalidDataException("Vault contains an invalid or duplicate site profile.");
+            }
+
+            if (profile.Domains is null || profile.Domains.Count is < 2 or > 100)
+                throw new InvalidDataException("Vault contains a site profile with an invalid domain collection.");
+
+            var localDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var domain in profile.Domains)
+            {
+                ValidateText(domain, "site-profile domain");
+                if (!IsValidSiteDomain(domain) || !localDomains.Add(domain))
+                    throw new InvalidDataException("Vault contains an invalid or duplicate site-profile domain.");
+
+                foreach (var existing in domains)
+                {
+                    if (string.Equals(existing.ProfileName, profile.Name, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (DomainScopesOverlap(domain, existing.Domain))
+                        throw new InvalidDataException("Vault contains overlapping domains in different site profiles.");
+                }
+
+                domains.Add((domain, profile.Name));
+            }
+        }
+    }
+
+    private static bool IsValidSiteDomain(string domain)
+    {
+        if (string.IsNullOrWhiteSpace(domain) ||
+            domain.Length > 253 ||
+            domain.Any(char.IsWhiteSpace) ||
+            domain.IndexOfAny(['/', '\\', '?', '#', '@', ':']) >= 0 ||
+            !Uri.TryCreate("https://" + domain, UriKind.Absolute, out var uri) ||
+            !string.IsNullOrEmpty(uri.UserInfo) ||
+            !uri.IsDefaultPort ||
+            !string.Equals(uri.IdnHost.TrimEnd('.'), domain, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return Uri.CheckHostName(uri.IdnHost) != UriHostNameType.Unknown;
+    }
+
+    private static bool DomainScopesOverlap(string left, string right) =>
+        left.Equals(right, StringComparison.OrdinalIgnoreCase) ||
+        left.EndsWith("." + right, StringComparison.OrdinalIgnoreCase) ||
+        right.EndsWith("." + left, StringComparison.OrdinalIgnoreCase);
 
     private static void ValidateEntry(VaultEntry? entry)
     {
