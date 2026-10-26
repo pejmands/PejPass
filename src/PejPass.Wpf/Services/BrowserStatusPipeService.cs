@@ -528,7 +528,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     return new SavePreparation(null, null, Guid.Empty, null, "invalid_request");
 
                 existing = vault.Entries.FirstOrDefault(entry =>
-                    entry.Id == targetId && EntryMatchesDomain(entry, domain));
+                    entry.Id == targetId && EntryMatchesDomain(vault, entry, domain));
                 if (existing is null)
                     return new SavePreparation(null, null, Guid.Empty, null, "credential_not_found");
             }
@@ -1195,7 +1195,8 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     private VaultEntry? FindEntryForFill(Guid id, string domain)
     {
         var entry = FindEntryById(id);
-        return entry is not null && EntryMatchesDomain(entry, domain) ? entry : null;
+        var vault = _vaultSession.Vault;
+        return entry is not null && vault is not null && EntryMatchesDomain(vault, entry, domain) ? entry : null;
     }
 
     private VaultEntry? FindEntryById(Guid id)
@@ -1285,13 +1286,22 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                     GetRegistrableDomain(host) is not { } registrableDomain)
                     continue;
 
-                if (!index.TryGetValue(registrableDomain, out var entries))
-                {
-                    entries = [];
-                    index.Add(registrableDomain, entries);
-                }
+                AddIndexedEntry(index, registrableDomain, entry);
 
-                entries.Add(entry);
+                foreach (var profile in vault.SiteProfiles)
+                {
+                    if (!profile.Domains.Any(configuredDomain => HostMatchesConfiguredDomain(host, configuredDomain)))
+                        continue;
+
+                    foreach (var relatedDomain in profile.Domains)
+                    {
+                        if (!TryNormalizeDomain(relatedDomain, out var normalizedDomain) ||
+                            GetRegistrableDomain(normalizedDomain) is not { } relatedRegistrableDomain)
+                            continue;
+
+                        AddIndexedEntry(index, relatedRegistrableDomain, entry);
+                    }
+                }
             }
 
             _credentialIndexByRegistrableDomain = index;
@@ -1316,13 +1326,56 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
     internal static bool EntryMatchesDomain(VaultEntry entry, string domain)
     {
-        if (!TryGetEntryHost(entry.Url, out var entryHost)) return false;
+        return EntryMatchesDomainCore(entry.Url, domain);
+    }
+
+    internal static bool EntryMatchesDomain(Vault vault, VaultEntry entry, string domain)
+    {
+        if (EntryMatchesDomainCore(entry.Url, domain))
+            return true;
+
+        if (!TryGetEntryHost(entry.Url, out var entryHost) ||
+            !TryNormalizeDomain(domain, out var requestedHost))
+            return false;
+
+        return vault.SiteProfiles.Any(profile =>
+            profile.Domains.Any(configuredDomain => HostMatchesConfiguredDomain(entryHost, configuredDomain)) &&
+            profile.Domains.Any(configuredDomain => HostMatchesConfiguredDomain(requestedHost, configuredDomain)));
+    }
+
+    private static bool EntryMatchesDomainCore(string url, string domain)
+    {
+        if (!TryGetEntryHost(url, out var entryHost)) return false;
 
         var entryRegistrableDomain = GetRegistrableDomain(entryHost);
         var requestedRegistrableDomain = GetRegistrableDomain(domain);
         return entryRegistrableDomain is not null &&
                requestedRegistrableDomain is not null &&
                entryRegistrableDomain.Equals(requestedRegistrableDomain, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void AddIndexedEntry(
+        Dictionary<string, List<VaultEntry>> index,
+        string registrableDomain,
+        VaultEntry entry)
+    {
+        if (!index.TryGetValue(registrableDomain, out var entries))
+        {
+            entries = [];
+            index.Add(registrableDomain, entries);
+        }
+
+        if (!entries.Any(existing => existing.Id == entry.Id))
+            entries.Add(entry);
+    }
+
+    private static bool HostMatchesConfiguredDomain(string host, string configuredDomain)
+    {
+        if (!TryNormalizeDomain(configuredDomain, out var normalizedConfiguredDomain))
+            return false;
+
+        return host.Equals(normalizedConfiguredDomain, StringComparison.OrdinalIgnoreCase) ||
+               host.EndsWith("." + normalizedConfiguredDomain, StringComparison.OrdinalIgnoreCase);
     }
 
     internal static string? GetRegistrableDomain(string host)
