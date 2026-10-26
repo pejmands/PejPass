@@ -85,9 +85,9 @@ public partial class SiteProfilesWindow : Window
                     normalizedDomains.Add(domain);
             }
 
-            if (normalizedDomains.Count < 2)
+            if (normalizedDomains.Count < 2 || normalizedDomains.Count > 100)
             {
-                ShowValidation($"'{name}' needs at least two different domains.");
+                ShowValidation($"'{name}' needs between 2 and 100 different domains.");
                 return;
             }
 
@@ -105,7 +105,8 @@ public partial class SiteProfilesWindow : Window
             {
                 foreach (var existing in domains)
                 {
-                    if (DomainScopesOverlap(domain, existing.Domain))
+                    if (!string.Equals(existing.Name, profile.Name, StringComparison.OrdinalIgnoreCase) &&
+                        DomainScopesOverlap(domain, existing.Domain))
                     {
                         ShowValidation(
                             $"'{domain}' in '{profile.Name}' overlaps with '{existing.Domain}' in '{existing.Name}'. A hostname can belong to only one group.");
