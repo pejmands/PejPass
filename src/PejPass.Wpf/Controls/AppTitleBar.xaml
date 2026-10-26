@@ -116,6 +116,10 @@
 									Style="{StaticResource PejPassContextMenu}"
 									VerticalOffset="6">
 									<MenuItem
+										Command="{Binding ManageSiteProfilesCommand}"
+										Header="Site Groups"
+										Style="{StaticResource PejPassContextMenuItem}" />
+									<MenuItem
 										Command="{Binding OpenHealthCommand}"
 										Header="Vault Health"
 										InputGestureText="Ctrl+H"
