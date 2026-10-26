@@ -68,7 +68,7 @@ public partial class SiteProfilesWindow : Window
 
             var normalizedDomains = new List<string>();
             foreach (var rawDomain in item.DomainsText.Split(
-                         ['\\r', '\\n', ',', ';'],
+                         ['\r', '\n', ',', ';'],
                          StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
                 if (!BrowserStatusPipeService.TryNormalizeDomain(rawDomain, out var domain) ||
