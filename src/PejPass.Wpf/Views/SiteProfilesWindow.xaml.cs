@@ -15,6 +15,7 @@ public partial class SiteProfilesWindow : Window
     public SiteProfilesWindow(IEnumerable<SiteProfile> profiles)
     {
         InitializeComponent();
+        App.PrepareCustomChrome(this);
         DataContext = this;
 
         foreach (var profile in profiles)
@@ -72,7 +73,7 @@ public partial class SiteProfilesWindow : Window
 
             var normalizedDomains = new List<string>();
             foreach (var rawDomain in item.DomainsText.Split(
-                         ['\r', '\n', ',', ';'],
+                         ['\\r', '\\n', ',', ';'],
                          StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
                 if (!BrowserStatusPipeService.TryNormalizeDomain(rawDomain, out var domain) ||
