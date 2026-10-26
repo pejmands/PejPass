@@ -5,8 +5,8 @@ using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Interop;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using Media = System.Windows.Media;
 
 namespace PejPass.Wpf.Services;
