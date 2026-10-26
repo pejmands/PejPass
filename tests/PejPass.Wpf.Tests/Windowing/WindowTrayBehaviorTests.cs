@@ -186,6 +186,7 @@ public sealed class WindowTrayBehaviorTests
             Assert.NotNull(menuField);
 
             var menu = Assert.IsType<ContextMenu>(menuField!.GetValue(host.Tray));
+            Assert.False(menu.StaysOpen);
             var iconField = typeof(SystemTrayService).GetField(
                 "_taskbarIcon",
                 BindingFlags.NonPublic | BindingFlags.Instance);
