@@ -1,7 +1,7 @@
-{
+﻿{
   "manifest_version": 3,
   "name": "PejPass",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "A lightweight browser companion for PejPass.",
   "browser_specific_settings": {
     "gecko": {
@@ -35,3 +35,4 @@
     "128": "icons/PejPass128.png"
   }
 }
+

@@ -475,7 +475,7 @@ public sealed class Vault
     public VaultEntry? FindEntry(Guid entryId) =>
         Entries.FirstOrDefault(e => e.Id == entryId);
 
-    private void Touch() => UpdatedAt = DateTimeOffset.UtcNow;
+    public void Touch() => UpdatedAt = DateTimeOffset.UtcNow;
 
     public bool RemoveHistory(Guid historyId)
     {
