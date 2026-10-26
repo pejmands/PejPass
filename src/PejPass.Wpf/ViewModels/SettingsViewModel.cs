@@ -364,9 +364,22 @@ public partial class SettingsViewModel : ObservableObject
         if (!AppearanceOnly)
         {
             if (!WindowsHelloEnabled)
+            {
                 _sessionPasswordCache.Clear();
+            }
+            else if (!_savedWindowsHello && WindowsHelloAvailable && _vaultSession.IsActive)
+            {
+                var vaultPath = _vaultSession.VaultPath;
+                if (!string.IsNullOrWhiteSpace(vaultPath))
+                {
+                    using var keyMaterial = _vaultSession.CopyKeyMaterial();
+                    _sessionPasswordCache.Store(vaultPath, keyMaterial);
+                }
+            }
             else
+            {
                 _sessionPasswordCache.RefreshExpiry();
+            }
         }
 
         _themeService.Apply();
