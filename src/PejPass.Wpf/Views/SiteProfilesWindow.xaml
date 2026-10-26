@@ -15,7 +15,7 @@
     <DockPanel>
         <controls:AppTitleBar
             DockPanel.Dock="Top"
-            ShowMaximize="False"
+            ShowMaximize="True"
             ShowMinimize="False" />
 
         <Grid Margin="24">
