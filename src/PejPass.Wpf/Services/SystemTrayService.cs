@@ -31,6 +31,9 @@ public sealed partial class SystemTrayService : IDisposable
     private MenuItem? _lockMenuItem;
     private bool _isExiting;
     private bool _disposed;
+    private IntPtr _previousForegroundWindow;
+    private IntPtr _foregroundHostHandle;
+    private bool _restoreForegroundOnMenuClosed;
 
     public bool IsVisible =>
         _taskbarIcon is not null &&
@@ -178,11 +181,49 @@ public sealed partial class SystemTrayService : IDisposable
         var hostHandle = _hostWindow is null
             ? IntPtr.Zero
             : new WindowInteropHelper(_hostWindow).Handle;
+        var foregroundBefore = GetForegroundWindow();
 
-        if (hostHandle != IntPtr.Zero)
-            _ = SetForegroundWindow(hostHandle);
+        _restoreForegroundOnMenuClosed =
+            hostHandle != IntPtr.Zero &&
+            foregroundBefore != IntPtr.Zero &&
+            foregroundBefore != hostHandle &&
+            SetForegroundWindow(hostHandle);
+
+        _previousForegroundWindow = _restoreForegroundOnMenuClosed
+            ? foregroundBefore
+            : IntPtr.Zero;
+        _foregroundHostHandle = _restoreForegroundOnMenuClosed
+            ? hostHandle
+            : IntPtr.Zero;
 
         menu.IsOpen = true;
+    }
+
+    private void RestoreForegroundAfterMenuClosed()
+    {
+        if (!_restoreForegroundOnMenuClosed)
+            return;
+
+        _restoreForegroundOnMenuClosed = false;
+
+        var previousHandle = _previousForegroundWindow;
+        var hostHandle = _foregroundHostHandle;
+
+        _previousForegroundWindow = IntPtr.Zero;
+        _foregroundHostHandle = IntPtr.Zero;
+
+        if (_disposed ||
+            _isExiting ||
+            previousHandle == IntPtr.Zero ||
+            hostHandle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        // If another app became foreground, leave it alone. Restore the prior
+        // foreground window only when the menu left the invisible tray host active.
+        if (GetForegroundWindow() == hostHandle)
+            _ = SetForegroundWindow(previousHandle);
     }
 
     private ContextMenu CreateContextMenu()
@@ -218,6 +259,7 @@ public sealed partial class SystemTrayService : IDisposable
             menu.HorizontalOffset = 0;
             menu.VerticalOffset = 0;
         };
+        menu.Closed += (_, _) => RestoreForegroundAfterMenuClosed();
 
         return menu;
     }
@@ -368,6 +410,9 @@ public sealed partial class SystemTrayService : IDisposable
 
         return (Icon)SystemIcons.Application.Clone();
     }
+
+    [LibraryImport("user32.dll")]
+    private static partial IntPtr GetForegroundWindow();
 
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
