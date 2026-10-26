@@ -68,8 +68,8 @@ public sealed partial class SystemTrayService : IDisposable
         {
             ToolTipText = GetTrayToolTip(),
             Icon = CreateTrayIcon(),
-            // H.NotifyIcon calls SetForegroundWindow after opening its menu,
-            // which can activate Application.MainWindow. Open it ourselves instead.
+            // Handle right-click manually so focus goes to the invisible tray host,
+            // not H.NotifyIcon's popup path that can activate Application.MainWindow.
             MenuActivation = PopupActivationMode.None,
             Visibility = Visibility.Visible
         };
@@ -167,7 +167,7 @@ public sealed partial class SystemTrayService : IDisposable
 
     private void OpenContextMenu()
     {
-        if (_contextMenu is not { } menu || _disposed)
+        if (_contextMenu is not { } menu || _disposed || menu.IsOpen)
             return;
 
         menu.PlacementTarget = _taskbarIcon;
@@ -185,7 +185,6 @@ public sealed partial class SystemTrayService : IDisposable
 
         _restoreForegroundOnMenuClosed =
             hostHandle != IntPtr.Zero &&
-            foregroundBefore != IntPtr.Zero &&
             foregroundBefore != hostHandle &&
             SetForegroundWindow(hostHandle);
 
