@@ -31,14 +31,12 @@ public partial class SiteProfilesWindow : Window
     {
         var profile = new SiteProfileEditorItem(Guid.NewGuid(), string.Empty, string.Empty);
         Profiles.Add(profile);
-        ProfilesGrid.SelectedItem = profile;
-        ProfilesGrid.ScrollIntoView(profile);
-        ProfilesGrid.BeginEdit();
+        ProfilesScrollViewer.ScrollToEnd();
     }
 
     private void RemoveProfile_Click(object sender, RoutedEventArgs e)
     {
-        if (ProfilesGrid.SelectedItem is SiteProfileEditorItem selected)
+        if (sender is FrameworkElement { DataContext: SiteProfileEditorItem selected })
             Profiles.Remove(selected);
     }
 
@@ -49,9 +47,6 @@ public partial class SiteProfilesWindow : Window
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        ProfilesGrid.CommitEdit();
-        ProfilesGrid.CommitEdit();
-
         var profiles = new List<SiteProfile>();
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var domains = new List<(string Domain, string Name)>();
