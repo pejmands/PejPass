@@ -1104,7 +1104,8 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         }
         finally
         {
-            owner.Close();
+            if (owner.IsVisible)
+                owner.Close();
         }
     }
 
