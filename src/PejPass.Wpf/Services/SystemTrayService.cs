@@ -3,7 +3,9 @@ using H.NotifyIcon.Core;
 using System.ComponentModel;
 using System.Drawing;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Controls;
 using Media = System.Windows.Media;
 
@@ -12,7 +14,7 @@ namespace PejPass.Wpf.Services;
 /// <summary>
 /// System-tray via H.NotifyIcon.Wpf. The tray icon is always available.
 /// </summary>
-public sealed class SystemTrayService : IDisposable
+public sealed partial class SystemTrayService : IDisposable
 {
     internal const string HostWindowTag = "PejPass.TrayHost";
 
@@ -29,6 +31,9 @@ public sealed class SystemTrayService : IDisposable
     private MenuItem? _lockMenuItem;
     private bool _isExiting;
     private bool _disposed;
+    private IntPtr _previousForegroundWindow;
+    private IntPtr _foregroundHostHandle;
+    private bool _restoreForegroundOnMenuClosed;
 
     public bool IsVisible =>
         _taskbarIcon is not null &&
@@ -63,8 +68,8 @@ public sealed class SystemTrayService : IDisposable
         {
             ToolTipText = GetTrayToolTip(),
             Icon = CreateTrayIcon(),
-            // H.NotifyIcon calls SetForegroundWindow after opening its menu,
-            // which can activate Application.MainWindow. Open it ourselves instead.
+            // Handle right-click manually so focus goes to the invisible tray host,
+            // not H.NotifyIcon's popup path that can activate Application.MainWindow.
             MenuActivation = PopupActivationMode.None,
             Visibility = Visibility.Visible
         };
@@ -162,21 +167,71 @@ public sealed class SystemTrayService : IDisposable
 
     private void OpenContextMenu()
     {
-        if (_contextMenu is not { } menu || _disposed)
+        if (_contextMenu is not { } menu || _disposed || menu.IsOpen)
             return;
 
         menu.PlacementTarget = _taskbarIcon;
         menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
         menu.HorizontalOffset = 0;
         menu.VerticalOffset = 0;
+
+        // Activate the invisible tray host, not Application.MainWindow. WPF
+        // needs a foreground owner for a tray ContextMenu to dismiss on an
+        // outside click, but activating the app's main window can reveal Login.
+        var hostHandle = _hostWindow is null
+            ? IntPtr.Zero
+            : new WindowInteropHelper(_hostWindow).Handle;
+        var foregroundBefore = GetForegroundWindow();
+
+        _restoreForegroundOnMenuClosed =
+            hostHandle != IntPtr.Zero &&
+            foregroundBefore != hostHandle &&
+            SetForegroundWindow(hostHandle);
+
+        _previousForegroundWindow = _restoreForegroundOnMenuClosed
+            ? foregroundBefore
+            : IntPtr.Zero;
+        _foregroundHostHandle = _restoreForegroundOnMenuClosed
+            ? hostHandle
+            : IntPtr.Zero;
+
         menu.IsOpen = true;
+    }
+
+    private void RestoreForegroundAfterMenuClosed()
+    {
+        if (!_restoreForegroundOnMenuClosed)
+            return;
+
+        _restoreForegroundOnMenuClosed = false;
+
+        var previousHandle = _previousForegroundWindow;
+        var hostHandle = _foregroundHostHandle;
+
+        _previousForegroundWindow = IntPtr.Zero;
+        _foregroundHostHandle = IntPtr.Zero;
+
+        if (_disposed ||
+            _isExiting ||
+            previousHandle == IntPtr.Zero ||
+            hostHandle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        // If another app became foreground, leave it alone. Restore the prior
+        // foreground window only when the menu left the invisible tray host active.
+        if (GetForegroundWindow() == hostHandle)
+            _ = SetForegroundWindow(previousHandle);
     }
 
     private ContextMenu CreateContextMenu()
     {
         var menu = new ContextMenu
         {
-            Style = GetContextMenuStyle()
+            Style = GetContextMenuStyle(),
+            PlacementTarget = _taskbarIcon!,
+            StaysOpen = false
         };
 
         menu.Items.Add(CreateMenuItem("Show", () => ShowRequested?.Invoke(this, EventArgs.Empty)));
@@ -203,6 +258,7 @@ public sealed class SystemTrayService : IDisposable
             menu.HorizontalOffset = 0;
             menu.VerticalOffset = 0;
         };
+        menu.Closed += (_, _) => RestoreForegroundAfterMenuClosed();
 
         return menu;
     }
@@ -353,6 +409,13 @@ public sealed class SystemTrayService : IDisposable
 
         return (Icon)SystemIcons.Application.Clone();
     }
+
+    [LibraryImport("user32.dll")]
+    private static partial IntPtr GetForegroundWindow();
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetForegroundWindow(IntPtr hWnd);
 
     public void Dispose()
     {

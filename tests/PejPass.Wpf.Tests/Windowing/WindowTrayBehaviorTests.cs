@@ -186,12 +186,14 @@ public sealed class WindowTrayBehaviorTests
             Assert.NotNull(menuField);
 
             var menu = Assert.IsType<ContextMenu>(menuField!.GetValue(host.Tray));
+            Assert.False(menu.StaysOpen);
             var iconField = typeof(SystemTrayService).GetField(
                 "_taskbarIcon",
                 BindingFlags.NonPublic | BindingFlags.Instance);
             Assert.NotNull(iconField);
             var trayIcon = Assert.IsType<FrameworkElement>(
                 iconField!.GetValue(host.Tray), exactMatch: false);
+            Assert.Same(trayIcon, menu.PlacementTarget);
             Assert.Equal("None", trayIcon.GetType()
                 .GetProperty("MenuActivation")!.GetValue(trayIcon)!.ToString());
 
