@@ -102,6 +102,8 @@ internal static class TrayDiagnostic
             CallbackMessage = 0x8001,
             Icon = LoadIcon(IntPtr.Zero, new IntPtr(32512)),
             Tip = "PejPass tray diagnostic",
+            Info = string.Empty,
+            InfoTitle = string.Empty,
             State = NisHidden,
             StateMask = NisHidden
         };
