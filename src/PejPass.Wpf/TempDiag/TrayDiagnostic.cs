@@ -23,7 +23,7 @@ internal static class TrayDiagnostic
     private const uint NifShowTip = 0x00000080;
     private const uint NisHidden = 0x00000001;
     private const int JobObjectBasicUiRestrictions = 4;
-    private const int JobObjectExtendedLimitInformation = 9;
+    private const int JobObjectExtendedLimitInformationClass = 9;
 
     private static readonly string LogDirectory =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -199,7 +199,7 @@ internal static class TrayDiagnostic
         var memory = Marshal.AllocHGlobal(limitsSize);
         try
         {
-            var limitOk = QueryInformationJobObject(IntPtr.Zero, JobObjectExtendedLimitInformation,
+            var limitOk = QueryInformationJobObject(IntPtr.Zero, JobObjectExtendedLimitInformationClass,
                 memory, (uint)limitsSize, out var returned);
             if (limitOk)
                 limits = Marshal.PtrToStructure<JobObjectExtendedLimitInformation>(memory);
