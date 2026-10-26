@@ -399,6 +399,7 @@
 							HorizontalAlignment="Left"
 							VerticalAlignment="Center"
 							IsChecked="{Binding WindowsHelloEnabled}"
+							IsEnabled="{Binding WindowsHelloAvailable}"
 							ToolTip="Unlock with Windows Hello after first password unlock" />
 					</Grid>
 					<Grid Margin="0,0,0,20">
@@ -427,6 +428,7 @@
 							<CheckBox
 								Content="Windows Hello"
 								IsChecked="{Binding BrowserAutofillWindowsHelloEnabled}"
+								IsEnabled="{Binding WindowsHelloAvailable}"
 								ToolTip="Require Windows Hello before filling" />
 						</StackPanel>
 					</Grid>
