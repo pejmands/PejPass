@@ -93,6 +93,28 @@ public sealed class BrowserStatusPipeServiceTests
     }
 
     [Fact]
+    public void VaultSnapshot_ClonesSiteProfilesAndTheirDomainLists()
+    {
+        var vault = new Vault
+        {
+            SiteProfiles =
+            [
+                new SiteProfile
+                {
+                    Name = "ChatGPT",
+                    Domains = ["chatgpt.com", "auth.openai.com"]
+                }
+            ]
+        };
+
+        var snapshot = vault.CreateSnapshot();
+        snapshot.SiteProfiles[0].Domains.Add("other.example");
+
+        Assert.Equal(2, vault.SiteProfiles[0].Domains.Count);
+        Assert.Equal("ChatGPT", snapshot.SiteProfiles[0].Name);
+    }
+
+    [Fact]
     public void GetCredentials_RequiresUnlockedVault()
     {
         using var session = new VaultSession();
@@ -112,6 +134,65 @@ public sealed class BrowserStatusPipeServiceTests
     {
         var entry = new VaultEntry { Url = "https://example.com/login" };
         Assert.Equal(expected, BrowserStatusPipeService.EntryMatchesDomain(entry, domain));
+    }
+
+    [Fact]
+    public void EntryMatchesDomain_MatchesHostsInTheSameExplicitSiteProfile()
+    {
+        var entry = new VaultEntry { Url = "https://chatgpt.com/" };
+        var vault = new Vault
+        {
+            SiteProfiles =
+            [
+                new SiteProfile
+                {
+                    Name = "ChatGPT",
+                    Domains = ["chatgpt.com", "auth.openai.com"]
+                }
+            ]
+        };
+
+        Assert.True(BrowserStatusPipeService.EntryMatchesDomain(vault, entry, "auth.openai.com"));
+        Assert.True(BrowserStatusPipeService.EntryMatchesDomain(vault, entry, "login.auth.openai.com"));
+        Assert.False(BrowserStatusPipeService.EntryMatchesDomain(vault, entry, "accounts.openai.com"));
+        Assert.False(BrowserStatusPipeService.EntryMatchesDomain(vault, entry, "auth.openai.com.attacker.test"));
+    }
+
+    [Fact]
+    public void GetCredentials_FindsEntriesAcrossExplicitlyGroupedDomainsOnly()
+    {
+        using var session = new VaultSession();
+        using var keyMaterial = CreateMaterial();
+        using var service = new BrowserStatusPipeService(session);
+        var vault = new Vault
+        {
+            Entries =
+            [
+                new VaultEntry
+                {
+                    Title = "ChatGPT",
+                    Username = "user@example.com",
+                    Url = "https://chatgpt.com/"
+                }
+            ],
+            SiteProfiles =
+            [
+                new SiteProfile
+                {
+                    Name = "ChatGPT",
+                    Domains = ["chatgpt.com", "auth.openai.com"]
+                }
+            ]
+        };
+        session.Open(vault, Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"), keyMaterial);
+
+        var grouped = service.CreateResponse(
+            """{"type":"getCredentials","protocolVersion":1,"domain":"auth.openai.com"}""");
+        var unrelated = service.CreateResponse(
+            """{"type":"getCredentials","protocolVersion":1,"domain":"accounts.openai.com"}""");
+
+        Assert.Single(grouped.Credentials!);
+        Assert.Empty(unrelated.Credentials!);
     }
 
     [Theory]
