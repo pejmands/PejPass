@@ -694,6 +694,40 @@
 										Content="Open"
 										Style="{StaticResource SecondaryButton}" />
 								</Grid>
+
+								<StackPanel
+									Margin="0,8,0,0"
+									Visibility="{Binding HasRelatedSites, Converter={StaticResource BoolToVis}}">
+									<TextBlock
+										Margin="0,0,0,6"
+										FontSize="{DynamicResource AppFontSize11}"
+										FontWeight="SemiBold"
+										Foreground="{DynamicResource MutedBrush}"
+										Text="RELATED SITES" />
+
+									<ItemsControl ItemsSource="{Binding RelatedSites}">
+										<ItemsControl.ItemsPanel>
+										<ItemsPanelTemplate>
+											<WrapPanel />
+										</ItemsPanelTemplate>
+									</ItemsControl.ItemsPanel>
+									<ItemsControl.ItemTemplate>
+										<DataTemplate>
+											<Button
+												Margin="0,0,6,6"
+												Padding="9,5"
+												Command="{Binding DataContext.OpenRelatedSiteCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+												CommandParameter="{Binding}"
+												Content="{Binding}"
+												Cursor="Hand"
+												FontSize="{DynamicResource AppFontSize12}"
+												Foreground="{DynamicResource AccentBrush}"
+												Style="{StaticResource SecondaryButton}"
+												ToolTip="Open related site in browser" />
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+								</StackPanel>
 							</StackPanel>
 
 							<!--  Username  -->

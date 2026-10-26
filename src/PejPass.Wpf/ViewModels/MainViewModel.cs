@@ -201,6 +201,7 @@ public partial class MainViewModel : ObservableObject
 
         UpdatePasswordDisplay();
         RebuildDisplayCustomFields();
+        RefreshRelatedSites();
         RefreshTotp();
     }
 
@@ -918,9 +919,11 @@ public partial class MainViewModel : ObservableObject
         if (!await SaveVaultAsync(vault, generation))
         {
             RestoreVaultSnapshot(snapshot, vault, generation);
+            RefreshRelatedSites();
             return;
         }
 
+        RefreshRelatedSites();
         SnackbarService.Show("Site groups saved.");
     }
 
