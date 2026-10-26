@@ -885,6 +885,46 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task ManageSiteProfiles()
+    {
+        if (!await EnsureVaultWritableAsync())
+            return;
+
+        var vault = _vaultSession.Vault;
+        var generation = _vaultSession.Generation;
+        if (vault is null || !_vaultSession.IsCurrent(generation, vault))
+            return;
+
+        var window = new SiteProfilesWindow(vault.SiteProfiles)
+        {
+            Owner = GetOwnerWindow()
+        };
+
+        if (window.ShowDialog() != true ||
+            !_vaultSession.IsCurrent(generation, vault))
+        {
+            return;
+        }
+
+        var snapshot = vault.CreateSnapshot();
+        vault.SiteProfiles = [.. window.SiteProfiles.Select(profile => new SiteProfile
+        {
+            Id = profile.Id,
+            Name = profile.Name,
+            Domains = [.. profile.Domains]
+        })];
+        vault.Touch();
+
+        if (!await SaveVaultAsync(vault, generation))
+        {
+            RestoreVaultSnapshot(snapshot, vault, generation);
+            return;
+        }
+
+        SnackbarService.Show("Site groups saved.");
+    }
+
+    [RelayCommand]
     private void OpenSettings()
     {
         var vm = new SettingsViewModel(
