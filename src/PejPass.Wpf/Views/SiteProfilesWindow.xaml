@@ -19,104 +19,122 @@
             ShowMinimize="False" />
 
         <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
+            <TextBlock
+                Grid.Row="0"
+                Margin="0,0,0,16"
+                Foreground="{DynamicResource TextSecondaryBrush}"
+                Text="Group login domains that belong to the same sign-in flow. Enter one hostname per line, without https:// or a path."
+                TextWrapping="Wrap" />
 
-        <TextBlock
-            Grid.Row="0"
-            Margin="0,0,0,16"
-            Foreground="{DynamicResource TextSecondaryBrush}"
-            Text="Group login domains that belong to the same sign-in flow. Enter one hostname per line, without https:// or a path."
-            TextWrapping="Wrap" />
-
-        <DataGrid
-            x:Name="ProfilesGrid"
-            Grid.Row="1"
-            AutoGenerateColumns="False"
-            CanUserAddRows="False"
-            CanUserDeleteRows="False"
-            HeadersVisibility="Column"
-            IsReadOnly="False"
-            ItemsSource="{Binding Profiles}"
-            SelectionMode="Single"
-            SelectionUnit="FullRow"
-            Background="{DynamicResource SurfaceBrush}"
-            Foreground="{DynamicResource TextBrush}"
-            BorderBrush="{DynamicResource BorderBrush}"
-            GridLinesVisibility="Horizontal"
-            RowBackground="{DynamicResource SurfaceBrush}"
-            AlternatingRowBackground="{DynamicResource BgBrush}">
-            <DataGrid.Columns>
-                <DataGridTextColumn
-                    Width="190"
-                    Header="Group name"
-                    Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
-                <DataGridTemplateColumn Width="*" Header="Domains (one per line)">
-                    <DataGridTemplateColumn.CellTemplate>
+            <ScrollViewer
+                x:Name="ProfilesScrollViewer"
+                Grid.Row="1"
+                Padding="0,0,8,0"
+                VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Profiles}">
+                    <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <TextBox
-                                MinHeight="54"
-                                Padding="6"
-                                AcceptsReturn="True"
-                                TextWrapping="Wrap"
-                                VerticalScrollBarVisibility="Auto"
-                                Background="{DynamicResource SurfaceAltBrush}"
-                                Foreground="{DynamicResource TextBrush}"
-                                BorderBrush="{DynamicResource BorderBrush}"
-                                Text="{Binding DomainsText, UpdateSourceTrigger=PropertyChanged}" />
+                            <Border
+                                Margin="0,0,0,12"
+                                Padding="16"
+                                Background="{DynamicResource SurfaceBrush}"
+                                CornerRadius="8">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            FontSize="{DynamicResource AppFontSize12}"
+                                            FontWeight="SemiBold"
+                                            Foreground="{DynamicResource TextBrush}"
+                                            Text="Group name" />
+                                        <Button
+                                            Grid.Column="1"
+                                            Height="28"
+                                            Padding="10,4"
+                                            Click="RemoveProfile_Click"
+                                            Content="Remove"
+                                            DataContext="{Binding}"
+                                            Style="{StaticResource SecondaryButton}" />
+                                    </Grid>
+                                    <TextBox
+                                        Margin="0,0,0,12"
+                                        Height="36"
+                                        Padding="10,6"
+                                        VerticalContentAlignment="Center"
+                                        Background="{DynamicResource SurfaceAltBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        Foreground="{DynamicResource TextBrush}"
+                                        Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock
+                                        Margin="0,0,0,6"
+                                        FontSize="{DynamicResource AppFontSize12}"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource TextBrush}"
+                                        Text="Domains (one per line)" />
+                                    <TextBox
+                                        MinHeight="76"
+                                        Padding="10,8"
+                                        AcceptsReturn="True"
+                                        TextWrapping="Wrap"
+                                        VerticalScrollBarVisibility="Auto"
+                                        Background="{DynamicResource SurfaceAltBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        Foreground="{DynamicResource TextBrush}"
+                                        Text="{Binding DomainsText, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
+                            </Border>
                         </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
 
-        <TextBlock
-            x:Name="ValidationText"
-            Grid.Row="2"
-            Margin="0,10,0,0"
-            Foreground="{DynamicResource ValidationErrorBrush}"
-            TextWrapping="Wrap"
-            Visibility="Collapsed" />
+            <TextBlock
+                x:Name="ValidationText"
+                Grid.Row="2"
+                Margin="0,10,0,0"
+                Foreground="{DynamicResource ValidationErrorBrush}"
+                TextWrapping="Wrap"
+                Visibility="Collapsed" />
 
-        <Grid Grid.Row="3" Margin="0,18,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Orientation="Horizontal">
+            <Grid Grid.Row="3" Margin="0,18,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
                 <Button
                     Padding="12,7"
-                    Margin="0,0,8,0"
                     Click="AddProfile_Click"
                     Content="Add Group"
+                    HorizontalAlignment="Left"
                     Style="{StaticResource SecondaryButton}" />
                 <Button
-                    Padding="12,7"
-                    Click="RemoveProfile_Click"
-                    Content="Remove Selected"
+                    Grid.Column="1"
+                    Padding="14,7"
+                    Margin="8,0,0,0"
+                    Click="Cancel_Click"
+                    Content="Cancel"
                     Style="{StaticResource SecondaryButton}" />
-            </StackPanel>
-            <Button
-                Grid.Column="1"
-                Padding="14,7"
-                Margin="8,0,0,0"
-                Click="Cancel_Click"
-                Content="Cancel"
-                Style="{StaticResource SecondaryButton}" />
-            <Button
-                Grid.Column="2"
-                Padding="14,7"
-                Margin="8,0,0,0"
-                Click="Save_Click"
-                Content="Save"
-                Style="{StaticResource PrimaryButton}" />
-        </Grid>
+                <Button
+                    Grid.Column="2"
+                    Padding="14,7"
+                    Margin="8,0,0,0"
+                    Click="Save_Click"
+                    Content="Save"
+                    Style="{StaticResource PrimaryButton}" />
+            </Grid>
         </Grid>
     </DockPanel>
 </Window>
