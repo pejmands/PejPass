@@ -122,6 +122,8 @@ public partial class App : System.Windows.Application
         tray.LockRequested += OnTrayLockRequested;
         tray.PasswordGeneratorRequested += OnTrayPasswordGeneratorRequested;
 
+        PejPass.Wpf.TempDiag.TrayDiagnostic.RunIfRequested(e.Args);
+
         tray.Show();
 
         _windowsSecurityService = Services.GetRequiredService<WindowsSecurityService>();
