@@ -983,7 +983,10 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             // If settings are unavailable, keep both confirmation steps enabled.
         }
 
-        var isCrossDomainSelection = RequiresCrossDomainConfirmation(entry, domain, allowDomainMismatch);
+        var activeVault = _vaultSession.Vault;
+        var isCrossDomainSelection = activeVault is not null
+            ? RequiresCrossDomainConfirmation(activeVault, entry, domain, allowDomainMismatch)
+            : RequiresCrossDomainConfirmation(entry, domain, allowDomainMismatch);
         var desktopConfirmationCompleted = false;
 
         // Accounts from another website always require explicit confirmation.
@@ -1324,6 +1327,10 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     internal static bool RequiresCrossDomainConfirmation(
         VaultEntry entry, string domain, bool allowDomainMismatch) =>
         allowDomainMismatch && !EntryMatchesDomain(entry, domain);
+
+    internal static bool RequiresCrossDomainConfirmation(
+        Vault vault, VaultEntry entry, string domain, bool allowDomainMismatch) =>
+        allowDomainMismatch && !EntryMatchesDomain(vault, entry, domain);
 
     internal static bool EntryMatchesDomain(VaultEntry entry, string domain)
     {
