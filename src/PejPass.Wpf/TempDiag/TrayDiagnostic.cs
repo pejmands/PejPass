@@ -141,6 +141,7 @@ internal static class TrayDiagnostic
         using var process = Process.GetCurrentProcess();
         WriteLog(writer, $"Process: {process.ProcessName}; PID={process.Id}; path={Environment.ProcessPath ?? "(unknown)"}");
         WriteLog(writer, $"User: {SafeIdentityName()}; session={process.SessionId}; 64-bit process={Environment.Is64BitProcess}; 64-bit OS={Environment.Is64BitOperatingSystem}; interactive={Environment.UserInteractive}");
+        WriteIntegrityLevel(writer);
         WriteLog(writer, $"Current directory: {Environment.CurrentDirectory}");
         WriteLog(writer, $"Command-line argument count={args.Length}; switches={string.Join(",", args.Where(a => a.StartsWith("--", StringComparison.Ordinal)).Select(a => a.Split('=', 2)[0]))}");
         WriteLog(writer, $"Window station: {GetUserObjectName(GetProcessWindowStation())}; desktop: {GetUserObjectName(GetThreadDesktop(GetCurrentThreadId()))}");
@@ -220,6 +221,63 @@ internal static class TrayDiagnostic
         return new Guid(hash.AsSpan(0, 16));
     }
 
+    private static void WriteIntegrityLevel(TextWriter writer)
+    {
+        IntPtr token = IntPtr.Zero;
+        IntPtr buffer = IntPtr.Zero;
+        try
+        {
+            if (!OpenProcessToken(Process.GetCurrentProcess().Handle, 0x0008, out token))
+            {
+                WriteLog(writer, $"Token integrity query failed: OpenProcessToken error={Marshal.GetLastWin32Error()}");
+                return;
+            }
+
+            GetTokenInformation(token, 25, IntPtr.Zero, 0, out var required);
+            if (required == 0)
+            {
+                WriteLog(writer, $"Token integrity query failed: GetTokenInformation error={Marshal.GetLastWin32Error()}");
+                return;
+            }
+
+            buffer = Marshal.AllocHGlobal((int)required);
+            if (!GetTokenInformation(token, 25, buffer, required, out _))
+            {
+                WriteLog(writer, $"Token integrity query failed: GetTokenInformation error={Marshal.GetLastWin32Error()}");
+                return;
+            }
+
+            var label = Marshal.PtrToStructure<TokenMandatoryLabel>(buffer);
+            var count = Marshal.ReadByte(GetSidSubAuthorityCount(label.Label.Sid));
+            if (count == 0)
+            {
+                WriteLog(writer, "Token integrity level: unavailable (SID has no subauthorities)");
+                return;
+            }
+
+            var rid = unchecked((uint)Marshal.ReadInt32(GetSidSubAuthority(label.Label.Sid, (uint)(count - 1))));
+            var name = rid switch
+            {
+                < 0x1000 => "Untrusted",
+                < 0x2000 => "Low",
+                < 0x3000 => "Medium",
+                < 0x4000 => "High",
+                < 0x5000 => "System",
+                _ => "Protected"
+            };
+            WriteLog(writer, $"Token integrity level: {name}; RID=0x{rid:X}");
+        }
+        catch (Exception ex)
+        {
+            WriteLog(writer, $"Token integrity query failed: {ex.GetType().Name}");
+        }
+        finally
+        {
+            if (buffer != IntPtr.Zero) Marshal.FreeHGlobal(buffer);
+            if (token != IntPtr.Zero) CloseHandle(token);
+        }
+    }
+
     private static string SafeIdentityName()
     {
         try { return WindowsIdentity.GetCurrent().Name; }
@@ -264,6 +322,19 @@ internal static class TrayDiagnostic
 
     private static void WriteLog(TextWriter writer, string message) =>
         writer.WriteLine($"{DateTime.UtcNow:O} {message}");
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SidAndAttributes
+    {
+        public IntPtr Sid;
+        public uint Attributes;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct TokenMandatoryLabel
+    {
+        public SidAndAttributes Label;
+    }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct NotifyIconData
@@ -334,6 +405,25 @@ internal static class TrayDiagnostic
         public UIntPtr PeakProcessMemoryUsed;
         public UIntPtr PeakJobMemoryUsed;
     }
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool OpenProcessToken(IntPtr processHandle, uint desiredAccess, out IntPtr tokenHandle);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetTokenInformation(IntPtr tokenHandle, int tokenInformationClass,
+        IntPtr tokenInformation, uint tokenInformationLength, out uint returnLength);
+
+    [DllImport("advapi32.dll")]
+    private static extern IntPtr GetSidSubAuthorityCount(IntPtr sid);
+
+    [DllImport("advapi32.dll")]
+    private static extern IntPtr GetSidSubAuthority(IntPtr sid, uint subAuthorityIndex);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CloseHandle(IntPtr handle);
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
