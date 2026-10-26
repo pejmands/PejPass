@@ -12,6 +12,8 @@ public sealed class Vault
 
     public List<VaultEntry> Entries { get; set; } = [];
 
+    public List<SiteProfile> SiteProfiles { get; set; } = [];
+
     public List<EntryHistoryItem> History { get; set; } = [];
 
     /// <summary>Soft-deleted entries (recoverable until purged).</summary>
@@ -33,6 +35,12 @@ public sealed class Vault
             Id = Id,
             Name = Name,
             Entries = [.. Entries.Select(CloneEntry)],
+            SiteProfiles = [.. SiteProfiles.Select(profile => new SiteProfile
+            {
+                Id = profile.Id,
+                Name = profile.Name,
+                Domains = [.. profile.Domains]
+            })],
             History = [.. History.Select(CloneHistoryItem)],
             Trash = [.. Trash.Select(item => new TrashedEntry
             {
@@ -105,6 +113,7 @@ public sealed class Vault
         var copy = source.CreateSnapshot();
         Name = copy.Name;
         Entries = copy.Entries;
+        SiteProfiles = copy.SiteProfiles;
         History = copy.History;
         Trash = copy.Trash;
         Touch();
@@ -116,6 +125,7 @@ public sealed class Vault
 
         Name = snapshot.Name;
         Entries = snapshot.Entries;
+        SiteProfiles = snapshot.SiteProfiles;
         History = snapshot.History;
         Trash = snapshot.Trash;
         KdfParameters = snapshot.KdfParameters;
