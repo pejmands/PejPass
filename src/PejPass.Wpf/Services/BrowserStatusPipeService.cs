@@ -1015,7 +1015,8 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             : RequiresCrossDomainConfirmation(entry, domain, allowDomainMismatch);
         var desktopConfirmationCompleted = false;
 
-        // Accounts from another website always require explicit confirmation.
+        // The setting controls whether the desktop confirmation window is shown.
+        // A second approval path is still required when this preference is disabled.
         if (requireDesktopConfirmation)
         {
             var confirmationError = await ConfirmBrowserAutofillAsync(
