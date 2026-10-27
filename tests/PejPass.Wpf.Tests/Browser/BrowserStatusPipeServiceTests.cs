@@ -586,6 +586,55 @@ public sealed class BrowserStatusPipeServiceTests
     }
 
     [Fact]
+    public async Task FillCredential_DoesNotShowConfirmationWhenHelloIsUnavailableAndConfirmationIsDisabled()
+    {
+        using var session = new VaultSession();
+        using var keyMaterial = CreateMaterial();
+        var settings = new AppSettings
+        {
+            BrowserAutofillConfirmationEnabled = false,
+            BrowserAutofillWindowsHelloEnabled = true
+        };
+        var approvals = new List<string>();
+        using var service = new BrowserStatusPipeService(
+            session,
+            (domain, title, username) =>
+            {
+                approvals.Add($"desktop:{domain}:{title}:{username}");
+                return true;
+            },
+            domain =>
+            {
+                approvals.Add($"hello:{domain}");
+                return Task.FromResult(WindowsHelloVerificationResult.Unavailable);
+            },
+            settings);
+        var entry = new VaultEntry
+        {
+            Title = "Example",
+            Username = "alice",
+            Password = "must-not-be-returned",
+            Url = "https://example.com/login"
+        };
+        session.Open(new Vault { Entries = [entry] },
+            Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"), keyMaterial);
+
+        var response = await service.CreateFillCredentialResponseAsync(JsonSerializer.Serialize(new
+        {
+            type = "fillCredential",
+            protocolVersion = 1,
+            domain = "login.example.com",
+            id = entry.Id.ToString("D")
+        }));
+
+        Assert.Equal(["hello:login.example.com"], approvals);
+        Assert.Equal("error", response.Type);
+        Assert.Equal("hello_unavailable", response.Code);
+        Assert.Null(response.Password);
+        Assert.DoesNotContain("must-not-be-returned", JsonSerializer.Serialize(response));
+    }
+
+    [Fact]
     public async Task FillCredential_RejectsAccountFromAnotherDomain()
     {
         using var session = new VaultSession();
