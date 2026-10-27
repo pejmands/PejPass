@@ -28,8 +28,9 @@ if (!string.IsNullOrWhiteSpace(stageZipPath))
         var pendingPath = GetRequiredEnvironmentVariable("PEJPASS_UPDATE_TEST_PENDING_PATH");
         var stageResultPath = GetRequiredEnvironmentVariable("PEJPASS_UPDATE_TEST_STAGE_RESULT_PATH");
 
-        using var packageStream = File.OpenRead(stageZipPath);
-        var expectedSha256 = Convert.ToHexString(SHA256.HashData(packageStream));
+        string expectedSha256;
+        using (var packageStream = File.OpenRead(stageZipPath))
+            expectedSha256 = Convert.ToHexString(SHA256.HashData(packageStream));
 
         AssemblyLoadContext.Default.Resolving += static (context, assemblyName) =>
         {
