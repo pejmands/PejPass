@@ -627,7 +627,7 @@ public sealed class BrowserStatusPipeServiceTests
             id = entry.Id.ToString("D")
         }));
 
-        Assert.Equal(["hello:login.example.com"], approvals);
+        Assert.Equal(new[] { "hello:login.example.com" }, approvals);
         Assert.Equal("error", response.Type);
         Assert.Equal("hello_unavailable", response.Code);
         Assert.Null(response.Password);
