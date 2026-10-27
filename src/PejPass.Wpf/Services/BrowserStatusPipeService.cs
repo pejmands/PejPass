@@ -10,6 +10,7 @@ using PejPass.Wpf.Views;
 using System.IO;
 using System.IO.Pipes;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 
 namespace PejPass.Wpf.Services;
@@ -91,6 +92,19 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     private const int MaximumCredentialResults = 25;
     private const int MaximumPasswordLength = 4096;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly nint HwndTopmost = new(-1);
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoMove = 0x0002;
+    private const uint SwpShowWindow = 0x0040;
+
+    [LibraryImport("user32.dll", EntryPoint = "SetWindowPos")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetWindowPos(
+        nint hWnd, nint hWndInsertAfter, int x, int y, int cx, int cy, uint flags);
+
+    [LibraryImport("user32.dll", EntryPoint = "SetForegroundWindow")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetForegroundWindow(nint hWnd);
     private readonly CancellationTokenSource _shutdown = new();
     private readonly object _vaultLockSync = new();
     private CancellationTokenSource _vaultLockCancellation = new();
@@ -1002,7 +1016,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         var desktopConfirmationCompleted = false;
 
         // Accounts from another website always require explicit confirmation.
-        if (requireDesktopConfirmation || isCrossDomainSelection)
+        if (requireDesktopConfirmation)
         {
             var confirmationError = await ConfirmBrowserAutofillAsync(
                 entry, domain, isCrossDomainSelection, cancellationToken);
@@ -1011,6 +1025,9 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
 
             desktopConfirmationCompleted = true;
         }
+
+        if (!requireDesktopConfirmation && !requireWindowsHello)
+            return (null, "confirmation_required");
 
         if (cancellationToken.IsCancellationRequested || !_vaultSession.IsActive)
             return (null, "vault_locked");
@@ -1100,6 +1117,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             ResizeMode = System.Windows.ResizeMode.NoResize,
             ShowInTaskbar = false,
             ShowActivated = true,
+            Topmost = true,
             AllowsTransparency = true,
             Background = System.Windows.Media.Brushes.Transparent,
             Opacity = 0,
@@ -1109,7 +1127,19 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         try
         {
             owner.Show();
+            var ownerHandle = new System.Windows.Interop.WindowInteropHelper(owner).EnsureHandle();
+            _ = SetWindowPos(
+                ownerHandle,
+                HwndTopmost,
+                0,
+                0,
+                0,
+                0,
+                SwpNoMove | SwpNoSize | SwpShowWindow);
             owner.Activate();
+            _ = SetForegroundWindow(ownerHandle);
+            await System.Windows.Threading.Dispatcher.Yield(
+                System.Windows.Threading.DispatcherPriority.Input);
 
             var message = $"Confirm browser autofill\nSite: {domain}\nAccount: {SanitizePromptText(title)}\nUsername: {SanitizePromptText(username)}";
             return await WindowsHelloHelper.VerifyAsync(owner, message);
