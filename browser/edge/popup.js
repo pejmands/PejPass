@@ -544,14 +544,17 @@ async function fillCredential(credential) {
         fill_denied: "Filling was cancelled in PejPass desktop.",
         hello_failed: "Windows Hello did not verify your identity. No credentials were released.",
         hello_cancelled: "Windows Hello verification was cancelled. No credentials were released.",
-        hello_unavailable: "Windows Hello is unavailable or not configured. Set it up in Windows, then try again.",
+        hello_unavailable: "Windows Hello is unavailable. No credentials were released. Enable Confirmation window or make Windows Hello available.",
+        confirmation_required: "Autofill was blocked because both confirmation methods are disabled. Enable Confirmation window or Windows Hello in PejPass settings.",
         fill_unavailable: "PejPass approved the request, but the active page could not be filled. Reopen the popup and try again.",
         invalid_domain: "The active site address is not valid for filling.",
         invalid_request: "The fill request was invalid.",
         lookup_unavailable: "PejPass could not retrieve this account. Try again.",
         unsupported_request: "The installed PejPass browser host is outdated. Rebuild the BrowserHost and rerun install-dev-host.ps1.",
         invalid_app_response: "The browser host received an incompatible response from PejPass. Rebuild both PejPass and BrowserHost, then reinstall the host.",
-        invalid_message: "The browser host rejected the fill message. Rebuild BrowserHost and reinstall the host.",
+        invalid_message: "BrowserHost could not parse the extension request. Rebuild the browser extension and reinstall BrowserHost.",
+        desktop_invalid_message: "PejPass desktop rejected the BrowserHost request. Fully exit PejPass and launch the rebuilt desktop app; reinstall BrowserHost if this persists.",
+        host_failure: "BrowserHost encountered an internal error. Rebuild BrowserHost and reinstall the host.",
         host_unavailable: "The PejPass browser host is unavailable. Open PejPass desktop and try again."
       };
       credentialsStatus.textContent = messages[response.code] ||
