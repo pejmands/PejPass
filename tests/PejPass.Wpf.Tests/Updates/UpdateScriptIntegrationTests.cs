@@ -1,5 +1,6 @@
 using PejPass.Wpf.Services;
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -93,6 +94,104 @@ public sealed class UpdateScriptIntegrationTests
         Assert.Contains("Rollback failed", error, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(layout.BackupDirectory, error, StringComparison.OrdinalIgnoreCase);
         Assert.False(Directory.Exists(layout.StageRoot));
+    }
+
+    [Fact]
+    public async Task StageUpdate_AppliesVerifiedPackageEndToEndInTemporaryInstallation()
+    {
+        using var layout = UpdateTestLayout.Create();
+
+        var packagePath = Path.Combine(layout.RootDirectory, "update-package.zip");
+        ZipFile.CreateFromDirectory(
+            layout.SourceDirectory,
+            packagePath,
+            CompressionLevel.Optimal,
+            includeBaseDirectory: false);
+
+        using var launcher = StartStagedUpdate(layout, packagePath);
+        var launchResult = await launcher.WaitForExitAsync();
+        Assert.True(
+            launchResult.ExitCode == 0,
+            "The staging helper failed.\nSTDOUT:\n" + launchResult.StandardOutput +
+            "\nSTDERR:\n" + launchResult.StandardError);
+
+        await WaitForFileAsync(layout.StageResultPath, TimeSpan.FromSeconds(10));
+        var stagedPaths = File.ReadAllLines(layout.StageResultPath);
+        Assert.Equal(3, stagedPaths.Length);
+
+        var scriptPath = stagedPaths[0];
+        var stageRoot = stagedPaths[1];
+        var backupDirectory = stagedPaths[2];
+        var deadline = DateTime.UtcNow + UpdaterTimeout;
+
+        while (DateTime.UtcNow < deadline)
+        {
+            if (File.Exists(layout.ErrorPath))
+            {
+                throw new InvalidOperationException(
+                    "The end-to-end updater failed: " + File.ReadAllText(layout.ErrorPath));
+            }
+
+            var processCount = File.Exists(layout.ProcessIdLogPath)
+                ? File.ReadAllLines(layout.ProcessIdLogPath).Length
+                : 0;
+
+            if (processCount >= 2
+                && File.ReadAllText(layout.VersionPath) == "new-version"
+                && File.ReadAllText(layout.InstalledHostPath) == "new-host"
+                && !File.Exists(scriptPath)
+                && !Directory.Exists(stageRoot)
+                && !Directory.Exists(backupDirectory))
+            {
+                Assert.False(File.Exists(packagePath));
+
+                var processIds = File.ReadAllLines(layout.ProcessIdLogPath);
+                Assert.True(
+                    int.TryParse(processIds[^1], NumberStyles.None, CultureInfo.InvariantCulture, out var installedProcessId));
+
+                using var installedProcess = Process.GetProcessById(installedProcessId);
+                Assert.False(installedProcess.HasExited);
+                return;
+            }
+
+            await Task.Delay(100);
+        }
+
+        var details = File.Exists(layout.ErrorPath)
+            ? File.ReadAllText(layout.ErrorPath)
+            : "Timed out waiting for the generated update script and temporary artifacts to be cleaned up.";
+        throw new TimeoutException("The end-to-end update did not finish successfully. " + details);
+    }
+
+    private static RunningUpdater StartStagedUpdate(UpdateTestLayout layout, string packagePath)
+    {
+        var helperPath = Path.Combine(AppContext.BaseDirectory, "PejPass.UpdateTestHost.exe");
+        Assert.True(File.Exists(helperPath), $"Updater test host was not found at '{helperPath}'.");
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = helperPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        startInfo.Environment["LOCALAPPDATA"] = layout.LocalAppDataDirectory;
+        startInfo.Environment["TEMP"] = layout.TempDirectory;
+        startInfo.Environment["TMP"] = layout.TempDirectory;
+        startInfo.Environment["PEJPASS_UPDATE_TEST_PID_LOG"] = layout.ProcessIdLogPath;
+        startInfo.Environment["PEJPASS_UPDATE_TEST_STAGE_ZIP"] = packagePath;
+        startInfo.Environment["PEJPASS_UPDATE_TEST_TARGET_VERSION"] = "2.0.1";
+        startInfo.Environment["PEJPASS_UPDATE_TEST_INSTALL_EXE_PATH"] = layout.InstalledAppPath;
+        startInfo.Environment["PEJPASS_UPDATE_TEST_PENDING_PATH"] = layout.PendingPath;
+        startInfo.Environment["PEJPASS_UPDATE_TEST_STAGE_RESULT_PATH"] = layout.StageResultPath;
+        startInfo.Environment.Remove("PEJPASS_UPDATE_TEST_EXIT_AFTER_MS");
+
+        var process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("Could not launch UpdateService staging in the test helper.");
+
+        return new RunningUpdater(process);
     }
 
     private static RunningUpdater StartUpdater(UpdateTestLayout layout, int? exitAfterMilliseconds)
@@ -244,6 +343,7 @@ public sealed class UpdateScriptIntegrationTests
             PendingPath = Path.Combine(rootDirectory, "State", "pending-whats-new.txt");
             ScriptPath = Path.Combine(rootDirectory, "apply-update.ps1");
             ProcessIdLogPath = Path.Combine(rootDirectory, "State", "started-processes.txt");
+            StageResultPath = Path.Combine(rootDirectory, "State", "stage-result.txt");
             LegacyHostPidLogPath = Path.Combine(rootDirectory, "State", "legacy-host-processes.txt");
             HostLockReadyPath = Path.Combine(rootDirectory, "State", "legacy-host-lock-ready.txt");
             ErrorPath = Path.Combine(TempDirectory, "PejPass-update-error.txt");
@@ -260,7 +360,9 @@ public sealed class UpdateScriptIntegrationTests
         public string PendingPath { get; }
         public string ScriptPath { get; }
         public string ProcessIdLogPath { get; }
+        public string StageResultPath { get; }
         public string LegacyHostPidLogPath { get; }
+        public string InstalledAppPath => Path.Combine(InstallDirectory, "PejPass.exe");
         public string HostLockReadyPath { get; }
         public string ErrorPath { get; }
         public string CoordinationSuffix { get; }
