@@ -132,9 +132,17 @@ public sealed class UpdateScriptIntegrationTests
                     "The end-to-end updater failed: " + File.ReadAllText(layout.ErrorPath));
             }
 
-            var processCount = File.Exists(layout.ProcessIdLogPath)
-                ? File.ReadAllLines(layout.ProcessIdLogPath).Length
-                : 0;
+            var processCount = 0;
+            if (File.Exists(layout.ProcessIdLogPath))
+            {
+                try
+                {
+                    processCount = File.ReadAllLines(layout.ProcessIdLogPath).Length;
+                }
+                catch (IOException)
+                {
+                }
+            }
 
             if (processCount >= 2
                 && File.ReadAllText(layout.VersionPath) == "new-version"
