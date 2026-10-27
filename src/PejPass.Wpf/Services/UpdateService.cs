@@ -337,6 +337,17 @@ public sealed class UpdateService : IDisposable
                     "The update package does not place PejPass.exe at the root of its application payload.");
             }
 
+            var browserHostDirectory = Path.Combine(sourceDir, "BrowserHost");
+            if (!Directory.Exists(browserHostDirectory) ||
+                !Directory.EnumerateFiles(
+                    browserHostDirectory,
+                    "PejPass.BrowserHost.exe",
+                    SearchOption.AllDirectories).Any())
+            {
+                throw new InvalidDataException(
+                    "The update package does not contain BrowserHost/PejPass.BrowserHost.exe.");
+            }
+
             TryDeleteFile(zipPath);
 
             scriptPath = Path.Combine(
