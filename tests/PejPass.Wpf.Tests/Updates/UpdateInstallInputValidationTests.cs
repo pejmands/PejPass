@@ -79,6 +79,8 @@ public sealed class UpdateInstallInputValidationTests
         Assert.Contains(@"Local\PejPass.UpdateRequested.v1", script);
         Assert.Contains("Get-Process -Name 'PejPass.BrowserHost'", script);
         Assert.Contains("Stop-Process -Id", script);
+        Assert.Contains("SourceHostExecutables", script);
+        Assert.Contains("HostShutdownDeadline", script);
         Assert.Contains(".update-paused.", script);
         Assert.Contains("Get-Process -Id $AppProcessId", script);
         Assert.Contains("/MIR", script);
