@@ -430,8 +430,23 @@ public sealed class UpdateService : IDisposable
         string stageRoot,
         string pendingPath,
         string backupDir,
-        int processId)
+        int processId,
+        string? coordinationSuffix = null)
     {
+        if (coordinationSuffix is not null &&
+            (coordinationSuffix.Length is < 1 or > 64 ||
+             coordinationSuffix.Any(character =>
+                 !char.IsAsciiLetterOrDigit(character) && character is not '-' and not '_')))
+        {
+            throw new ArgumentException(
+                "The update coordination suffix may contain only ASCII letters, digits, hyphens, and underscores.",
+                nameof(coordinationSuffix));
+        }
+
+        var updateMutexName = @"Local\PejPass.UpdateLock.v1" +
+            (coordinationSuffix is null ? string.Empty : "." + coordinationSuffix);
+        var updateEventName = @"Local\PejPass.UpdateRequested.v1" +
+            (coordinationSuffix is null ? string.Empty : "." + coordinationSuffix);
         var nl = Environment.NewLine;
 
         return string.Join(nl, new[]
@@ -445,8 +460,8 @@ public sealed class UpdateService : IDisposable
             "$BackupDir = " + EscapePowerShellLiteral(backupDir),
             "$AppProcessId = " + processId,
             "$LockPath = Join-Path $env:LOCALAPPDATA 'PejPass\\BrowserHost.update.lock'",
-            "$UpdateMutexName = 'Local\\PejPass.UpdateLock.v1'",
-            "$UpdateEventName = 'Local\\PejPass.UpdateRequested.v1'",
+            "$UpdateMutexName = " + EscapePowerShellLiteral(updateMutexName),
+            "$UpdateEventName = " + EscapePowerShellLiteral(updateEventName),
             "$ErrorPath = Join-Path $env:TEMP 'PejPass-update-error.txt'",
             "$ScriptPath = $MyInvocation.MyCommand.Path",
             "$UpdateLock = $null",
