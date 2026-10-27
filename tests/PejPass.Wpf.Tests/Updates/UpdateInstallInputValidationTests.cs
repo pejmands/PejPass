@@ -75,6 +75,7 @@ public sealed class UpdateInstallInputValidationTests
         Assert.Contains(@"$AppDir = 'C:\Apps\100%\O''Brien\PejPass'", script);
         Assert.Contains("$AppProcessId = 4242", script);
         Assert.Contains("[System.IO.FileShare]::None", script);
+        Assert.Contains("Local\\\\PejPass.Update.v1", script);
         Assert.Contains("Get-Process -Id $AppProcessId", script);
         Assert.Contains("/MIR", script);
         Assert.Contains("if ($RollbackSucceeded)", script);
