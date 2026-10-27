@@ -61,21 +61,58 @@ public sealed class UpdateInstallInputValidationTests
     }
 
     [Fact]
-    public void BuildApplyScript_EscapesPercentSignsAndEmbedsProcessId()
+    public void BuildApplyScript_UsesSafePowerShellLiteralsAndCoordinatesBrowserHostShutdown()
     {
         var script = UpdateService.BuildApplyScript(
-            appDir: @"C:\Apps\100%\PejPass",
+            appDir: @"C:\Apps\100%\O'Brien\PejPass",
             sourceDir: @"C:\Temp\stage",
-            exePath: @"C:\Apps\100%\PejPass\PejPass.exe",
+            exePath: @"C:\Apps\100%\O'Brien\PejPass\PejPass.exe",
             stageRoot: @"C:\Temp\stage",
             pendingPath: @"C:\Users\u\pending.txt",
             backupDir: @"C:\Temp\backup",
             processId: 4242);
 
-        Assert.Contains(@"set ""APPDIR=C:\Apps\100%%\PejPass""", script);
-        Assert.Contains(@"set ""APP_PID=4242""", script);
-        Assert.DoesNotContain(@"100%\PejPass", script.Replace("%%", string.Empty));
-        Assert.Contains("goto install_failed", script);
+        Assert.Contains(@"$AppDir = 'C:\Apps\100%\O''Brien\PejPass'", script);
+        Assert.Contains("$AppProcessId = 4242", script);
+        Assert.Contains("[System.IO.FileShare]::None", script);
+        Assert.Contains("Get-Process -Id $AppProcessId", script);
+        Assert.Contains("/MIR", script);
+        Assert.Contains("if ($RollbackSucceeded)", script);
+        Assert.Contains("Backup preserved at:", script);
+    }
+
+    [Fact]
+    public void BrowserHostUpdateLock_ExcludesUpdaterAndNewHostDuringInstallation()
+    {
+        var lockPath = Path.Combine(Path.GetTempPath(), $"PejPass-lock-{Guid.NewGuid():N}.lock");
+        File.WriteAllBytes(lockPath, []);
+
+        try
+        {
+            using (var hostLock = new FileStream(
+                lockPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                Assert.Throws<IOException>(() =>
+                {
+                    using var updaterLock = new FileStream(
+                        lockPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+                });
+            }
+
+            using (var updaterLock = new FileStream(
+                lockPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                Assert.Throws<IOException>(() =>
+                {
+                    using var newHostLock = new FileStream(
+                        lockPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                });
+            }
+        }
+        finally
+        {
+            File.Delete(lockPath);
+        }
     }
 
     [Fact]
