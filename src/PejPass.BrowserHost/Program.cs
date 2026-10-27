@@ -18,10 +18,44 @@ internal static class Program
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly SemaphoreSlim PipeRequestGate = new(1, 1);
 
+    private const string UpdateMutexName = @"Local\PejPass.Update.v1";
+
+    private static bool IsUpdateInProgress()
+    {
+        try
+        {
+            using var updateMutex = Mutex.OpenExisting(UpdateMutexName);
+            try
+            {
+                if (!updateMutex.WaitOne(0))
+                    return true;
+
+                updateMutex.ReleaseMutex();
+                return false;
+            }
+            catch (AbandonedMutexException)
+            {
+                updateMutex.ReleaseMutex();
+                return false;
+            }
+        }
+        catch (WaitHandleCannotBeOpenedException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return true;
+        }
+    }
+
     private static FileStream? TryAcquireUpdateLock()
     {
         try
         {
+            if (IsUpdateInProgress())
+                return null;
+
             var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             if (string.IsNullOrWhiteSpace(localAppData))
                 return null;
@@ -45,11 +79,19 @@ internal static class Program
                 }
             }
 
-            return new FileStream(
+            var updateLock = new FileStream(
                 lockPath,
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.Read);
+
+            if (IsUpdateInProgress())
+            {
+                updateLock.Dispose();
+                return null;
+            }
+
+            return updateLock;
         }
         catch (IOException)
         {
@@ -58,6 +100,19 @@ internal static class Program
         catch (UnauthorizedAccessException)
         {
             return null;
+        }
+    }
+
+    private static async Task<bool> WaitForUpdateRequestAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(250));
+        while (true)
+        {
+            if (IsUpdateInProgress())
+                return true;
+
+            if (!await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+                return false;
         }
     }
 
@@ -70,6 +125,8 @@ internal static class Program
         using var input = Console.OpenStandardInput();
         using var output = Console.OpenStandardOutput();
         using var shutdown = new CancellationTokenSource();
+        using var updateRequestCancellation = new CancellationTokenSource();
+        var updateRequestTask = WaitForUpdateRequestAsync(updateRequestCancellation.Token);
         var writeLock = new SemaphoreSlim(1, 1);
         var activeTasks = new ConcurrentDictionary<long, Task>();
         long nextTaskId = 0;
@@ -79,7 +136,15 @@ internal static class Program
         {
             while (true)
             {
-                var message = await ReadMessageAsync(input, shutdown.Token).ConfigureAwait(false);
+                var readTask = ReadMessageAsync(input, shutdown.Token);
+                var completedTask = await Task.WhenAny(readTask, updateRequestTask).ConfigureAwait(false);
+                if (completedTask == updateRequestTask && await updateRequestTask.ConfigureAwait(false))
+                {
+                    shutdown.Cancel();
+                    break;
+                }
+
+                var message = await readTask.ConfigureAwait(false);
                 if (message is null) break;
 
                 var taskId = Interlocked.Increment(ref nextTaskId);
@@ -111,6 +176,8 @@ internal static class Program
         finally
         {
             shutdown.Cancel();
+            updateRequestCancellation.Cancel();
+            try { await updateRequestTask.ConfigureAwait(false); } catch (OperationCanceledException) { }
             try { await watcher.ConfigureAwait(false); } catch { }
             writeLock.Dispose();
         }
