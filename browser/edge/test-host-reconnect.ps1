@@ -92,13 +92,12 @@ $registrationChanged = $false
 
 try {
     Write-Host "Building and preparing an isolated test installation..."
+    $registrationChanged = $true
     & $installScript -ExtensionId $ExtensionId -InstallDirectory $testInstallDirectory
 
     if (-not (Test-Path -LiteralPath $testHostPath -PathType Leaf)) {
         throw "The test BrowserHost executable was not created: $testHostPath"
     }
-
-    $registrationChanged = $true
     Write-Host "Switching Edge's native-host registration to the temporary installation..."
     Stop-HostProcessesAtPath $originalHostPath
 
