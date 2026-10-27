@@ -144,9 +144,22 @@ public sealed class UpdateScriptIntegrationTests
                 }
             }
 
+            var installedPayloadMatches = false;
+            try
+            {
+                installedPayloadMatches =
+                    File.ReadAllText(layout.VersionPath) == "new-version"
+                    && File.ReadAllText(layout.InstalledHostPath) == "new-host";
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+
             if (processCount >= 2
-                && File.ReadAllText(layout.VersionPath) == "new-version"
-                && File.ReadAllText(layout.InstalledHostPath) == "new-host"
+                && installedPayloadMatches
                 && !File.Exists(scriptPath)
                 && !Directory.Exists(stageRoot)
                 && !Directory.Exists(backupDirectory))
