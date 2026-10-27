@@ -442,7 +442,7 @@ public sealed class UpdateService : IDisposable
             "$UpdateEvent = $null",
             "$SourceHostRoot = Join-Path $SourceDir 'BrowserHost'",
             "$HostRoot = [System.IO.Path]::GetFullPath((Join-Path $AppDir 'BrowserHost'))",
-            "$HostRootPrefix = $HostRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar",
+            "$HostRootPrefix = $HostRoot + [System.IO.Path]::DirectorySeparatorChar",
             "$PausedHostFiles = [System.Collections.Generic.List[string]]::new()",
             "$UpdateMutex = [System.Threading.Mutex]::new($false, $UpdateMutexName)",
             "$UpdateMutexAcquired = $false",
