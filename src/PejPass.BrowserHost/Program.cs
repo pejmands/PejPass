@@ -18,11 +18,103 @@ internal static class Program
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly SemaphoreSlim PipeRequestGate = new(1, 1);
 
+    private const string UpdateEventName = @"Local\PejPass.UpdateRequested.v1";
+
+    private static bool IsUpdateInProgress()
+    {
+        try
+        {
+            using var updateEvent = EventWaitHandle.OpenExisting(UpdateEventName);
+            return updateEvent.WaitOne(0);
+        }
+        catch (WaitHandleCannotBeOpenedException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return true;
+        }
+    }
+
+    private static FileStream? TryAcquireUpdateLock()
+    {
+        try
+        {
+            if (IsUpdateInProgress())
+                return null;
+
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (string.IsNullOrWhiteSpace(localAppData))
+                return null;
+
+            var lockDirectory = Path.Combine(localAppData, "PejPass");
+            Directory.CreateDirectory(lockDirectory);
+
+            var lockPath = Path.Combine(lockDirectory, "BrowserHost.update.lock");
+            if (!File.Exists(lockPath))
+            {
+                try
+                {
+                    using var createdLockFile = new FileStream(
+                        lockPath,
+                        FileMode.CreateNew,
+                        FileAccess.Write,
+                        FileShare.Read);
+                }
+                catch (IOException) when (File.Exists(lockPath))
+                {
+                }
+            }
+
+            var updateLock = new FileStream(
+                lockPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read);
+
+            if (IsUpdateInProgress())
+            {
+                updateLock.Dispose();
+                return null;
+            }
+
+            return updateLock;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static async Task<bool> WaitForUpdateRequestAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(250));
+        while (true)
+        {
+            if (IsUpdateInProgress())
+                return true;
+
+            if (!await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+                return false;
+        }
+    }
+
     private static async Task<int> Main()
     {
+        using var updateLock = TryAcquireUpdateLock();
+        if (updateLock is null)
+            return 0;
+
         using var input = Console.OpenStandardInput();
         using var output = Console.OpenStandardOutput();
         using var shutdown = new CancellationTokenSource();
+        using var updateRequestCancellation = new CancellationTokenSource();
+        var updateRequestTask = WaitForUpdateRequestAsync(updateRequestCancellation.Token);
         var writeLock = new SemaphoreSlim(1, 1);
         var activeTasks = new ConcurrentDictionary<long, Task>();
         long nextTaskId = 0;
@@ -32,7 +124,31 @@ internal static class Program
         {
             while (true)
             {
-                var message = await ReadMessageAsync(input, shutdown.Token).ConfigureAwait(false);
+                var readTask = ReadMessageAsync(input, shutdown.Token);
+                var completedTask = await Task.WhenAny(readTask, updateRequestTask).ConfigureAwait(false);
+                if (completedTask == updateRequestTask && await updateRequestTask.ConfigureAwait(false))
+                {
+                    shutdown.Cancel();
+                    _ = readTask.ContinueWith(
+                        static completed => { _ = completed.Exception; },
+                        CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                        TaskScheduler.Default);
+                    break;
+                }
+
+                if (IsUpdateInProgress())
+                {
+                    shutdown.Cancel();
+                    _ = readTask.ContinueWith(
+                        static completed => { _ = completed.Exception; },
+                        CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                        TaskScheduler.Default);
+                    break;
+                }
+
+                var message = await readTask.ConfigureAwait(false);
                 if (message is null) break;
 
                 var taskId = Interlocked.Increment(ref nextTaskId);
@@ -64,6 +180,8 @@ internal static class Program
         finally
         {
             shutdown.Cancel();
+            updateRequestCancellation.Cancel();
+            try { await updateRequestTask.ConfigureAwait(false); } catch (OperationCanceledException) { }
             try { await watcher.ConfigureAwait(false); } catch { }
             writeLock.Dispose();
         }
@@ -291,6 +409,9 @@ internal static class Program
 
     private static HostResponse LaunchDesktopApp()
     {
+        if (IsUpdateInProgress())
+            return Error("app_unavailable");
+
         var appPath = GetConfiguredDesktopAppPath();
         if (appPath is null || !File.Exists(appPath))
             return Error("app_unavailable");
@@ -360,6 +481,9 @@ internal static class Program
 
             for (var attempt = 0; attempt < 25; attempt++)
             {
+                if (IsUpdateInProgress())
+                    return Error("app_unavailable");
+
                 await Task.Delay(400).ConfigureAwait(false);
                 response = await SendPipeRequestAsync(hostRequest).ConfigureAwait(false);
                 if (response.Error != "app_unavailable")
@@ -395,6 +519,9 @@ internal static class Program
 
             for (var attempt = 0; attempt < 25; attempt++)
             {
+                if (IsUpdateInProgress())
+                    return Error("app_unavailable");
+
                 await Task.Delay(400).ConfigureAwait(false);
                 response = await SendPipeRequestAsync(request).ConfigureAwait(false);
                 if (response.Error != "app_unavailable")
