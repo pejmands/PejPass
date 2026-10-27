@@ -54,13 +54,13 @@ public sealed class UpdateScriptIntegrationTests
         await WaitForProcessCountAsync(layout.ProcessIdLogPath, 1, TimeSpan.FromSeconds(10));
 
         ScriptResult result;
+        Assert.Equal("new-version", File.ReadAllText(layout.VersionPath));
         using (var lockedVersionFile = new FileStream(
             layout.VersionPath,
             FileMode.Open,
             FileAccess.Read,
             FileShare.None))
         {
-            Assert.Equal("new-version", File.ReadAllText(layout.VersionPath));
             result = await updater.WaitForExitAsync();
         }
 
@@ -105,7 +105,6 @@ public sealed class UpdateScriptIntegrationTests
         startInfo.Environment["TEMP"] = layout.TempDirectory;
         startInfo.Environment["TMP"] = layout.TempDirectory;
         startInfo.Environment["PEJPASS_UPDATE_TEST_PID_LOG"] = layout.ProcessIdLogPath;
-        startInfo.Environment["PEJPASS_UPDATE_TEST_COORDINATION_SUFFIX"] = layout.CoordinationSuffix;
 
         if (exitAfterMilliseconds is null)
             startInfo.Environment.Remove("PEJPASS_UPDATE_TEST_EXIT_AFTER_MS");
