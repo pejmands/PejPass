@@ -614,6 +614,57 @@ public sealed class BrowserStatusPipeServiceTests
             Title = "Example",
             Username = "alice",
             Password = "must-not-be-returned",
+            Url = "https://different.example/login"
+        };
+        session.Open(new Vault { Entries = [entry] },
+            Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"), keyMaterial);
+
+        var response = await service.CreateFillCredentialResponseAsync(JsonSerializer.Serialize(new
+        {
+            type = "fillCredential",
+            protocolVersion = 1,
+            domain = "login.example.com",
+            id = entry.Id.ToString("D"),
+            allowDomainMismatch = true
+        }));
+
+        Assert.Equal(new[] { "hello:login.example.com" }, approvals);
+        Assert.Equal("error", response.Type);
+        Assert.Equal("hello_unavailable", response.Code);
+        Assert.Null(response.Password);
+        Assert.DoesNotContain("must-not-be-returned", JsonSerializer.Serialize(response));
+    }
+
+    [Fact]
+    public async Task FillCredential_RejectsWhenBothConfirmationMethodsAreDisabled()
+    {
+        using var session = new VaultSession();
+        using var keyMaterial = CreateMaterial();
+        var settings = new AppSettings
+        {
+            BrowserAutofillConfirmationEnabled = false,
+            BrowserAutofillWindowsHelloEnabled = false
+        };
+        var desktopConfirmationCalled = false;
+        var helloCalled = false;
+        using var service = new BrowserStatusPipeService(
+            session,
+            (_, _, _) =>
+            {
+                desktopConfirmationCalled = true;
+                return true;
+            },
+            _ =>
+            {
+                helloCalled = true;
+                return Task.FromResult(WindowsHelloVerificationResult.Verified);
+            },
+            settings);
+        var entry = new VaultEntry
+        {
+            Title = "Example",
+            Username = "alice",
+            Password = "must-not-be-returned",
             Url = "https://example.com/login"
         };
         session.Open(new Vault { Entries = [entry] },
@@ -627,9 +678,10 @@ public sealed class BrowserStatusPipeServiceTests
             id = entry.Id.ToString("D")
         }));
 
-        Assert.Equal(new[] { "hello:login.example.com" }, approvals);
+        Assert.False(desktopConfirmationCalled);
+        Assert.False(helloCalled);
         Assert.Equal("error", response.Type);
-        Assert.Equal("hello_unavailable", response.Code);
+        Assert.Equal("confirmation_required", response.Code);
         Assert.Null(response.Password);
         Assert.DoesNotContain("must-not-be-returned", JsonSerializer.Serialize(response));
     }
