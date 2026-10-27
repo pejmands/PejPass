@@ -260,7 +260,9 @@ public sealed class UpdateService : IDisposable
     internal static StagedUpdate StageUpdate(
         string zipPath,
         string targetVersion,
-        string expectedSha256)
+        string expectedSha256,
+        string? processPathOverride = null,
+        string? coordinationSuffix = null)
     {
         if (string.IsNullOrWhiteSpace(zipPath))
             throw new ArgumentException("Update package path is required.", nameof(zipPath));
@@ -275,7 +277,8 @@ public sealed class UpdateService : IDisposable
         if (!IsValidSha256(expectedSha256))
             throw new ArgumentException("The expected update package SHA-256 hash is invalid.", nameof(expectedSha256));
 
-        var processPath = Environment.ProcessPath
+        // The overrides are internal test seams; production calls always use the real process path.
+        var processPath = processPathOverride ?? Environment.ProcessPath
             ?? throw new InvalidOperationException("Could not determine the running PejPass executable path.");
 
         if (!Path.GetFileName(processPath).Equals("PejPass.exe", StringComparison.OrdinalIgnoreCase))
@@ -363,7 +366,8 @@ public sealed class UpdateService : IDisposable
                     stageRoot,
                     PendingWhatsNewPath,
                     Path.Combine(Path.GetTempPath(), "PejPass-backup-" + Guid.NewGuid().ToString("N")),
-                    Environment.ProcessId),
+                    Environment.ProcessId,
+                    coordinationSuffix),
                 new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
 
             return new StagedUpdate(scriptPath, stageRoot, normalizedTargetVersion);
