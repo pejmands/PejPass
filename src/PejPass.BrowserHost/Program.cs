@@ -18,7 +18,7 @@ internal static class Program
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly SemaphoreSlim PipeRequestGate = new(1, 1);
 
-    private const string UpdateEventName = @"Local\\PejPass.UpdateRequested.v1";
+    private const string UpdateEventName = @"Local\PejPass.UpdateRequested.v1";
 
     private static bool IsUpdateInProgress()
     {
@@ -129,6 +129,17 @@ internal static class Program
                 if (completedTask == updateRequestTask && await updateRequestTask.ConfigureAwait(false))
                 {
                     shutdown.Cancel();
+                    break;
+                }
+
+                if (IsUpdateInProgress())
+                {
+                    shutdown.Cancel();
+                    _ = readTask.ContinueWith(
+                        static completed => { _ = completed.Exception; },
+                        CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                        TaskScheduler.Default);
                     break;
                 }
 
