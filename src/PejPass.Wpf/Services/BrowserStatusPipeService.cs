@@ -1026,11 +1026,11 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             desktopConfirmationCompleted = true;
         }
 
-        if (!requireDesktopConfirmation && !requireWindowsHello)
-            return (null, "confirmation_required");
-
         if (cancellationToken.IsCancellationRequested || !_vaultSession.IsActive)
             return (null, "vault_locked");
+
+        if (!requireDesktopConfirmation && !requireWindowsHello)
+            return (null, "confirmation_required");
 
         if (requireWindowsHello)
         {
