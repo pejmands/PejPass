@@ -21,6 +21,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     private IClipboardService? _clipboardService;
     private readonly Func<string, string, string, bool>? _fillConfirmation;
     private readonly Func<string, Task<WindowsHelloVerificationResult>>? _fillHelloVerification;
+    private readonly Func<AppSettings?>? _settingsProvider;
 
     internal BrowserStatusPipeService(VaultSession vaultSession)
         : this(vaultSession, null) { }
@@ -30,6 +31,13 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         Func<string, string, string, bool> fillConfirmation,
         Func<string, Task<WindowsHelloVerificationResult>> fillHelloVerification)
         : this(vaultSession, null, EventsPipeName, fillConfirmation, fillHelloVerification) { }
+
+    internal BrowserStatusPipeService(
+        VaultSession vaultSession,
+        Func<string, string, string, bool> fillConfirmation,
+        Func<string, Task<WindowsHelloVerificationResult>> fillHelloVerification,
+        AppSettings settings)
+        : this(vaultSession, null, EventsPipeName, fillConfirmation, fillHelloVerification, () => settings) { }
 
     internal BrowserStatusPipeService(
         VaultSession vaultSession,
@@ -63,7 +71,8 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         Application.Services.VaultService? vaultService,
         string eventsPipeName,
         Func<string, string, string, bool>? fillConfirmation,
-        Func<string, Task<WindowsHelloVerificationResult>>? fillHelloVerification = null)
+        Func<string, Task<WindowsHelloVerificationResult>>? fillHelloVerification = null,
+        Func<AppSettings?>? settingsProvider = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(eventsPipeName);
         _vaultSession = vaultSession;
@@ -71,6 +80,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         _eventsPipeName = eventsPipeName;
         _fillConfirmation = fillConfirmation;
         _fillHelloVerification = fillHelloVerification;
+        _settingsProvider = settingsProvider;
         _vaultSession.StateChanged += OnVaultStateChanged;
     }
 
@@ -974,7 +984,9 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         var requireWindowsHello = true;
         try
         {
-            var settings = App.Services.GetService<AppSettings>();
+            var settings = _settingsProvider is null
+                ? App.Services.GetService<AppSettings>()
+                : _settingsProvider();
             requireDesktopConfirmation = settings?.BrowserAutofillConfirmationEnabled ?? true;
             requireWindowsHello = settings?.BrowserAutofillWindowsHelloEnabled ?? true;
         }
@@ -1009,14 +1021,10 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
             if (helloResult == WindowsHelloVerificationResult.Unavailable)
             {
-                // If Hello is unavailable, fall back to explicit desktop approval.
+                // Respect the disabled confirmation setting. If Hello is unavailable
+                // and no desktop confirmation was required, fail closed without a prompt.
                 if (!desktopConfirmationCompleted)
-                {
-                    var confirmationError = await ConfirmBrowserAutofillAsync(
-                        entry, domain, isCrossDomainSelection, cancellationToken);
-                    if (confirmationError is not null)
-                        return (null, confirmationError);
-                }
+                    return (null, "hello_unavailable");
             }
             else if (helloResult != WindowsHelloVerificationResult.Verified)
             {
@@ -1091,7 +1099,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             WindowStyle = System.Windows.WindowStyle.None,
             ResizeMode = System.Windows.ResizeMode.NoResize,
             ShowInTaskbar = false,
-            ShowActivated = false,
+            ShowActivated = true,
             AllowsTransparency = true,
             Background = System.Windows.Media.Brushes.Transparent,
             Opacity = 0,
@@ -1101,6 +1109,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         try
         {
             owner.Show();
+            owner.Activate();
 
             var message = $"Confirm browser autofill\nSite: {domain}\nAccount: {SanitizePromptText(title)}\nUsername: {SanitizePromptText(username)}";
             return await WindowsHelloHelper.VerifyAsync(owner, message);
