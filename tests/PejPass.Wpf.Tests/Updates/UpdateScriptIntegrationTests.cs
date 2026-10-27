@@ -28,6 +28,26 @@ public sealed class UpdateScriptIntegrationTests
     }
 
     [Fact]
+    public async Task GeneratedUpdater_StopsLegacyBrowserHostBeforeWaitingForExclusiveLock()
+    {
+        using var layout = UpdateTestLayout.Create();
+
+        using var legacyHost = layout.StartLegacyBrowserHost();
+        await WaitForFileAsync(layout.HostLockReadyPath, TimeSpan.FromSeconds(10));
+        Assert.False(legacyHost.HasExited);
+
+        using var updater = StartUpdater(layout, exitAfterMilliseconds: null);
+        var result = await updater.WaitForExitAsync();
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.True(legacyHost.HasExited);
+        Assert.Equal("new-version", File.ReadAllText(layout.VersionPath));
+        Assert.Equal("new-host", File.ReadAllText(layout.InstalledHostPath));
+        Assert.False(Directory.Exists(layout.BackupDirectory));
+        await WaitForProcessCountAsync(layout.ProcessIdLogPath, 1, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public async Task GeneratedUpdater_RestoresBackupWhenUpdatedProcessExitsDuringStartup()
     {
         using var layout = UpdateTestLayout.Create();
@@ -116,6 +136,20 @@ public sealed class UpdateScriptIntegrationTests
             ?? throw new InvalidOperationException("Could not launch the updater integration test process.");
 
         return new RunningUpdater(process);
+    }
+
+    private static async Task WaitForFileAsync(string path, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (File.Exists(path))
+                return;
+
+            await Task.Delay(50);
+        }
+
+        throw new TimeoutException($"Expected a test host readiness file at '{path}'.");
     }
 
     private static async Task WaitForProcessCountAsync(string path, int expectedCount, TimeSpan timeout)
@@ -210,6 +244,8 @@ public sealed class UpdateScriptIntegrationTests
             PendingPath = Path.Combine(rootDirectory, "State", "pending-whats-new.txt");
             ScriptPath = Path.Combine(rootDirectory, "apply-update.ps1");
             ProcessIdLogPath = Path.Combine(rootDirectory, "State", "started-processes.txt");
+            LegacyHostPidLogPath = Path.Combine(rootDirectory, "State", "legacy-host-processes.txt");
+            HostLockReadyPath = Path.Combine(rootDirectory, "State", "legacy-host-lock-ready.txt");
             ErrorPath = Path.Combine(TempDirectory, "PejPass-update-error.txt");
             CoordinationSuffix = Guid.NewGuid().ToString("N");
         }
@@ -224,10 +260,40 @@ public sealed class UpdateScriptIntegrationTests
         public string PendingPath { get; }
         public string ScriptPath { get; }
         public string ProcessIdLogPath { get; }
+        public string LegacyHostPidLogPath { get; }
+        public string HostLockReadyPath { get; }
         public string ErrorPath { get; }
         public string CoordinationSuffix { get; }
         public string VersionPath => Path.Combine(InstallDirectory, "version.txt");
-        public string InstalledHostPath => Path.Combine(InstallDirectory, "BrowserHost", "PejPass.BrowserHost.exe");
+        public string BrowserHostDirectory => Path.Combine(InstallDirectory, "BrowserHost");
+        public string SourceBrowserHostDirectory => Path.Combine(SourceDirectory, "BrowserHost");
+        public string InstalledHostPath => Path.Combine(BrowserHostDirectory, "PejPass.BrowserHost.exe");
+
+        public Process StartLegacyBrowserHost()
+        {
+            var helperExe = Path.Combine(AppContext.BaseDirectory, "PejPass.UpdateTestHost.exe");
+            if (!File.Exists(helperExe))
+                throw new FileNotFoundException("Updater test host executable was not copied to the test output.", helperExe);
+
+            File.Copy(helperExe, InstalledHostPath, overwrite: true);
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = InstalledHostPath,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            startInfo.Environment["LOCALAPPDATA"] = LocalAppDataDirectory;
+            startInfo.Environment["TEMP"] = TempDirectory;
+            startInfo.Environment["TMP"] = TempDirectory;
+            startInfo.Environment["PEJPASS_UPDATE_TEST_PID_LOG"] = LegacyHostPidLogPath;
+            startInfo.Environment["PEJPASS_UPDATE_TEST_HOST_LOCK_READY"] = HostLockReadyPath;
+            startInfo.Environment["PEJPASS_UPDATE_TEST_HOLD_HOST_LOCK"] = "1";
+            startInfo.Environment.Remove("PEJPASS_UPDATE_TEST_EXIT_AFTER_MS");
+
+            return Process.Start(startInfo)
+                ?? throw new InvalidOperationException("Could not start the simulated legacy BrowserHost.");
+        }
 
         public static UpdateTestLayout Create()
         {
@@ -244,6 +310,8 @@ public sealed class UpdateScriptIntegrationTests
 
             CopyTestHostRuntime(layout.InstallDirectory);
             CopyTestHostRuntime(layout.SourceDirectory);
+            CopyTestHostSupportFiles(layout.BrowserHostDirectory);
+            CopyTestHostSupportFiles(layout.SourceBrowserHostDirectory);
 
             File.WriteAllText(layout.VersionPath, "old-version");
             File.WriteAllText(Path.Combine(layout.SourceDirectory, "version.txt"), "new-version");
@@ -299,6 +367,15 @@ public sealed class UpdateScriptIntegrationTests
                 Path.Combine(destinationDirectory, "PejPass.deps.json"));
         }
 
+        private static void CopyTestHostSupportFiles(string destinationDirectory)
+        {
+            var helperBasePath = Path.Combine(AppContext.BaseDirectory, "PejPass.UpdateTestHost");
+            foreach (var suffix in new[] { ".dll", ".runtimeconfig.json", ".deps.json" })
+            {
+                CopyIfExists(helperBasePath + suffix, Path.Combine(destinationDirectory, "PejPass.UpdateTestHost" + suffix));
+            }
+        }
+
         private static void CopyIfExists(string source, string destination)
         {
             if (File.Exists(source))
@@ -308,6 +385,7 @@ public sealed class UpdateScriptIntegrationTests
         public void Dispose()
         {
             StopLoggedProcesses(ProcessIdLogPath);
+            StopLoggedProcesses(LegacyHostPidLogPath);
 
             try
             {
