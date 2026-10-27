@@ -29,6 +29,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\PejPass.Wpf\PejPass.Wpf.csproj" />
+    <ProjectReference Include="..\PejPass.UpdateTestHost\PejPass.UpdateTestHost.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
+
+  <Target Name="CopyUpdateTestHostArtifacts" AfterTargets="Build">
+    <ItemGroup>
+      <UpdateTestHostArtifact Include="$(MSBuildThisFileDirectory)..\PejPass.UpdateTestHost\bin\$(Platform)\$(Configuration)\net10.0-windows\PejPass.UpdateTestHost.*" />
+    </ItemGroup>
+    <Error Condition="'@(UpdateTestHostArtifact)' == ''" Text="The updater integration-test host was not built." />
+    <Copy SourceFiles="@(UpdateTestHostArtifact)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>
