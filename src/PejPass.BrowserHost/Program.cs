@@ -213,9 +213,13 @@ internal static class Program
         {
             response = await CreateResponseAsync(messageBytes).ConfigureAwait(false);
         }
-        catch
+        catch (JsonException)
         {
             response = Error("invalid_message");
+        }
+        catch (Exception)
+        {
+            response = Error("host_failure");
         }
 
         try
@@ -859,7 +863,10 @@ internal static class Program
                 var retryAfter = root.TryGetProperty("retryAfterSeconds", out var retryElement) &&
                                  retryElement.TryGetInt32(out var seconds) && seconds is >= 1 and <= 3600
                     ? seconds : 0;
-                return new PipeResponse(default, IsSafeErrorCode(code) ? code : "invalid_app_response", retryAfter);
+                var normalizedCode = code == "invalid_message"
+                    ? "desktop_invalid_message"
+                    : IsSafeErrorCode(code) ? code : "invalid_app_response";
+                return new PipeResponse(default, normalizedCode, retryAfter);
             }
             return new PipeResponse(root, null);
         }
