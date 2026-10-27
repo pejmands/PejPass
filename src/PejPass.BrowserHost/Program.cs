@@ -18,26 +18,14 @@ internal static class Program
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly SemaphoreSlim PipeRequestGate = new(1, 1);
 
-    private const string UpdateMutexName = @"Local\PejPass.Update.v1";
+    private const string UpdateEventName = @"Local\\PejPass.UpdateRequested.v1";
 
     private static bool IsUpdateInProgress()
     {
         try
         {
-            using var updateMutex = Mutex.OpenExisting(UpdateMutexName);
-            try
-            {
-                if (!updateMutex.WaitOne(0))
-                    return true;
-
-                updateMutex.ReleaseMutex();
-                return false;
-            }
-            catch (AbandonedMutexException)
-            {
-                updateMutex.ReleaseMutex();
-                return false;
-            }
+            using var updateEvent = EventWaitHandle.OpenExisting(UpdateEventName);
+            return updateEvent.WaitOne(0);
         }
         catch (WaitHandleCannotBeOpenedException)
         {
