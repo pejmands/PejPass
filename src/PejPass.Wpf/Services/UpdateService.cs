@@ -341,7 +341,7 @@ public sealed class UpdateService : IDisposable
 
             scriptPath = Path.Combine(
                 Path.GetTempPath(),
-                "PejPass-apply-update-" + Guid.NewGuid().ToString("N") + ".cmd");
+                "PejPass-apply-update-" + Guid.NewGuid().ToString("N") + ".ps1");
 
             File.WriteAllText(
                 scriptPath,
@@ -352,7 +352,8 @@ public sealed class UpdateService : IDisposable
                     stageRoot,
                     PendingWhatsNewPath,
                     Path.Combine(Path.GetTempPath(), "PejPass-backup-" + Guid.NewGuid().ToString("N")),
-                    Environment.ProcessId));
+                    Environment.ProcessId),
+                new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
 
             return new StagedUpdate(scriptPath, stageRoot, normalizedTargetVersion);
         }
@@ -372,13 +373,27 @@ public sealed class UpdateService : IDisposable
     {
         try
         {
-            Process.Start(new ProcessStartInfo
+            var powerShellPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.System),
+                "WindowsPowerShell",
+                "v1.0",
+                "powershell.exe");
+
+            var startInfo = new ProcessStartInfo
             {
-                FileName = staged.ScriptPath,
-                UseShellExecute = true,
+                FileName = powerShellPath,
+                UseShellExecute = false,
                 WindowStyle = ProcessWindowStyle.Hidden,
                 CreateNoWindow = true
-            });
+            };
+            startInfo.ArgumentList.Add("-NoProfile");
+            startInfo.ArgumentList.Add("-ExecutionPolicy");
+            startInfo.ArgumentList.Add("Bypass");
+            startInfo.ArgumentList.Add("-File");
+            startInfo.ArgumentList.Add(staged.ScriptPath);
+
+            if (Process.Start(startInfo) is null)
+                throw new InvalidOperationException("The update process could not be started.");
         }
         catch
         {
@@ -408,45 +423,111 @@ public sealed class UpdateService : IDisposable
     {
         var nl = Environment.NewLine;
 
-        return
-            "@echo off" + nl +
-            "setlocal EnableExtensions" + nl +
-            "set \"APPDIR=" + EscapeCmd(appDir) + "\"" + nl +
-            "set \"SOURCE=" + EscapeCmd(sourceDir) + "\"" + nl +
-            "set \"EXE=" + EscapeCmd(exePath) + "\"" + nl +
-            "set \"STAGE=" + EscapeCmd(stageRoot) + "\"" + nl +
-            "set \"PENDING=" + EscapeCmd(pendingPath) + "\"" + nl +
-            "set \"BACKUP=" + EscapeCmd(backupDir) + "\"" + nl +
-            "set \"APP_PID=" + processId + "\"" + nl +
-            "set /a WAITCOUNT=0" + nl +
-            ":wait" + nl +
-            "tasklist /FI \"PID eq %APP_PID%\" 2>nul | find \"%APP_PID%\" >nul" + nl +
-            "if errorlevel 1 goto apply_update" + nl +
-            "set /a WAITCOUNT+=1" + nl +
-            "if %WAITCOUNT% GEQ 120 goto install_failed" + nl +
-            "timeout /t 1 /nobreak >nul" + nl +
-            "goto wait" + nl +
-            ":apply_update" + nl +
-            "mkdir \"%BACKUP%\" 2>nul" + nl +
-            "robocopy \"%APPDIR%\" \"%BACKUP%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1" + nl +
-            "if errorlevel 8 goto install_failed" + nl +
-            "robocopy \"%SOURCE%\" \"%APPDIR%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1" + nl +
-            "if errorlevel 8 goto install_failed" + nl +
-            "start \"\" \"%EXE%\"" + nl +
-            "rmdir /S /Q \"%STAGE%\" 2>nul" + nl +
-            "rmdir /S /Q \"%BACKUP%\" 2>nul" + nl +
-            "del \"%~f0\" 2>nul" + nl +
-            "exit /b 0" + nl +
-            ":install_failed" + nl +
-            "if exist \"%BACKUP%\" robocopy \"%BACKUP%\" \"%APPDIR%\" /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1 >nul" + nl +
-            "start \"\" \"%EXE%\" 2>nul" + nl +
-            "del \"%PENDING%\" 2>nul" + nl +
-            "echo PejPass update installation failed. Previous application files were restored when possible. > \"%TEMP%\\PejPass-update-error.txt\"" + nl +
-            "rmdir /S /Q \"%STAGE%\" 2>nul" + nl +
-            "rmdir /S /Q \"%BACKUP%\" 2>nul" + nl +
-            "del \"%~f0\" 2>nul" + nl +
-            "exit /b 1" + nl;
+        return string.Join(nl, new[]
+        {
+            "$ErrorActionPreference = 'Stop'",
+            "$AppDir = " + EscapePowerShellLiteral(appDir),
+            "$SourceDir = " + EscapePowerShellLiteral(sourceDir),
+            "$ExePath = " + EscapePowerShellLiteral(exePath),
+            "$StageRoot = " + EscapePowerShellLiteral(stageRoot),
+            "$PendingPath = " + EscapePowerShellLiteral(pendingPath),
+            "$BackupDir = " + EscapePowerShellLiteral(backupDir),
+            "$AppProcessId = " + processId,
+            "$LockPath = Join-Path $env:LOCALAPPDATA 'PejPass\\BrowserHost.update.lock'",
+            "$ErrorPath = Join-Path $env:TEMP 'PejPass-update-error.txt'",
+            "$ScriptPath = $MyInvocation.MyCommand.Path",
+            "$UpdateLock = $null",
+            "$BackupComplete = $false",
+            "$InstallStarted = $false",
+            "$RollbackSucceeded = $false",
+            "$FailureMessage = $null",
+            "try {",
+            "    $AppDeadline = [DateTime]::UtcNow.AddSeconds(120)",
+            "    $AppProcess = Get-Process -Id $AppProcessId -ErrorAction SilentlyContinue",
+            "    while ($null -ne $AppProcess) {",
+            "        if ([DateTime]::UtcNow -ge $AppDeadline) { throw [System.TimeoutException]::new('Timed out waiting for PejPass to exit.') }",
+            "        Start-Sleep -Seconds 1",
+            "        $AppProcess = Get-Process -Id $AppProcessId -ErrorAction SilentlyContinue",
+            "    }",
+            "",
+            "    $LockDirectory = Split-Path -Parent $LockPath",
+            "    [System.IO.Directory]::CreateDirectory($LockDirectory) | Out-Null",
+            "    $LockDeadline = [DateTime]::UtcNow.AddSeconds(120)",
+            "    while ($null -eq $UpdateLock) {",
+            "        try {",
+            "            $UpdateLock = [System.IO.File]::Open($LockPath, [System.IO.FileMode]::OpenOrCreate, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)",
+            "        } catch [System.IO.IOException] {",
+            "            if ([DateTime]::UtcNow -ge $LockDeadline) { throw [System.TimeoutException]::new('Timed out waiting for BrowserHost processes to exit.') }",
+            "            Start-Sleep -Seconds 1",
+            "        }",
+            "    }",
+            "",
+            "    if (-not (Test-Path -LiteralPath $AppDir -PathType Container)) { throw [System.IO.DirectoryNotFoundException]::new('The PejPass installation directory was not found.') }",
+            "    New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null",
+            "    & robocopy $AppDir $BackupDir /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1 | Out-Null",
+            "    $BackupExitCode = $LASTEXITCODE",
+            "    if ($BackupExitCode -ge 8) { throw [System.IO.IOException]::new('Could not back up the existing PejPass installation. Robocopy exit code: ' + $BackupExitCode) }",
+            "    if (-not (Test-Path -LiteralPath (Join-Path $BackupDir 'PejPass.exe') -PathType Leaf)) { throw [System.IO.IOException]::new('The PejPass backup is incomplete because PejPass.exe is missing.') }",
+            "    $BackupComplete = $true",
+            "",
+            "    $InstallStarted = $true",
+            "    & robocopy $SourceDir $AppDir /E /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1 | Out-Null",
+            "    $InstallExitCode = $LASTEXITCODE",
+            "    if ($InstallExitCode -ge 8) { throw [System.IO.IOException]::new('Could not copy the update files. Robocopy exit code: ' + $InstallExitCode) }",
+            "    if (-not (Test-Path -LiteralPath $ExePath -PathType Leaf)) { throw [System.IO.IOException]::new('The updated PejPass.exe is missing after installation.') }",
+            "",
+            "    $StartedProcess = Start-Process -FilePath $ExePath -PassThru -ErrorAction Stop",
+            "    Start-Sleep -Seconds 3",
+            "    $StartedProcess.Refresh()",
+            "    if ($StartedProcess.HasExited) { throw [System.InvalidOperationException]::new('The updated PejPass process exited during startup.') }",
+            "} catch {",
+            "    $FailureMessage = $_.Exception.Message",
+            "    if ($InstallStarted -and $BackupComplete) {",
+            "        $RollbackExitCode = 16",
+            "        try {",
+            "            & robocopy $BackupDir $AppDir /MIR /IS /IT /NFL /NDL /NJH /NJS /R:2 /W:1 | Out-Null",
+            "            $RollbackExitCode = $LASTEXITCODE",
+            "            $RollbackSucceeded = $RollbackExitCode -lt 8 -and (Test-Path -LiteralPath $ExePath -PathType Leaf)",
+            "        } catch {",
+            "            $RollbackSucceeded = $false",
+            "        }",
+            "        if (-not $RollbackSucceeded) {",
+            "            $FailureMessage += ' Rollback failed (robocopy exit code ' + $RollbackExitCode + ').'",
+            "        }",
+            "    }",
+            "} finally {",
+            "    if ($null -ne $UpdateLock) { $UpdateLock.Dispose() }",
+            "}",
+            "",
+            "if ($null -eq $FailureMessage) {",
+            "    Remove-Item -LiteralPath $StageRoot -Recurse -Force -ErrorAction SilentlyContinue",
+            "    Remove-Item -LiteralPath $BackupDir -Recurse -Force -ErrorAction SilentlyContinue",
+            "    Remove-Item -LiteralPath $ScriptPath -Force -ErrorAction SilentlyContinue",
+            "    exit 0",
+            "}",
+            "",
+            "if ($RollbackSucceeded) {",
+            "    Remove-Item -LiteralPath $BackupDir -Recurse -Force -ErrorAction SilentlyContinue",
+            "} elseif ($BackupComplete -and $InstallStarted) {",
+            "    $FailureMessage += ' Backup preserved at: ' + $BackupDir",
+            "} else {",
+            "    Remove-Item -LiteralPath $BackupDir -Recurse -Force -ErrorAction SilentlyContinue",
+            "}",
+            "",
+            "if ((-not $InstallStarted -or $RollbackSucceeded) -and (Test-Path -LiteralPath $ExePath -PathType Leaf)) {",
+            "    try { Start-Process -FilePath $ExePath -ErrorAction Stop | Out-Null }",
+            "    catch { $FailureMessage += ' The previous PejPass process could not be started: ' + $_.Exception.Message }",
+            "}",
+            "Remove-Item -LiteralPath $PendingPath -Force -ErrorAction SilentlyContinue",
+            "Remove-Item -LiteralPath $StageRoot -Recurse -Force -ErrorAction SilentlyContinue",
+            "try { Set-Content -LiteralPath $ErrorPath -Value $FailureMessage -Encoding UTF8 -Force } catch { }",
+            "Remove-Item -LiteralPath $ScriptPath -Force -ErrorAction SilentlyContinue",
+            "exit 1"
+        }) + nl;
     }
+
+    private static string EscapePowerShellLiteral(string value) =>
+        "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";
 
     private static void TryDeleteDirectory(string path)
     {
