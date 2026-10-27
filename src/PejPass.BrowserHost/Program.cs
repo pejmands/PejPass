@@ -409,6 +409,9 @@ internal static class Program
 
     private static HostResponse LaunchDesktopApp()
     {
+        if (IsUpdateInProgress())
+            return Error("app_unavailable");
+
         var appPath = GetConfiguredDesktopAppPath();
         if (appPath is null || !File.Exists(appPath))
             return Error("app_unavailable");
@@ -478,6 +481,9 @@ internal static class Program
 
             for (var attempt = 0; attempt < 25; attempt++)
             {
+                if (IsUpdateInProgress())
+                    return Error("app_unavailable");
+
                 await Task.Delay(400).ConfigureAwait(false);
                 response = await SendPipeRequestAsync(hostRequest).ConfigureAwait(false);
                 if (response.Error != "app_unavailable")
@@ -513,6 +519,9 @@ internal static class Program
 
             for (var attempt = 0; attempt < 25; attempt++)
             {
+                if (IsUpdateInProgress())
+                    return Error("app_unavailable");
+
                 await Task.Delay(400).ConfigureAwait(false);
                 response = await SendPipeRequestAsync(request).ConfigureAwait(false);
                 if (response.Error != "app_unavailable")
