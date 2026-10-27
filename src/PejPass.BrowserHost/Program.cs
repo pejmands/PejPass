@@ -18,8 +18,55 @@ internal static class Program
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly SemaphoreSlim PipeRequestGate = new(1, 1);
 
+    private static FileStream? TryAcquireUpdateLock()
+    {
+        try
+        {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (string.IsNullOrWhiteSpace(localAppData))
+                return null;
+
+            var lockDirectory = Path.Combine(localAppData, "PejPass");
+            Directory.CreateDirectory(lockDirectory);
+
+            var lockPath = Path.Combine(lockDirectory, "BrowserHost.update.lock");
+            if (!File.Exists(lockPath))
+            {
+                try
+                {
+                    using var createdLockFile = new FileStream(
+                        lockPath,
+                        FileMode.CreateNew,
+                        FileAccess.Write,
+                        FileShare.Read);
+                }
+                catch (IOException) when (File.Exists(lockPath))
+                {
+                }
+            }
+
+            return new FileStream(
+                lockPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read);
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
     private static async Task<int> Main()
     {
+        using var updateLock = TryAcquireUpdateLock();
+        if (updateLock is null)
+            return 0;
+
         using var input = Console.OpenStandardInput();
         using var output = Console.OpenStandardOutput();
         using var shutdown = new CancellationTokenSource();
