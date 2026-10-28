@@ -586,6 +586,55 @@ public sealed class BrowserStatusPipeServiceTests
     }
 
     [Fact]
+    public async Task FillCredential_FillsWithoutPromptsWhenHelloIsUnavailableAndConfirmationIsDisabled()
+    {
+        using var session = new VaultSession();
+        using var keyMaterial = CreateMaterial();
+        var confirmationCalled = false;
+        var helloCalled = false;
+        var settings = new AppSettings
+        {
+            BrowserAutofillConfirmationEnabled = false,
+            BrowserAutofillWindowsHelloEnabled = true
+        };
+        using var service = new BrowserStatusPipeService(
+            session,
+            (_, _, _) =>
+            {
+                confirmationCalled = true;
+                return true;
+            },
+            _ =>
+            {
+                helloCalled = true;
+                return Task.FromResult(WindowsHelloVerificationResult.Unavailable);
+            },
+            settings);
+        var entry = new VaultEntry
+        {
+            Title = "Example",
+            Username = "alice",
+            Password = "fill-without-prompts",
+            Url = "https://example.com/login"
+        };
+        session.Open(new Vault { Entries = [entry] },
+            Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pejpass"), keyMaterial);
+
+        var response = await service.CreateFillCredentialResponseAsync(JsonSerializer.Serialize(new
+        {
+            type = "fillCredential",
+            protocolVersion = 1,
+            domain = "login.example.com",
+            id = entry.Id.ToString("D")
+        }));
+
+        Assert.False(confirmationCalled);
+        Assert.True(helloCalled);
+        Assert.Equal("credentialForFill", response.Type);
+        Assert.Equal("fill-without-prompts", response.Password);
+    }
+
+    [Fact]
     public async Task FillCredential_RejectsAccountFromAnotherDomain()
     {
         using var session = new VaultSession();
