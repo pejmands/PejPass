@@ -23,6 +23,13 @@ test("Chrome manifest is MV3 and retains the stable Chromium extension identity"
   assert.ok(chromeManifest.permissions.includes("scripting"));
 });
 
+test("Each browser builds an isolated package under its own dist directory", () => {
+  assert.match(buildScript, /Join-Path \$browserRoot "dist\\edge"/);
+  assert.match(buildScript, /Join-Path \$browserRoot "dist\\chrome"/);
+  assert.match(buildScript, /Join-Path \$browserRoot "dist\\firefox"/);
+  assert.match(buildScript, /"test-host-reconnect\.ps1"/);
+});
+
 test("Chrome build reuses the Edge runtime and shared injected script", () => {
   assert.match(buildScript, /ValidateSet\("edge",\s*"chrome",\s*"firefox"\)/);
   assert.match(buildScript, /Join-Path \$browserRoot "dist\\chrome"/);
