@@ -1017,19 +1017,10 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         {
             var helloResult = await VerifyBrowserAutofillWithWindowsHelloAsync(
                 domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
-            if (helloResult == WindowsHelloVerificationResult.Unavailable)
+            if (helloResult == WindowsHelloVerificationResult.Unavailable && !desktopConfirmationCompleted)
             {
-                if (!desktopConfirmationCompleted)
-                {
-                    // The disabled confirmation option must not be replaced by a desktop prompt.
-                    if (!requireDesktopConfirmation)
-                        return (null, "hello_unavailable");
-
-                    var confirmationError = await ConfirmBrowserAutofillAsync(
-                        entry, domain, isCrossDomainSelection, cancellationToken);
-                    if (confirmationError is not null)
-                        return (null, confirmationError);
-                }
+                // Do not replace an unavailable Windows Hello check with a confirmation prompt.
+                return (null, "hello_unavailable");
             }
             else if (helloResult != WindowsHelloVerificationResult.Verified)
             {
