@@ -585,8 +585,11 @@ public sealed class BrowserStatusPipeServiceTests
         Assert.Equal("fallback-secret", response.Password);
     }
 
-    [Fact]
-    public async Task FillCredential_FillsWithoutPromptsWhenHelloIsUnavailableAndConfirmationIsDisabled()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task FillCredential_FillsWithoutPromptsWhenHelloIsUnavailableAndConfirmationIsDisabled(
+        bool windowsHelloEnabled)
     {
         using var session = new VaultSession();
         using var keyMaterial = CreateMaterial();
@@ -595,7 +598,7 @@ public sealed class BrowserStatusPipeServiceTests
         var settings = new AppSettings
         {
             BrowserAutofillConfirmationEnabled = false,
-            BrowserAutofillWindowsHelloEnabled = true
+            BrowserAutofillWindowsHelloEnabled = windowsHelloEnabled
         };
         using var service = new BrowserStatusPipeService(
             session,
@@ -629,7 +632,7 @@ public sealed class BrowserStatusPipeServiceTests
         }));
 
         Assert.False(confirmationCalled);
-        Assert.True(helloCalled);
+        Assert.Equal(windowsHelloEnabled, helloCalled);
         Assert.Equal("credentialForFill", response.Type);
         Assert.Equal("fill-without-prompts", response.Password);
     }
