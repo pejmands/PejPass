@@ -21,6 +21,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     private IClipboardService? _clipboardService;
     private readonly Func<string, string, string, bool>? _fillConfirmation;
     private readonly Func<string, Task<WindowsHelloVerificationResult>>? _fillHelloVerification;
+    private readonly AppSettings? _settingsOverride;
 
     internal BrowserStatusPipeService(VaultSession vaultSession)
         : this(vaultSession, null) { }
@@ -30,6 +31,13 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         Func<string, string, string, bool> fillConfirmation,
         Func<string, Task<WindowsHelloVerificationResult>> fillHelloVerification)
         : this(vaultSession, null, EventsPipeName, fillConfirmation, fillHelloVerification) { }
+
+    internal BrowserStatusPipeService(
+        VaultSession vaultSession,
+        AppSettings settings,
+        Func<string, string, string, bool> fillConfirmation,
+        Func<string, Task<WindowsHelloVerificationResult>> fillHelloVerification)
+        : this(vaultSession, null, EventsPipeName, fillConfirmation, fillHelloVerification, settings) { }
 
     internal BrowserStatusPipeService(
         VaultSession vaultSession,
@@ -63,7 +71,8 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         Application.Services.VaultService? vaultService,
         string eventsPipeName,
         Func<string, string, string, bool>? fillConfirmation,
-        Func<string, Task<WindowsHelloVerificationResult>>? fillHelloVerification = null)
+        Func<string, Task<WindowsHelloVerificationResult>>? fillHelloVerification = null,
+        AppSettings? settingsOverride = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(eventsPipeName);
         _vaultSession = vaultSession;
@@ -71,6 +80,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         _eventsPipeName = eventsPipeName;
         _fillConfirmation = fillConfirmation;
         _fillHelloVerification = fillHelloVerification;
+        _settingsOverride = settingsOverride;
         _vaultSession.StateChanged += OnVaultStateChanged;
     }
 
@@ -974,7 +984,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         var requireWindowsHello = true;
         try
         {
-            var settings = App.Services.GetService<AppSettings>();
+            var settings = _settingsOverride ?? App.Services.GetService<AppSettings>();
             requireDesktopConfirmation = settings?.BrowserAutofillConfirmationEnabled ?? true;
             requireWindowsHello = settings?.BrowserAutofillWindowsHelloEnabled ?? true;
         }
@@ -1009,9 +1019,12 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
             if (helloResult == WindowsHelloVerificationResult.Unavailable)
             {
-                // If Hello is unavailable, fall back to explicit desktop approval.
                 if (!desktopConfirmationCompleted)
                 {
+                    // The disabled confirmation option must not be replaced by a desktop prompt.
+                    if (!requireDesktopConfirmation)
+                        return (null, "hello_unavailable");
+
                     var confirmationError = await ConfirmBrowserAutofillAsync(
                         entry, domain, isCrossDomainSelection, cancellationToken);
                     if (confirmationError is not null)
