@@ -1,6 +1,6 @@
 param()
 
-# Read-only check of the PejPass native messaging registration for Edge and Firefox.
+# Read-only check of the PejPass native messaging registration for Edge, Chrome, and Firefox.
 # It verifies the registry entry, the host manifest, the host executable, the allowed
 # extension identity, and where the desktop executable path (used by launchApp) comes from.
 #
@@ -16,6 +16,7 @@ function Report([bool]$ok, [string]$message) {
 
 $targets = @(
     @{ Browser = "Edge";    Key = "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\com.pejpass.browserhost"; AllowedProperty = "allowed_origins" },
+    @{ Browser = "Chrome";  Key = "HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.pejpass.browserhost"; AllowedProperty = "allowed_origins" },
     @{ Browser = "Firefox"; Key = "HKCU:\Software\Mozilla\NativeMessagingHosts\com.pejpass.browserhost";        AllowedProperty = "allowed_extensions" }
 )
 
@@ -58,10 +59,8 @@ foreach ($target in $targets) {
         Report ($allowed -contains "pejpass@pejmands.github.io") "Firefox allows the stable Gecko ID"
     }
 
-    # BrowserHost (GetConfiguredDesktopAppPath) looks in its own directory, in this order:
-    #   1) pejpass-host-config.json        (written by the Firefox install script)
-    #   2) com.pejpass.browserhost.json    (the Edge host manifest)
-    # and accepts only a fully qualified path to an existing file.
+    # BrowserHost resolves the desktop executable from pejpass-host-config.json (Firefox)
+    # or com.pejpass.browserhost.json (Chromium browsers), both next to the host executable.
     $desktopPath = $null
     $source = $null
     if ($hostExists) {
