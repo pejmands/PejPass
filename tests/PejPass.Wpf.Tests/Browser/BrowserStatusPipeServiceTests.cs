@@ -545,7 +545,7 @@ public sealed class BrowserStatusPipeServiceTests
     }
 
     [Fact]
-    public async Task FillCredential_FallsBackToDesktopConfirmationWhenWindowsHelloIsUnavailable()
+    public async Task FillCredential_SkipsUnavailableWindowsHelloWithoutAddingFallbackConfirmation()
     {
         using var session = new VaultSession();
         using var keyMaterial = CreateMaterial();
