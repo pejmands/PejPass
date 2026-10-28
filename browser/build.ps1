@@ -7,35 +7,29 @@ $ErrorActionPreference = "Stop"
 
 $browserRoot = $PSScriptRoot
 $sourcePath = Join-Path $browserRoot "shared\injected.js"
+$edgeDirectory = Join-Path $browserRoot "edge"
 
 if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
     throw "Shared injected script was not found: $sourcePath"
 }
 
-if ($Browser -eq "edge") {
-    $targetDirectory = Join-Path $browserRoot "edge"
-    if (-not (Test-Path -LiteralPath $targetDirectory -PathType Container)) {
-        throw "Edge package directory was not found: $targetDirectory"
-    }
-
-    $targetPath = Join-Path $targetDirectory "injected.js"
-    Copy-Item -LiteralPath $sourcePath -Destination $targetPath -Force
-    Write-Host "Updated $targetPath from the shared source."
-    return
-}
-
-$edgeDirectory = Join-Path $browserRoot "edge"
-if ($Browser -eq "chrome") {
-    $sourceManifestDirectory = Join-Path $browserRoot "chrome"
-    $targetDirectory = Join-Path $browserRoot "dist\chrome"
-}
-else {
-    $sourceManifestDirectory = Join-Path $browserRoot "firefox"
-    $targetDirectory = Join-Path $browserRoot "dist\firefox"
-}
-
 if (-not (Test-Path -LiteralPath $edgeDirectory -PathType Container)) {
     throw "Edge runtime package directory was not found: $edgeDirectory"
+}
+
+switch ($Browser) {
+    "edge" {
+        $sourceManifestDirectory = Join-Path $browserRoot "edge"
+        $targetDirectory = Join-Path $browserRoot "dist\edge"
+    }
+    "chrome" {
+        $sourceManifestDirectory = Join-Path $browserRoot "chrome"
+        $targetDirectory = Join-Path $browserRoot "dist\chrome"
+    }
+    "firefox" {
+        $sourceManifestDirectory = Join-Path $browserRoot "firefox"
+        $targetDirectory = Join-Path $browserRoot "dist\firefox"
+    }
 }
 
 $manifestTemplate = Join-Path $sourceManifestDirectory "manifest.json"
@@ -55,7 +49,8 @@ $excludedFiles = @(
     "package.json",
     "package-lock.json",
     "install-dev-host.ps1",
-    "uninstall-dev-host.ps1"
+    "uninstall-dev-host.ps1",
+    "test-host-reconnect.ps1"
 )
 
 Get-ChildItem -LiteralPath $edgeDirectory | ForEach-Object {
