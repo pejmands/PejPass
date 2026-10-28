@@ -5,6 +5,8 @@ const assert = require("node:assert/strict");
 
 const backgroundSource = fs.readFileSync(path.join(__dirname, "..", "background.js"), "utf8");
 const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "manifest.json"), "utf8"));
+const chromeManifest = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "..", "..", "chrome", "manifest.json"), "utf8"));
 const firefoxManifest = JSON.parse(
   fs.readFileSync(path.join(__dirname, "..", "..", "firefox", "manifest.json"), "utf8"));
 
@@ -22,8 +24,8 @@ test("persisted state never contains credentials", () => {
   assert.doesNotMatch(persisted[1], /password|totp|username|domain|url/i);
 });
 
-test("both manifests use PNG toolbar icons and the storage permission", () => {
-  for (const candidate of [manifest, firefoxManifest]) {
+test("all browser manifests use PNG toolbar icons and the storage permission", () => {
+  for (const candidate of [manifest, chromeManifest, firefoxManifest]) {
     assert.equal(typeof candidate.action.default_icon, "object");
     assert.ok(Object.values(candidate.action.default_icon).every((file) => file.endsWith(".png")));
     assert.ok(candidate.permissions.includes("storage"));

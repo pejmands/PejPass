@@ -8,12 +8,20 @@ The extension reads the active HTTP(S) tab hostname and requests matching accoun
 - .NET 10 SDK
 - A local checkout of this repository
 
-## Load the extension
+## Build and load the extension
+
+From the repository root, build the Edge package:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\browser\build.ps1 -Browser edge
+```
+
+The generated package is `browser\dist\edge`. To load it:
 
 1. Open `edge://extensions` in Edge.
 2. Enable **Developer mode**.
 3. Select **Load unpacked**.
-4. Choose the `browser/edge` directory.
+4. Choose the `browser/dist/edge` directory.
 5. Copy the extension ID shown on the extension card.
 
 ## Browser API compatibility
@@ -24,14 +32,14 @@ The extension's background and popup scripts use `browser-api.js` as a small com
 
 These differences come from the browsers, not from PejPass settings. See `browser/firefox/README.md` for Firefox setup.
 
-| Area | Edge (Chromium) | Firefox |
-|---|---|---|
-| Background | MV3 service worker (`importScripts`); the browser can stop it when idle | MV3 event page (`background.scripts`); the browser can unload it when idle |
-| Native host manifest | `allowed_origins` with the extension ID; `desktopAppPath` is stored in the manifest | `allowed_extensions` with the Gecko ID `pejpass@pejmands.github.io`; `desktopAppPath` is stored in `pejpass-host-config.json` next to the host executable |
-| Registry key | `HKCU\Software\Microsoft\Edge\NativeMessagingHosts` | `HKCU\Software\Mozilla\NativeMessagingHosts` |
-| Frames | `location.ancestorOrigins` lets PejPass verify the top-level site from a same-site subdomain frame | `ancestorOrigins` is not available, so a subdomain frame cannot prove its top-level site and is not filled; main-document fields still work |
-| Popup | The popup stays open until it loses focus | The popup may close earlier; PejPass waits about 1.2 seconds after a successful fill before closing |
-| Toolbar icon | PNG, rendered on a canvas | Same renderer |
+| Area | Edge | Chrome | Firefox |
+|---|---|---|---|
+| Background | MV3 service worker (`importScripts`); the browser can stop it when idle | Same Chromium service-worker runtime | MV3 event page (`background.scripts`); the browser can unload it when idle |
+| Native host manifest | `allowed_origins` with the stable Chromium extension ID; `desktopAppPath` is stored in the manifest | Same Chromium host manifest format and extension ID | `allowed_extensions` with the Gecko ID `pejpass@pejmands.github.io`; `desktopAppPath` is stored in `pejpass-host-config.json` next to the host executable |
+| Registry key | `HKCU\Software\Microsoft\Edge\NativeMessagingHosts` | `HKCU\Software\Google\Chrome\NativeMessagingHosts` | `HKCU\Software\Mozilla\NativeMessagingHosts` |
+| Frames | `location.ancestorOrigins` lets PejPass verify the top-level site from a same-site subdomain frame | Same as Edge | `ancestorOrigins` is not available, so a subdomain frame cannot prove its top-level site and is not filled; main-document fields still work |
+| Popup | The popup stays open until it loses focus | Same as Edge | The popup may close earlier; PejPass waits about 1.2 seconds after a successful fill before closing |
+| Toolbar icon | PNG, rendered on a canvas | Same renderer | Same renderer |
 
 To survive background restarts, the last known vault state (`locked`, `unlocked`, `unavailable`, plus whether Windows Hello is ready) is kept in `storage.session`. It contains no credentials, account names, or addresses, and it is cleared when the browser session ends. After a restart the background script confirms the state with the desktop app before relying on it.
 
@@ -41,7 +49,7 @@ Select the version number in the popup header to open the About panel. It shows 
 
 ## Shared browser-independent logic
 
-The login-form detection and filling implementation is maintained in `browser/shared/injected.js`. The `browser/edge/injected.js` file is the packaged copy required by the unpacked Edge extension; edit the shared source, not the packaged copy.
+The login-form detection and filling implementation is maintained in `browser/shared/injected.js`. The generated `browser/dist/edge/injected.js` file is the packaged copy loaded by Edge. Edit `browser/shared/injected.js`, not the generated output or runtime template.
 
 After changing the shared implementation, run these commands from `browser/edge`:
 
@@ -50,7 +58,7 @@ npm run build
 npm test
 ```
 
-The build script synchronizes the shared source into the Edge package. The tests exercise the shared implementation and fail if the packaged Edge copy is out of date. The Firefox build copies the same source into `browser/dist/firefox`.
+The build script creates a clean Edge package under `browser/dist/edge` and copies the shared source into it. `npm test` builds that package first, then tests the generated copy and shared implementation. The Chrome and Firefox packages are generated separately under `browser/dist/chrome` and `browser/dist/firefox`.
 
 ## Build and register the local host
 
@@ -62,7 +70,7 @@ powershell -ExecutionPolicy Bypass -File .\browser\edge\install-dev-host.ps1 -Ex
 
 The script builds `src/PejPass.Wpf` and `src/PejPass.BrowserHost`, writes a host manifest under the host's Release output directory, and registers that manifest for the current Windows user in Edge. The manifest records the desktop executable's absolute path in `desktopAppPath`; the host uses this configured path when handling `launchApp`, rather than deriving a path relative to the development checkout. It does not require administrator privileges. Restart Edge after registration if it was already running.
 
-To check a registration for Edge and Firefox without changing anything, run:
+To check Edge, Chrome, and Firefox registrations without changing anything, run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\browser\check-host-registration.ps1
