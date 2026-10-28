@@ -1090,8 +1090,9 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
             Height = 1,
             WindowStyle = System.Windows.WindowStyle.None,
             ResizeMode = System.Windows.ResizeMode.NoResize,
-            ShowInTaskbar = false,
-            ShowActivated = false,
+            ShowInTaskbar = true,
+            ShowActivated = true,
+            Topmost = true,
             AllowsTransparency = true,
             Background = System.Windows.Media.Brushes.Transparent,
             Opacity = 0,
@@ -1101,6 +1102,9 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         try
         {
             owner.Show();
+            owner.Activate();
+            await System.Windows.Threading.Dispatcher.Yield(
+                System.Windows.Threading.DispatcherPriority.Input);
 
             var message = $"Confirm browser autofill\nSite: {domain}\nAccount: {SanitizePromptText(title)}\nUsername: {SanitizePromptText(username)}";
             return await WindowsHelloHelper.VerifyAsync(owner, message);
