@@ -33,7 +33,7 @@ The extension's background and popup scripts use `browser-api.js` as a small com
 These differences come from the browsers, not from PejPass settings. See `browser/firefox/README.md` for Firefox setup.
 
 | Area | Edge | Chrome | Firefox |
-|---|---|---|
+|---|---|---|---|
 | Background | MV3 service worker (`importScripts`); the browser can stop it when idle | Same Chromium service-worker runtime | MV3 event page (`background.scripts`); the browser can unload it when idle |
 | Native host manifest | `allowed_origins` with the stable Chromium extension ID; `desktopAppPath` is stored in the manifest | Same Chromium host manifest format and extension ID | `allowed_extensions` with the Gecko ID `pejpass@pejmands.github.io`; `desktopAppPath` is stored in `pejpass-host-config.json` next to the host executable |
 | Registry key | `HKCU\Software\Microsoft\Edge\NativeMessagingHosts` | `HKCU\Software\Google\Chrome\NativeMessagingHosts` | `HKCU\Software\Mozilla\NativeMessagingHosts` |
