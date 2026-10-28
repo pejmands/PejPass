@@ -1009,14 +1009,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
             if (helloResult == WindowsHelloVerificationResult.Unavailable)
             {
-                // If Hello is unavailable, fall back to explicit desktop approval.
-                if (!desktopConfirmationCompleted)
-                {
-                    var confirmationError = await ConfirmBrowserAutofillAsync(
-                        entry, domain, isCrossDomainSelection, cancellationToken);
-                    if (confirmationError is not null)
-                        return (null, confirmationError);
-                }
+                // Treat unavailable Windows Hello as disabled; do not add a fallback prompt.
             }
             else if (helloResult != WindowsHelloVerificationResult.Verified)
             {
