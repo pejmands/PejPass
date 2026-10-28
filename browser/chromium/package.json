@@ -2,7 +2,7 @@
   "name": "pejpass-browser-extension",
   "private": true,
   "scripts": {
-    "build": "powershell -NoProfile -ExecutionPolicy Bypass -File ..\\build.ps1 -Browser edge",
+    "build": "powershell -NoProfile -ExecutionPolicy Bypass -File ..\\build.ps1 -Browser chromium",
     "pretest": "npm run build",
     "test": "node --test tests/*.test.js"
   },

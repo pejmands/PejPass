@@ -1,30 +1,26 @@
 param(
-    [ValidateSet("edge", "chrome", "firefox")]
-    [string]$Browser = "edge"
+    [ValidateSet("chromium", "firefox")]
+    [string]$Browser = "chromium"
 )
 
 $ErrorActionPreference = "Stop"
 
 $browserRoot = $PSScriptRoot
 $sourcePath = Join-Path $browserRoot "shared\injected.js"
-$edgeDirectory = Join-Path $browserRoot "edge"
+$chromiumDirectory = Join-Path $browserRoot "chromium"
 
 if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
     throw "Shared injected script was not found: $sourcePath"
 }
 
-if (-not (Test-Path -LiteralPath $edgeDirectory -PathType Container)) {
-    throw "Edge runtime package directory was not found: $edgeDirectory"
+if (-not (Test-Path -LiteralPath $chromiumDirectory -PathType Container)) {
+    throw "Chromium runtime package directory was not found: $chromiumDirectory"
 }
 
 switch ($Browser) {
-    "edge" {
-        $sourceManifestDirectory = Join-Path $browserRoot "edge"
-        $targetDirectory = Join-Path $browserRoot "dist\edge"
-    }
-    "chrome" {
-        $sourceManifestDirectory = Join-Path $browserRoot "chrome"
-        $targetDirectory = Join-Path $browserRoot "dist\chrome"
+    "chromium" {
+        $sourceManifestDirectory = $chromiumDirectory
+        $targetDirectory = Join-Path $browserRoot "dist\chromium"
     }
     "firefox" {
         $sourceManifestDirectory = Join-Path $browserRoot "firefox"
@@ -53,7 +49,7 @@ $excludedFiles = @(
     "test-host-reconnect.ps1"
 )
 
-Get-ChildItem -LiteralPath $edgeDirectory | ForEach-Object {
+Get-ChildItem -LiteralPath $chromiumDirectory | ForEach-Object {
     if ($_.PSIsContainer) {
         if ($excludedDirectories -notcontains $_.Name) {
             Copy-Item -LiteralPath $_.FullName -Destination $targetDirectory -Recurse -Force
@@ -72,7 +68,7 @@ if ($Browser -eq "firefox") {
     $backgroundSource = [System.IO.File]::ReadAllText($backgroundPath)
     $workerImport = 'importScripts("browser-api.js", "injected.js");'
     if (-not $backgroundSource.StartsWith($workerImport)) {
-        throw "The Edge background script no longer has the expected importScripts header."
+        throw "The Chromium background script no longer has the expected importScripts header."
     }
 
     $firefoxBackground = $backgroundSource.Substring($workerImport.Length).TrimStart([char]13, [char]10)

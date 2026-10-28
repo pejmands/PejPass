@@ -21,8 +21,8 @@ test("Firefox manifest declares its stable Gecko ID and supported MV3 background
   assert.equal(manifest.desktopAppPath, undefined);
 });
 
-test("Firefox build copies the Edge runtime and removes the worker-only importScripts line", () => {
-  assert.match(buildScript, /ValidateSet\("edge",\s*"chrome",\s*"firefox"\)/);
+test("Firefox build copies the Chromium runtime and removes the worker-only importScripts line", () => {
+  assert.match(buildScript, /ValidateSet\("chromium",\s*"firefox"\)/);
   assert.ok(buildScript.includes('importScripts("browser-api.js", "injected.js");'));
   assert.match(buildScript, /StartsWith\(\$workerImport\)/);
   assert.match(backgroundSource, /^importScripts\("browser-api\.js", "injected\.js"\);/);
