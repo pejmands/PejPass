@@ -6,7 +6,7 @@ const { JSDOM } = require("jsdom");
 
 const injectedSource = fs.readFileSync(path.join(__dirname, "..", "..", "shared", "injected.js"), "utf8");
 const packagedInjectedSource = fs.readFileSync(
-  path.join(__dirname, "..", "..", "dist", "edge", "injected.js"), "utf8");
+  path.join(__dirname, "..", "..", "dist", "chromium", "injected.js"), "utf8");
 
 function createPage(markup, url = "https://example.com/login") {
   const dom = new JSDOM(markup, {
@@ -21,7 +21,7 @@ function createPage(markup, url = "https://example.com/login") {
   return dom;
 }
 
-test("Generated Edge package contains the current shared login-form implementation", () => {
+test("Generated Chromium package contains the current shared login-form implementation", () => {
   assert.equal(packagedInjectedSource, injectedSource);
 });
 

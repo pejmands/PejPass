@@ -13,6 +13,17 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $installScript = Join-Path $PSScriptRoot "install-dev-host.ps1"
 $registrationPath = "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\com.pejpass.browserhost"
+$chromeRegistrationPath = "HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.pejpass.browserhost"
+$registrationPaths = @($registrationPath, $chromeRegistrationPath)
+$originalRegistrations = @{}
+foreach ($path in $registrationPaths) {
+    if (Test-Path -LiteralPath $path) {
+        $originalRegistrations[$path] = (Get-Item -LiteralPath $path).GetValue("")
+    }
+    else {
+        $originalRegistrations[$path] = $null
+    }
+}
 
 if (-not (Test-Path -LiteralPath $registrationPath)) {
     throw "The Edge native messaging host is not currently registered. Register the normal host first."
@@ -134,9 +145,18 @@ finally {
     }
 
     if ($registrationChanged) {
-        Write-Host "Restoring the original Edge native-host registration..."
-        New-Item -Path $registrationPath -Force | Out-Null
-        Set-Item -Path $registrationPath -Value $originalManifestPath
+        Write-Host "Restoring the original Chromium native-host registrations..."
+        foreach ($path in $registrationPaths) {
+            $originalPath = $originalRegistrations[$path]
+            if ([string]::IsNullOrWhiteSpace([string]$originalPath)) {
+                if (Test-Path -LiteralPath $path) {
+                    Remove-Item -LiteralPath $path -Recurse -Force
+                }
+                continue
+            }
+            New-Item -Path $path -Force | Out-Null
+            Set-Item -Path $path -Value $originalPath
+        }
 
         Stop-HostProcessesAtPath $testHostPath
         try {

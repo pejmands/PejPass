@@ -1,6 +1,6 @@
 param()
 
-# Read-only check of the PejPass native messaging registration for Edge, Chrome, and Firefox.
+# Read-only check of the PejPass native messaging registration for Chromium browsers (Edge and Chrome) and Firefox.
 # It verifies the registry entry, the host manifest, the host executable, the allowed
 # extension identity, and where the desktop executable path (used by launchApp) comes from.
 #

@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 if ($ExtensionId -notmatch '^[a-p]{32}$') {
-    throw "ExtensionId must be the 32-character ID shown on edge://extensions."
+    throw "ExtensionId must be the 32-character ID shown on edge://extensions or chrome://extensions."
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
@@ -25,7 +25,10 @@ $hostDirectory = Join-Path $InstallDirectory "BrowserHost"
 $desktopExecutable = Join-Path $InstallDirectory "PejPass.exe"
 $hostExecutable = Join-Path $hostDirectory "PejPass.BrowserHost.exe"
 $manifestPath = Join-Path $hostDirectory "com.pejpass.browserhost.json"
-$registryPath = "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\com.pejpass.browserhost"
+$registryPaths = @(
+    "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\com.pejpass.browserhost",
+    "HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.pejpass.browserhost"
+)
 
 dotnet build $desktopProjectPath --configuration Release -p:Platform=x64
 if ($LASTEXITCODE -ne 0) {
@@ -65,7 +68,7 @@ if (-not (Test-Path $hostExecutable)) {
 
 $manifest = @{
     name = "com.pejpass.browserhost"
-    description = "PejPass local browser communication bridge"
+    description = "PejPass local Chromium browser communication bridge"
     path = $hostExecutable
     desktopAppPath = $desktopExecutable
     type = "stdio"
@@ -78,10 +81,12 @@ $manifest = @{
     [System.Text.UTF8Encoding]::new($false)
 )
 
-New-Item -Path $registryPath -Force | Out-Null
-Set-Item -Path $registryPath -Value $manifestPath
+foreach ($registryPath in $registryPaths) {
+    New-Item -Path $registryPath -Force | Out-Null
+    Set-Item -Path $registryPath -Value $manifestPath
+}
 
-Write-Host "PejPass native messaging host registered for Edge."
+Write-Host "PejPass native messaging host registered for Edge and Chrome."
 Write-Host "Install directory: $InstallDirectory"
 Write-Host "Manifest: $manifestPath"
-Write-Host "Restart Edge if it was already running, then test the PejPass extension popup."
+Write-Host "Restart Edge or Chrome if it was already running, then test the PejPass extension popup."
