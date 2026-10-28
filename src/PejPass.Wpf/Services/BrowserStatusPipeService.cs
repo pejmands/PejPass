@@ -21,6 +21,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     private IClipboardService? _clipboardService;
     private readonly Func<string, string, string, bool>? _fillConfirmation;
     private readonly Func<string, Task<WindowsHelloVerificationResult>>? _fillHelloVerification;
+    private readonly AppSettings? _settingsOverride;
 
     internal BrowserStatusPipeService(VaultSession vaultSession)
         : this(vaultSession, null) { }
@@ -64,6 +65,15 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         string eventsPipeName,
         Func<string, string, string, bool>? fillConfirmation,
         Func<string, Task<WindowsHelloVerificationResult>>? fillHelloVerification = null)
+        : this(vaultSession, vaultService, eventsPipeName, fillConfirmation, fillHelloVerification, null) { }
+
+    internal BrowserStatusPipeService(
+        VaultSession vaultSession,
+        Application.Services.VaultService? vaultService,
+        string eventsPipeName,
+        Func<string, string, string, bool>? fillConfirmation,
+        Func<string, Task<WindowsHelloVerificationResult>>? fillHelloVerification,
+        AppSettings? settingsOverride)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(eventsPipeName);
         _vaultSession = vaultSession;
@@ -71,8 +81,16 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         _eventsPipeName = eventsPipeName;
         _fillConfirmation = fillConfirmation;
         _fillHelloVerification = fillHelloVerification;
+        _settingsOverride = settingsOverride;
         _vaultSession.StateChanged += OnVaultStateChanged;
     }
+
+    internal BrowserStatusPipeService(
+        VaultSession vaultSession,
+        Func<string, string, string, bool> fillConfirmation,
+        Func<string, Task<WindowsHelloVerificationResult>> fillHelloVerification,
+        AppSettings settingsOverride)
+        : this(vaultSession, null, EventsPipeName, fillConfirmation, fillHelloVerification, settingsOverride) { }
 
     internal UnlockRateLimiter UnlockLimiter { get; init; } = new(TimeProvider.System);
     internal const string PipeName = "PejPass.BrowserStatus.v1";
@@ -974,7 +992,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         var requireWindowsHello = true;
         try
         {
-            var settings = App.Services.GetService<AppSettings>();
+            var settings = _settingsOverride ?? App.Services.GetService<AppSettings>();
             requireDesktopConfirmation = settings?.BrowserAutofillConfirmationEnabled ?? true;
             requireWindowsHello = settings?.BrowserAutofillWindowsHelloEnabled ?? true;
         }
