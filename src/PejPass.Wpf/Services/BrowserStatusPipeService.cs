@@ -21,6 +21,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
     private IClipboardService? _clipboardService;
     private readonly Func<string, string, string, bool>? _fillConfirmation;
     private readonly Func<string, Task<WindowsHelloVerificationResult>>? _fillHelloVerification;
+    private readonly AppSettings? _settingsOverride;
 
     internal BrowserStatusPipeService(VaultSession vaultSession)
         : this(vaultSession, null) { }
@@ -64,6 +65,15 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         string eventsPipeName,
         Func<string, string, string, bool>? fillConfirmation,
         Func<string, Task<WindowsHelloVerificationResult>>? fillHelloVerification = null)
+        : this(vaultSession, vaultService, eventsPipeName, fillConfirmation, fillHelloVerification, null) { }
+
+    internal BrowserStatusPipeService(
+        VaultSession vaultSession,
+        Application.Services.VaultService? vaultService,
+        string eventsPipeName,
+        Func<string, string, string, bool>? fillConfirmation,
+        Func<string, Task<WindowsHelloVerificationResult>>? fillHelloVerification,
+        AppSettings? settingsOverride)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(eventsPipeName);
         _vaultSession = vaultSession;
@@ -71,8 +81,16 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         _eventsPipeName = eventsPipeName;
         _fillConfirmation = fillConfirmation;
         _fillHelloVerification = fillHelloVerification;
+        _settingsOverride = settingsOverride;
         _vaultSession.StateChanged += OnVaultStateChanged;
     }
+
+    internal BrowserStatusPipeService(
+        VaultSession vaultSession,
+        Func<string, string, string, bool> fillConfirmation,
+        Func<string, Task<WindowsHelloVerificationResult>> fillHelloVerification,
+        AppSettings settingsOverride)
+        : this(vaultSession, null, EventsPipeName, fillConfirmation, fillHelloVerification, settingsOverride) { }
 
     internal UnlockRateLimiter UnlockLimiter { get; init; } = new(TimeProvider.System);
     internal const string PipeName = "PejPass.BrowserStatus.v1";
@@ -974,7 +992,7 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         var requireWindowsHello = true;
         try
         {
-            var settings = App.Services.GetService<AppSettings>();
+            var settings = _settingsOverride ?? App.Services.GetService<AppSettings>();
             requireDesktopConfirmation = settings?.BrowserAutofillConfirmationEnabled ?? true;
             requireWindowsHello = settings?.BrowserAutofillWindowsHelloEnabled ?? true;
         }
@@ -987,8 +1005,6 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         var isCrossDomainSelection = activeVault is not null
             ? RequiresCrossDomainConfirmation(activeVault, entry, domain, allowDomainMismatch)
             : RequiresCrossDomainConfirmation(entry, domain, allowDomainMismatch);
-        var desktopConfirmationCompleted = false;
-
         // Accounts from another website always require explicit confirmation.
         if (requireDesktopConfirmation || isCrossDomainSelection)
         {
@@ -996,8 +1012,6 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 entry, domain, isCrossDomainSelection, cancellationToken);
             if (confirmationError is not null)
                 return (null, confirmationError);
-
-            desktopConfirmationCompleted = true;
         }
 
         if (cancellationToken.IsCancellationRequested || !_vaultSession.IsActive)
@@ -1007,18 +1021,9 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         {
             var helloResult = await VerifyBrowserAutofillWithWindowsHelloAsync(
                 domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
-            if (helloResult == WindowsHelloVerificationResult.Unavailable)
-            {
-                // If Hello is unavailable, fall back to explicit desktop approval.
-                if (!desktopConfirmationCompleted)
-                {
-                    var confirmationError = await ConfirmBrowserAutofillAsync(
-                        entry, domain, isCrossDomainSelection, cancellationToken);
-                    if (confirmationError is not null)
-                        return (null, confirmationError);
-                }
-            }
-            else if (helloResult != WindowsHelloVerificationResult.Verified)
+            // Unavailable Windows Hello is treated as disabled; it must not add a fallback prompt.
+            if (helloResult != WindowsHelloVerificationResult.Verified &&
+                helloResult != WindowsHelloVerificationResult.Unavailable)
             {
                 var code = helloResult switch
                 {
