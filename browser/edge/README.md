@@ -13,10 +13,10 @@ The extension reads the active HTTP(S) tab hostname and requests matching accoun
 From the repository root, build the Edge package:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\\browser\\build.ps1 -Browser edge
+powershell -ExecutionPolicy Bypass -File .\browser\build.ps1 -Browser edge
 ```
 
-The generated package is `browser\\dist\\edge`. To load it:
+The generated package is `browser\dist\edge`. To load it:
 
 1. Open `edge://extensions` in Edge.
 2. Enable **Developer mode**.
