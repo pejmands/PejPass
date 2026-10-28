@@ -32,6 +32,8 @@ powershell -ExecutionPolicy Bypass -File .\browser\chrome\install-dev-host.ps1 -
 
 This builds the desktop app and BrowserHost, copies the Release output to the normal PejPass install directory, and registers the host for the current Windows user under `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.pejpass.browserhost`. It does not require administrator privileges.
 
+**Important:** Chrome and the Native Messaging host must run in the same Windows environment and user context. If Chrome runs inside Windows Sandbox or another isolated environment, PejPass and BrowserHost must also be installed and registered inside that environment. A host registration on the Windows host is not visible to Chrome inside the sandbox. Windows Sandbox is temporary, so repeat the setup after its contents are reset.
+
 Restart Chrome if it was already running. Then open the extension popup and test connection, vault unlock, account matching, explicit fill, save/update, and TOTP.
 
 To verify the host registration:
