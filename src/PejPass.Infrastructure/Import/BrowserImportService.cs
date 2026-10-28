@@ -1,5 +1,4 @@
 using CsvHelper;
-using CsvHelper.Configuration;
 using PejPass.Application.Interfaces;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Exceptions;
@@ -27,39 +26,59 @@ public sealed partial class BrowserImportService : IBrowserImportService
 
         await using var stream = File.OpenRead(filePath);
         ValidateCsvFileSize(stream);
+
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
-        using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
+        using var csv = CsvReader.Create(reader, new CsvReaderOptions
         {
-            HasHeaderRecord = true,
-            IgnoreBlankLines = true,
-            BadDataFound = _ => throw new InvalidDataException("CSV contains malformed quoting or field data.")
+            HasHeader = true,
+            SkipEmptyLines = true,
+            FormatProvider = CultureInfo.InvariantCulture,
+            MalformedData = CsvMalformedDataHandling.Recover,
+            OnMalformedRecord = _ => throw new InvalidDataException(
+                "CSV contains malformed quoting or field data.")
         });
 
         ct.ThrowIfCancellationRequested();
-        if (!await csv.ReadAsync())
+        await csv.ReadHeaderAsync(ct);
+
+        var header = csv.Headers.ToList();
+
+        if (header.Count == 0)
             throw new InvalidDataException("The CSV file is empty.");
 
-        csv.ReadHeader();
-        var header = csv.HeaderRecord?.ToList() ?? [];
         ValidateCsvRecord(header, "header");
 
         var map = BuildColumnMap(header);
 
         if (map.PasswordIndex < 0)
-            throw new InvalidDataException("Could not find a password column in the CSV header.");
+            throw new InvalidDataException(
+                "Could not find a password column in the CSV header.");
 
         var entries = new List<VaultEntry>();
         var recordCount = 0;
 
-        while (await csv.ReadAsync())
+        while (await csv.ReadAsync(ct))
         {
             ct.ThrowIfCancellationRequested();
 
             if (++recordCount > MaxCsvRecords)
-                throw new InvalidDataException($"CSV import exceeds the limit of {MaxCsvRecords} records.");
+            {
+                throw new InvalidDataException(
+                    $"CSV import exceeds the limit of {MaxCsvRecords} records.");
+            }
 
-            var cols = csv.Parser.Record?.ToList() ?? [];
+            if (csv.FieldCount > MaxCsvColumns)
+            {
+                throw new InvalidDataException(
+                    $"record {recordCount} exceeds the {MaxCsvColumns}-column limit.");
+            }
+
+            var cols = Enumerable
+                .Range(0, csv.FieldCount)
+                .Select(i => csv.GetString(i))
+                .ToList();
+
             ValidateCsvRecord(
                 cols,
                 $"record {recordCount}",
@@ -79,12 +98,16 @@ public sealed partial class BrowserImportService : IBrowserImportService
             var url = GetCol(cols, map.UrlIndex);
             var notes = GetCol(cols, map.NotesIndex);
 
-            if (string.IsNullOrWhiteSpace(title) && !string.IsNullOrWhiteSpace(url))
+            if (string.IsNullOrWhiteSpace(title)
+                && !string.IsNullOrWhiteSpace(url))
             {
                 try
                 {
                     var uri = new Uri(url);
-                    title = uri.Host.Replace("www.", "", StringComparison.OrdinalIgnoreCase);
+                    title = uri.Host.Replace(
+                        "www.",
+                        "",
+                        StringComparison.OrdinalIgnoreCase);
                 }
                 catch
                 {
@@ -111,7 +134,10 @@ public sealed partial class BrowserImportService : IBrowserImportService
     private static void ValidateCsvFileSize(FileStream stream)
     {
         if (stream.Length > MaxCsvFileBytes)
-            throw new InvalidDataException($"CSV file exceeds the {MaxCsvFileBytes / (1024 * 1024)} MiB size limit.");
+        {
+            throw new InvalidDataException(
+                $"CSV file exceeds the {MaxCsvFileBytes / (1024 * 1024)} MiB size limit.");
+        }
     }
 
     private static void ValidateCsvRecord(
@@ -121,7 +147,10 @@ public sealed partial class BrowserImportService : IBrowserImportService
         string? entryTitle = null)
     {
         if (fields.Count > MaxCsvColumns)
-            throw new InvalidDataException($"{recordDescription} exceeds the {MaxCsvColumns}-column limit.");
+        {
+            throw new InvalidDataException(
+                $"{recordDescription} exceeds the {MaxCsvColumns}-column limit.");
+        }
 
         for (var i = 0; i < fields.Count; i++)
         {
@@ -135,6 +164,7 @@ public sealed partial class BrowserImportService : IBrowserImportService
             }
 
             var fieldName = DescribeCsvField(header.ElementAtOrDefault(i), i);
+
             throw new VaultLimitExceededException(
                 VaultLimit.TextLength,
                 $"{recordDescription} contains an oversized {fieldName} field.")
@@ -175,29 +205,46 @@ public sealed partial class BrowserImportService : IBrowserImportService
     {
         var map = new ColumnMap();
 
-        for (int i = 0; i < header.Count; i++)
+        for (var i = 0; i < header.Count; i++)
         {
             var h = header[i].Trim().ToLowerInvariant();
 
             // Title / Name
-            if (map.TitleIndex < 0 && (h is "name" or "title" or "hostname" or "site" or "login_uri"))
+            if (map.TitleIndex < 0
+                && (h is "name" or "title" or "hostname" or "site" or "login_uri"))
+            {
                 map.TitleIndex = i;
+            }
 
             // URL
-            if (map.UrlIndex < 0 && (h is "url" or "origin" or "login_uri" or "formactionorigin" or "http://hostname" or "hostname"))
+            if (map.UrlIndex < 0
+                && (h is "url" or "origin" or "login_uri"
+                    or "formactionorigin" or "http://hostname" or "hostname"))
+            {
                 map.UrlIndex = i;
+            }
 
             // Username
-            if (map.UsernameIndex < 0 && (h is "username" or "user" or "login" or "login_username" or "email"))
+            if (map.UsernameIndex < 0
+                && (h is "username" or "user" or "login"
+                    or "login_username" or "email"))
+            {
                 map.UsernameIndex = i;
+            }
 
             // Password
-            if (map.PasswordIndex < 0 && (h is "password" or "login_password" or "pass"))
+            if (map.PasswordIndex < 0
+                && (h is "password" or "login_password" or "pass"))
+            {
                 map.PasswordIndex = i;
+            }
 
             // Notes
-            if (map.NotesIndex < 0 && (h is "note" or "notes" or "comment" or "extra"))
+            if (map.NotesIndex < 0
+                && (h is "note" or "notes" or "comment" or "extra"))
+            {
                 map.NotesIndex = i;
+            }
         }
 
         return map;
@@ -207,6 +254,7 @@ public sealed partial class BrowserImportService : IBrowserImportService
     {
         if (index < 0 || index >= cols.Count)
             return null;
+
         return cols[index];
     }
 
