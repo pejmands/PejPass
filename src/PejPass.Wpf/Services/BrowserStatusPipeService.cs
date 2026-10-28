@@ -1005,8 +1005,6 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         var isCrossDomainSelection = activeVault is not null
             ? RequiresCrossDomainConfirmation(activeVault, entry, domain, allowDomainMismatch)
             : RequiresCrossDomainConfirmation(entry, domain, allowDomainMismatch);
-        var desktopConfirmationCompleted = false;
-
         // Accounts from another website always require explicit confirmation.
         if (requireDesktopConfirmation || isCrossDomainSelection)
         {
@@ -1014,8 +1012,6 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
                 entry, domain, isCrossDomainSelection, cancellationToken);
             if (confirmationError is not null)
                 return (null, confirmationError);
-
-            desktopConfirmationCompleted = true;
         }
 
         if (cancellationToken.IsCancellationRequested || !_vaultSession.IsActive)
@@ -1025,11 +1021,9 @@ internal sealed partial class BrowserStatusPipeService : IDisposable
         {
             var helloResult = await VerifyBrowserAutofillWithWindowsHelloAsync(
                 domain, Limit(entry.Title, 200), Limit(entry.Username, 256));
-            if (helloResult == WindowsHelloVerificationResult.Unavailable)
-            {
-                // Treat unavailable Windows Hello as disabled; do not add a fallback prompt.
-            }
-            else if (helloResult != WindowsHelloVerificationResult.Verified)
+            // Unavailable Windows Hello is treated as disabled; it must not add a fallback prompt.
+            if (helloResult != WindowsHelloVerificationResult.Verified &&
+                helloResult != WindowsHelloVerificationResult.Unavailable)
             {
                 var code = helloResult switch
                 {
