@@ -49,7 +49,7 @@ Select the version number in the popup header to open the About panel. It shows 
 
 ## Shared browser-independent logic
 
-The login-form detection and filling implementation is maintained in `browser/shared/injected.js`. The generated `browser/dist/chromium/injected.js` file is the packaged copy loaded by Edge. Edit `browser/shared/injected.js`, not the generated output or runtime template.
+The login-form detection and filling implementation is maintained in `browser/shared/injected.js`. The generated `browser/dist/chromium/injected.js` file is the packaged copy loaded by Edge and Chrome. Edit `browser/shared/injected.js`, not the generated output or runtime template.
 
 After changing the shared implementation, run these commands from `browser/chromium`:
 
@@ -68,7 +68,7 @@ From the repository root, run PowerShell with the extension ID copied above:
 powershell -ExecutionPolicy Bypass -File .\browser\chromium\install-dev-host.ps1 -ExtensionId YOUR_32_CHARACTER_EXTENSION_ID
 ```
 
-The script builds `src/PejPass.Wpf` and `src/PejPass.BrowserHost`, writes a host manifest under the installed host directory, and registers that shared manifest for the current Windows user in both Edge and Chrome. The manifest records the desktop executable's absolute path in `desktopAppPath`; the host uses this configured path when handling `launchApp`, rather than deriving a path relative to the development checkout. It does not require administrator privileges. Restart Edge after registration if it was already running.
+The script builds `src/PejPass.Wpf` and `src/PejPass.BrowserHost`, writes a host manifest under the installed host directory, and registers that shared manifest for the current Windows user in both Edge and Chrome. The manifest records the desktop executable's absolute path in `desktopAppPath`; the host uses this configured path when handling `launchApp`, rather than deriving a path relative to the development checkout. It does not require administrator privileges. Restart Edge or Chrome after registration if either browser was already running.
 
 To check Edge, Chrome, and Firefox registrations without changing anything, run:
 
