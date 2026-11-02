@@ -4,6 +4,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace PejPass.Wpf.Views;
 
@@ -55,6 +57,180 @@ public partial class TrashWindow : Window
 
         return null;
     }
+
+    private void TrashSearchBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Tab ||
+            (e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0 ||
+            TrashList.Items.Count == 0 ||
+            Keyboard.FocusedElement is not UIElement focusedElement)
+        {
+            return;
+        }
+
+        var tabStops = FindVisualChildren<UIElement>(TrashSearchBox)
+            .Where(IsKeyboardTabStop)
+            .ToList();
+        var focusedIndex = tabStops.FindIndex(
+            element => ReferenceEquals(element, focusedElement));
+
+        if (focusedIndex < 0 || focusedIndex < tabStops.Count - 1)
+            return;
+
+        e.Handled = true;
+        FocusTrashItem(0, 0);
+    }
+
+    private void TrashList_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Tab ||
+            Keyboard.FocusedElement is not DependencyObject focusedElement)
+        {
+            return;
+        }
+
+        var container = ItemsControl.ContainerFromElement(
+            TrashList,
+            focusedElement) as ListBoxItem;
+
+        if (container is null)
+            return;
+
+        var currentIndex = TrashList.ItemContainerGenerator.IndexFromContainer(container);
+        if (currentIndex < 0)
+            return;
+
+        var tabStops = GetTrashItemTabStops(container);
+        var focusedIndex = tabStops.FindIndex(
+            element => ReferenceEquals(element, Keyboard.FocusedElement));
+        if (focusedIndex < 0)
+            return;
+
+        var direction = (e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0
+            ? -1
+            : 1;
+        var nextFocusIndex = focusedIndex + direction;
+
+        if (nextFocusIndex >= 0 && nextFocusIndex < tabStops.Count)
+        {
+            e.Handled = true;
+            tabStops[nextFocusIndex].Focus();
+            return;
+        }
+
+        if (direction > 0)
+        {
+            e.Handled = true;
+            if (currentIndex < TrashList.Items.Count - 1)
+                FocusTrashItem(currentIndex + 1, 0);
+            else
+                FocusFirstFooterTabStop();
+
+            return;
+        }
+
+        e.Handled = true;
+        if (currentIndex > 0)
+        {
+            FocusTrashItem(currentIndex - 1, -1);
+        }
+        else
+        {
+            FocusLastSearchTabStop();
+        }
+    }
+
+    private void TrashFooterFirstButton_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Tab ||
+            (e.KeyboardDevice.Modifiers & ModifierKeys.Shift) == 0 ||
+            TrashList.Items.Count == 0 ||
+            !ReferenceEquals(GetFirstFooterTabStop(), Keyboard.FocusedElement))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        FocusTrashItem(TrashList.Items.Count - 1, -1);
+    }
+
+    private void FocusTrashItem(int index, int tabStopIndex)
+    {
+        if (index < 0 || index >= TrashList.Items.Count)
+            return;
+
+        TrashList.ScrollIntoView(TrashList.Items[index]);
+        TrashList.Dispatcher.BeginInvoke(
+            DispatcherPriority.Loaded,
+            new Action(() =>
+            {
+                TrashList.UpdateLayout();
+
+                if (TrashList.ItemContainerGenerator.ContainerFromIndex(index)
+                    is not ListBoxItem container)
+                {
+                    return;
+                }
+
+                var tabStops = GetTrashItemTabStops(container);
+                var targetIndex = tabStopIndex < 0
+                    ? tabStops.Count - 1
+                    : tabStopIndex;
+
+                if (targetIndex >= 0 && targetIndex < tabStops.Count)
+                    tabStops[targetIndex].Focus();
+            }));
+    }
+
+    private void FocusLastSearchTabStop()
+    {
+        FindVisualChildren<UIElement>(TrashSearchBox)
+            .Where(IsKeyboardTabStop)
+            .LastOrDefault()
+            ?.Focus();
+    }
+
+    private void FocusFirstFooterTabStop()
+    {
+        GetFooterTabStops().FirstOrDefault()?.Focus();
+    }
+
+    private UIElement? GetFirstFooterTabStop() =>
+        GetFooterTabStops().FirstOrDefault();
+
+    private IEnumerable<UIElement> GetFooterTabStops()
+    {
+        foreach (var button in new[]
+        {
+            RestoreSelectedButton,
+            PurgeSelectedButton,
+            CloseButton
+        })
+        {
+            if (IsKeyboardTabStop(button))
+                yield return button;
+        }
+    }
+
+    private static List<UIElement> GetTrashItemTabStops(ListBoxItem container)
+    {
+        var tabStops = new List<UIElement>();
+        if (IsKeyboardTabStop(container))
+            tabStops.Add(container);
+
+        tabStops.AddRange(
+            FindVisualChildren<Button>(container)
+                .Where(IsKeyboardTabStop));
+
+        return tabStops;
+    }
+
+    private static bool IsKeyboardTabStop(UIElement element) =>
+        element.IsVisible &&
+        element.IsEnabled &&
+        element.Focusable &&
+        element is Control control &&
+        control.IsTabStop;
 
     private void OnKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
