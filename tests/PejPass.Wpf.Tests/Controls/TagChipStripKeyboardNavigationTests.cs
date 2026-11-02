@@ -1,5 +1,4 @@
 using PejPass.Wpf.Controls;
-using PejPass.Wpf.Tests;
 using PejPass.Wpf.ViewModels;
 using System.Windows;
 using System.Windows.Controls;

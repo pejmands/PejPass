@@ -2,12 +2,12 @@ using PejPass.Domain.Entities;
 using PejPass.Wpf.Controls;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Reflection;
 using System.Windows.Threading;
 
 namespace PejPass.Wpf.Tests.Windowing;

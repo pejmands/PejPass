@@ -5,7 +5,6 @@ using PejPass.Wpf.Controls;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
-using System.IO;
 using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,6 +13,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using Path = System.IO.Path;
 
 namespace PejPass.Wpf.Tests.Windowing;
 
@@ -118,7 +118,7 @@ public sealed class HistoryWindowKeyboardNavigationTests
 
             Assert.Same(searchInput, Keyboard.Focus(searchInput));
             var headerTitle = FindVisualChildren<TextBlock>(
-                Assert.IsAssignableFrom<DependencyObject>(firstExpander.Header)).First();
+                Assert.IsType<DependencyObject>(firstExpander.Header)).First();
             RaisePreviewMouseLeftButtonDown(headerTitle);
             Assert.Same(firstExpander, Keyboard.FocusedElement);
             Assert.False(firstExpander.IsExpanded);
@@ -144,8 +144,8 @@ public sealed class HistoryWindowKeyboardNavigationTests
 
             for (var index = 1; index < viewModel.Items.Count; index++)
             {
-                var currentExpander = Assert.IsAssignableFrom<Expander>(
-                    Keyboard.FocusedElement);
+                var currentExpander = Assert.IsType<Expander>(
+                    Keyboard.FocusedElement, exactMatch: false);
                 var tab = RaisePreviewKeyDown(currentExpander, Key.Tab);
 
                 Assert.True(tab.Handled);

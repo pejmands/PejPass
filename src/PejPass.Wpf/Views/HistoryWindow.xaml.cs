@@ -104,11 +104,10 @@ public partial class HistoryWindow : Window
             return;
         }
 
-        var container = ItemsControl.ContainerFromElement(
-            HistoryItemsListBox,
-            focusedElement) as ListBoxItem;
 
-        if (container is null)
+        if (ItemsControl.ContainerFromElement(
+            HistoryItemsListBox,
+            focusedElement) is not ListBoxItem container)
             return;
 
         var currentIndex = HistoryItemsListBox.ItemContainerGenerator

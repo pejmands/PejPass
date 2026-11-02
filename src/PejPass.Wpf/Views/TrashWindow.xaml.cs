@@ -1,10 +1,11 @@
+using PejPass.Wpf.Controls;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
-using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace PejPass.Wpf.Views;
@@ -237,9 +238,9 @@ public partial class TrashWindow : Window
         element is Control control &&
         control.IsTabStop;
 
-    private void OnKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    private void OnKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key != System.Windows.Input.Key.Escape)
+        if (e.Key != Key.Escape)
             return;
 
         Close();

@@ -48,7 +48,10 @@
 								<Track x:Name="PART_Track">
 
 									<Track.DecreaseRepeatButton>
-										<RepeatButton Command="Slider.DecreaseLarge" IsTabStop="False" Focusable="False">
+										<RepeatButton
+											Command="Slider.DecreaseLarge"
+											Focusable="False"
+											IsTabStop="False">
 											<RepeatButton.Template>
 												<ControlTemplate TargetType="RepeatButton">
 													<Border
@@ -63,7 +66,10 @@
 
 
 									<Track.IncreaseRepeatButton>
-										<RepeatButton Command="Slider.IncreaseLarge" IsTabStop="False" Focusable="False">
+										<RepeatButton
+											Command="Slider.IncreaseLarge"
+											Focusable="False"
+											IsTabStop="False">
 											<RepeatButton.Template>
 												<ControlTemplate TargetType="RepeatButton">
 													<Border
@@ -78,7 +84,10 @@
 
 
 									<Track.Thumb>
-										<Thumb Width="16" Height="16" Focusable="False">
+										<Thumb
+											Width="16"
+											Height="16"
+											Focusable="False">
 											<Thumb.Template>
 												<ControlTemplate TargetType="Thumb">
 													<Ellipse Fill="{DynamicResource AccentBrush}" />
@@ -819,7 +828,11 @@
 										<Track x:Name="PART_Track" IsDirectionReversed="True">
 
 											<Track.DecreaseRepeatButton>
-												<RepeatButton Command="ScrollBar.PageUpCommand" IsTabStop="False" Focusable="False" Opacity="0" />
+												<RepeatButton
+													Command="ScrollBar.PageUpCommand"
+													Focusable="False"
+													IsTabStop="False"
+													Opacity="0" />
 											</Track.DecreaseRepeatButton>
 
 											<Track.Thumb>
@@ -827,7 +840,11 @@
 											</Track.Thumb>
 
 											<Track.IncreaseRepeatButton>
-												<RepeatButton Command="ScrollBar.PageDownCommand" IsTabStop="False" Focusable="False" Opacity="0" />
+												<RepeatButton
+													Command="ScrollBar.PageDownCommand"
+													Focusable="False"
+													IsTabStop="False"
+													Opacity="0" />
 											</Track.IncreaseRepeatButton>
 
 										</Track>
@@ -861,7 +878,11 @@
 										<Track x:Name="PART_Track" IsDirectionReversed="False">
 
 											<Track.DecreaseRepeatButton>
-												<RepeatButton Command="ScrollBar.PageLeftCommand" IsTabStop="False" Focusable="False" Opacity="0" />
+												<RepeatButton
+													Command="ScrollBar.PageLeftCommand"
+													Focusable="False"
+													IsTabStop="False"
+													Opacity="0" />
 											</Track.DecreaseRepeatButton>
 
 											<Track.Thumb>
@@ -869,7 +890,11 @@
 											</Track.Thumb>
 
 											<Track.IncreaseRepeatButton>
-												<RepeatButton Command="ScrollBar.PageRightCommand" IsTabStop="False" Focusable="False" Opacity="0" />
+												<RepeatButton
+													Command="ScrollBar.PageRightCommand"
+													Focusable="False"
+													IsTabStop="False"
+													Opacity="0" />
 											</Track.IncreaseRepeatButton>
 
 										</Track>
@@ -911,10 +936,10 @@
 									x:Name="PART_VerticalScrollBar"
 									Grid.Row="0"
 									Grid.Column="1"
-									Maximum="{TemplateBinding ScrollableHeight}"
-									Orientation="Vertical"
 									Focusable="False"
 									IsTabStop="False"
+									Maximum="{TemplateBinding ScrollableHeight}"
+									Orientation="Vertical"
 									ViewportSize="{TemplateBinding ViewportHeight}"
 									Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
 									Value="{TemplateBinding VerticalOffset}" />
@@ -923,10 +948,10 @@
 									x:Name="PART_HorizontalScrollBar"
 									Grid.Row="1"
 									Grid.Column="0"
-									Maximum="{TemplateBinding ScrollableWidth}"
-									Orientation="Horizontal"
 									Focusable="False"
 									IsTabStop="False"
+									Maximum="{TemplateBinding ScrollableWidth}"
+									Orientation="Horizontal"
 									ViewportSize="{TemplateBinding ViewportWidth}"
 									Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"
 									Value="{TemplateBinding HorizontalOffset}" />
