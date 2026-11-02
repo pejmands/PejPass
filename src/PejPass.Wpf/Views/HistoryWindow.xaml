@@ -37,6 +37,7 @@
 			<controls:SearchBox
 				x:Name="HistorySearchBox"
 				Grid.Row="0"
+				PreviewKeyDown="HistorySearchBox_PreviewKeyDown"
 				Focusable="False"
 				IsTabStop="False"
 				Margin="0,0,0,12"
@@ -92,6 +93,7 @@
 				<ListBox
 					x:Name="HistoryItemsListBox"
 					Grid.Column="0"
+					PreviewKeyDown="HistoryItemsListBox_PreviewKeyDown"
 					Focusable="False"
 					IsTabStop="False"
 					KeyboardNavigation.TabNavigation="Continue"
@@ -208,13 +210,10 @@
 										<ControlTemplate.Triggers>
 											<Trigger Property="IsSelected" Value="True">
 												<Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
-												<Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+												<Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
 											</Trigger>
 											<Trigger Property="IsMouseOver" Value="True">
 												<Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
-											</Trigger>
-											<Trigger Property="IsKeyboardFocusWithin" Value="True">
-												<Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
 											</Trigger>
 										</ControlTemplate.Triggers>
 									</ControlTemplate>
@@ -250,8 +249,20 @@
 									Grid.Column="1"
 									Margin="8,0,0,6"
 									Padding="14,12"
-									Background="{DynamicResource SurfaceBrush}"
 									CornerRadius="8">
+									<Border.Style>
+										<Style TargetType="Border">
+											<Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+											<Setter Property="BorderBrush" Value="Transparent" />
+											<Setter Property="BorderThickness" Value="1" />
+											<Style.Triggers>
+												<Trigger Property="IsKeyboardFocusWithin" Value="True">
+													<Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+													<Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+												</Trigger>
+											</Style.Triggers>
+										</Style>
+									</Border.Style>
 									<Expander
 										Focusable="True"
 										IsTabStop="True"
@@ -434,6 +445,7 @@
 							<ScrollViewer
 								x:Name="ComparisonScrollViewer"
 								Grid.Row="1"
+					PreviewKeyDown="ComparisonScrollViewer_PreviewKeyDown"
 								Focusable="False"
 								IsTabStop="False"
 								HorizontalScrollBarVisibility="Disabled"
