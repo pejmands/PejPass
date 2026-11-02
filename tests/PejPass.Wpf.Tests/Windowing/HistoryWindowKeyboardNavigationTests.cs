@@ -120,6 +120,7 @@ public sealed class HistoryWindowKeyboardNavigationTests
             var headerTitle = FindVisualChildren<TextBlock>(
                 Assert.IsType<DependencyObject>(firstExpander.Header)).First();
             RaisePreviewMouseLeftButtonDown(headerTitle);
+            DrainPendingOperations(window.Dispatcher);
             Assert.Same(firstExpander, Keyboard.FocusedElement);
             Assert.False(firstExpander.IsExpanded);
 
