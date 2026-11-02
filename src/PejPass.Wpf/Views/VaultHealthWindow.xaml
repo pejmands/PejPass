@@ -280,6 +280,7 @@
 					x:Name="HealthIssuesList"
 					Focusable="False"
 					IsTabStop="False"
+					KeyboardNavigation.TabNavigation="Continue"
 					Background="Transparent"
 					BorderThickness="0"
 					ItemsSource="{Binding Issues}"
