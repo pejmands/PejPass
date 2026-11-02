@@ -37,6 +37,11 @@ public sealed class WindowChromeTests
             Assert.Equal(expectedRadius, chrome!.CornerRadius.TopLeft);
             Assert.Equal(expectedRadius, root.CornerRadius.TopLeft);
 
+            var expectedGlassFrame = expectedRadius == 0
+                ? new Thickness(0.00001)
+                : new Thickness(0);
+            Assert.Equal(expectedGlassFrame, chrome.GlassFrameThickness);
+
             window.Close();
         }, TestContext.Current.CancellationToken);
     }
