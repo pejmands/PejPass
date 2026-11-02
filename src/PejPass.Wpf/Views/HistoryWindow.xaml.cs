@@ -51,4 +51,10 @@ public partial class HistoryWindow : Window
         if (sender is ListBoxItem item)
             item.IsSelected = true;
     }
+
+    private void HistoryListBoxItem_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (sender is ListBoxItem item)
+            item.IsSelected = true;
+    }
 }
