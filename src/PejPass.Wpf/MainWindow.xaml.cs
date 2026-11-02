@@ -168,6 +168,11 @@ public partial class MainWindow : Window
             }, DispatcherPriority.Loaded);
         };
 
+        AddHandler(
+            Keyboard.GotKeyboardFocusEvent,
+            new KeyboardFocusChangedEventHandler(OnKeyboardFocusChanged),
+            handledEventsToo: true);
+
         PreviewKeyDown += OnPreviewKeyDown;
         EntryList.SelectionChanged += (_, _) => UpdateSelectedEntriesToolbar();
         EntryList.PreviewMouseLeftButtonDown += EntryList_PreviewMouseLeftButtonDown;
@@ -740,6 +745,17 @@ public partial class MainWindow : Window
         var selected = EntryList.SelectedItems.Cast<VaultEntry>().ToArray();
         if (vm.DeleteSelectedEntriesCommand.CanExecute(selected))
             vm.DeleteSelectedEntriesCommand.Execute(selected);
+    }
+
+    private void OnKeyboardFocusChanged(
+        object sender,
+        KeyboardFocusChangedEventArgs e)
+    {
+        if (e.NewFocus is not FrameworkElement focusedElement)
+            return;
+
+        if (focusedElement.IsVisible && focusedElement.IsLoaded)
+            focusedElement.BringIntoView();
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)

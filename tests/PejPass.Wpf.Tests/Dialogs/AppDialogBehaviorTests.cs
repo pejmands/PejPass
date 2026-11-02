@@ -1,6 +1,5 @@
 using PejPass.Wpf.Dialogs;
 using System.Reflection;
-using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -23,8 +22,8 @@ public sealed class AppDialogBehaviorTests
         {
             var dialog = new AppDialog("Dialog", "Message", type);
             var icon = GetTypeIcon(dialog);
-            var expectedBrush = Assert.IsAssignableFrom<Brush>(
-                Application.Current!.FindResource(expectedBrushKey));
+            var expectedBrush = Assert.IsType<Brush>(
+             System.Windows.Application.Current!.FindResource(expectedBrushKey), exactMatch: false);
 
             Assert.NotNull(icon.Data);
             Assert.Equal(2.2, icon.StrokeThickness);

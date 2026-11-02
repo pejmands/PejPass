@@ -175,7 +175,7 @@ public sealed class UpdateScriptIntegrationTests
                 return;
             }
 
-            await Task.Delay(100);
+            await Task.Delay(100, TestContext.Current.CancellationToken);
         }
 
         var details = File.Exists(layout.ErrorPath)

@@ -611,6 +611,8 @@
 
 					<ScrollViewer
 						x:Name="EntryDetailsScrollViewer"
+						Focusable="False"
+						IsTabStop="False"
 						VerticalScrollBarVisibility="Auto"
 						Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
 						<StackPanel MaxWidth="560" Margin="24,32,24,16">
@@ -718,7 +720,10 @@
 										Foreground="{DynamicResource MutedBrush}"
 										Text="RELATED SITES" />
 
-									<ItemsControl ItemsSource="{Binding RelatedSites}">
+									<ItemsControl
+										Focusable="False"
+										IsTabStop="False"
+										ItemsSource="{Binding RelatedSites}">
 										<ItemsControl.ItemsPanel>
 											<ItemsPanelTemplate>
 												<WrapPanel />
@@ -872,6 +877,7 @@
 										</StackPanel>
 
 										<Button
+											x:Name="CopyTotpButton"
 											Grid.Column="1"
 											Margin="12,0,0,0"
 											VerticalAlignment="Center"
@@ -896,6 +902,9 @@
 									Background="{DynamicResource SurfaceBrush}"
 									CornerRadius="6">
 									<ScrollViewer
+										x:Name="NotesScrollViewer"
+										Focusable="False"
+										IsTabStop="False"
 										MaxHeight="160"
 										HorizontalScrollBarVisibility="Disabled"
 										VerticalScrollBarVisibility="Auto">
@@ -917,7 +926,11 @@
 									Foreground="{DynamicResource MutedBrush}"
 									Text="CUSTOM FIELDS" />
 
-								<ItemsControl ItemsSource="{Binding DisplayCustomFields}">
+								<ItemsControl
+									x:Name="CustomFieldsItemsControl"
+									Focusable="False"
+									IsTabStop="False"
+									ItemsSource="{Binding DisplayCustomFields}">
 									<ItemsControl.ItemTemplate>
 										<DataTemplate>
 											<Grid Margin="0,0,0,8">
@@ -983,7 +996,10 @@
 									Foreground="{DynamicResource MutedBrush}"
 									Text="TAGS" />
 
-								<ItemsControl ItemsSource="{Binding SelectedEntry.Tags}">
+								<ItemsControl
+									Focusable="False"
+									IsTabStop="False"
+									ItemsSource="{Binding SelectedEntry.Tags}">
 									<ItemsControl.ItemsPanel>
 										<ItemsPanelTemplate>
 											<WrapPanel />
@@ -1010,6 +1026,7 @@
 							<!--  Actions  -->
 							<StackPanel Orientation="Horizontal">
 								<Button
+									x:Name="EditEntryButton"
 									Margin="0,0,8,0"
 									Padding="20,8"
 									Command="{Binding EditEntryCommand}"
