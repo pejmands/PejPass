@@ -309,6 +309,7 @@
 						Text="Custom Fields" />
 
 					<Button
+						x:Name="AddCustomFieldButton"
 						Grid.Column="1"
 						Height="32"
 						Padding="10,4"
@@ -321,6 +322,8 @@
 
 				<ItemsControl
 					x:Name="CustomFieldsItemsControl"
+					Focusable="False"
+					IsTabStop="False"
 					Margin="0,0,0,20"
 					ItemsSource="{Binding CustomFields}">
 					<ItemsControl.ItemTemplate>
@@ -449,6 +452,7 @@
 					Text="Notes" />
 
 				<TextBox
+					x:Name="NotesTextBox"
 					MaxLength="{x:Static domain:VaultLimits.MaxTextCharacters}"
 					Height="100"
 					MaxHeight="160"
