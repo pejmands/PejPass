@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Media3D;
 using System.Windows.Controls.Primitives;
 using System.Windows.Threading;
 
@@ -50,26 +49,25 @@ public partial class HistoryWindow : Window
         button.ContextMenu.IsOpen = true;
     }
 
-    private void HistoryWindow_PreviewMouseLeftButtonDown(
+    private void HistoryListBoxItem_PreviewMouseLeftButtonDown(
         object sender,
         MouseButtonEventArgs e)
     {
-        if (e.OriginalSource is not DependencyObject source)
+        if (sender is not ListBoxItem item)
             return;
 
-        var item = FindVisualAncestor<ListBoxItem>(source);
-        if (item is null ||
-            FindVisualAncestor<ButtonBase>(source) is not null)
+        if (e.OriginalSource is DependencyObject source)
         {
-            return;
-        }
+            if (FindVisualAncestor<ButtonBase>(source) is not null)
+                return;
 
-        var sourceControl = FindVisualAncestor<Control>(source);
-        if (sourceControl is not null &&
-            sourceControl is not Expander &&
-            sourceControl.IsTabStop)
-        {
-            return;
+            var sourceControl = FindVisualAncestor<Control>(source);
+            if (sourceControl is not null &&
+                sourceControl is not Expander &&
+                sourceControl.IsTabStop)
+            {
+                return;
+            }
         }
 
         var expander = FindVisualChildren<Expander>(item).FirstOrDefault();
@@ -96,7 +94,7 @@ public partial class HistoryWindow : Window
 
             element = element switch
             {
-                Visual or Visual3D => VisualTreeHelper.GetParent(element),
+                Visual => VisualTreeHelper.GetParent(element),
                 FrameworkContentElement contentElement => contentElement.Parent,
                 _ => LogicalTreeHelper.GetParent(element)
             };
