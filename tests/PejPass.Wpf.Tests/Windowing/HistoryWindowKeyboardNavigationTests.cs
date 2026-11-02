@@ -9,6 +9,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -111,7 +112,19 @@ public sealed class HistoryWindowKeyboardNavigationTests
             Assert.Equal(new Thickness(1), cardBorder.BorderThickness);
             Assert.Equal(window.FindResource("AccentBrush"), cardBorder.BorderBrush);
 
+            Assert.Empty(FindVisualChildren<Ellipse>(firstContainer));
+
+            var arrowButton = Assert.Single(FindVisualChildren<ToggleButton>(firstExpander));
+            Assert.False(arrowButton.Focusable);
+            Assert.False(arrowButton.IsTabStop);
             Assert.False(firstExpander.IsExpanded);
+
+            arrowButton.IsChecked = true;
+            Assert.True(firstExpander.IsExpanded);
+
+            arrowButton.IsChecked = false;
+            Assert.False(firstExpander.IsExpanded);
+
             var expandBySpace = RaisePreviewKeyDown(firstExpander, Key.Space);
             Assert.True(expandBySpace.Handled);
             Assert.True(firstExpander.IsExpanded);
