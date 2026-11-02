@@ -88,6 +88,7 @@
 
 				<ListBox.ItemContainerStyle>
 					<Style TargetType="ListBoxItem">
+						<EventSetter Event="PreviewMouseLeftButtonDown" Handler="TrashListBoxItem_PreviewMouseLeftButtonDown" />
 						<Setter Property="Focusable" Value="True" />
 						<Setter Property="IsTabStop" Value="True" />
 						<Setter Property="KeyboardNavigation.TabNavigation" Value="Continue" />
