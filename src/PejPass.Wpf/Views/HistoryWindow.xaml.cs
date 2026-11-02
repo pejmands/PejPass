@@ -2,6 +2,8 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace PejPass.Wpf.Views;
 
@@ -58,5 +60,122 @@ public partial class HistoryWindow : Window
     {
         if (sender is ListBoxItem item)
             item.IsSelected = true;
+    }
+
+    private void HistorySearchBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Tab ||
+            (e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0 ||
+            HistoryItemsListBox.Items.Count == 0)
+        {
+            return;
+        }
+
+        var tabStops = FindVisualChildren<UIElement>(HistorySearchBox)
+            .Where(IsKeyboardTabStop)
+            .ToList();
+        var focusedIndex = tabStops.FindIndex(
+            element => ReferenceEquals(element, Keyboard.FocusedElement));
+
+        if (focusedIndex < 0 || focusedIndex < tabStops.Count - 1)
+            return;
+
+        e.Handled = true;
+        FocusHistoryItem(0);
+    }
+
+    private void HistoryItemsListBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Tab ||
+            Keyboard.FocusedElement is not DependencyObject focusedElement)
+        {
+            return;
+        }
+
+        var container = ItemsControl.ContainerFromElement(
+            HistoryItemsListBox,
+            focusedElement) as ListBoxItem;
+
+        if (container is null)
+            return;
+
+        var currentIndex = HistoryItemsListBox.ItemContainerGenerator
+            .IndexFromContainer(container);
+        if (currentIndex < 0)
+            return;
+
+        var direction = (e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0
+            ? -1
+            : 1;
+        var nextIndex = currentIndex + direction;
+
+        if (nextIndex < 0 || nextIndex >= HistoryItemsListBox.Items.Count)
+            return;
+
+        e.Handled = true;
+        FocusHistoryItem(nextIndex);
+    }
+
+    private void ComparisonScrollViewer_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Tab ||
+            (e.KeyboardDevice.Modifiers & ModifierKeys.Shift) == 0 ||
+            HistoryItemsListBox.Items.Count == 0)
+        {
+            return;
+        }
+
+        var firstTabStop = FindVisualChildren<UIElement>(ComparisonFieldsItemsControl)
+            .FirstOrDefault(IsKeyboardTabStop);
+
+        if (!ReferenceEquals(firstTabStop, Keyboard.FocusedElement))
+            return;
+
+        e.Handled = true;
+        FocusHistoryItem(HistoryItemsListBox.Items.Count - 1);
+    }
+
+    private void FocusHistoryItem(int index)
+    {
+        if (index < 0 || index >= HistoryItemsListBox.Items.Count)
+            return;
+
+        HistoryItemsListBox.ScrollIntoView(HistoryItemsListBox.Items[index]);
+        HistoryItemsListBox.Dispatcher.BeginInvoke(
+            DispatcherPriority.Loaded,
+            new Action(() =>
+            {
+                HistoryItemsListBox.UpdateLayout();
+
+                if (HistoryItemsListBox.ItemContainerGenerator.ContainerFromIndex(index)
+                    is not ListBoxItem container)
+                {
+                    return;
+                }
+
+                var expander = FindVisualChildren<Expander>(container).FirstOrDefault();
+                expander?.Focus();
+            }));
+    }
+
+    private static bool IsKeyboardTabStop(UIElement element) =>
+        element.IsVisible &&
+        element.IsEnabled &&
+        element.Focusable &&
+        element.IsTabStop;
+
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent)
+        where T : DependencyObject
+    {
+        var count = VisualTreeHelper.GetChildrenCount(parent);
+        for (var index = 0; index < count; index++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+            if (child is T match)
+                yield return match;
+
+            foreach (var nested in FindVisualChildren<T>(child))
+                yield return nested;
+        }
     }
 }
