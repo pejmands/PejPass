@@ -4,6 +4,7 @@ using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -55,6 +56,22 @@ public sealed class TrashWindowKeyboardNavigationTests
                 KeyboardNavigation.GetTabNavigation(trashList));
             Assert.True(VirtualizingPanel.GetIsVirtualizing(trashList));
             Assert.Null(trashList.ItemContainerGenerator.ContainerFromIndex(20));
+
+            var scrollBars = FindVisualChildren<ScrollBar>(trashList).ToArray();
+            Assert.NotEmpty(scrollBars);
+            Assert.All(scrollBars, scrollBar =>
+            {
+                Assert.False(scrollBar.Focusable);
+                Assert.False(scrollBar.IsTabStop);
+            });
+
+            Assert.All(
+                FindVisualChildren<RepeatButton>(trashList),
+                repeatButton =>
+                {
+                    Assert.False(repeatButton.Focusable);
+                    Assert.False(repeatButton.IsTabStop);
+                });
 
             Assert.False(searchBox.Focusable);
             Assert.False(searchBox.IsTabStop);
