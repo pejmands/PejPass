@@ -1,10 +1,10 @@
+using PejPass.Domain.Entities;
+using PejPass.Wpf.Controls;
+using PejPass.Wpf.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using PejPass.Domain.Entities;
-using PejPass.Wpf.ViewModels;
-using PejPass.Wpf.Controls;
 using System.Windows.Media;
 
 namespace PejPass.Wpf.Tests.Windowing;
@@ -113,15 +113,14 @@ public sealed class KeyboardFocusVisibilityTests
                 Notes = string.Join(" ", Enumerable.Repeat(
                     "A long note used to exercise the nested notes scroll viewer.",
                     120)),
-                Tags = tagNames.ToList(),
-                CustomFields = Enumerable.Range(1, customFieldCount)
+                Tags = [.. tagNames],
+                CustomFields = [.. Enumerable.Range(1, customFieldCount)
                     .Select(index => new CustomField
                     {
                         Name = $"Secret field {index:D2}",
                         Value = $"secret-value-{index:D2}",
                         IsSecret = true
-                    })
-                    .ToList()
+                    })]
             };
 
             viewModel.Entries.Add(entry);
@@ -189,8 +188,8 @@ public sealed class KeyboardFocusVisibilityTests
                 PressTab(window);
                 window.UpdateLayout();
 
-                var focused = Assert.IsAssignableFrom<FrameworkElement>(
-                    Keyboard.FocusedElement);
+                var focused = Assert.IsType<FrameworkElement>(
+                    Keyboard.FocusedElement, exactMatch: false);
 
                 Assert.True(
                     focused.IsVisible,
@@ -381,8 +380,7 @@ public sealed class KeyboardFocusVisibilityTests
         if (element is null)
             return "<null>";
 
-        var frameworkElement = element as FrameworkElement;
-        var details = frameworkElement is null
+        var details = element is not FrameworkElement frameworkElement
             ? string.Empty
             : $", Name='{frameworkElement.Name}', Visibility={frameworkElement.Visibility}, IsVisible={frameworkElement.IsVisible}, Focusable={frameworkElement.Focusable}, IsTabStop={(frameworkElement is Control control ? control.IsTabStop.ToString() : "n/a")}, Size={frameworkElement.RenderSize}";
 
