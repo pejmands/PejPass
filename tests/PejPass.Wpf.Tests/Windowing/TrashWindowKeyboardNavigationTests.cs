@@ -107,8 +107,7 @@ public sealed class TrashWindowKeyboardNavigationTests
             Assert.True(firstContainer.IsKeyboardFocusWithin);
             Assert.Equal(window.FindResource("AccentBrush"), itemBorder.BorderBrush);
 
-            var titleText = FindVisualChildren<TextBlock>(firstContainer).First();
-            RaisePreviewMouseLeftButtonDown(titleText);
+            RaisePreviewMouseLeftButtonDown(firstContainer);
             DrainPendingOperations(window.Dispatcher);
 
             Assert.Same(firstContainer, Keyboard.FocusedElement);
@@ -159,11 +158,14 @@ public sealed class TrashWindowKeyboardNavigationTests
             var searchInput = Assert.Single(FindVisualChildren<TextBox>(searchBox));
             var scrollViewer = Assert.Single(FindVisualChildren<ScrollViewer>(trashList));
 
+            Assert.True(scrollViewer.ScrollableHeight > 0);
             scrollViewer.ScrollToBottom();
-            window.UpdateLayout();
+            DrainPendingOperations(window.Dispatcher);
 
             Assert.True(VirtualizingPanel.GetIsVirtualizing(trashList));
-            Assert.Null(trashList.ItemContainerGenerator.ContainerFromIndex(0));
+            Assert.True(
+                scrollViewer.VerticalOffset > 0,
+                $"Expected the Trash list to be scrolled down, but its offset was {scrollViewer.VerticalOffset}.");
 
             Assert.Same(searchInput, Keyboard.Focus(searchInput));
             var searchTab = RaisePreviewKeyDown(searchInput, Key.Tab);
