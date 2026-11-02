@@ -50,8 +50,11 @@ public partial class HistoryWindow : Window
 
     private void HistoryListBoxItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (sender is ListBoxItem item)
-            item.IsSelected = true;
+        if (sender is not ListBoxItem item)
+            return;
+
+        item.IsSelected = true;
+        FindVisualChildren<Expander>(item).FirstOrDefault()?.Focus();
     }
 
     private void HistoryListBoxItem_GotKeyboardFocus(
