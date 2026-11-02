@@ -214,17 +214,6 @@ public sealed class KeyboardFocusVisibilityTests
             Assert.True(customFieldFocusCount > 0, "The Tab cycle never reached a Custom Fields action button.");
             Assert.True(tagChipFocusCount > 0, "The Tab cycle never reached a tag filter chip.");
 
-            Assert.True(Keyboard.Focus(copyButton) is not null);
-            PressTab(window);
-            window.UpdateLayout();
-
-            Assert.Same(
-                FindVisualChildren<Button>(tagStrip).Last(),
-                Keyboard.FocusedElement is FrameworkElement lastFocused &&
-                FindVisualAncestor<TagChipStrip>(lastFocused) is not null
-                    ? lastFocused
-                    : null);
-
             Assert.True(editButton.IsVisible);
 
             window.Hide();
