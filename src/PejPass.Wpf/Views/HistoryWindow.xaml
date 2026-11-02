@@ -188,8 +188,8 @@
 					</ListBox.Style>
 					<ListBox.ItemContainerStyle>
 						<Style TargetType="ListBoxItem">
-			<EventSetter Event="PreviewMouseLeftButtonDown" Handler="HistoryListBoxItem_PreviewMouseLeftButtonDown" />
-											<EventSetter Event="GotKeyboardFocus" Handler="HistoryListBoxItem_GotKeyboardFocus" />
+							<EventSetter Event="PreviewMouseLeftButtonDown" Handler="HistoryListBoxItem_PreviewMouseLeftButtonDown" />
+							<EventSetter Event="GotKeyboardFocus" Handler="HistoryListBoxItem_GotKeyboardFocus" />
 							<Setter Property="Focusable" Value="False" />
 							<Setter Property="IsTabStop" Value="False" />
 							<Setter Property="HorizontalContentAlignment" Value="Stretch" />
