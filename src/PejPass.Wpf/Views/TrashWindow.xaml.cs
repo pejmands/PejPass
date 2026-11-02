@@ -23,6 +23,33 @@ public partial class TrashWindow : Window
         Closed += (_, _) => FaviconService.FaviconsBatchReady -= OnFaviconsReady;
     }
 
+    private void TrashListBoxItem_PreviewMouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (sender is not ListBoxItem item ||
+            FindVisualAncestor<Button>(e.OriginalSource as DependencyObject) is not null)
+        {
+            return;
+        }
+
+        item.Focus();
+    }
+
+    private static T? FindVisualAncestor<T>(DependencyObject? element)
+        where T : DependencyObject
+    {
+        while (element is not null)
+        {
+            if (element is T match)
+                return match;
+
+            element = VisualTreeHelper.GetParent(element);
+        }
+
+        return null;
+    }
+
     private void OnKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (e.Key != System.Windows.Input.Key.Escape)
