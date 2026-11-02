@@ -162,7 +162,8 @@ public partial class HistoryWindow : Window
         element.IsVisible &&
         element.IsEnabled &&
         element.Focusable &&
-        element.IsTabStop;
+        element is Control control &&
+        control.IsTabStop;
 
     private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent)
         where T : DependencyObject
