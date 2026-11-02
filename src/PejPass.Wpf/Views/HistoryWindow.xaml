@@ -206,7 +206,7 @@
 								</Setter.Value>
 							</Setter>
 						</Style>
-					</ListBox.ItemContainerStyle>tyle>
+					</ListBox.ItemContainerStyle>
 					<ListBox.ItemTemplate>
 						<DataTemplate>
 							<Grid>
