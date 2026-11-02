@@ -49,6 +49,10 @@ public sealed class TrashWindowKeyboardNavigationTests
                 FindVisualChildren<ScrollViewer>(trashList));
 
             Assert.Equal(30, viewModel.Items.Count);
+            Assert.True(viewModel.EmptyTrashCommand.CanExecute(null));
+            Assert.Equal(
+                KeyboardNavigationMode.Continue,
+                KeyboardNavigation.GetTabNavigation(trashList));
             Assert.True(VirtualizingPanel.GetIsVirtualizing(trashList));
             Assert.Null(trashList.ItemContainerGenerator.ContainerFromIndex(20));
 
