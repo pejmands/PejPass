@@ -107,12 +107,13 @@ public static class NestedScrollChain
             return;
 
         inner.SetValue(IsLocalHandlerAttachedProperty, true);
+        MouseWheelEventHandler handler = horizontal
+            ? OnUnparentedHorizontalPreviewMouseWheel
+            : OnUnparentedVerticalPreviewMouseWheel;
+
         inner.AddHandler(
             UIElement.PreviewMouseWheelEvent,
-            new MouseWheelEventHandler(
-                horizontal
-                    ? OnUnparentedHorizontalPreviewMouseWheel
-                    : OnUnparentedVerticalPreviewMouseWheel),
+            handler,
             handledEventsToo: true);
     }
 
