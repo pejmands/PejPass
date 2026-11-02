@@ -210,30 +210,8 @@
 					<ListBox.ItemTemplate>
 						<DataTemplate>
 							<Grid>
-								<Grid.ColumnDefinitions>
-									<ColumnDefinition Width="24" />
-									<ColumnDefinition Width="*" />
-								</Grid.ColumnDefinitions>
-
-								<Grid Grid.Column="0">
-									<Border
-										Width="1"
-										Margin="0,14,0,0"
-										HorizontalAlignment="Center"
-										VerticalAlignment="Stretch"
-										Background="{DynamicResource BorderBrush}" />
-									<Ellipse
-										Width="9"
-										Height="9"
-										Margin="0,7,0,0"
-										HorizontalAlignment="Center"
-										VerticalAlignment="Top"
-										Fill="{DynamicResource AccentBrush}" />
-								</Grid>
-
 								<Border
-									Grid.Column="1"
-									Margin="8,0,0,6"
+									Margin="0,0,0,6"
 									Padding="14,12"
 									CornerRadius="8">
 									<Border.Style>
@@ -263,6 +241,87 @@
 										PreviewKeyDown="HistoryExpander_PreviewKeyDown"
 										BorderThickness="0"
 										IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
+										<Expander.Template>
+											<ControlTemplate TargetType="{x:Type Expander}">
+												<DockPanel LastChildFill="True">
+													<Grid DockPanel.Dock="Top">
+														<Grid.ColumnDefinitions>
+															<ColumnDefinition Width="*" />
+															<ColumnDefinition Width="Auto" />
+														</Grid.ColumnDefinitions>
+													<ContentPresenter
+														Grid.Column="0"
+														ContentSource="Header"
+														RecognizesAccessKey="True"
+														VerticalAlignment="Center" />
+													<ToggleButton
+														Grid.Column="1"
+														Width="28"
+														Height="28"
+														Margin="8,0,0,0"
+														Padding="0"
+														Focusable="False"
+														IsTabStop="False"
+														Background="Transparent"
+														BorderThickness="0"
+														Cursor="Hand"
+														IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource AncestorType={x:Type Expander}}, Mode=TwoWay}">
+														<ToggleButton.Template>
+															<ControlTemplate TargetType="{x:Type ToggleButton}">
+																<Border
+																	x:Name="ArrowButtonBackground"
+																	Background="{TemplateBinding Background}"
+																	CornerRadius="4">
+																	<Path
+																		x:Name="ArrowGlyph"
+																		Width="12"
+																		Height="12"
+																		HorizontalAlignment="Center"
+																		VerticalAlignment="Center"
+																		Data="M 3,1 L 8,6 L 3,11"
+																		Stroke="{DynamicResource MutedBrush}"
+																		StrokeThickness="1.6"
+																		StrokeStartLineCap="Round"
+																		StrokeEndLineCap="Round"
+																		RenderTransformOrigin="0.5,0.5">
+																		<Path.RenderTransform>
+																			<RotateTransform Angle="0" />
+																		</Path.RenderTransform>
+																	</Path>
+																</Border>
+																<ControlTemplate.Triggers>
+																	<Trigger Property="IsMouseOver" Value="True">
+																		<Setter TargetName="ArrowButtonBackground" Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+																	</Trigger>
+																	<Trigger Property="IsPressed" Value="True">
+																		<Setter TargetName="ArrowButtonBackground" Property="Background" Value="{DynamicResource BorderBrush}" />
+																	</Trigger>
+																	<Trigger Property="IsChecked" Value="True">
+																		<Setter TargetName="ArrowGlyph" Property="RenderTransform">
+																			<Setter.Value>
+																				<RotateTransform Angle="90" />
+																			</Setter.Value>
+																		</Setter>
+																	</Trigger>
+																	<Trigger Property="IsEnabled" Value="False">
+																		<Setter TargetName="ArrowGlyph" Property="Opacity" Value="0.5" />
+																	</Trigger>
+																</ControlTemplate.Triggers>
+															</ControlTemplate>
+														</ToggleButton.Template>
+													</ToggleButton>
+													</Grid>
+													<ContentPresenter
+														x:Name="ExpandSite"
+														ContentSource="Content" />
+												</DockPanel>
+												<ControlTemplate.Triggers>
+													<Trigger Property="IsExpanded" Value="False">
+														<Setter TargetName="ExpandSite" Property="Visibility" Value="Collapsed" />
+													</Trigger>
+												</ControlTemplate.Triggers>
+										</ControlTemplate>
+									</Expander.Template>
 										<Expander.Header>
 											<Grid>
 												<Grid.ColumnDefinitions>
