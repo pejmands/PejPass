@@ -1,6 +1,7 @@
 using PejPass.Application.Security;
 using PejPass.Domain.Entities;
 using PejPass.Domain.Settings;
+using PejPass.Wpf.Controls;
 using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
@@ -51,9 +52,9 @@ public sealed class HistoryWindowKeyboardNavigationTests
                 (_, _) => { });
             var window = new HistoryWindow(viewModel);
 
-            var titleBar = Assert.IsType<Controls.AppTitleBar>(
+            var titleBar = Assert.IsType<AppTitleBar>(
                 window.FindName("HistoryTitleBar"));
-            var searchBox = Assert.IsType<Controls.SearchBox>(
+            var searchBox = Assert.IsType<SearchBox>(
                 window.FindName("HistorySearchBox"));
             var historyList = Assert.IsType<ListBox>(
                 window.FindName("HistoryItemsListBox"));
