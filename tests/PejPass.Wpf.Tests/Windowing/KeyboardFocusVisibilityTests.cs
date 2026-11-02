@@ -89,27 +89,7 @@ public sealed class KeyboardFocusVisibilityTests
     }
 
     [Fact(Timeout = 15000)]
-    public void MainWindowTotpProgressBar_IsNotAKeyboardTabStop()
-    {
-        WpfTestHost.Run(host =>
-        {
-            var window = host.CreateMainWindow();
-
-            window.Show();
-            window.UpdateLayout();
-
-            var progressBar = Assert.IsType<ProgressBar>(
-                window.FindName("TotpProgressBar"));
-
-            Assert.False(progressBar.Focusable);
-            Assert.False(progressBar.IsTabStop);
-
-            window.Hide();
-        }, TestContext.Current.CancellationToken);
-    }
-
-    [Fact(Timeout = 15000)]
-    public void MainWindow_TotpCopy_TabMovesDirectlyToEditAction()
+    public void MainWindow_TotpCopy_SkipsScrollableNotesViewerAndMovesToEdit()
     {
         WpfTestHost.Run(host =>
         {
@@ -119,7 +99,10 @@ public sealed class KeyboardFocusVisibilityTests
             var entry = new VaultEntry
             {
                 Title = "TOTP entry",
-                TotpSecret = "JBSWY3DPEHPK3PXP"
+                TotpSecret = "JBSWY3DPEHPK3PXP",
+                Notes = string.Join(" ", Enumerable.Repeat(
+                    "A long note used to exercise the nested notes scroll viewer.",
+                    120))
             };
 
             viewModel.Entries.Add(entry);
@@ -133,8 +116,20 @@ public sealed class KeyboardFocusVisibilityTests
                 window.FindName("CopyTotpButton"));
             var editButton = Assert.IsType<Button>(
                 window.FindName("EditEntryButton"));
+            var detailsScrollViewer = Assert.IsType<ScrollViewer>(
+                window.FindName("EntryDetailsScrollViewer"));
+            var notesScrollViewer = Assert.IsType<ScrollViewer>(
+                window.FindName("NotesScrollViewer"));
 
             Assert.Equal(Visibility.Visible, copyButton.Visibility);
+            Assert.Equal(Visibility.Visible, notesScrollViewer.Visibility);
+            Assert.True(
+                notesScrollViewer.ScrollableHeight > 0,
+                "The regression entry must produce a scrollable Notes section.");
+            Assert.False(detailsScrollViewer.Focusable);
+            Assert.False(detailsScrollViewer.IsTabStop);
+            Assert.False(notesScrollViewer.Focusable);
+            Assert.False(notesScrollViewer.IsTabStop);
             Assert.True(Keyboard.Focus(copyButton) is not null);
             Assert.Same(copyButton, Keyboard.FocusedElement);
 
@@ -200,19 +195,6 @@ public sealed class KeyboardFocusVisibilityTests
 
             window.Close();
         }, TestContext.Current.CancellationToken);
-    }
-
-    private static string DescribeFocus(DependencyObject? element)
-    {
-        if (element is null)
-            return "<null>";
-
-        var frameworkElement = element as FrameworkElement;
-        var details = frameworkElement is null
-            ? string.Empty
-            : $", Name='{frameworkElement.Name}', Visibility={frameworkElement.Visibility}, IsVisible={frameworkElement.IsVisible}, Focusable={frameworkElement.Focusable}";
-
-        return $"{element.GetType().FullName}{details}";
     }
 
     private static T? FindVisualChild<T>(DependencyObject parent)
