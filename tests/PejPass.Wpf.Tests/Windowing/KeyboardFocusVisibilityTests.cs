@@ -87,6 +87,26 @@ public sealed class KeyboardFocusVisibilityTests
     }
 
     [Fact(Timeout = 15000)]
+    public void MainWindowTotpProgressBar_IsNotAKeyboardTabStop()
+    {
+        WpfTestHost.Run(host =>
+        {
+            var window = host.CreateMainWindow();
+
+            window.Show();
+            window.UpdateLayout();
+
+            var progressBar = Assert.IsType<ProgressBar>(
+                window.FindName("TotpProgressBar"));
+
+            Assert.False(progressBar.Focusable);
+            Assert.False(progressBar.IsTabStop);
+
+            window.Hide();
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 15000)]
     public void SliderTemplate_ShowsFocusRingWhenFocusedByKeyboard()
     {
         WpfTestHost.Run(_ =>
