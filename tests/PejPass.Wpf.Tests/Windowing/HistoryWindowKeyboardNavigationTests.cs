@@ -6,7 +6,6 @@ using PejPass.Wpf.Services;
 using PejPass.Wpf.ViewModels;
 using PejPass.Wpf.Views;
 using System.IO;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
@@ -105,13 +104,23 @@ public sealed class HistoryWindowKeyboardNavigationTests
                 historyList.ItemContainerGenerator.ContainerFromIndex(0));
             var firstExpander = Assert.Single(FindVisualChildren<Expander>(firstContainer));
             Assert.Same(firstExpander, Keyboard.FocusedElement);
+            Assert.Null(firstContainer.Template.FindName("ItemBorder", firstContainer));
 
             var cardBorder = Assert.IsType<Border>(VisualTreeHelper.GetParent(firstExpander));
             Assert.True(cardBorder.IsKeyboardFocusWithin);
             Assert.Equal(new Thickness(1), cardBorder.BorderThickness);
             Assert.Equal(window.FindResource("AccentBrush"), cardBorder.BorderBrush);
 
-            for (var index = 1; index <= 18; index++)
+            Assert.False(firstExpander.IsExpanded);
+            var expandBySpace = RaisePreviewKeyDown(firstExpander, Key.Space);
+            Assert.True(expandBySpace.Handled);
+            Assert.True(firstExpander.IsExpanded);
+
+            var collapseBySpace = RaisePreviewKeyDown(firstExpander, Key.Space);
+            Assert.True(collapseBySpace.Handled);
+            Assert.False(firstExpander.IsExpanded);
+
+            for (var index = 1; index < viewModel.Items.Count; index++)
             {
                 var currentExpander = Assert.IsAssignableFrom<Expander>(
                     Keyboard.FocusedElement);
@@ -128,15 +137,7 @@ public sealed class HistoryWindowKeyboardNavigationTests
                 Assert.Same(viewModel.Items[index], viewModel.SelectedItem);
             }
 
-            var focusHistoryItem = typeof(HistoryWindow).GetMethod(
-                "FocusHistoryItem",
-                BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.NotNull(focusHistoryItem);
-
             var lastIndex = viewModel.Items.Count - 1;
-            focusHistoryItem!.Invoke(window, [lastIndex]);
-            DrainPendingOperations(window.Dispatcher);
-
             var lastContainer = Assert.IsType<ListBoxItem>(
                 historyList.ItemContainerGenerator.ContainerFromIndex(lastIndex));
             var lastExpander = Assert.Single(FindVisualChildren<Expander>(lastContainer));
