@@ -116,6 +116,13 @@ public sealed class HistoryWindowKeyboardNavigationTests
 
             Assert.Empty(FindVisualChildren<Ellipse>(firstContainer));
 
+            Assert.Same(searchInput, Keyboard.Focus(searchInput));
+            var headerTitle = FindVisualChildren<TextBlock>(
+                Assert.IsAssignableFrom<DependencyObject>(firstExpander.Header)).First();
+            RaisePreviewMouseLeftButtonDown(headerTitle);
+            Assert.Same(firstExpander, Keyboard.FocusedElement);
+            Assert.False(firstExpander.IsExpanded);
+
             var arrowButton = Assert.Single(FindVisualChildren<ToggleButton>(firstExpander));
             Assert.False(arrowButton.Focusable);
             Assert.False(arrowButton.IsTabStop);
@@ -175,6 +182,20 @@ public sealed class HistoryWindowKeyboardNavigationTests
             key)
         {
             RoutedEvent = Keyboard.PreviewKeyDownEvent
+        };
+
+        target.RaiseEvent(args);
+        return args;
+    }
+
+    private static MouseButtonEventArgs RaisePreviewMouseLeftButtonDown(UIElement target)
+    {
+        var args = new MouseButtonEventArgs(
+            Mouse.PrimaryDevice,
+            Environment.TickCount,
+            MouseButton.Left)
+        {
+            RoutedEvent = UIElement.PreviewMouseLeftButtonDownEvent
         };
 
         target.RaiseEvent(args);
