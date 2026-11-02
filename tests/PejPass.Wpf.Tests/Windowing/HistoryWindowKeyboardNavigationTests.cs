@@ -12,6 +12,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace PejPass.Wpf.Tests.Windowing;
@@ -111,6 +112,7 @@ public sealed class HistoryWindowKeyboardNavigationTests
             Assert.True(cardBorder.IsKeyboardFocusWithin);
             Assert.Equal(new Thickness(1), cardBorder.BorderThickness);
             Assert.Equal(window.FindResource("AccentBrush"), cardBorder.BorderBrush);
+            Assert.Equal(new Thickness(0, 0, 0, 6), cardBorder.Margin);
 
             Assert.Empty(FindVisualChildren<Ellipse>(firstContainer));
 
