@@ -255,7 +255,7 @@
 													<Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
 												</Trigger>
 											</Style.Triggers>
-										</Style>		</Style>
+										</Style>
 									</Border.Style>
 									<Expander
 										Focusable="True"
