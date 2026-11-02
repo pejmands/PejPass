@@ -33,6 +33,11 @@ public partial class App : System.Windows.Application
     private static int _unobservedTaskExceptionPending;
 
     private const double WindowCornerRadius = 10;
+    private const int DwmWindowCornerPreferenceAttribute = 33;
+    private const int DwmWindowCornerPreferenceSmallRound = 3;
+
+    private static bool SupportsNativeRoundedCorners =>
+        OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000);
 
     public App()
     {
@@ -638,13 +643,13 @@ public partial class App : System.Windows.Application
         if (window.Content is Border { Tag: "ChromeRoot" })
             return;
 
+        EnsureChromeShell(window);
+
         ApplyWindowChrome(
             window,
             window.WindowState == WindowState.Maximized
                 ? 0
                 : WindowCornerRadius);
-
-        EnsureChromeShell(window);
 
         window.StateChanged -= OnWindowStateChangedForChrome;
         window.StateChanged += OnWindowStateChangedForChrome;
@@ -672,15 +677,56 @@ public partial class App : System.Windows.Application
             : WindowCornerRadius;
 
         ApplyWindowChrome(window, radius);
-
-        if (window.Content is Border root &&
-            Equals(root.Tag, "ChromeRoot"))
-        {
-            root.CornerRadius = new CornerRadius(radius);
-        }
     }
 
     private static void ApplyWindowChrome(Window window, double radius)
+    {
+        var useNativeRoundedCorners = SupportsNativeRoundedCorners;
+        var windowCornerRadius = useNativeRoundedCorners
+            ? 0
+            : radius;
+
+        SetWindowChrome(window, windowCornerRadius, useNativeRoundedCorners);
+        SetChromeRootCornerRadius(window, windowCornerRadius);
+
+        void ApplyWindowStyles()
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
+            if (hwnd == IntPtr.Zero)
+                return;
+
+            StripNativeSystemMenu(hwnd);
+
+            if (useNativeRoundedCorners &&
+                !TryApplyNativeRoundedCorners(hwnd))
+            {
+                SetWindowChrome(window, radius, useNativeRoundedCorners: false);
+                SetChromeRootCornerRadius(window, radius);
+            }
+        }
+
+        var handle = new System.Windows.Interop.WindowInteropHelper(window).Handle;
+        if (handle != IntPtr.Zero)
+        {
+            ApplyWindowStyles();
+        }
+        else
+        {
+            EventHandler? sourceInitialized = null;
+            sourceInitialized = (_, _) =>
+            {
+                window.SourceInitialized -= sourceInitialized;
+                ApplyWindowStyles();
+            };
+
+            window.SourceInitialized += sourceInitialized;
+        }
+    }
+
+    private static void SetWindowChrome(
+        Window window,
+        double radius,
+        bool useNativeRoundedCorners)
     {
         WindowChrome.SetWindowChrome(window, new WindowChrome
         {
@@ -688,17 +734,44 @@ public partial class App : System.Windows.Application
             ResizeBorderThickness = window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip
                 ? new Thickness(6)
                 : new Thickness(0),
-            GlassFrameThickness = new Thickness(0),
+            // Keep WPF from applying a binary window region so DWM can render the corners.
+            GlassFrameThickness = useNativeRoundedCorners
+                ? new Thickness(0.00001)
+                : new Thickness(0),
             CornerRadius = new CornerRadius(radius),
             UseAeroCaptionButtons = false
         });
+    }
 
-        var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
-        if (hwnd != IntPtr.Zero)
-            StripNativeSystemMenu(hwnd);
-        else
-            window.SourceInitialized += (_, _) =>
-                StripNativeSystemMenu(new System.Windows.Interop.WindowInteropHelper(window).Handle);
+    private static void SetChromeRootCornerRadius(Window window, double radius)
+    {
+        if (window.Content is Border root &&
+            Equals(root.Tag, "ChromeRoot"))
+        {
+            root.CornerRadius = new CornerRadius(radius);
+        }
+    }
+
+    private static bool TryApplyNativeRoundedCorners(IntPtr hwnd)
+    {
+        var preference = DwmWindowCornerPreferenceSmallRound;
+
+        try
+        {
+            return DwmSetWindowAttribute(
+                hwnd,
+                DwmWindowCornerPreferenceAttribute,
+                ref preference,
+                sizeof(uint)) >= 0;
+        }
+        catch (DllNotFoundException)
+        {
+            return false;
+        }
+        catch (EntryPointNotFoundException)
+        {
+            return false;
+        }
     }
 
     private const int GwlStyle = -16;
@@ -712,6 +785,13 @@ public partial class App : System.Windows.Application
         var style = GetWindowLongPtr(hwnd, GwlStyle).ToInt64();
         SetWindowLongPtr(hwnd, GwlStyle, checked((IntPtr)(style & ~WsSysMenu)));
     }
+
+    [LibraryImport("dwmapi.dll", EntryPoint = "DwmSetWindowAttribute")]
+    private static partial int DwmSetWindowAttribute(
+        IntPtr hwnd,
+        int attribute,
+        ref int value,
+        uint valueSize);
 
     [LibraryImport("user32.dll", EntryPoint = "GetWindowLong")]
     private static partial IntPtr GetWindowLongPtr32(IntPtr hWnd, int nIndex);
@@ -776,9 +856,10 @@ public partial class App : System.Windows.Application
             content = dock;
         }
 
-        var radius = window.WindowState == WindowState.Maximized
-            ? 0
-            : WindowCornerRadius;
+        var radius = window.WindowState == WindowState.Maximized ||
+            SupportsNativeRoundedCorners
+                ? 0
+                : WindowCornerRadius;
 
         var root = new Border
         {
