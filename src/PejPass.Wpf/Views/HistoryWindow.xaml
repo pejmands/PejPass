@@ -198,29 +198,15 @@
 							<Setter Property="Template">
 								<Setter.Value>
 									<ControlTemplate TargetType="ListBoxItem">
-										<Border
-											x:Name="ItemBorder"
-											Padding="14,12"
-											Background="{DynamicResource SurfaceBrush}"
-											BorderBrush="Transparent"
-											BorderThickness="1"
-											CornerRadius="8">
-											<ContentPresenter />
-										</Border>
-										<ControlTemplate.Triggers>
-											<Trigger Property="IsSelected" Value="True">
-												<Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
-												<Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-											</Trigger>
-											<Trigger Property="IsMouseOver" Value="True">
-												<Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
-											</Trigger>
-										</ControlTemplate.Triggers>
+										<ContentPresenter
+										HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+										VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+										SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
 									</ControlTemplate>
 								</Setter.Value>
 							</Setter>
 						</Style>
-					</ListBox.ItemContainerStyle>
+					</ListBox.ItemContainerStyle>tyle>
 					<ListBox.ItemTemplate>
 						<DataTemplate>
 							<Grid>
@@ -251,21 +237,30 @@
 									Padding="14,12"
 									CornerRadius="8">
 									<Border.Style>
+
 										<Style TargetType="Border">
 											<Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
 											<Setter Property="BorderBrush" Value="Transparent" />
 											<Setter Property="BorderThickness" Value="1" />
 											<Style.Triggers>
+												<DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
+													<Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+													<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+												</DataTrigger>
+												<DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
+													<Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+												</DataTrigger>
 												<Trigger Property="IsKeyboardFocusWithin" Value="True">
 													<Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
 													<Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
 												</Trigger>
 											</Style.Triggers>
-										</Style>
+										</Style>		</Style>
 									</Border.Style>
 									<Expander
 										Focusable="True"
 										IsTabStop="True"
+										PreviewKeyDown="HistoryExpander_PreviewKeyDown"
 										BorderThickness="0"
 										IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
 										<Expander.Header>
