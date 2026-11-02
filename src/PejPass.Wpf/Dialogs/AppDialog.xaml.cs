@@ -77,8 +77,9 @@ public partial class AppDialog : Window
                 "Unsupported dialog type.")
         };
 
-        TypeIcon.Data = Geometry.Parse(geometry);
-        TypeIcon.SetResourceReference(Shape.StrokeProperty, brushKey);
+        var icon = (Path)FindName("TypeIcon");
+        icon.Data = Geometry.Parse(geometry);
+        icon.SetResourceReference(Shape.StrokeProperty, brushKey);
     }
 
     public AppDialog(string title, string message, AppDialogType type,
