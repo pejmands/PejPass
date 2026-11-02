@@ -41,6 +41,8 @@
 			x:Name="TrashSearchBox"
 			Grid.Row="1"
 			Margin="0,0,0,12"
+			Focusable="False"
+			IsTabStop="False"
 			Placeholder="Search trash..."
 			Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
 			ToolTip="Search trash by title, username, or URL" />
@@ -49,14 +51,46 @@
 		<Grid Grid.Row="2">
 			<ListBox
 				x:Name="TrashList"
+				Focusable="False"
+				IsTabStop="False"
+				KeyboardNavigation.TabNavigation="Continue"
 				Background="Transparent"
 				BorderThickness="0"
 				ItemsSource="{Binding Items}"
+				ScrollViewer.CanContentScroll="True"
 				ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+				ScrollViewer.VerticalScrollBarVisibility="Auto"
+				VirtualizingPanel.IsVirtualizing="True"
+				VirtualizingPanel.ScrollUnit="Pixel"
 				SelectionMode="Extended">
+
+				<ListBox.Style>
+					<Style TargetType="ListBox">
+						<Setter Property="Template">
+							<Setter.Value>
+								<ControlTemplate TargetType="ListBox">
+									<Grid>
+										<ScrollViewer
+										x:Name="TrashListScrollViewer"
+										Focusable="False"
+										IsTabStop="False"
+										CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}"
+										HorizontalScrollBarVisibility="Disabled"
+										VerticalScrollBarVisibility="Auto">
+										<ItemsPresenter />
+										</ScrollViewer>
+									</Grid>
+								</ControlTemplate>
+							</Setter.Value>
+						</Setter>
+					</Style>
+				</ListBox.Style>
 
 				<ListBox.ItemContainerStyle>
 					<Style TargetType="ListBoxItem">
+						<Setter Property="Focusable" Value="True" />
+						<Setter Property="IsTabStop" Value="True" />
+						<Setter Property="KeyboardNavigation.TabNavigation" Value="Continue" />
 						<Setter Property="HorizontalContentAlignment" Value="Stretch" />
 						<Setter Property="Padding" Value="0" />
 						<Setter Property="Margin" Value="0,0,0,6" />
@@ -71,12 +105,18 @@
 										BorderBrush="Transparent"
 										BorderThickness="1"
 										CornerRadius="8">
-										<ContentPresenter />
+										<ContentPresenter
+											HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+											VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+											SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
 									</Border>
 									<ControlTemplate.Triggers>
 										<Trigger Property="IsSelected" Value="True">
 											<Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
 											<Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+										</Trigger>
+										<Trigger Property="IsMouseOver" Value="True">
+											<Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
 										</Trigger>
 										<Trigger Property="IsKeyboardFocusWithin" Value="True">
 											<Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
