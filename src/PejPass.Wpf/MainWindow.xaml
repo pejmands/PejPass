@@ -720,7 +720,10 @@
 										Foreground="{DynamicResource MutedBrush}"
 										Text="RELATED SITES" />
 
-									<ItemsControl ItemsSource="{Binding RelatedSites}">
+									<ItemsControl
+										Focusable="False"
+										IsTabStop="False"
+										ItemsSource="{Binding RelatedSites}">
 										<ItemsControl.ItemsPanel>
 											<ItemsPanelTemplate>
 												<WrapPanel />
@@ -923,7 +926,11 @@
 									Foreground="{DynamicResource MutedBrush}"
 									Text="CUSTOM FIELDS" />
 
-								<ItemsControl ItemsSource="{Binding DisplayCustomFields}">
+								<ItemsControl
+									x:Name="CustomFieldsItemsControl"
+									Focusable="False"
+									IsTabStop="False"
+									ItemsSource="{Binding DisplayCustomFields}">
 									<ItemsControl.ItemTemplate>
 										<DataTemplate>
 											<Grid Margin="0,0,0,8">
@@ -989,7 +996,10 @@
 									Foreground="{DynamicResource MutedBrush}"
 									Text="TAGS" />
 
-								<ItemsControl ItemsSource="{Binding SelectedEntry.Tags}">
+								<ItemsControl
+									Focusable="False"
+									IsTabStop="False"
+									ItemsSource="{Binding SelectedEntry.Tags}">
 									<ItemsControl.ItemsPanel>
 										<ItemsPanelTemplate>
 											<WrapPanel />
