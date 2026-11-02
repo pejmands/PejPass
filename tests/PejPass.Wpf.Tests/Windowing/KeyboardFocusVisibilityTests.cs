@@ -4,6 +4,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using PejPass.Domain.Entities;
 using PejPass.Wpf.ViewModels;
+using PejPass.Wpf.Controls;
 using System.Windows.Media;
 
 namespace PejPass.Wpf.Tests.Windowing;
@@ -89,14 +90,22 @@ public sealed class KeyboardFocusVisibilityTests
     }
 
     [Fact(Timeout = 15000)]
-    public void MainWindow_TotpCopy_TabKeyScrollsEditIntoView()
+    public void MainWindow_TotpCopy_TabKeepsCustomFieldsAndTagChipsVisible()
     {
         WpfTestHost.Run(host =>
         {
+            const int customFieldCount = 18;
+            const int tagCount = 24;
+
             var window = host.CreateMainWindow();
             window.Height = 560;
             System.Windows.Application.Current!.MainWindow = window;
+
             var viewModel = Assert.IsType<MainViewModel>(window.DataContext);
+            var tagNames = Enumerable.Range(1, tagCount)
+                .Select(index => $"focus-tag-{index:D2}")
+                .ToArray();
+
             var entry = new VaultEntry
             {
                 Title = "TOTP entry",
@@ -104,13 +113,37 @@ public sealed class KeyboardFocusVisibilityTests
                 Notes = string.Join(" ", Enumerable.Repeat(
                     "A long note used to exercise the nested notes scroll viewer.",
                     120)),
-                Tags = Enumerable.Range(1, 60)
-                    .Select(index => $"focus-visibility-regression-tag-{index:D2}")
+                Tags = tagNames.ToList(),
+                CustomFields = Enumerable.Range(1, customFieldCount)
+                    .Select(index => new CustomField
+                    {
+                        Name = $"Secret field {index:D2}",
+                        Value = $"secret-value-{index:D2}",
+                        IsSecret = true
+                    })
                     .ToList()
             };
 
             viewModel.Entries.Add(entry);
             viewModel.FilteredEntries.Add(entry);
+            viewModel.TagFilters.Add(new TagFilterItem
+            {
+                Name = "All",
+                Count = 1,
+                IsAll = true,
+                IsSelected = true
+            });
+
+            foreach (var tagName in tagNames)
+            {
+                viewModel.TagFilters.Add(new TagFilterItem
+                {
+                    Name = tagName,
+                    Count = 1
+                });
+            }
+
+            viewModel.ShowTagFilters = true;
             viewModel.SelectedEntry = entry;
 
             window.Show();
@@ -124,12 +157,18 @@ public sealed class KeyboardFocusVisibilityTests
                 window.FindName("EntryDetailsScrollViewer"));
             var notesScrollViewer = Assert.IsType<ScrollViewer>(
                 window.FindName("NotesScrollViewer"));
+            var tagStrip = Assert.IsType<TagChipStrip>(
+                FindVisualChild<TagChipStrip>(window));
+            var tagStripScrollViewer = Assert.IsType<ScrollViewer>(
+                FindVisualChild<ScrollViewer>(tagStrip));
 
             Assert.Equal(Visibility.Visible, copyButton.Visibility);
             Assert.Equal(Visibility.Visible, notesScrollViewer.Visibility);
-            Assert.True(
-                notesScrollViewer.ScrollableHeight > 0,
-                "The regression entry must produce a scrollable Notes section.");
+            Assert.True(notesScrollViewer.ScrollableHeight > 0);
+            Assert.True(tagStripScrollViewer.ScrollableWidth > 0);
+            Assert.Equal(tagCount + 1, FindVisualChildren<Button>(tagStrip).Count());
+            Assert.Equal(customFieldCount, viewModel.DisplayCustomFields.Count);
+
             Assert.False(detailsScrollViewer.Focusable);
             Assert.False(detailsScrollViewer.IsTabStop);
             Assert.False(notesScrollViewer.Focusable);
@@ -137,31 +176,56 @@ public sealed class KeyboardFocusVisibilityTests
             Assert.True(Keyboard.Focus(copyButton) is not null);
             Assert.Same(copyButton, Keyboard.FocusedElement);
 
+            var customFieldFocusCount = 0;
+            var tagChipFocusCount = 0;
+            var returnedToStart = false;
+
+            for (var index = 0; index < 160; index++)
+            {
+                PressTab(window);
+                window.UpdateLayout();
+
+                var focused = Assert.IsAssignableFrom<FrameworkElement>(
+                    Keyboard.FocusedElement);
+
+                Assert.True(
+                    focused.IsVisible,
+                    $"Tab moved focus to an invisible element: {DescribeFocus(focused)}.");
+
+                if (ReferenceEquals(focused, copyButton))
+                {
+                    returnedToStart = true;
+                    break;
+                }
+
+                if (FindVisualAncestor<ItemsControl>(focused) is { } itemsControl &&
+                    ReferenceEquals(itemsControl.ItemsSource, viewModel.DisplayCustomFields))
+                {
+                    customFieldFocusCount++;
+                }
+
+                if (FindVisualAncestor<TagChipStrip>(focused) is not null)
+                    tagChipFocusCount++;
+
+                AssertFocusedElementIsVisibleInAncestorScrollViewers(focused);
+            }
+
+            Assert.True(returnedToStart, "Tab navigation did not complete a full cycle back to the TOTP Copy button.");
+            Assert.True(customFieldFocusCount > 0, "The Tab cycle never reached a Custom Fields action button.");
+            Assert.True(tagChipFocusCount > 0, "The Tab cycle never reached a tag filter chip.");
+
+            Assert.True(Keyboard.Focus(copyButton) is not null);
             PressTab(window);
             window.UpdateLayout();
 
-            var focused = Keyboard.FocusedElement as DependencyObject;
-            Assert.True(
-                ReferenceEquals(editButton, focused),
-                $"Expected EditEntryButton after a real Tab key input from TOTP Copy, but focus moved to {DescribeFocus(focused)}.");
+            Assert.Same(
+                FindVisualChildren<Button>(tagStrip).Last(),
+                Keyboard.FocusedElement is FrameworkElement lastFocused &&
+                FindVisualAncestor<TagChipStrip>(lastFocused) is not null
+                    ? lastFocused
+                    : null);
 
-            Assert.True(editButton.IsKeyboardFocused);
-            editButton.ApplyTemplate();
-            var editFocusRing = Assert.IsType<Border>(
-                editButton.Template.FindName("FocusRing", editButton));
-            Assert.Equal(Visibility.Visible, editFocusRing.Visibility);
-
-            var editBounds = editButton
-                .TransformToAncestor(detailsScrollViewer)
-                .TransformBounds(new Rect(editButton.RenderSize));
-            var viewportBounds = new Rect(
-                0,
-                0,
-                detailsScrollViewer.ViewportWidth,
-                detailsScrollViewer.ViewportHeight);
-            Assert.True(
-                viewportBounds.IntersectsWith(editBounds),
-                $"EditEntryButton has keyboard focus but remains outside the visible details viewport. Edit bounds: {editBounds}; viewport: {viewportBounds}; vertical offset: {detailsScrollViewer.VerticalOffset}.");
+            Assert.True(editButton.IsVisible);
 
             window.Hide();
             viewModel.StopBackgroundTimers();
@@ -215,6 +279,82 @@ public sealed class KeyboardFocusVisibilityTests
 
             window.Close();
         }, TestContext.Current.CancellationToken);
+    }
+
+    private static void AssertFocusedElementIsVisibleInAncestorScrollViewers(
+        FrameworkElement focusedElement)
+    {
+        var current = VisualTreeHelper.GetParent(focusedElement);
+
+        while (current is not null)
+        {
+            if (current is ScrollViewer scrollViewer &&
+                scrollViewer.ViewportWidth > 0 &&
+                scrollViewer.ViewportHeight > 0)
+            {
+                var bounds = focusedElement
+                    .TransformToAncestor(scrollViewer)
+                    .TransformBounds(new Rect(focusedElement.RenderSize));
+                var viewport = new Rect(
+                    0,
+                    0,
+                    scrollViewer.ViewportWidth,
+                    scrollViewer.ViewportHeight);
+
+                Assert.True(
+                    IsVisibleWithin(bounds.Left, bounds.Right, viewport.Left, viewport.Right),
+                    $"Focused element is horizontally outside {scrollViewer.Name}: bounds={bounds}, viewport={viewport}.");
+                Assert.True(
+                    IsVisibleWithin(bounds.Top, bounds.Bottom, viewport.Top, viewport.Bottom),
+                    $"Focused element is vertically outside {scrollViewer.Name}: bounds={bounds}, viewport={viewport}.");
+            }
+
+            current = VisualTreeHelper.GetParent(current);
+        }
+    }
+
+    private static bool IsVisibleWithin(
+        double start,
+        double end,
+        double viewportStart,
+        double viewportEnd)
+    {
+        const double tolerance = 1.5;
+        return start >= viewportStart - tolerance &&
+               end <= viewportEnd + tolerance;
+    }
+
+    private static T? FindVisualAncestor<T>(DependencyObject element)
+        where T : DependencyObject
+    {
+        var current = VisualTreeHelper.GetParent(element);
+
+        while (current is not null)
+        {
+            if (current is T match)
+                return match;
+
+            current = VisualTreeHelper.GetParent(current);
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent)
+        where T : DependencyObject
+    {
+        var count = VisualTreeHelper.GetChildrenCount(parent);
+
+        for (var index = 0; index < count; index++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+
+            if (child is T match)
+                yield return match;
+
+            foreach (var nested in FindVisualChildren<T>(child))
+                yield return nested;
+        }
     }
 
     private static void PressTab(Window window)
