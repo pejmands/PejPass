@@ -37,7 +37,13 @@ public partial class TrashWindow : Window
             return;
         }
 
-        item.Focus();
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            new Action(() =>
+            {
+                if (item.IsLoaded && item.IsVisible)
+                    item.Focus();
+            }));
     }
 
     private static T? FindVisualAncestor<T>(DependencyObject? element)
