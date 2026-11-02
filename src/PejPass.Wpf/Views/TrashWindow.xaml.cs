@@ -58,100 +58,90 @@ public partial class TrashWindow : Window
         return null;
     }
 
-    private void TrashSearchBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    private void TrashWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Tab ||
-            (e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0 ||
-            TrashList.Items.Count == 0 ||
             Keyboard.FocusedElement is not UIElement focusedElement)
         {
             return;
         }
 
-        var tabStops = FindVisualChildren<UIElement>(TrashSearchBox)
-            .Where(IsKeyboardTabStop)
-            .ToList();
-        var focusedIndex = tabStops.FindIndex(
-            element => ReferenceEquals(element, focusedElement));
-
-        if (focusedIndex < 0 || focusedIndex < tabStops.Count - 1)
-            return;
-
-        e.Handled = true;
-        FocusTrashItem(0, 0);
+        var reverse = (e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0;
+        if (TryNavigateTrashTab(focusedElement, reverse))
+            e.Handled = true;
     }
 
-    private void TrashList_PreviewKeyDown(object sender, KeyEventArgs e)
+    private bool TryNavigateTrashTab(UIElement focusedElement, bool reverse)
     {
-        if (e.Key != Key.Tab ||
-            Keyboard.FocusedElement is not DependencyObject focusedElement)
-        {
-            return;
-        }
-
         var container = ItemsControl.ContainerFromElement(
             TrashList,
             focusedElement) as ListBoxItem;
 
-        if (container is null)
-            return;
-
-        var currentIndex = TrashList.ItemContainerGenerator.IndexFromContainer(container);
-        if (currentIndex < 0)
-            return;
-
-        var tabStops = GetTrashItemTabStops(container);
-        var focusedIndex = tabStops.FindIndex(
-            element => ReferenceEquals(element, Keyboard.FocusedElement));
-        if (focusedIndex < 0)
-            return;
-
-        var direction = (e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0
-            ? -1
-            : 1;
-        var nextFocusIndex = focusedIndex + direction;
-
-        if (nextFocusIndex >= 0 && nextFocusIndex < tabStops.Count)
+        if (container is not null)
         {
-            e.Handled = true;
-            tabStops[nextFocusIndex].Focus();
-            return;
-        }
+            var currentIndex = TrashList.ItemContainerGenerator.IndexFromContainer(container);
+            if (currentIndex < 0)
+                return false;
 
-        if (direction > 0)
-        {
-            e.Handled = true;
-            if (currentIndex < TrashList.Items.Count - 1)
-                FocusTrashItem(currentIndex + 1, 0);
+            var tabStops = GetTrashItemTabStops(container);
+            var focusedIndex = tabStops.FindIndex(
+                element => ReferenceEquals(element, focusedElement));
+            if (focusedIndex < 0)
+                return false;
+
+            var nextFocusIndex = focusedIndex + (reverse ? -1 : 1);
+            if (nextFocusIndex >= 0 && nextFocusIndex < tabStops.Count)
+            {
+                FocusTrashTabStop(tabStops[nextFocusIndex]);
+                return true;
+            }
+
+            if (!reverse)
+            {
+                if (currentIndex < TrashList.Items.Count - 1)
+                    FocusTrashItem(currentIndex + 1, 0);
+                else
+                    FocusFirstFooterTabStop();
+
+                return true;
+            }
+
+            if (currentIndex > 0)
+                FocusTrashItem(currentIndex - 1, -1);
             else
-                FocusFirstFooterTabStop();
+                FocusLastSearchTabStop();
 
-            return;
+            return true;
         }
 
-        e.Handled = true;
-        if (currentIndex > 0)
+        if (!reverse &&
+            FindVisualAncestor<SearchBox>(focusedElement) is not null &&
+            IsLastSearchTabStop(focusedElement) &&
+            TrashList.Items.Count > 0)
         {
-            FocusTrashItem(currentIndex - 1, -1);
+            FocusTrashItem(0, 0);
+            return true;
         }
-        else
+
+        if (reverse &&
+            TrashList.Items.Count > 0 &&
+            ReferenceEquals(GetFirstFooterTabStop(), focusedElement))
         {
-            FocusLastSearchTabStop();
+            FocusTrashItem(TrashList.Items.Count - 1, -1);
+            return true;
         }
+
+        return false;
     }
 
-    private void TrashFooterFirstButton_PreviewKeyDown(object sender, KeyEventArgs e)
+    private bool IsLastSearchTabStop(UIElement focusedElement)
     {
-        if (e.Key != Key.Tab ||
-            (e.KeyboardDevice.Modifiers & ModifierKeys.Shift) == 0 ||
-            TrashList.Items.Count == 0 ||
-            !ReferenceEquals(GetFirstFooterTabStop(), Keyboard.FocusedElement))
-        {
-            return;
-        }
+        var tabStops = FindVisualChildren<UIElement>(TrashSearchBox)
+            .Where(IsKeyboardTabStop)
+            .ToList();
 
-        e.Handled = true;
-        FocusTrashItem(TrashList.Items.Count - 1, -1);
+        return tabStops.Count > 0 &&
+            ReferenceEquals(tabStops[^1], focusedElement);
     }
 
     private void FocusTrashItem(int index, int tabStopIndex)
@@ -178,8 +168,23 @@ public partial class TrashWindow : Window
                     : tabStopIndex;
 
                 if (targetIndex >= 0 && targetIndex < tabStops.Count)
-                    tabStops[targetIndex].Focus();
+                    FocusTrashTabStop(tabStops[targetIndex]);
             }));
+    }
+
+    private void FocusTrashTabStop(UIElement target)
+    {
+        var selectedItems = TrashList.SelectedItems.Cast<object>().ToArray();
+
+        target.Focus();
+
+        var currentSelection = TrashList.SelectedItems.Cast<object>().ToArray();
+        if (selectedItems.SequenceEqual(currentSelection))
+            return;
+
+        TrashList.SelectedItems.Clear();
+        foreach (var selectedItem in selectedItems)
+            TrashList.SelectedItems.Add(selectedItem);
     }
 
     private void FocusLastSearchTabStop()
