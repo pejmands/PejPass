@@ -157,6 +157,8 @@ public sealed class KeyboardFocusVisibilityTests
                 window.FindName("EntryDetailsScrollViewer"));
             var notesScrollViewer = Assert.IsType<ScrollViewer>(
                 window.FindName("NotesScrollViewer"));
+            var customFieldsItemsControl = Assert.IsType<ItemsControl>(
+                window.FindName("CustomFieldsItemsControl"));
             var tagStrip = Assert.IsType<TagChipStrip>(
                 FindVisualChild<TagChipStrip>(window));
             var tagStripScrollViewer = Assert.IsType<ScrollViewer>(
@@ -173,6 +175,8 @@ public sealed class KeyboardFocusVisibilityTests
             Assert.False(detailsScrollViewer.IsTabStop);
             Assert.False(notesScrollViewer.Focusable);
             Assert.False(notesScrollViewer.IsTabStop);
+            Assert.False(customFieldsItemsControl.Focusable);
+            Assert.False(customFieldsItemsControl.IsTabStop);
             Assert.True(Keyboard.Focus(copyButton) is not null);
             Assert.Same(copyButton, Keyboard.FocusedElement);
 
