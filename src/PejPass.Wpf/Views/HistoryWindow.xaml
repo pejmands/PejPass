@@ -445,7 +445,7 @@
 							<ScrollViewer
 								x:Name="ComparisonScrollViewer"
 								Grid.Row="1"
-					PreviewKeyDown="ComparisonScrollViewer_PreviewKeyDown"
+								PreviewKeyDown="ComparisonScrollViewer_PreviewKeyDown"
 								Focusable="False"
 								IsTabStop="False"
 								HorizontalScrollBarVisibility="Disabled"
