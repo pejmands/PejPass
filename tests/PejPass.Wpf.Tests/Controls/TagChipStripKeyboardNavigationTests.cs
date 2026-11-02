@@ -19,11 +19,11 @@ public sealed class TagChipStripKeyboardNavigationTests
             var afterTags = new Button { Content = "After tags" };
             var strip = new TagChipStrip
             {
-                ItemsSource =
-                [
-                    new TagFilterItem { Name = "All", Count = 2, IsAll = true },
-                    new TagFilterItem { Name = "Work", Count = 1 }
-                ]
+                ItemsSource = new TagFilterItem[]
+                {
+                    new() { Name = "All", Count = 2, IsAll = true },
+                    new() { Name = "Work", Count = 1 }
+                }
             };
 
             var panel = new StackPanel();
