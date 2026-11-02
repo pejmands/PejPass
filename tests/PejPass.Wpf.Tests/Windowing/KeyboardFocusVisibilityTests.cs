@@ -372,7 +372,7 @@ public sealed class KeyboardFocusVisibilityTests
         var frameworkElement = element as FrameworkElement;
         var details = frameworkElement is null
             ? string.Empty
-            : $", Name='{frameworkElement.Name}', Visibility={frameworkElement.Visibility}, IsVisible={frameworkElement.IsVisible}, Focusable={frameworkElement.Focusable}, IsTabStop={(frameworkElement is Control control ? control.IsTabStop : "n/a")}, Size={frameworkElement.RenderSize}";
+            : $", Name='{frameworkElement.Name}', Visibility={frameworkElement.Visibility}, IsVisible={frameworkElement.IsVisible}, Focusable={frameworkElement.Focusable}, IsTabStop={(frameworkElement is Control control ? control.IsTabStop.ToString() : "n/a")}, Size={frameworkElement.RenderSize}";
 
         return $"{element.GetType().FullName}{details}";
     }
