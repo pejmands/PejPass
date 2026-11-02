@@ -3,6 +3,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
+using System.Windows.Controls.Primitives;
 using System.Windows.Threading;
 
 namespace PejPass.Wpf.Views;
@@ -48,13 +50,59 @@ public partial class HistoryWindow : Window
         button.ContextMenu.IsOpen = true;
     }
 
-    private void HistoryListBoxItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void HistoryWindow_PreviewMouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
     {
-        if (sender is not ListBoxItem item)
+        if (e.OriginalSource is not DependencyObject source)
+            return;
+
+        var item = FindVisualAncestor<ListBoxItem>(source);
+        if (item is null ||
+            FindVisualAncestor<ButtonBase>(source) is not null)
+        {
+            return;
+        }
+
+        var sourceControl = FindVisualAncestor<Control>(source);
+        if (sourceControl is not null &&
+            sourceControl is not Expander &&
+            sourceControl.IsTabStop)
+        {
+            return;
+        }
+
+        var expander = FindVisualChildren<Expander>(item).FirstOrDefault();
+        if (expander is null)
             return;
 
         item.IsSelected = true;
-        FindVisualChildren<Expander>(item).FirstOrDefault()?.Focus();
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            new Action(() =>
+            {
+                if (item.IsLoaded && item.IsVisible && expander.IsVisible)
+                    expander.Focus();
+            }));
+    }
+
+    private static T? FindVisualAncestor<T>(DependencyObject? element)
+        where T : DependencyObject
+    {
+        while (element is not null)
+        {
+            if (element is T match)
+                return match;
+
+            element = element switch
+            {
+                Visual or Visual3D => VisualTreeHelper.GetParent(element),
+                FrameworkContentElement contentElement => contentElement.Parent,
+                _ => LogicalTreeHelper.GetParent(element)
+            };
+        }
+
+        return null;
     }
 
     private void HistoryListBoxItem_GotKeyboardFocus(
