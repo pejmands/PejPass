@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace PejPass.Wpf.Tests.Windowing;
 
@@ -57,6 +58,35 @@ public sealed class KeyboardFocusVisibilityTests
     }
 
     [Fact(Timeout = 15000)]
+    public void MainWindowGridSplitter_ShowsFocusRingWhenFocusedByKeyboard()
+    {
+        WpfTestHost.Run(host =>
+        {
+            var window = host.CreateMainWindow();
+
+            window.Show();
+            window.UpdateLayout();
+
+            var splitter = FindVisualChild<GridSplitter>(window);
+            Assert.NotNull(splitter);
+
+            splitter!.ApplyTemplate();
+            var focusRing = Assert.IsType<Border>(
+                splitter.Template.FindName("SplitterFocusRing", splitter));
+
+            Assert.Equal(Visibility.Collapsed, focusRing.Visibility);
+
+            Keyboard.Focus(splitter);
+            window.UpdateLayout();
+
+            Assert.True(splitter.IsKeyboardFocused);
+            Assert.Equal(Visibility.Visible, focusRing.Visibility);
+
+            window.Hide();
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 15000)]
     public void SliderTemplate_ShowsFocusRingWhenFocusedByKeyboard()
     {
         WpfTestHost.Run(_ =>
@@ -86,7 +116,13 @@ public sealed class KeyboardFocusVisibilityTests
 
             var focusRing = Assert.IsType<Border>(
                 slider.Template.FindName("FocusRing", slider));
+            var track = Assert.IsType<Track>(
+                slider.Template.FindName("PART_Track", slider));
 
+            Assert.False(track.DecreaseRepeatButton.IsTabStop);
+            Assert.False(track.DecreaseRepeatButton.Focusable);
+            Assert.False(track.IncreaseRepeatButton.IsTabStop);
+            Assert.False(track.IncreaseRepeatButton.Focusable);
             Assert.Equal(Visibility.Collapsed, focusRing.Visibility);
 
             Keyboard.Focus(slider);
@@ -97,5 +133,23 @@ public sealed class KeyboardFocusVisibilityTests
 
             window.Close();
         }, TestContext.Current.CancellationToken);
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject parent)
+        where T : DependencyObject
+    {
+        var count = VisualTreeHelper.GetChildrenCount(parent);
+        for (var index = 0; index < count; index++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+            if (child is T match)
+                return match;
+
+            var nested = FindVisualChild<T>(child);
+            if (nested is not null)
+                return nested;
+        }
+
+        return null;
     }
 }
