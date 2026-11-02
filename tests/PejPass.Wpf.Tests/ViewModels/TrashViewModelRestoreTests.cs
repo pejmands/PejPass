@@ -6,6 +6,19 @@ namespace PejPass.Wpf.Tests.ViewModels;
 public sealed class TrashViewModelRestoreTests
 {
     [Fact]
+    public void EmptyTrashCommand_IsDisabledWhenTrashIsEmpty()
+    {
+        var viewModel = new TrashViewModel(
+            new Vault(),
+            () => Task.FromResult(true),
+            () => Task.FromResult(true),
+            () => true,
+            _ => false);
+
+        Assert.False(viewModel.EmptyTrashCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async Task RestoreSelected_WhenTwoTrashedEntriesAreIdentical_RestoresOnlyOne()
     {
         var vault = new Vault();
