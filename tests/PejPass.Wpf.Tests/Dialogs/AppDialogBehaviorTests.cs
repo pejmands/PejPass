@@ -1,11 +1,60 @@
 using PejPass.Wpf.Dialogs;
 using System.Reflection;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
 
 namespace PejPass.Wpf.Tests.Dialogs;
 
 public sealed class AppDialogBehaviorTests
 {
+    [Theory]
+    [InlineData(AppDialogType.Info, "AccentBrush")]
+    [InlineData(AppDialogType.Success, "SuccessBrush")]
+    [InlineData(AppDialogType.Warning, "WarningBrush")]
+    [InlineData(AppDialogType.Error, "DangerBrush")]
+    [InlineData(AppDialogType.Confirm, "AccentBrush")]
+    public void DialogType_ConfiguresItsSemanticIcon(
+        AppDialogType type,
+        string expectedBrushKey)
+    {
+        WpfTestHost.Run(_ =>
+        {
+            var dialog = new AppDialog("Dialog", "Message", type);
+            var icon = GetTypeIcon(dialog);
+            var expectedBrush = Assert.IsAssignableFrom<Brush>(
+                Application.Current!.FindResource(expectedBrushKey));
+
+            Assert.NotNull(icon.Data);
+            Assert.Equal(2.2, icon.StrokeThickness);
+            Assert.Same(expectedBrush, icon.Stroke);
+
+            dialog.Close();
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 15000)]
+    public void DialogTypes_UseDistinctIconGeometries()
+    {
+        WpfTestHost.Run(_ =>
+        {
+            var geometries = Enum.GetValues<AppDialogType>()
+                .Select(type =>
+                {
+                    var dialog = new AppDialog("Dialog", "Message", type);
+                    var geometry = GetTypeIcon(dialog).Data!.ToString();
+                    dialog.Close();
+                    return geometry;
+                })
+                .ToArray();
+
+            Assert.Equal(
+                geometries.Length,
+                geometries.Distinct(StringComparer.Ordinal).Count());
+        }, TestContext.Current.CancellationToken);
+    }
+
     [Fact(Timeout = 15000)]
     public void DestructiveDialog_EnterDefaultsToCancel()
     {
@@ -76,6 +125,16 @@ public sealed class AppDialogBehaviorTests
 
             dialog.Close();
         }, TestContext.Current.CancellationToken);
+    }
+
+    private static Path GetTypeIcon(AppDialog dialog)
+    {
+        var field = typeof(AppDialog).GetField(
+            "TypeIcon",
+            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+
+        Assert.NotNull(field);
+        return Assert.IsType<Path>(field!.GetValue(dialog));
     }
 
     private static Button GetButton(AppDialog dialog, string name)
