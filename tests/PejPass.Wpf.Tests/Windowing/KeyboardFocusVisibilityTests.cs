@@ -2,6 +2,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using PejPass.Domain.Entities;
+using PejPass.Wpf.ViewModels;
 using System.Windows.Media;
 
 namespace PejPass.Wpf.Tests.Windowing;
@@ -107,6 +109,51 @@ public sealed class KeyboardFocusVisibilityTests
     }
 
     [Fact(Timeout = 15000)]
+    public void MainWindow_TotpCopy_TabMovesDirectlyToEditAction()
+    {
+        WpfTestHost.Run(host =>
+        {
+            var window = host.CreateMainWindow();
+            System.Windows.Application.Current!.MainWindow = window;
+            var viewModel = Assert.IsType<MainViewModel>(window.DataContext);
+            var entry = new VaultEntry
+            {
+                Title = "TOTP entry",
+                TotpSecret = "JBSWY3DPEHPK3PXP"
+            };
+
+            viewModel.Entries.Add(entry);
+            viewModel.FilteredEntries.Add(entry);
+            viewModel.SelectedEntry = entry;
+
+            window.Show();
+            window.UpdateLayout();
+
+            var copyButton = Assert.IsType<Button>(
+                window.FindName("CopyTotpButton"));
+            var editButton = Assert.IsType<Button>(
+                window.FindName("EditEntryButton"));
+
+            Assert.Equal(Visibility.Visible, copyButton.Visibility);
+            Assert.True(Keyboard.Focus(copyButton) is not null);
+            Assert.Same(copyButton, Keyboard.FocusedElement);
+
+            var moved = copyButton.MoveFocus(
+                new TraversalRequest(FocusNavigationDirection.Next));
+            window.UpdateLayout();
+
+            var focused = Keyboard.FocusedElement as DependencyObject;
+            Assert.True(moved, "Tab navigation could not move past the TOTP Copy button.");
+            Assert.True(
+                ReferenceEquals(editButton, focused),
+                $"Expected EditEntryButton immediately after TOTP Copy, but focus moved to {DescribeFocus(focused)}.");
+
+            window.Hide();
+            viewModel.StopBackgroundTimers();
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 15000)]
     public void SliderTemplate_ShowsFocusRingWhenFocusedByKeyboard()
     {
         WpfTestHost.Run(_ =>
@@ -153,6 +200,19 @@ public sealed class KeyboardFocusVisibilityTests
 
             window.Close();
         }, TestContext.Current.CancellationToken);
+    }
+
+    private static string DescribeFocus(DependencyObject? element)
+    {
+        if (element is null)
+            return "<null>";
+
+        var frameworkElement = element as FrameworkElement;
+        var details = frameworkElement is null
+            ? string.Empty
+            : $", Name='{frameworkElement.Name}', Visibility={frameworkElement.Visibility}, IsVisible={frameworkElement.IsVisible}, Focusable={frameworkElement.Focusable}";
+
+        return $"{element.GetType().FullName}{details}";
     }
 
     private static T? FindVisualChild<T>(DependencyObject parent)
