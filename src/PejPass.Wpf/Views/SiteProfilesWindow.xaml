@@ -14,6 +14,9 @@
     WindowStartupLocation="CenterOwner">
     <DockPanel>
         <controls:AppTitleBar
+            x:Name="WindowTitleBar"
+            Focusable="False"
+            IsTabStop="False"
             DockPanel.Dock="Top"
             ShowMaximize="True"
             ShowMinimize="False" />
@@ -35,11 +38,17 @@
 
             <ScrollViewer
                 x:Name="ProfilesScrollViewer"
+                Focusable="False"
+                IsTabStop="False"
                 Grid.Row="1"
                 Padding="0,0,8,0"
                 VerticalScrollBarVisibility="Auto"
                 HorizontalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{Binding Profiles}">
+                <ItemsControl
+                    x:Name="ProfilesItemsControl"
+                    Focusable="False"
+                    IsTabStop="False"
+                    ItemsSource="{Binding Profiles}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border
@@ -115,6 +124,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <Button
+                    x:Name="AddGroupButton"
                     Padding="12,7"
                     Click="AddProfile_Click"
                     Content="Add Group"
@@ -128,6 +138,7 @@
                     Content="Cancel"
                     Style="{StaticResource SecondaryButton}" />
                 <Button
+                    x:Name="SaveButton"
                     Grid.Column="2"
                     Padding="14,7"
                     Margin="8,0,0,0"
