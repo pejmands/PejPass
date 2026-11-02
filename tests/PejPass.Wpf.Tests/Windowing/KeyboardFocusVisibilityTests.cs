@@ -94,6 +94,7 @@ public sealed class KeyboardFocusVisibilityTests
         WpfTestHost.Run(host =>
         {
             var window = host.CreateMainWindow();
+            window.Height = 560;
             System.Windows.Application.Current!.MainWindow = window;
             var viewModel = Assert.IsType<MainViewModel>(window.DataContext);
             var entry = new VaultEntry
@@ -102,7 +103,10 @@ public sealed class KeyboardFocusVisibilityTests
                 TotpSecret = "JBSWY3DPEHPK3PXP",
                 Notes = string.Join(" ", Enumerable.Repeat(
                     "A long note used to exercise the nested notes scroll viewer.",
-                    120))
+                    120)),
+                Tags = Enumerable.Range(1, 60)
+                    .Select(index => $"focus-visibility-regression-tag-{index:D2}")
+                    .ToList()
             };
 
             viewModel.Entries.Add(entry);
@@ -133,21 +137,31 @@ public sealed class KeyboardFocusVisibilityTests
             Assert.True(Keyboard.Focus(copyButton) is not null);
             Assert.Same(copyButton, Keyboard.FocusedElement);
 
-            var moved = copyButton.MoveFocus(
-                new TraversalRequest(FocusNavigationDirection.Next));
+            PressTab(window);
             window.UpdateLayout();
 
             var focused = Keyboard.FocusedElement as DependencyObject;
-            Assert.True(moved, "Tab navigation could not move past the TOTP Copy button.");
             Assert.True(
                 ReferenceEquals(editButton, focused),
-                $"Expected EditEntryButton immediately after TOTP Copy, but focus moved to {DescribeFocus(focused)}.");
+                $"Expected EditEntryButton after a real Tab key input from TOTP Copy, but focus moved to {DescribeFocus(focused)}.");
 
             Assert.True(editButton.IsKeyboardFocused);
             editButton.ApplyTemplate();
             var editFocusRing = Assert.IsType<Border>(
                 editButton.Template.FindName("FocusRing", editButton));
             Assert.Equal(Visibility.Visible, editFocusRing.Visibility);
+
+            var editBounds = editButton
+                .TransformToAncestor(detailsScrollViewer)
+                .TransformBounds(new Rect(editButton.RenderSize));
+            var viewportBounds = new Rect(
+                0,
+                0,
+                detailsScrollViewer.ViewportWidth,
+                detailsScrollViewer.ViewportHeight);
+            Assert.True(
+                viewportBounds.IntersectsWith(editBounds),
+                $"EditEntryButton has keyboard focus but remains outside the visible details viewport. Edit bounds: {editBounds}; viewport: {viewportBounds}; vertical offset: {detailsScrollViewer.VerticalOffset}.");
 
             window.Hide();
             viewModel.StopBackgroundTimers();
@@ -201,6 +215,23 @@ public sealed class KeyboardFocusVisibilityTests
 
             window.Close();
         }, TestContext.Current.CancellationToken);
+    }
+
+    private static void PressTab(Window window)
+    {
+        var source = PresentationSource.FromVisual(window)
+            ?? throw new InvalidOperationException("The test window has no presentation source.");
+
+        var keyEvent = new KeyEventArgs(
+            Keyboard.PrimaryDevice,
+            source,
+            Environment.TickCount,
+            Key.Tab)
+        {
+            RoutedEvent = Keyboard.KeyDownEvent
+        };
+
+        InputManager.Current.ProcessInput(keyEvent);
     }
 
     private static string DescribeFocus(DependencyObject? element)
