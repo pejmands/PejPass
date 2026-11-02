@@ -267,6 +267,9 @@
 						Text="{Binding ScanStatus}" />
 
 					<ProgressBar
+						x:Name="ScanProgressBar"
+						Focusable="False"
+						IsTabStop="False"
 						Height="6"
 						Background="{DynamicResource SurfaceAltBrush}"
 						Maximum="100"
