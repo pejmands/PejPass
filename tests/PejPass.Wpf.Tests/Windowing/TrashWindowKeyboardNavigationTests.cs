@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Reflection;
 using System.Windows.Threading;
 
 namespace PejPass.Wpf.Tests.Windowing;
@@ -221,6 +222,94 @@ public sealed class TrashWindowKeyboardNavigationTests
                     ? purgeSelectedButton
                     : closeButton;
             Assert.Same(firstFooterTabStop, Keyboard.FocusedElement);
+            window.Close();
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact(Timeout = 20000)]
+    public void ShiftTabNavigation_DoesNotChangeExtendedSelection()
+    {
+        WpfTestHost.Run(_ =>
+        {
+            var vault = new Vault();
+            foreach (var index in Enumerable.Range(0, 30))
+            {
+                var entry = new VaultEntry
+                {
+                    Title = $"Trash entry {index:D2}",
+                    Username = $"user{index:D2}"
+                };
+
+                vault.AddEntry(entry);
+                vault.SoftDelete(entry.Id);
+            }
+
+            var viewModel = new TrashViewModel(
+                vault,
+                () => Task.FromResult(true),
+                () => Task.FromResult(true),
+                () => true,
+                _ => false);
+            var window = new TrashWindow(viewModel);
+            var trashList = Assert.IsType<ListBox>(window.FindName("TrashList"));
+
+            window.Show();
+            window.UpdateLayout();
+
+            trashList.ScrollIntoView(viewModel.Items[10]);
+            window.UpdateLayout();
+
+            var currentContainer = Assert.IsType<ListBoxItem>(
+                trashList.ItemContainerGenerator.ContainerFromIndex(10));
+            var currentButtons = FindVisualChildren<Button>(currentContainer).ToArray();
+            Assert.Equal(2, currentButtons.Length);
+            Assert.Same(currentButtons[0], Keyboard.Focus(currentButtons[0]));
+
+            trashList.SelectedItems.Add(viewModel.Items[2]);
+            trashList.SelectedItems.Add(viewModel.Items[4]);
+            var selectedIds = trashList.SelectedItems
+                .Cast<TrashRow>()
+                .Select(row => row.EntryId)
+                .OrderBy(id => id)
+                .ToArray();
+            Assert.Equal(2, selectedIds.Length);
+
+            var navigateMethod = typeof(TrashWindow).GetMethod(
+                "TryNavigateTrashTab",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(navigateMethod);
+
+            var movedToRow = Assert.IsType<bool>(
+                navigateMethod!.Invoke(window, [currentButtons[0], true]));
+            Assert.True(movedToRow);
+            Assert.Same(currentContainer, Keyboard.FocusedElement);
+            Assert.Equal(
+                selectedIds,
+                trashList.SelectedItems
+                    .Cast<TrashRow>()
+                    .Select(row => row.EntryId)
+                    .OrderBy(id => id)
+                    .ToArray());
+
+            var movedToPreviousRow = Assert.IsType<bool>(
+                navigateMethod.Invoke(window, [currentContainer, true]));
+            Assert.True(movedToPreviousRow);
+            DrainPendingOperations(window.Dispatcher);
+
+            var previousContainer = Assert.IsType<ListBoxItem>(
+                trashList.ItemContainerGenerator.ContainerFromIndex(9));
+            var previousButtons = FindVisualChildren<Button>(previousContainer).ToArray();
+
+            Assert.Equal(2, previousButtons.Length);
+            Assert.Same(previousButtons[^1], Keyboard.FocusedElement);
+            Assert.Equal(
+                selectedIds,
+                trashList.SelectedItems
+                    .Cast<TrashRow>()
+                    .Select(row => row.EntryId)
+                    .OrderBy(id => id)
+                    .ToArray());
+
             window.Close();
         }, TestContext.Current.CancellationToken);
     }
