@@ -182,8 +182,7 @@ public static class NestedScrollChain
         if (sender is not ScrollViewer parent || e.Handled)
             return;
 
-        var state = parent.GetValue(ParentGestureStateProperty) as WheelGestureState;
-        if (state is null)
+        if (parent.GetValue(ParentGestureStateProperty) is not WheelGestureState state)
             return;
 
         var candidate = FindNestedScrollViewer(parent, e.OriginalSource as DependencyObject);
@@ -340,8 +339,7 @@ public static class NestedScrollChain
         {
             if (current is ScrollViewer inner)
             {
-                var configuredParent = inner.GetValue(ParentOverrideProperty) as ScrollViewer;
-                if (configuredParent is null || ReferenceEquals(configuredParent, parent))
+                if (inner.GetValue(ParentOverrideProperty) is not ScrollViewer configuredParent || ReferenceEquals(configuredParent, parent))
                     return inner;
             }
 
