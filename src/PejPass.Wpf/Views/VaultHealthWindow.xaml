@@ -251,6 +251,7 @@
 			<!--  Scan status and filter  -->
 			<DockPanel Grid.Row="0" Margin="0,0,0,12">
 				<ComboBox
+					x:Name="IssueFilterComboBox"
 					Width="200"
 					Height="40"
 					DockPanel.Dock="Right"
@@ -276,6 +277,9 @@
 
 			<Grid Grid.Row="1">
 				<ListBox
+					x:Name="HealthIssuesList"
+					Focusable="False"
+					IsTabStop="False"
 					Background="Transparent"
 					BorderThickness="0"
 					ItemsSource="{Binding Issues}"
@@ -284,6 +288,8 @@
 					<ListBox.ItemContainerStyle>
 						<Style TargetType="ListBoxItem">
 							<Setter Property="HorizontalContentAlignment" Value="Stretch" />
+							<Setter Property="Focusable" Value="False" />
+							<Setter Property="IsTabStop" Value="False" />
 							<Setter Property="Padding" Value="0" />
 							<Setter Property="Margin" Value="0,0,0,6" />
 							<Setter Property="Template">
