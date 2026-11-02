@@ -19,7 +19,10 @@
 		</Grid.RowDefinitions>
 
 		<controls:AppTitleBar
+			x:Name="HistoryTitleBar"
 			Grid.Row="0"
+			Focusable="False"
+			IsTabStop="False"
 			ShowMaximize="true"
 			ShowMinimize="false" />
 
@@ -32,7 +35,11 @@
 			</Grid.RowDefinitions>
 
 			<controls:SearchBox
+				x:Name="HistorySearchBox"
 				Grid.Row="0"
+				PreviewKeyDown="HistorySearchBox_PreviewKeyDown"
+				Focusable="False"
+				IsTabStop="False"
 				Margin="0,0,0,12"
 				Placeholder="Search history..."
 				Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
@@ -84,7 +91,12 @@
 
 				<!--  History list  -->
 				<ListBox
+					x:Name="HistoryItemsListBox"
 					Grid.Column="0"
+					PreviewKeyDown="HistoryItemsListBox_PreviewKeyDown"
+					Focusable="False"
+					IsTabStop="False"
+					KeyboardNavigation.TabNavigation="Continue"
 					Background="Transparent"
 					BorderThickness="0"
 					ItemsSource="{Binding FilteredItems}"
@@ -109,7 +121,13 @@
 								<Setter.Value>
 									<ControlTemplate TargetType="ListBox">
 										<Grid>
-											<ScrollViewer CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+											<ScrollViewer
+												x:Name="HistoryListScrollViewer"
+												Focusable="False"
+												IsTabStop="False"
+												CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}"
+												HorizontalScrollBarVisibility="Disabled"
+												VerticalScrollBarVisibility="Auto">
 												<ItemsPresenter />
 											</ScrollViewer>
 
@@ -171,33 +189,19 @@
 					<ListBox.ItemContainerStyle>
 						<Style TargetType="ListBoxItem">
 							<EventSetter Event="PreviewMouseLeftButtonDown" Handler="HistoryListBoxItem_PreviewMouseLeftButtonDown" />
+							<EventSetter Event="GotKeyboardFocus" Handler="HistoryListBoxItem_GotKeyboardFocus" />
+							<Setter Property="Focusable" Value="False" />
+							<Setter Property="IsTabStop" Value="False" />
 							<Setter Property="HorizontalContentAlignment" Value="Stretch" />
 							<Setter Property="Padding" Value="0" />
 							<Setter Property="Margin" Value="0,0,12,6" />
 							<Setter Property="Template">
 								<Setter.Value>
 									<ControlTemplate TargetType="ListBoxItem">
-										<Border
-											x:Name="ItemBorder"
-											Padding="14,12"
-											Background="{DynamicResource SurfaceBrush}"
-											BorderBrush="Transparent"
-											BorderThickness="1"
-											CornerRadius="8">
-											<ContentPresenter />
-										</Border>
-										<ControlTemplate.Triggers>
-											<Trigger Property="IsSelected" Value="True">
-												<Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
-												<Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-											</Trigger>
-											<Trigger Property="IsMouseOver" Value="True">
-												<Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
-											</Trigger>
-											<Trigger Property="IsKeyboardFocusWithin" Value="True">
-												<Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-											</Trigger>
-										</ControlTemplate.Triggers>
+										<ContentPresenter
+										HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+										VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+										SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
 									</ControlTemplate>
 								</Setter.Value>
 							</Setter>
@@ -206,34 +210,118 @@
 					<ListBox.ItemTemplate>
 						<DataTemplate>
 							<Grid>
-								<Grid.ColumnDefinitions>
-									<ColumnDefinition Width="24" />
-									<ColumnDefinition Width="*" />
-								</Grid.ColumnDefinitions>
-
-								<Grid Grid.Column="0">
-									<Border
-										Width="1"
-										Margin="0,14,0,0"
-										HorizontalAlignment="Center"
-										VerticalAlignment="Stretch"
-										Background="{DynamicResource BorderBrush}" />
-									<Ellipse
-										Width="9"
-										Height="9"
-										Margin="0,7,0,0"
-										HorizontalAlignment="Center"
-										VerticalAlignment="Top"
-										Fill="{DynamicResource AccentBrush}" />
-								</Grid>
-
 								<Border
-									Grid.Column="1"
-									Margin="8,0,0,6"
+									Margin="0,0,0,6"
 									Padding="14,12"
-									Background="{DynamicResource SurfaceBrush}"
 									CornerRadius="8">
-									<Expander BorderThickness="0" IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
+									<Border.Style>
+
+										<Style TargetType="Border">
+											<Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+											<Setter Property="BorderBrush" Value="Transparent" />
+											<Setter Property="BorderThickness" Value="1" />
+											<Style.Triggers>
+												<DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
+													<Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+													<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+												</DataTrigger>
+												<DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
+													<Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+												</DataTrigger>
+												<Trigger Property="IsKeyboardFocusWithin" Value="True">
+													<Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+													<Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+												</Trigger>
+											</Style.Triggers>
+										</Style>
+									</Border.Style>
+									<Expander
+										Focusable="True"
+										IsTabStop="True"
+										PreviewKeyDown="HistoryExpander_PreviewKeyDown"
+										BorderThickness="0"
+										IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
+										<Expander.Template>
+											<ControlTemplate TargetType="{x:Type Expander}">
+												<DockPanel LastChildFill="True">
+													<Grid DockPanel.Dock="Top">
+														<Grid.ColumnDefinitions>
+															<ColumnDefinition Width="*" />
+															<ColumnDefinition Width="Auto" />
+														</Grid.ColumnDefinitions>
+													<ContentPresenter
+														Grid.Column="0"
+														ContentSource="Header"
+														RecognizesAccessKey="True"
+														VerticalAlignment="Center" />
+													<ToggleButton
+														Grid.Column="1"
+														Width="28"
+														Height="28"
+														Margin="8,0,0,0"
+														Padding="0"
+														Focusable="False"
+														IsTabStop="False"
+														Background="Transparent"
+														BorderThickness="0"
+														Cursor="Hand"
+														IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource AncestorType={x:Type Expander}}, Mode=TwoWay}">
+														<ToggleButton.Template>
+															<ControlTemplate TargetType="{x:Type ToggleButton}">
+																<Border
+																	x:Name="ArrowButtonBackground"
+																	Background="{TemplateBinding Background}"
+																	CornerRadius="4">
+																	<Path
+																		x:Name="ArrowGlyph"
+																		Width="12"
+																		Height="12"
+																		HorizontalAlignment="Center"
+																		VerticalAlignment="Center"
+																		Data="M 3,1 L 8,6 L 3,11"
+																		Stroke="{DynamicResource MutedBrush}"
+																		StrokeThickness="1.6"
+																		StrokeStartLineCap="Round"
+																		StrokeEndLineCap="Round"
+																		RenderTransformOrigin="0.5,0.5">
+																		<Path.RenderTransform>
+																			<RotateTransform Angle="0" />
+																		</Path.RenderTransform>
+																	</Path>
+																</Border>
+																<ControlTemplate.Triggers>
+																	<Trigger Property="IsMouseOver" Value="True">
+																		<Setter TargetName="ArrowButtonBackground" Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+																	</Trigger>
+																	<Trigger Property="IsPressed" Value="True">
+																		<Setter TargetName="ArrowButtonBackground" Property="Background" Value="{DynamicResource BorderBrush}" />
+																	</Trigger>
+																	<Trigger Property="IsChecked" Value="True">
+																		<Setter TargetName="ArrowGlyph" Property="RenderTransform">
+																			<Setter.Value>
+																				<RotateTransform Angle="90" />
+																			</Setter.Value>
+																		</Setter>
+																	</Trigger>
+																	<Trigger Property="IsEnabled" Value="False">
+																		<Setter TargetName="ArrowGlyph" Property="Opacity" Value="0.5" />
+																	</Trigger>
+																</ControlTemplate.Triggers>
+															</ControlTemplate>
+														</ToggleButton.Template>
+													</ToggleButton>
+													</Grid>
+													<ContentPresenter
+														x:Name="ExpandSite"
+														ContentSource="Content" />
+												</DockPanel>
+												<ControlTemplate.Triggers>
+													<Trigger Property="IsExpanded" Value="False">
+														<Setter TargetName="ExpandSite" Property="Visibility" Value="Collapsed" />
+													</Trigger>
+												</ControlTemplate.Triggers>
+										</ControlTemplate>
+									</Expander.Template>
 										<Expander.Header>
 											<Grid>
 												<Grid.ColumnDefinitions>
@@ -283,7 +371,10 @@
 													Foreground="{DynamicResource MutedBrush}"
 													Text="Changed fields" />
 
-												<ItemsControl ItemsSource="{Binding ChangedFields}">
+												<ItemsControl
+												Focusable="False"
+												IsTabStop="False"
+												ItemsSource="{Binding ChangedFields}">
 													<ItemsControl.ItemsPanel>
 														<ItemsPanelTemplate>
 															<WrapPanel />
@@ -406,10 +497,18 @@
 							</Grid>
 
 							<ScrollViewer
+								x:Name="ComparisonScrollViewer"
 								Grid.Row="1"
+								PreviewKeyDown="ComparisonScrollViewer_PreviewKeyDown"
+								Focusable="False"
+								IsTabStop="False"
 								HorizontalScrollBarVisibility="Disabled"
 								VerticalScrollBarVisibility="Auto">
-								<ItemsControl ItemsSource="{Binding Fields}">
+								<ItemsControl
+									x:Name="ComparisonFieldsItemsControl"
+									Focusable="False"
+									IsTabStop="False"
+									ItemsSource="{Binding Fields}">
 									<ItemsControl.ItemTemplate>
 										<DataTemplate>
 											<Border
@@ -564,6 +663,9 @@
 				Background="{DynamicResource SurfaceBrush}">
 				<StackPanel>
 					<ProgressBar
+						x:Name="BusyProgressBar"
+						Focusable="False"
+						IsTabStop="False"
 						Width="180"
 						Height="4"
 						IsIndeterminate="True" />

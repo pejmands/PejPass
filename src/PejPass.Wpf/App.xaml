@@ -48,7 +48,10 @@
 								<Track x:Name="PART_Track">
 
 									<Track.DecreaseRepeatButton>
-										<RepeatButton Command="Slider.DecreaseLarge">
+										<RepeatButton
+											Command="Slider.DecreaseLarge"
+											Focusable="False"
+											IsTabStop="False">
 											<RepeatButton.Template>
 												<ControlTemplate TargetType="RepeatButton">
 													<Border
@@ -63,7 +66,10 @@
 
 
 									<Track.IncreaseRepeatButton>
-										<RepeatButton Command="Slider.IncreaseLarge">
+										<RepeatButton
+											Command="Slider.IncreaseLarge"
+											Focusable="False"
+											IsTabStop="False">
 											<RepeatButton.Template>
 												<ControlTemplate TargetType="RepeatButton">
 													<Border
@@ -78,7 +84,10 @@
 
 
 									<Track.Thumb>
-										<Thumb Width="16" Height="16">
+										<Thumb
+											Width="16"
+											Height="16"
+											Focusable="False">
 											<Thumb.Template>
 												<ControlTemplate TargetType="Thumb">
 													<Ellipse Fill="{DynamicResource AccentBrush}" />
@@ -89,8 +98,21 @@
 
 								</Track>
 
+								<Border
+									x:Name="FocusRing"
+									Margin="1"
+									BorderBrush="{DynamicResource BorderFocusBrush}"
+									BorderThickness="1"
+									CornerRadius="5"
+									IsHitTestVisible="False"
+									Visibility="Collapsed" />
 							</Grid>
 
+							<ControlTemplate.Triggers>
+								<Trigger Property="IsKeyboardFocused" Value="True">
+									<Setter TargetName="FocusRing" Property="Visibility" Value="Visible" />
+								</Trigger>
+							</ControlTemplate.Triggers>
 						</ControlTemplate>
 					</Setter.Value>
 				</Setter>
@@ -806,7 +828,11 @@
 										<Track x:Name="PART_Track" IsDirectionReversed="True">
 
 											<Track.DecreaseRepeatButton>
-												<RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" />
+												<RepeatButton
+													Command="ScrollBar.PageUpCommand"
+													Focusable="False"
+													IsTabStop="False"
+													Opacity="0" />
 											</Track.DecreaseRepeatButton>
 
 											<Track.Thumb>
@@ -814,7 +840,11 @@
 											</Track.Thumb>
 
 											<Track.IncreaseRepeatButton>
-												<RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" />
+												<RepeatButton
+													Command="ScrollBar.PageDownCommand"
+													Focusable="False"
+													IsTabStop="False"
+													Opacity="0" />
 											</Track.IncreaseRepeatButton>
 
 										</Track>
@@ -848,7 +878,11 @@
 										<Track x:Name="PART_Track" IsDirectionReversed="False">
 
 											<Track.DecreaseRepeatButton>
-												<RepeatButton Command="ScrollBar.PageLeftCommand" Opacity="0" />
+												<RepeatButton
+													Command="ScrollBar.PageLeftCommand"
+													Focusable="False"
+													IsTabStop="False"
+													Opacity="0" />
 											</Track.DecreaseRepeatButton>
 
 											<Track.Thumb>
@@ -856,7 +890,11 @@
 											</Track.Thumb>
 
 											<Track.IncreaseRepeatButton>
-												<RepeatButton Command="ScrollBar.PageRightCommand" Opacity="0" />
+												<RepeatButton
+													Command="ScrollBar.PageRightCommand"
+													Focusable="False"
+													IsTabStop="False"
+													Opacity="0" />
 											</Track.IncreaseRepeatButton>
 
 										</Track>
@@ -898,6 +936,8 @@
 									x:Name="PART_VerticalScrollBar"
 									Grid.Row="0"
 									Grid.Column="1"
+									Focusable="False"
+									IsTabStop="False"
 									Maximum="{TemplateBinding ScrollableHeight}"
 									Orientation="Vertical"
 									ViewportSize="{TemplateBinding ViewportHeight}"
@@ -908,6 +948,8 @@
 									x:Name="PART_HorizontalScrollBar"
 									Grid.Row="1"
 									Grid.Column="0"
+									Focusable="False"
+									IsTabStop="False"
 									Maximum="{TemplateBinding ScrollableWidth}"
 									Orientation="Horizontal"
 									ViewportSize="{TemplateBinding ViewportWidth}"

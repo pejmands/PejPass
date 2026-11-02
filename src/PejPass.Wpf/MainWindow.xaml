@@ -317,9 +317,9 @@
 							ItemsSource="{Binding FilteredEntries}"
 							ScrollViewer.HorizontalScrollBarVisibility="Disabled"
 							ScrollViewer.VerticalScrollBarVisibility="Auto"
-							VirtualizingPanel.ScrollUnit="Pixel"
 							SelectedItem="{Binding SelectedEntry}"
-							SelectionMode="Extended">
+							SelectionMode="Extended"
+							VirtualizingPanel.ScrollUnit="Pixel">
 
 							<ListBox.ItemContainerStyle>
 								<Style TargetType="ListBoxItem">
@@ -517,15 +517,23 @@
 					<GridSplitter.Template>
 						<ControlTemplate TargetType="GridSplitter">
 							<Border x:Name="SplitterBorder" Background="{TemplateBinding Background}">
-								<Border
-									x:Name="SplitterGrip"
-									Width="2"
-									Height="36"
-									HorizontalAlignment="Center"
-									VerticalAlignment="Center"
-									Background="{DynamicResource MutedBrush}"
-									CornerRadius="2"
-									Opacity="0.25" />
+								<Grid>
+									<Border
+										x:Name="SplitterGrip"
+										Width="2"
+										Height="36"
+										HorizontalAlignment="Center"
+										VerticalAlignment="Center"
+										Background="{DynamicResource MutedBrush}"
+										CornerRadius="2"
+										Opacity="0.25" />
+									<Border
+										x:Name="SplitterFocusRing"
+										BorderBrush="{DynamicResource BorderFocusBrush}"
+										BorderThickness="2"
+										IsHitTestVisible="False"
+										Visibility="Collapsed" />
+								</Grid>
 							</Border>
 							<ControlTemplate.Triggers>
 								<Trigger Property="IsMouseOver" Value="True">
@@ -537,6 +545,13 @@
 									<Setter TargetName="SplitterBorder" Property="Background" Value="{DynamicResource SurfacePressedBrush}" />
 									<Setter TargetName="SplitterGrip" Property="Background" Value="{DynamicResource AccentBrush}" />
 									<Setter TargetName="SplitterGrip" Property="Opacity" Value="1" />
+								</Trigger>
+								<Trigger Property="IsKeyboardFocused" Value="True">
+									<Setter TargetName="SplitterBorder" Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+									<Setter TargetName="SplitterGrip" Property="Background" Value="{DynamicResource AccentBrush}" />
+									<Setter TargetName="SplitterGrip" Property="Width" Value="3" />
+									<Setter TargetName="SplitterGrip" Property="Opacity" Value="1" />
+									<Setter TargetName="SplitterFocusRing" Property="Visibility" Value="Visible" />
 								</Trigger>
 							</ControlTemplate.Triggers>
 						</ControlTemplate>
@@ -695,9 +710,7 @@
 										Style="{StaticResource SecondaryButton}" />
 								</Grid>
 
-								<StackPanel
-									Margin="0,8,0,0"
-									Visibility="{Binding HasRelatedSites, Converter={StaticResource BoolToVis}}">
+								<StackPanel Margin="0,8,0,0" Visibility="{Binding HasRelatedSites, Converter={StaticResource BoolToVis}}">
 									<TextBlock
 										Margin="0,0,0,6"
 										FontSize="{DynamicResource AppFontSize11}"
@@ -707,26 +720,26 @@
 
 									<ItemsControl ItemsSource="{Binding RelatedSites}">
 										<ItemsControl.ItemsPanel>
-										<ItemsPanelTemplate>
-											<WrapPanel />
-										</ItemsPanelTemplate>
-									</ItemsControl.ItemsPanel>
-									<ItemsControl.ItemTemplate>
-										<DataTemplate>
-											<Button
-												Margin="0,0,6,6"
-												Padding="9,5"
-												Command="{Binding DataContext.OpenRelatedSiteCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-												CommandParameter="{Binding}"
-												Content="{Binding}"
-												Cursor="Hand"
-												FontSize="{DynamicResource AppFontSize12}"
-												Foreground="{DynamicResource AccentBrush}"
-												Style="{StaticResource SecondaryButton}"
-												ToolTip="Open related site in browser" />
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
+											<ItemsPanelTemplate>
+												<WrapPanel />
+											</ItemsPanelTemplate>
+										</ItemsControl.ItemsPanel>
+										<ItemsControl.ItemTemplate>
+											<DataTemplate>
+												<Button
+													Margin="0,0,6,6"
+													Padding="9,5"
+													Command="{Binding DataContext.OpenRelatedSiteCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+													CommandParameter="{Binding}"
+													Content="{Binding}"
+													Cursor="Hand"
+													FontSize="{DynamicResource AppFontSize12}"
+													Foreground="{DynamicResource AccentBrush}"
+													Style="{StaticResource SecondaryButton}"
+													ToolTip="Open related site in browser" />
+											</DataTemplate>
+										</ItemsControl.ItemTemplate>
+									</ItemsControl>
 								</StackPanel>
 							</StackPanel>
 
