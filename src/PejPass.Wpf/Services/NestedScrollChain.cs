@@ -218,7 +218,10 @@ public static class NestedScrollChain
 
         if (parent is not null)
         {
+            inner.SetValue(ParentOverrideProperty, parent);
             AttachParent(parent);
+            HandleVerticalWheel(inner, parent, e.Delta);
+            e.Handled = true;
             return;
         }
 
@@ -240,6 +243,7 @@ public static class NestedScrollChain
         {
             inner.SetValue(ParentOverrideProperty, parent);
             AttachParent(parent);
+            e.Handled = HandleHorizontalWheel(inner, parent, e.Delta);
             return;
         }
 
