@@ -19,7 +19,10 @@
 		</Grid.RowDefinitions>
 
 		<controls:AppTitleBar
+			x:Name="HistoryTitleBar"
 			Grid.Row="0"
+			Focusable="False"
+			IsTabStop="False"
 			ShowMaximize="true"
 			ShowMinimize="false" />
 
@@ -32,7 +35,10 @@
 			</Grid.RowDefinitions>
 
 			<controls:SearchBox
+				x:Name="HistorySearchBox"
 				Grid.Row="0"
+				Focusable="False"
+				IsTabStop="False"
 				Margin="0,0,0,12"
 				Placeholder="Search history..."
 				Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
@@ -84,7 +90,11 @@
 
 				<!--  History list  -->
 				<ListBox
+					x:Name="HistoryItemsListBox"
 					Grid.Column="0"
+					Focusable="False"
+					IsTabStop="False"
+					KeyboardNavigation.TabNavigation="Continue"
 					Background="Transparent"
 					BorderThickness="0"
 					ItemsSource="{Binding FilteredItems}"
@@ -109,7 +119,13 @@
 								<Setter.Value>
 									<ControlTemplate TargetType="ListBox">
 										<Grid>
-											<ScrollViewer CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+											<ScrollViewer
+												x:Name="HistoryListScrollViewer"
+												Focusable="False"
+												IsTabStop="False"
+												CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}"
+												HorizontalScrollBarVisibility="Disabled"
+												VerticalScrollBarVisibility="Auto">
 												<ItemsPresenter />
 											</ScrollViewer>
 
@@ -171,6 +187,9 @@
 					<ListBox.ItemContainerStyle>
 						<Style TargetType="ListBoxItem">
 							<EventSetter Event="PreviewMouseLeftButtonDown" Handler="HistoryListBoxItem_PreviewMouseLeftButtonDown" />
+							<EventSetter Event="GotKeyboardFocus" Handler="HistoryListBoxItem_GotKeyboardFocus" />
+							<Setter Property="Focusable" Value="False" />
+							<Setter Property="IsTabStop" Value="False" />
 							<Setter Property="HorizontalContentAlignment" Value="Stretch" />
 							<Setter Property="Padding" Value="0" />
 							<Setter Property="Margin" Value="0,0,12,6" />
@@ -233,7 +252,11 @@
 									Padding="14,12"
 									Background="{DynamicResource SurfaceBrush}"
 									CornerRadius="8">
-									<Expander BorderThickness="0" IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
+									<Expander
+										Focusable="True"
+										IsTabStop="True"
+										BorderThickness="0"
+										IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
 										<Expander.Header>
 											<Grid>
 												<Grid.ColumnDefinitions>
@@ -283,7 +306,10 @@
 													Foreground="{DynamicResource MutedBrush}"
 													Text="Changed fields" />
 
-												<ItemsControl ItemsSource="{Binding ChangedFields}">
+												<ItemsControl
+												Focusable="False"
+												IsTabStop="False"
+												ItemsSource="{Binding ChangedFields}">
 													<ItemsControl.ItemsPanel>
 														<ItemsPanelTemplate>
 															<WrapPanel />
@@ -406,10 +432,17 @@
 							</Grid>
 
 							<ScrollViewer
+								x:Name="ComparisonScrollViewer"
 								Grid.Row="1"
+								Focusable="False"
+								IsTabStop="False"
 								HorizontalScrollBarVisibility="Disabled"
 								VerticalScrollBarVisibility="Auto">
-								<ItemsControl ItemsSource="{Binding Fields}">
+								<ItemsControl
+									x:Name="ComparisonFieldsItemsControl"
+									Focusable="False"
+									IsTabStop="False"
+									ItemsSource="{Binding Fields}">
 									<ItemsControl.ItemTemplate>
 										<DataTemplate>
 											<Border
@@ -564,6 +597,9 @@
 				Background="{DynamicResource SurfaceBrush}">
 				<StackPanel>
 					<ProgressBar
+						x:Name="BusyProgressBar"
+						Focusable="False"
+						IsTabStop="False"
 						Width="180"
 						Height="4"
 						IsIndeterminate="True" />
