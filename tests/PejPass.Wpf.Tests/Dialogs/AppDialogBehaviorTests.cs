@@ -129,12 +129,7 @@ public sealed class AppDialogBehaviorTests
 
     private static Path GetTypeIcon(AppDialog dialog)
     {
-        var field = typeof(AppDialog).GetField(
-            "TypeIcon",
-            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-
-        Assert.NotNull(field);
-        return Assert.IsType<Path>(field!.GetValue(dialog));
+        return Assert.IsType<Path>(dialog.FindName("TypeIcon"));
     }
 
     private static Button GetButton(AppDialog dialog, string name)
