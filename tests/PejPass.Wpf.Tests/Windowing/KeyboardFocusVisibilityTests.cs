@@ -313,9 +313,17 @@ public sealed class KeyboardFocusVisibilityTests
         double viewportStart,
         double viewportEnd)
     {
-        const double tolerance = 1.5;
-        return start >= viewportStart - tolerance &&
-               end <= viewportEnd + tolerance;
+        const double minimumVisibleRatio = 0.95;
+        var elementLength = end - start;
+
+        if (elementLength <= 0)
+            return false;
+
+        var visibleLength = Math.Max(
+            0,
+            Math.Min(end, viewportEnd) - Math.Max(start, viewportStart));
+
+        return visibleLength / elementLength >= minimumVisibleRatio;
     }
 
     private static T? FindVisualAncestor<T>(DependencyObject element)
