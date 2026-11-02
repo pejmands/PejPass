@@ -107,8 +107,7 @@ public sealed class TrashWindowKeyboardNavigationTests
             Assert.True(firstContainer.IsKeyboardFocusWithin);
             Assert.Equal(window.FindResource("AccentBrush"), itemBorder.BorderBrush);
 
-            var titleText = FindVisualChildren<TextBlock>(firstContainer).First();
-            RaisePreviewMouseLeftButtonDown(titleText);
+            RaisePreviewMouseLeftButtonDown(firstContainer);
             DrainPendingOperations(window.Dispatcher);
 
             Assert.Same(firstContainer, Keyboard.FocusedElement);
