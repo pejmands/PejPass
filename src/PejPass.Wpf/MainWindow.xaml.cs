@@ -754,56 +754,8 @@ public partial class MainWindow : Window
         if (e.NewFocus is not FrameworkElement focusedElement)
             return;
 
-        EnsureFocusedElementVisible(focusedElement);
-    }
-
-    internal static void EnsureFocusedElementVisible(FrameworkElement focusedElement)
-    {
-        if (!focusedElement.IsVisible || !focusedElement.IsLoaded)
-            return;
-
-        var current = VisualTreeHelper.GetParent(focusedElement);
-
-        while (current is not null)
-        {
-            if (current is ScrollViewer scrollViewer)
-            {
-                scrollViewer.UpdateLayout();
-
-                if (scrollViewer.ViewportWidth > 0 &&
-                    scrollViewer.ViewportHeight > 0)
-                {
-                    var bounds = focusedElement
-                        .TransformToAncestor(scrollViewer)
-                        .TransformBounds(new Rect(focusedElement.RenderSize));
-
-                    var horizontalOffset = scrollViewer.HorizontalOffset;
-                    var verticalOffset = scrollViewer.VerticalOffset;
-
-                    if (bounds.Width > scrollViewer.ViewportWidth)
-                        horizontalOffset += bounds.Left;
-                    else if (bounds.Left < 0)
-                        horizontalOffset += bounds.Left;
-                    else if (bounds.Right > scrollViewer.ViewportWidth)
-                        horizontalOffset += bounds.Right - scrollViewer.ViewportWidth;
-
-                    if (bounds.Height > scrollViewer.ViewportHeight)
-                        verticalOffset += bounds.Top;
-                    else if (bounds.Top < 0)
-                        verticalOffset += bounds.Top;
-                    else if (bounds.Bottom > scrollViewer.ViewportHeight)
-                        verticalOffset += bounds.Bottom - scrollViewer.ViewportHeight;
-
-                    scrollViewer.ScrollToHorizontalOffset(
-                        Math.Clamp(horizontalOffset, 0, scrollViewer.ScrollableWidth));
-                    scrollViewer.ScrollToVerticalOffset(
-                        Math.Clamp(verticalOffset, 0, scrollViewer.ScrollableHeight));
-                    scrollViewer.UpdateLayout();
-                }
-            }
-
-            current = VisualTreeHelper.GetParent(current);
-        }
+        if (focusedElement.IsVisible && focusedElement.IsLoaded)
+            focusedElement.BringIntoView();
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
