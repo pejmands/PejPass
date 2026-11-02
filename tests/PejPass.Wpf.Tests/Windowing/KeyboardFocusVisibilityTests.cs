@@ -143,6 +143,12 @@ public sealed class KeyboardFocusVisibilityTests
                 ReferenceEquals(editButton, focused),
                 $"Expected EditEntryButton immediately after TOTP Copy, but focus moved to {DescribeFocus(focused)}.");
 
+            Assert.True(editButton.IsKeyboardFocused);
+            editButton.ApplyTemplate();
+            var editFocusRing = Assert.IsType<Border>(
+                editButton.Template.FindName("FocusRing", editButton));
+            Assert.Equal(Visibility.Visible, editFocusRing.Visibility);
+
             window.Hide();
             viewModel.StopBackgroundTimers();
         }, TestContext.Current.CancellationToken);
@@ -195,6 +201,19 @@ public sealed class KeyboardFocusVisibilityTests
 
             window.Close();
         }, TestContext.Current.CancellationToken);
+    }
+
+    private static string DescribeFocus(DependencyObject? element)
+    {
+        if (element is null)
+            return "<null>";
+
+        var frameworkElement = element as FrameworkElement;
+        var details = frameworkElement is null
+            ? string.Empty
+            : $", Name='{frameworkElement.Name}', Visibility={frameworkElement.Visibility}, IsVisible={frameworkElement.IsVisible}, Focusable={frameworkElement.Focusable}";
+
+        return $"{element.GetType().FullName}{details}";
     }
 
     private static T? FindVisualChild<T>(DependencyObject parent)
