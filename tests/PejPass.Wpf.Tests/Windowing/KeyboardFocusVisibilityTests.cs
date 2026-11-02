@@ -89,7 +89,7 @@ public sealed class KeyboardFocusVisibilityTests
     }
 
     [Fact(Timeout = 15000)]
-    public void MainWindow_TotpCopy_SkipsScrollableNotesViewerAndMovesToEdit()
+    public void MainWindow_TotpCopy_TabKeyScrollsEditIntoView()
     {
         WpfTestHost.Run(host =>
         {
