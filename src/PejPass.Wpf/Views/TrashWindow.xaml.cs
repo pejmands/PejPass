@@ -3,6 +3,7 @@ using PejPass.Wpf.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 
 namespace PejPass.Wpf.Views;
 
@@ -44,7 +45,12 @@ public partial class TrashWindow : Window
             if (element is T match)
                 return match;
 
-            element = VisualTreeHelper.GetParent(element);
+            element = element switch
+            {
+                Visual or Visual3D => VisualTreeHelper.GetParent(element),
+                FrameworkContentElement contentElement => contentElement.Parent,
+                _ => LogicalTreeHelper.GetParent(element)
+            };
         }
 
         return null;
