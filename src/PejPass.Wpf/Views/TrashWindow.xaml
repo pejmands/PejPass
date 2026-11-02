@@ -290,6 +290,7 @@
 					Style="{StaticResource SecondaryButton}" />
 				<Button
 					x:Name="PurgeSelectedButton"
+					PreviewKeyDown="TrashFooterFirstButton_PreviewKeyDown"
 					Click="PurgeSelected_Click"
 					Content="Delete selected"
 					IsEnabled="False"
