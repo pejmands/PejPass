@@ -62,6 +62,15 @@ public partial class HistoryWindow : Window
             item.IsSelected = true;
     }
 
+    private void HistoryExpander_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Space || sender is not Expander expander)
+            return;
+
+        expander.IsExpanded = !expander.IsExpanded;
+        e.Handled = true;
+    }
+
     private void HistorySearchBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Tab ||
