@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Threading;
 
 namespace PejPass.Wpf.Tests.Services;
 
@@ -25,7 +24,7 @@ public sealed class NestedScrollChainTests
             RaiseWheel(fixture.InnerContent, -120);
             fixture.Window.UpdateLayout();
 
-            Assert.Equal(0, fixture.Inner.VerticalOffset);
+            Assert.Equal(0d, fixture.Inner.VerticalOffset);
             Assert.True(fixture.Parent.VerticalOffset > parentOffsetAfterFirstTick);
         }, TestContext.Current.CancellationToken);
     }
@@ -47,7 +46,7 @@ public sealed class NestedScrollChainTests
             fixture.Window.UpdateLayout();
 
             Assert.True(fixture.Inner.VerticalOffset > innerOffsetAfterFirstTick);
-            Assert.Equal(0, fixture.Parent.VerticalOffset);
+            Assert.Equal(0d, fixture.Parent.VerticalOffset);
         }, TestContext.Current.CancellationToken);
     }
 
