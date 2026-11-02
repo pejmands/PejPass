@@ -207,7 +207,7 @@ public sealed class KeyboardFocusVisibilityTests
                 if (FindVisualAncestor<TagChipStrip>(focused) is not null)
                     tagChipFocusCount++;
 
-                AssertFocusedElementIsVisibleInAncestorScrollViewers(focused);
+                AssertFocusedElementIsVisibleInAncestorScrollViewers(focused, index + 1);
             }
 
             Assert.True(returnedToStart, "Tab navigation did not complete a full cycle back to the TOTP Copy button.");
@@ -271,7 +271,8 @@ public sealed class KeyboardFocusVisibilityTests
     }
 
     private static void AssertFocusedElementIsVisibleInAncestorScrollViewers(
-        FrameworkElement focusedElement)
+        FrameworkElement focusedElement,
+        int tabIndex)
     {
         var current = VisualTreeHelper.GetParent(focusedElement);
 
@@ -292,10 +293,10 @@ public sealed class KeyboardFocusVisibilityTests
 
                 Assert.True(
                     IsVisibleWithin(bounds.Left, bounds.Right, viewport.Left, viewport.Right),
-                    $"Focused element is horizontally outside {scrollViewer.Name}: bounds={bounds}, viewport={viewport}.");
+                    $"Tab step {tabIndex}: {DescribeFocus(focusedElement)} is horizontally outside {scrollViewer.Name}: bounds={bounds}, viewport={viewport}.");
                 Assert.True(
                     IsVisibleWithin(bounds.Top, bounds.Bottom, viewport.Top, viewport.Bottom),
-                    $"Focused element is vertically outside {scrollViewer.Name}: bounds={bounds}, viewport={viewport}.");
+                    $"Tab step {tabIndex}: {DescribeFocus(focusedElement)} is vertically outside {scrollViewer.Name}: bounds={bounds}, viewport={viewport}.");
             }
 
             current = VisualTreeHelper.GetParent(current);
@@ -371,7 +372,7 @@ public sealed class KeyboardFocusVisibilityTests
         var frameworkElement = element as FrameworkElement;
         var details = frameworkElement is null
             ? string.Empty
-            : $", Name='{frameworkElement.Name}', Visibility={frameworkElement.Visibility}, IsVisible={frameworkElement.IsVisible}, Focusable={frameworkElement.Focusable}";
+            : $", Name='{frameworkElement.Name}', Visibility={frameworkElement.Visibility}, IsVisible={frameworkElement.IsVisible}, Focusable={frameworkElement.Focusable}, IsTabStop={frameworkElement.IsTabStop}, Size={frameworkElement.RenderSize}";
 
         return $"{element.GetType().FullName}{details}";
     }
