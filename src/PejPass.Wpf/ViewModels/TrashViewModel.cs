@@ -61,6 +61,7 @@ public partial class TrashViewModel : ObservableObject
     private void ApplyFilter()
     {
         Items.Clear();
+        EmptyTrashCommand.NotifyCanExecuteChanged();
         var q = SearchText?.Trim() ?? string.Empty;
 
         IEnumerable<TrashRow> source = _all;
@@ -258,7 +259,7 @@ public partial class TrashViewModel : ObservableObject
         SnackbarService.Show($"Permanently deleted {purgedIds.Count} item(s).");
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanEmptyTrash))]
     private async Task EmptyTrashAsync()
     {
         if (_all.Count == 0) return;
@@ -287,6 +288,8 @@ public partial class TrashViewModel : ObservableObject
         StatusMessage = "Trash is empty.";
         SnackbarService.Show("Trash emptied.");
     }
+
+    private bool CanEmptyTrash() => _all.Count > 0;
 
     private async Task<bool> EnsureCurrentAndWritableAsync()
     {
