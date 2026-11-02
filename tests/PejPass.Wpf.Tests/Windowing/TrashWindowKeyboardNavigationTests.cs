@@ -129,6 +129,10 @@ public sealed class TrashWindowKeyboardNavigationTests
 
             var searchBox = Assert.IsType<SearchBox>(window.FindName("TrashSearchBox"));
             var trashList = Assert.IsType<ListBox>(window.FindName("TrashList"));
+            var restoreSelectedButton = Assert.IsType<Button>(
+                window.FindName("RestoreSelectedButton"));
+            var purgeSelectedButton = Assert.IsType<Button>(
+                window.FindName("PurgeSelectedButton"));
             var closeButton = Assert.IsType<Button>(window.FindName("CloseButton"));
 
             window.Show();
@@ -194,7 +198,12 @@ public sealed class TrashWindowKeyboardNavigationTests
                 }
             }
 
-            Assert.Same(closeButton, Keyboard.FocusedElement);
+            var firstFooterTabStop = restoreSelectedButton.IsEnabled
+                ? restoreSelectedButton
+                : purgeSelectedButton.IsEnabled
+                    ? purgeSelectedButton
+                    : closeButton;
+            Assert.Same(firstFooterTabStop, Keyboard.FocusedElement);
             window.Close();
         }, TestContext.Current.CancellationToken);
     }
