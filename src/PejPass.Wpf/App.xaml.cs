@@ -686,7 +686,7 @@ public partial class App : System.Windows.Application
             ? 0
             : radius;
 
-        SetWindowChrome(window, windowCornerRadius);
+        SetWindowChrome(window, windowCornerRadius, useNativeRoundedCorners);
         SetChromeRootCornerRadius(window, windowCornerRadius);
 
         void ApplyWindowStyles()
@@ -700,7 +700,7 @@ public partial class App : System.Windows.Application
             if (useNativeRoundedCorners &&
                 !TryApplyNativeRoundedCorners(hwnd))
             {
-                SetWindowChrome(window, radius);
+                SetWindowChrome(window, radius, useNativeRoundedCorners: false);
                 SetChromeRootCornerRadius(window, radius);
             }
         }
@@ -723,7 +723,10 @@ public partial class App : System.Windows.Application
         }
     }
 
-    private static void SetWindowChrome(Window window, double radius)
+    private static void SetWindowChrome(
+        Window window,
+        double radius,
+        bool useNativeRoundedCorners)
     {
         WindowChrome.SetWindowChrome(window, new WindowChrome
         {
@@ -731,7 +734,10 @@ public partial class App : System.Windows.Application
             ResizeBorderThickness = window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip
                 ? new Thickness(6)
                 : new Thickness(0),
-            GlassFrameThickness = new Thickness(0),
+            // Keep WPF from applying a binary window region so DWM can render the corners.
+            GlassFrameThickness = useNativeRoundedCorners
+                ? new Thickness(0.00001)
+                : new Thickness(0),
             CornerRadius = new CornerRadius(radius),
             UseAeroCaptionButtons = false
         });
